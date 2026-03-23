@@ -1,6 +1,7 @@
 import { CircleCheckBig, Ellipsis, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CircularProgress } from '@/components/CircularProgress'
+import { ScheduleTimeline } from '@/features/schedule/ScheduleTimeline'
 import { TaskCard } from '@/features/schedule/TaskCard'
 
 const tasks = [
@@ -49,6 +50,17 @@ const tasks = [
     commentCount: 3,
     progress: { completed: 2, total: 5 },
   },
+  {
+    title: 'ReadERTA paper sections 1-3',
+    description: 'Focus on methodology and experiment design, take notes for discussion',
+    tags: [
+      { label: 'AI', bg: 'bg-sky-100', text: 'text-sky-700' },
+      { label: 'Paper', bg: 'bg-fuchsia-100', text: 'text-fuchsia-700' },
+    ],
+    dueDate: 'Mar 17',
+    commentCount: 0,
+    progress: { completed: 1, total: 3 },
+  },
 ] as const
 
 const overallDone = tasks.reduce((sum, t) => sum + t.progress.completed, 0)
@@ -77,14 +89,14 @@ export function SchedulePage() {
             </Button>
           </div>
         </div>
-        <div className="mt-2 flex flex-1 flex-col gap-3 overflow-y-auto">
+        <div className="scrollbar-hidden mt-2 flex flex-1 flex-col gap-3 overflow-y-auto">
           {tasks.map((task) => (
             <TaskCard key={task.title} {...task} />
           ))}
         </div>
       </div>
-      <div className="flex min-w-0 flex-1 items-center justify-center overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
-        <p className="text-sm text-zinc-400">Calendar</p>
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50">
+        <ScheduleTimeline />
       </div>
     </div>
   )

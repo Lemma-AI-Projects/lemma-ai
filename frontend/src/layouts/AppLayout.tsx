@@ -14,7 +14,7 @@ import {
   Puzzle,
   SquarePen,
 } from 'lucide-react'
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { SidebarItem } from '@/components/SidebarItem'
@@ -46,6 +46,8 @@ const chatItems = [
 ]
 
 export function AppLayout() {
+  const location = useLocation()
+  const hideToolbar = location.pathname === '/schedule'
   const navRef = useRef<HTMLElement>(null)
   const [isScrolledFromTop, setIsScrolledFromTop] = useState(false)
 
@@ -130,20 +132,22 @@ export function AppLayout() {
 
       <main className="relative min-w-0 flex-1 overflow-hidden">
         <Outlet />
-        <div className="pointer-events-none absolute right-0 top-0 flex items-center gap-2 p-4 [&>*]:pointer-events-auto">
-          <Button
-            variant="ghost"
-            aria-label="Switch language"
-            className="size-8 rounded-full p-0"
-          >
-            <Languages className="size-[18px]" />
-          </Button>
-          <UserAvatar
-            name="Alex"
-            showBadge
-            onClick={() => console.log('avatar clicked')}
-          />
-        </div>
+        {!hideToolbar && (
+          <div className="pointer-events-none absolute right-0 top-0 flex items-center gap-2 p-4 [&>*]:pointer-events-auto">
+            <Button
+              variant="ghost"
+              aria-label="Switch language"
+              className="size-8 rounded-full p-0"
+            >
+              <Languages className="size-[18px]" />
+            </Button>
+            <UserAvatar
+              name="Alex"
+              showBadge
+              onClick={() => console.log('avatar clicked')}
+            />
+          </div>
+        )}
       </main>
     </div>
   )
