@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { format, isToday } from 'date-fns'
+import { addWeeks, format, isToday, startOfWeek, subWeeks } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { scheduleEvents } from '@/mock/scheduleEvents'
+import { Button } from '@/components/ui/button'
 import { CurrentTimeBadge } from './CurrentTimeBadge'
 import { CurrentTimeIndicator } from './CurrentTimeIndicator'
 import { ScheduleEventCard } from './ScheduleEventCard'
@@ -19,8 +21,10 @@ function getCurrentTime() {
 }
 
 export function ScheduleTimeline() {
-  const days = useMemo(() => getWeekDays(), [])
-  const hasToday = useMemo(() => days.some((d) => isToday(d)), [days])
+  const [weekStart, setWeekStart] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  )
+  const days = useMemo(() => getWeekDays(weekStart), [weekStart])
   const [currentTime, setCurrentTime] = useState(getCurrentTime)
 
   const eventsByDate = useMemo(() => {
@@ -49,14 +53,38 @@ export function ScheduleTimeline() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="h-[42px] shrink-0" />
+      <div className="flex h-[42px] shrink-0 items-center justify-end px-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 rounded-full bg-transparent"
+            onClick={() => setWeekStart((w) => subWeeks(w, 1))}
+            aria-label="Previous week"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="min-w-[100px] text-center text-[16px] font-semibold">
+            {format(weekStart, 'MMMM yyyy')}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6 rounded-full bg-transparent"
+            onClick={() => setWeekStart((w) => addWeeks(w, 1))}
+            aria-label="Next week"
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
 
       <ScheduleWeekHeader days={days} />
 
       <div ref={gridRef} className="scrollbar-hidden flex-1 overflow-y-auto">
         <div className="flex">
           <div className="relative shrink-0 border-r border-border" style={{ width: TIME_LABEL_WIDTH }}>
-            {hasToday && <CurrentTimeBadge top={currentTime.top} label={currentTime.label} />}
+            <CurrentTimeBadge top={currentTime.top} label={currentTime.label} />
             {HOURS_24.map((hour) => (
               <div
                 key={hour}
@@ -73,7 +101,7 @@ export function ScheduleTimeline() {
           </div>
 
           <div className="relative flex min-w-0 flex-1">
-            {hasToday && <CurrentTimeIndicator top={currentTime.top} />}
+            <CurrentTimeIndicator top={currentTime.top} />
             {days.map((day, colIdx) => {
               const dateKey = format(day, 'yyyy-MM-dd')
               const dayEvents = eventsByDate[dateKey] ?? []

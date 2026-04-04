@@ -3,7 +3,7 @@ import { ArrowUp, Paperclip, Sparkles, Wrench } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export function ChatInput({ className }: { className?: string }) {
+export function ConversationInput({ className }: { className?: string }) {
   const [value, setValue] = useState('')
   const hasContent = value.trim().length > 0
 
@@ -19,17 +19,17 @@ export function ChatInput({ className }: { className?: string }) {
         rows={1}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-20 w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
+        className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
         style={{ fieldSizing: 'content' } as React.CSSProperties}
       />
 
       <div className="flex items-center gap-2 px-4 pt-1 pb-4">
-        <div className="mb-[-2px] ml-[1px] flex items-center gap-2">
+        <div className="mb-[-12px] ml-[-4px] flex items-center gap-2">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="icon-sm"
-            className="rounded-full border-zinc-200"
+            className="rounded-full"
             aria-label="Attach file"
           >
             <Paperclip className="size-4 text-zinc-500" />
@@ -37,9 +37,9 @@ export function ChatInput({ className }: { className?: string }) {
 
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="rounded-full border-zinc-200 text-zinc-600"
+            className="rounded-full text-zinc-600"
           >
             <Sparkles className="size-3.5" />
             Auto
@@ -47,9 +47,9 @@ export function ChatInput({ className }: { className?: string }) {
 
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
-            className="rounded-full border-zinc-200 text-zinc-600"
+            className="rounded-full text-zinc-600"
           >
             <Wrench className="size-3.5" />
             Tools
