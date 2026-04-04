@@ -69,9 +69,10 @@ export function AppLayout() {
               <SidebarItem icon={FolderPlus} label="New Project" />
               {projectItems.slice(0, 3).map((item) => (
                 <SidebarItem
-                  key={item.label}
+                  key={item.id}
                   icon={item.icon}
                   label={item.label}
+                  to={`/project/${item.id}`}
                 />
               ))}
               <SidebarItem icon={Ellipsis} label="More" />
