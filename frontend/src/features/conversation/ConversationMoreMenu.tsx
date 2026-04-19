@@ -57,7 +57,7 @@ export function ConversationMoreMenu() {
         <Button
           variant="outline"
           aria-label="More actions"
-          className="size-9 rounded-full bg-transparent p-0 hover:bg-muted"
+          className="size-[34px] rounded-full bg-transparent p-0 hover:bg-muted"
         >
           <Ellipsis className="size-4" />
         </Button>

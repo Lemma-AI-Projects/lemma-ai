@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUp, Paperclip, Sparkles, Wrench } from 'lucide-react'
+import { ArrowUp, Paperclip, Puzzle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -24,12 +24,12 @@ export function ProjectInput({ className }: { className?: string }) {
       />
 
       <div className="flex items-center gap-2 px-4 pt-1 pb-4">
-        <div className="mb-[-12px] ml-[-4px] flex items-center gap-2">
+        <div className="mb-[-12px] ml-[-5px] flex items-center gap-2">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon-sm"
-            className="rounded-full"
+            className="rounded-full border-zinc-200"
             aria-label="Attach file"
           >
             <Paperclip className="size-4 text-zinc-500" />
@@ -37,21 +37,11 @@ export function ProjectInput({ className }: { className?: string }) {
 
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="rounded-full text-zinc-600"
+            className="rounded-full border-zinc-200 text-zinc-600"
           >
-            <Sparkles className="size-3.5" />
-            Auto
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="rounded-full text-zinc-600"
-          >
-            <Wrench className="size-3.5" />
+            <Puzzle className="size-3.5" />
             Tools
           </Button>
         </div>

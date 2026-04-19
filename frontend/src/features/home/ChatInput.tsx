@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUp, Paperclip, Sparkles, Wrench } from 'lucide-react'
+import { ArrowUp, Paperclip, Puzzle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -10,7 +10,7 @@ export function ChatInput({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex flex-col rounded-3xl border border-zinc-200 bg-white',
+        'flex flex-col rounded-[26px] border border-zinc-200 bg-white',
         className
       )}
     >
@@ -24,7 +24,7 @@ export function ChatInput({ className }: { className?: string }) {
       />
 
       <div className="flex items-center gap-2 px-4 pt-1 pb-4">
-        <div className="mb-[-2px] ml-[1px] flex items-center gap-2">
+        <div className="mb-[-2px] ml-[0px] flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -41,17 +41,7 @@ export function ChatInput({ className }: { className?: string }) {
             size="sm"
             className="rounded-full border-zinc-200 text-zinc-600"
           >
-            <Sparkles className="size-3.5" />
-            Auto
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-full border-zinc-200 text-zinc-600"
-          >
-            <Wrench className="size-3.5" />
+            <Puzzle className="size-3.5" />
             Tools
           </Button>
         </div>
