@@ -34,8 +34,6 @@ export function AssistantMarkdown({
       isAnimating={isStreaming}
       parseIncompleteMarkdown={isStreaming}
       dir="auto"
-      normalizeHtmlIndentation
-      lineNumbers={false}
       shikiTheme={['github-light', 'github-dark']}
       mermaid={{ config: { theme: 'neutral', fontFamily: 'inherit' } }}
       controls={{

@@ -23,6 +23,8 @@ export type FileCategory =
 export const extToCategoryMap: Record<string, FileCategory> = {
   doc: 'word',
   docx: 'word',
+  md: 'word',
+  txt: 'word',
   pdf: 'pdf',
   ppt: 'powerpoint',
   pptx: 'powerpoint',

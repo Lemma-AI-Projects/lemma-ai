@@ -151,3 +151,13 @@
     @apply min-h-screen;
   }
 }
+
+/* Streamdown's code-block action buttons (copy/download) live inside a wrapper
+   with `position: sticky; top: 2; -mt-10` so they pin to the top of the scroll
+   container. We want them anchored to the code block instead, scrolling with
+   it. The wrapper has no class hook of its own, so we target it via its only
+   child's data attribute. Kept unlayered + !important so it beats Tailwind's
+   `.sticky` utility (which sits in the `utilities` cascade layer). */
+*:has(> [data-streamdown="code-block-actions"]) {
+  position: static !important;
+}

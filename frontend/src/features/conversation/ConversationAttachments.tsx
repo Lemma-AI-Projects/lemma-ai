@@ -37,20 +37,22 @@ export function ConversationAttachments({
             data-file-category={attachment.category}
             className="min-w-0 max-w-full"
           >
-            <div className="flex w-60 min-w-0 items-center gap-3 rounded-2xl border border-zinc-200 bg-transparent p-2.5">
+            <div className="flex w-56 min-w-0 items-stretch gap-2.5 rounded-2xl border border-zinc-200 bg-transparent p-1.5">
               <div
                 className={cn(
-                  'flex size-10 shrink-0 items-center justify-center rounded-lg',
+                  'flex size-10 shrink-0 items-center justify-center rounded-md',
                   iconBg
                 )}
               >
                 <Icon className="size-5 text-white" strokeWidth={2.25} />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
+              <div className="flex min-w-0 flex-1 flex-col justify-between">
+                <p className="truncate text-sm font-semibold leading-5 text-foreground">
                   {attachment.fileName}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">{label}</p>
+                <p className="truncate text-[13px] leading-[18px] text-muted-foreground">
+                  {label}
+                </p>
               </div>
             </div>
           </li>

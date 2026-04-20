@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom'
 import { ProjectChatList } from '@/features/project/ProjectChatList'
 import { ProjectInput } from '@/features/project/ProjectInput'
 import { ProjectPageActions } from '@/features/project/ProjectPageActions'
+import { ProjectSourceList } from '@/features/project/ProjectSourceList'
 import { ProjectTabs, type ProjectTab } from '@/features/project/ProjectTabs'
 import { projectItems } from '@/mock/projectItems'
 
@@ -28,6 +29,11 @@ export function ProjectPage() {
           {activeTab === 'Chats' && (
             <div className="mt-4">
               <ProjectChatList projectId={id!} projectName={projectName} />
+            </div>
+          )}
+          {activeTab === 'Sources' && (
+            <div className="mt-4">
+              <ProjectSourceList projectId={id!} />
             </div>
           )}
         </div>
