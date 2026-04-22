@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { SidebarItem } from '@/components/SidebarItem'
 import { SidebarSection } from '@/components/SidebarSection'
+import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
 import { chatItems } from '@/mock/chatItems'
 import { courseItems } from '@/mock/courseItems'
 import { projectItems } from '@/mock/projectItems'
@@ -21,6 +22,7 @@ import { projectItems } from '@/mock/projectItems'
 export function AppLayout() {
   const navRef = useRef<HTMLElement>(null)
   const [isScrolledFromTop, setIsScrolledFromTop] = useState(false)
+  const [createProjectOpen, setCreateProjectOpen] = useState(false)
 
   const handleScroll = useCallback(() => {
     const el = navRef.current
@@ -66,7 +68,11 @@ export function AppLayout() {
 
           <div className="mt-2 flex flex-col gap-1">
             <SidebarSection title="Projects">
-              <SidebarItem icon={FolderPlus} label="New Project" />
+              <SidebarItem
+                icon={FolderPlus}
+                label="New Project"
+                onClick={() => setCreateProjectOpen(true)}
+              />
               {projectItems.slice(0, 3).map((item) => (
                 <SidebarItem
                   key={item.id}
@@ -106,6 +112,12 @@ export function AppLayout() {
       <main className="relative min-w-0 flex-1 overflow-hidden">
         <Outlet />
       </main>
+
+      <CreateProjectDialog
+        open={createProjectOpen}
+        onOpenChange={setCreateProjectOpen}
+        onCreate={(name) => console.log('TODO: create project', name)}
+      />
     </div>
   )
 }
