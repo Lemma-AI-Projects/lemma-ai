@@ -1,9 +1,12 @@
+import { cn } from '@/lib/utils'
+
 interface UserAvatarProps {
   name: string
   color?: string
   showBadge?: boolean
   size?: number
   onClick?: () => void
+  className?: string
 }
 
 export function UserAvatar({
@@ -12,12 +15,16 @@ export function UserAvatar({
   showBadge = false,
   size = 32,
   onClick,
+  className,
 }: UserAvatarProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative flex cursor-pointer items-center justify-center"
+      className={cn(
+        'relative flex cursor-pointer items-center justify-center',
+        className
+      )}
       style={{ width: size, height: size }}
     >
       <div
