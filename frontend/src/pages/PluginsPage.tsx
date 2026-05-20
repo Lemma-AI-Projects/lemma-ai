@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
+import { PluginFeaturedList } from '@/features/plugins/PluginFeaturedList'
 import { PluginPoster } from '@/features/plugins/PluginPoster'
 import {
   PluginSubjectTabs,
@@ -43,6 +44,7 @@ export function PluginsPage() {
 
           <PluginPoster />
           <PluginSubjectTabs value={activeTab} onChange={setActiveTab} />
+          <PluginFeaturedList searchTerm={searchTerm} activeTab={activeTab} />
         </div>
       </main>
     </div>
