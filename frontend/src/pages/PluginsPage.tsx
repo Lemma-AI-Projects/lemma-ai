@@ -1,15 +1,10 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-
-type PluginSubjectTab = 'all' | 'general' | 'math'
-
-const subjectTabs: Array<{ value: PluginSubjectTab; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'general', label: '通用' },
-  { value: 'math', label: '数学' },
-]
+import { PluginPoster } from '@/features/plugins/PluginPoster'
+import {
+  PluginSubjectTabs,
+  type PluginSubjectTab,
+} from '@/features/plugins/PluginSubjectTabs'
 
 export function PluginsPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -46,29 +41,8 @@ export function PluginsPage() {
             </div>
           </div>
 
-          <div
-            aria-label="插件海报展示区"
-            className="mt-8 h-[150px] w-full rounded-3xl bg-zinc-200/70"
-          />
-
-          <div className="mt-7 flex min-h-9 items-center gap-2">
-            {subjectTabs.map((tab) => (
-              <Button
-                key={tab.value}
-                type="button"
-                variant="ghost"
-                className={cn(
-                  'rounded-full bg-transparent px-4 font-normal text-muted-foreground hover:bg-transparent hover:text-foreground',
-                  activeTab === tab.value &&
-                    'bg-muted text-foreground hover:bg-muted hover:text-foreground'
-                )}
-                onClick={() => setActiveTab(tab.value)}
-                aria-current={activeTab === tab.value ? 'page' : undefined}
-              >
-                {tab.label}
-              </Button>
-            ))}
-          </div>
+          <PluginPoster />
+          <PluginSubjectTabs value={activeTab} onChange={setActiveTab} />
         </div>
       </main>
     </div>
