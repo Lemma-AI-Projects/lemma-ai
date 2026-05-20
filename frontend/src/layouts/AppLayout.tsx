@@ -57,7 +57,7 @@ export function AppLayout() {
             <SidebarItem icon={SquarePen} label="New chat" to="/" end />
             <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
             <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
-            <SidebarItem icon={Puzzle} label="Plugins" />
+            <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
             <div
               className={cn(
                 'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',

@@ -3,6 +3,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
+import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 
@@ -22,6 +23,10 @@ const routes: RouteObject[] = [
       {
         path: 'knowledge',
         element: <KnowledgeBasePage />,
+      },
+      {
+        path: 'plugins',
+        element: <PluginsPage />,
       },
       {
         path: 'chat/:id',
