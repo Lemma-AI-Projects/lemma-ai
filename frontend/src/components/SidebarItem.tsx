@@ -8,6 +8,7 @@ interface SidebarItemProps {
   to?: string
   end?: boolean
   onClick?: () => void
+  collapsed?: boolean
 }
 
 export function SidebarItem({
@@ -16,6 +17,7 @@ export function SidebarItem({
   to,
   end,
   onClick,
+  collapsed = false,
 }: SidebarItemProps) {
   const classes = (isActive: boolean) =>
     cn(
@@ -25,6 +27,32 @@ export function SidebarItem({
         : 'text-black hover:bg-zinc-200/70'
     )
 
+  // Collapsed sidebar = 56px, icon = 18px, container px-3 = 12px.
+  // To center the icon symmetrically: (56 - 18) / 2 - 12 = 7px shift.
+  // We translate the icon instead of changing padding/gap so the transition
+  // can interpolate smoothly alongside the parent's width animation.
+  const iconEl = Icon && (
+    <Icon
+      className={cn(
+        'size-[18px] shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+        collapsed && 'translate-x-[7px]'
+      )}
+      strokeWidth={1.75}
+    />
+  )
+
+  const labelEl = (
+    <span
+      aria-hidden={collapsed}
+      className={cn(
+        'truncate transition-[opacity,transform] duration-200 ease-out',
+        collapsed && 'pointer-events-none -translate-x-1 opacity-0'
+      )}
+    >
+      {label}
+    </span>
+  )
+
   if (to) {
     return (
       <NavLink
@@ -33,20 +61,16 @@ export function SidebarItem({
         className={({ isActive }) => classes(isActive)}
         onClick={onClick}
       >
-        {Icon && <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />}
-        <span className="truncate">{label}</span>
+        {iconEl}
+        {labelEl}
       </NavLink>
     )
   }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={classes(false)}
-    >
-      {Icon && <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />}
-      <span className="truncate">{label}</span>
+    <button type="button" onClick={onClick} className={classes(false)}>
+      {iconEl}
+      {labelEl}
     </button>
   )
 }

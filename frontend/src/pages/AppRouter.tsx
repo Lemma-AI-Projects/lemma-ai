@@ -1,6 +1,7 @@
 import { type RouteObject, useRoutes } from 'react-router-dom'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
+import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { PluginsPage } from '@/pages/PluginsPage'
@@ -31,6 +32,10 @@ const routes: RouteObject[] = [
       {
         path: 'chat/:id',
         element: <ConversationPage />,
+      },
+      {
+        path: 'course/:id',
+        element: <CoursePage />,
       },
       {
         path: 'project/:id',
