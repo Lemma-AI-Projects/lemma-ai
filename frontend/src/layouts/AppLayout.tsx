@@ -87,9 +87,10 @@ export function AppLayout() {
             <SidebarSection title="Courses">
               {courseItems.slice(0, 4).map((item) => (
                 <SidebarItem
-                  key={item.label}
+                  key={item.id}
                   icon={item.icon}
                   label={item.label}
+                  to={`/course/${item.id}`}
                 />
               ))}
               <SidebarItem icon={Ellipsis} label="More" />
