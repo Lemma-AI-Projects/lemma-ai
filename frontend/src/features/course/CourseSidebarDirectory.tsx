@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import {
-  BookOpen,
-  ChevronRight,
-  ClipboardCheck,
-  FileText,
-  PencilLine,
-  PlayCircle,
-  type LucideIcon,
-} from 'lucide-react'
+import { ChevronRight, CircleCheckBig } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { courseItems } from '@/mock/courseItems'
 
 type Course = (typeof courseItems)[number]
+type CourseUnit = Course['units'][number]
 type CourseChapter = Course['units'][number]['chapters'][number]
+type CourseProgressStatus = Course['units'][number]['overview']['status']
+
+interface CourseAggregateProgress {
+  completed: number
+  total: number
+  percent: number
+  status: CourseProgressStatus
+}
 
 function stripOutlinePrefix(title: string): string {
   const stripped = title
@@ -54,71 +55,178 @@ function findCurrentUnitId(course: Course, chapterId: string | null): string | n
   )
 }
 
-function CourseDirectoryLink({
-  label,
-  href,
-  depth = 0,
-  muted = false,
-}: {
-  label: string
-  href: string
-  depth?: 0 | 1
-  muted?: boolean
-}) {
+function getChapterTaskStatuses(chapter: CourseChapter): CourseProgressStatus[] {
+  return [
+    chapter.overview.status,
+    chapter.video.status,
+    chapter.quiz.status,
+    chapter.assignment.status,
+  ]
+}
+
+function getAggregateProgress(statuses: CourseProgressStatus[]): CourseAggregateProgress {
+  const completed = statuses.filter((status) => status === 'completed').length
+  const total = statuses.length
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  if (completed === total && total > 0) {
+    return { completed, total, percent, status: 'completed' }
+  }
+
+  if (completed > 0) {
+    return { completed, total, percent, status: 'in-progress' }
+  }
+
+  return { completed, total, percent, status: 'not-started' }
+}
+
+function getChapterProgress(chapter: CourseChapter): CourseAggregateProgress {
+  return getAggregateProgress(getChapterTaskStatuses(chapter))
+}
+
+function getUnitTaskStatuses(unit: CourseUnit): CourseProgressStatus[] {
+  return [
+    unit.overview.status,
+    ...unit.chapters.flatMap(getChapterTaskStatuses),
+    unit.quiz.status,
+    unit.assignment.status,
+  ]
+}
+
+function getUnitProgress(unit: CourseUnit): CourseAggregateProgress {
+  return getAggregateProgress(getUnitTaskStatuses(unit))
+}
+
+function getCourseProgress(course: Course): CourseAggregateProgress {
+  return getAggregateProgress(course.units.flatMap(getUnitTaskStatuses))
+}
+
+function BacklogStatusIcon() {
   return (
-    <a
-      href={href}
-      className={cn(
-        'flex h-9 w-full items-center gap-2 rounded-sm text-sm transition-colors hover:bg-zinc-200/70',
-        depth === 0 ? 'px-3' : 'pl-8 pr-3',
-        muted ? 'text-zinc-600' : 'text-black'
-      )}
-    >
-      <span className="truncate">{label}</span>
-    </a>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <circle
+        cx="7"
+        cy="7"
+        r="6"
+        fill="none"
+        stroke="#53565A"
+        strokeWidth="2"
+        strokeDasharray="1.4 1.74"
+        strokeDashoffset="0.65"
+      />
+      <circle
+        cx="7"
+        cy="7"
+        r="2"
+        fill="none"
+        stroke="#53565A"
+        strokeWidth="4"
+        strokeDasharray="0 100"
+        strokeDashoffset="0"
+        transform="rotate(-90 7 7)"
+      />
+    </svg>
   )
 }
 
+function TechnicalReviewStatusIcon({ value }: { value?: number }) {
+  const radius = 2
+  const circumference = 2 * Math.PI * radius
+  const clampedValue = Math.min(Math.max(value ?? 33, 0), 100)
+  const offset = circumference * (1 - clampedValue / 100)
+  const dynamicProgressProps =
+    value === undefined
+      ? {
+          strokeDasharray: '4.167846253762459 100',
+          strokeDashoffset: 0,
+        }
+      : {
+          strokeDasharray: circumference,
+          strokeDashoffset: offset,
+        }
+
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <circle
+        cx="7"
+        cy="7"
+        r="6"
+        fill="none"
+        stroke="#22c55e"
+        strokeWidth="2"
+        strokeDasharray="3.14 0"
+        strokeDashoffset="-0.7"
+      />
+      <circle
+        cx="7"
+        cy="7"
+        r="2"
+        fill="none"
+        stroke="#22c55e"
+        strokeWidth="4"
+        {...dynamicProgressProps}
+        transform="rotate(-90 7 7)"
+      />
+    </svg>
+  )
+}
+
+function CourseProgressStatusIcon({
+  status,
+  value,
+}: {
+  status: CourseProgressStatus
+  value?: number
+}) {
+  if (status === 'completed') {
+    return <CircleCheckBig className="size-4 text-green-500" />
+  }
+
+  if (status === 'in-progress') {
+    return <TechnicalReviewStatusIcon value={value} />
+  }
+
+  return <BacklogStatusIcon />
+}
+
 function CourseDirectoryMetaLink({
-  icon: Icon,
+  status,
   label,
   href,
 }: {
-  icon: LucideIcon
+  status: CourseProgressStatus
   label: string
   href: string
 }) {
   return (
     <a
       href={href}
-      className="flex h-9 w-full items-center gap-2 rounded-sm pl-8 pr-3 text-sm text-zinc-600 transition-colors hover:bg-zinc-200/70 hover:text-black"
+      className="flex min-h-9 w-full items-start gap-2 rounded-sm py-2 pl-8 pr-3 text-sm text-zinc-600 transition-colors hover:bg-zinc-200/70 hover:text-black"
     >
-      <Icon className="size-4 shrink-0 text-zinc-400" strokeWidth={1.75} />
-      <span className="truncate">{label}</span>
+      <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+        <CourseProgressStatusIcon status={status} />
+      </span>
+      <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+        {label}
+      </span>
     </a>
   )
 }
 
 function CourseUnitSection({
   title,
+  progress,
   defaultOpen,
-  isCurrentUnit,
   children,
 }: {
   title: string
+  progress: CourseAggregateProgress
   defaultOpen: boolean
-  isCurrentUnit: boolean
   children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const contentRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState<number | undefined>(undefined)
-
-  useEffect(() => {
-    if (isCurrentUnit) {
-      setOpen(true)
-    }
-  }, [isCurrentUnit])
 
   useEffect(() => {
     if (contentRef.current) {
@@ -131,12 +239,20 @@ function CourseUnitSection({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-8 w-full items-center gap-1.5 px-3 text-sm text-zinc-700 hover:text-zinc-900"
+        className="flex min-h-8 w-full items-start gap-1.5 px-3 py-1.5 text-left text-sm text-zinc-700 hover:text-zinc-900"
       >
-        <span className="truncate">{title}</span>
+        <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+          <CourseProgressStatusIcon
+            status={progress.status}
+            value={progress.percent}
+          />
+        </span>
+        <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+          {title}
+        </span>
         <ChevronRight
           className={cn(
-            'size-3.5 shrink-0 text-zinc-400 transition-transform duration-150',
+            'mt-0.5 size-3.5 shrink-0 text-zinc-400 transition-transform duration-150',
             open && 'rotate-90'
           )}
         />
@@ -164,17 +280,27 @@ function CourseChapterSection({
   open: boolean
   onToggle: () => void
 }) {
+  const progress = getChapterProgress(chapter)
+
   return (
     <div className="flex flex-col gap-0.5">
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-8 w-full items-center gap-1.5 rounded-sm px-3 text-sm text-zinc-700 transition-colors hover:bg-zinc-200/70 hover:text-zinc-900"
+        className="flex min-h-8 w-full items-start gap-1.5 rounded-sm px-3 py-1.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-200/70 hover:text-zinc-900"
       >
-        <span className="truncate">{stripOutlinePrefix(chapter.title)}</span>
+        <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+          <CourseProgressStatusIcon
+            status={progress.status}
+            value={progress.percent}
+          />
+        </span>
+        <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+          {stripOutlinePrefix(chapter.title)}
+        </span>
         <ChevronRight
           className={cn(
-            'size-3.5 shrink-0 text-zinc-400 transition-transform duration-150',
+            'mt-0.5 size-3.5 shrink-0 text-zinc-400 transition-transform duration-150',
             open && 'rotate-90'
           )}
         />
@@ -183,22 +309,22 @@ function CourseChapterSection({
       {open && (
         <div className="flex flex-col gap-0.5">
           <CourseDirectoryMetaLink
-            icon={FileText}
+            status={chapter.overview.status}
             label="Chapter overview"
             href={`#${chapter.id}-overview`}
           />
           <CourseDirectoryMetaLink
-            icon={PlayCircle}
+            status={chapter.video.status}
             label={chapter.video.title}
             href={`#${chapter.id}-video`}
           />
           <CourseDirectoryMetaLink
-            icon={ClipboardCheck}
+            status={chapter.quiz.status}
             label="Quiz"
             href={`#${chapter.id}-quiz`}
           />
           <CourseDirectoryMetaLink
-            icon={PencilLine}
+            status={chapter.assignment.status}
             label="Assignment"
             href={`#${chapter.id}-assignment`}
           />
@@ -222,22 +348,15 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
   const [expandedChapterIds, setExpandedChapterIds] = useState<Set<string>>(
     () => (currentChapterId ? new Set([currentChapterId]) : new Set())
   )
+  const visibleExpandedChapterIds = useMemo(() => {
+    const next = new Set(expandedChapterIds)
 
-  useEffect(() => {
-    if (!currentChapterId) {
-      return
+    if (currentChapterId) {
+      next.add(currentChapterId)
     }
 
-    setExpandedChapterIds((current) => {
-      if (current.has(currentChapterId)) {
-        return current
-      }
-
-      const next = new Set(current)
-      next.add(currentChapterId)
-      return next
-    })
-  }, [currentChapterId])
+    return next
+  }, [currentChapterId, expandedChapterIds])
 
   if (!course) {
     return (
@@ -247,23 +366,33 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
     )
   }
 
+  const courseProgress = getCourseProgress(course)
+
   return (
     <div className="mt-2 flex flex-col gap-1">
       <div className="px-3 py-2">
-        <div className="truncate text-sm font-medium text-black">
-          {course.label}
+        <div className="flex items-start gap-2 text-sm font-medium text-black">
+          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+            <CourseProgressStatusIcon
+              status={courseProgress.status}
+              value={courseProgress.percent}
+            />
+          </span>
+          <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+            {course.label}
+          </span>
         </div>
       </div>
 
       {course.units.map((unit) => (
         <CourseUnitSection
-          key={unit.id}
+          key={`${unit.id}-${unit.id === currentUnitId ? 'current' : 'idle'}`}
           title={stripOutlinePrefix(unit.title)}
+          progress={getUnitProgress(unit)}
           defaultOpen={unit.id === currentUnitId}
-          isCurrentUnit={unit.id === currentUnitId}
         >
           <CourseDirectoryMetaLink
-            icon={BookOpen}
+            status={unit.overview.status}
             label="Unit overview"
             href={`#${unit.id}-overview`}
           />
@@ -272,7 +401,7 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
             <CourseChapterSection
               key={chapter.id}
               chapter={chapter}
-              open={expandedChapterIds.has(chapter.id)}
+              open={visibleExpandedChapterIds.has(chapter.id)}
               onToggle={() =>
                 setExpandedChapterIds((current) => {
                   const next = new Set(current)
@@ -289,17 +418,15 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
             />
           ))}
 
-          <CourseDirectoryLink
+          <CourseDirectoryMetaLink
+            status={unit.quiz.status}
             label="Unit quiz"
             href={`#${unit.id}-quiz`}
-            depth={1}
-            muted
           />
-          <CourseDirectoryLink
+          <CourseDirectoryMetaLink
+            status={unit.assignment.status}
             label="Unit assignment"
             href={`#${unit.id}-assignment`}
-            depth={1}
-            muted
           />
         </CourseUnitSection>
       ))}

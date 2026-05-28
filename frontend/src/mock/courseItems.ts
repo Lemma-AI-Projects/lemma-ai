@@ -1,19 +1,25 @@
 import { FileText, GraduationCap, PlayCircle, type LucideIcon } from 'lucide-react'
 
+type CourseProgressStatus = 'not-started' | 'in-progress' | 'completed'
+
 interface CourseOverview {
   blocks: string[]
+  status: CourseProgressStatus
 }
 
 interface CourseQuiz {
   questions: string[]
+  status: CourseProgressStatus
 }
 
 interface CourseAssignment {
   prompts: string[]
+  status: CourseProgressStatus
 }
 
 interface CourseVideoLesson {
   title: string
+  status: CourseProgressStatus
 }
 
 interface CourseChapter {
@@ -41,9 +47,19 @@ interface CourseItem {
   units: CourseUnit[]
 }
 
-const emptyOverview = (): CourseOverview => ({ blocks: [] })
-const emptyQuiz = (): CourseQuiz => ({ questions: [] })
-const emptyAssignment = (): CourseAssignment => ({ prompts: [] })
+const emptyOverview = (
+  status: CourseProgressStatus = 'not-started'
+): CourseOverview => ({ blocks: [], status })
+const emptyQuiz = (
+  status: CourseProgressStatus = 'not-started'
+): CourseQuiz => ({ questions: [], status })
+const emptyAssignment = (
+  status: CourseProgressStatus = 'not-started'
+): CourseAssignment => ({ prompts: [], status })
+const videoLesson = (
+  title: string,
+  status: CourseProgressStatus = 'not-started'
+): CourseVideoLesson => ({ title, status })
 
 export const courseItems: CourseItem[] = [
   {
@@ -54,21 +70,21 @@ export const courseItems: CourseItem[] = [
       {
         id: 'linear-algebra-lecture-12-unit-1',
         title: 'Eigenvalues and Eigenvectors',
-        overview: emptyOverview(),
+        overview: emptyOverview('completed'),
         chapters: [
           {
             id: 'linear-algebra-lecture-12-unit-1-chapter-1',
             title: 'Why Eigenvectors Matter',
-            overview: emptyOverview(),
-            video: { title: 'Video: Seeing Stable Directions in Linear Maps' },
-            quiz: emptyQuiz(),
-            assignment: emptyAssignment(),
+            overview: emptyOverview('completed'),
+            video: videoLesson('Video: Seeing Stable Directions in Linear Maps', 'completed'),
+            quiz: emptyQuiz('completed'),
+            assignment: emptyAssignment('completed'),
           },
           {
             id: 'linear-algebra-lecture-12-unit-1-chapter-2',
             title: 'Computing Eigenvalues',
-            overview: emptyOverview(),
-            video: { title: 'Video: Characteristic Polynomials Step by Step' },
+            overview: emptyOverview('completed'),
+            video: videoLesson('Video: Characteristic Polynomials Step by Step', 'in-progress'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -76,12 +92,12 @@ export const courseItems: CourseItem[] = [
             id: 'linear-algebra-lecture-12-unit-1-chapter-3',
             title: 'Diagonalization Basics',
             overview: emptyOverview(),
-            video: { title: 'Video: Turning a Matrix into a Simpler Form' },
+            video: videoLesson('Video: Turning a Matrix into a Simpler Form'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
         ],
-        quiz: emptyQuiz(),
+        quiz: emptyQuiz('in-progress'),
         assignment: emptyAssignment(),
       },
       {
@@ -93,7 +109,7 @@ export const courseItems: CourseItem[] = [
             id: 'linear-algebra-lecture-12-unit-2-chapter-1',
             title: 'Change of Basis',
             overview: emptyOverview(),
-            video: { title: 'Video: Reading Matrices Through Better Coordinates' },
+            video: videoLesson('Video: Reading Matrices Through Better Coordinates'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -101,7 +117,7 @@ export const courseItems: CourseItem[] = [
             id: 'linear-algebra-lecture-12-unit-2-chapter-2',
             title: 'Spectral Decomposition',
             overview: emptyOverview(),
-            video: { title: 'Video: Splitting Transformations into Components' },
+            video: videoLesson('Video: Splitting Transformations into Components'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -125,7 +141,7 @@ export const courseItems: CourseItem[] = [
             id: 'python-data-structures-notes-unit-1-chapter-1',
             title: 'Sequence Fundamentals',
             overview: emptyOverview(),
-            video: { title: 'Video: Indexing, Slicing, and Iteration' },
+            video: videoLesson('Video: Indexing, Slicing, and Iteration'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -133,7 +149,7 @@ export const courseItems: CourseItem[] = [
             id: 'python-data-structures-notes-unit-1-chapter-2',
             title: 'Mutable vs Immutable Data',
             overview: emptyOverview(),
-            video: { title: 'Video: When Python Objects Can Change' },
+            video: videoLesson('Video: When Python Objects Can Change'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -150,7 +166,7 @@ export const courseItems: CourseItem[] = [
             id: 'python-data-structures-notes-unit-2-chapter-1',
             title: 'Key-Value Modeling',
             overview: emptyOverview(),
-            video: { title: 'Video: Designing Lookups with Dictionaries' },
+            video: videoLesson('Video: Designing Lookups with Dictionaries'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -158,7 +174,7 @@ export const courseItems: CourseItem[] = [
             id: 'python-data-structures-notes-unit-2-chapter-2',
             title: 'Membership and Uniqueness',
             overview: emptyOverview(),
-            video: { title: 'Video: Using Sets to Remove Duplicate Work' },
+            video: videoLesson('Video: Using Sets to Remove Duplicate Work'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -166,7 +182,7 @@ export const courseItems: CourseItem[] = [
             id: 'python-data-structures-notes-unit-2-chapter-3',
             title: 'Comprehensions',
             overview: emptyOverview(),
-            video: { title: 'Video: Building Collections Declaratively' },
+            video: videoLesson('Video: Building Collections Declaratively'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -190,7 +206,7 @@ export const courseItems: CourseItem[] = [
             id: 'machine-learning-fundamentals-unit-1-chapter-1',
             title: 'Features, Labels, and Datasets',
             overview: emptyOverview(),
-            video: { title: 'Video: Framing Prediction Problems Clearly' },
+            video: videoLesson('Video: Framing Prediction Problems Clearly'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -198,7 +214,7 @@ export const courseItems: CourseItem[] = [
             id: 'machine-learning-fundamentals-unit-1-chapter-2',
             title: 'Loss Functions',
             overview: emptyOverview(),
-            video: { title: 'Video: Measuring Model Mistakes' },
+            video: videoLesson('Video: Measuring Model Mistakes'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -206,7 +222,7 @@ export const courseItems: CourseItem[] = [
             id: 'machine-learning-fundamentals-unit-1-chapter-3',
             title: 'Train and Validation Splits',
             overview: emptyOverview(),
-            video: { title: 'Video: Checking Whether Learning Generalizes' },
+            video: videoLesson('Video: Checking Whether Learning Generalizes'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -223,7 +239,7 @@ export const courseItems: CourseItem[] = [
             id: 'machine-learning-fundamentals-unit-2-chapter-1',
             title: 'Gradient Descent',
             overview: emptyOverview(),
-            video: { title: 'Video: Moving Parameters in the Right Direction' },
+            video: videoLesson('Video: Moving Parameters in the Right Direction'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -231,7 +247,7 @@ export const courseItems: CourseItem[] = [
             id: 'machine-learning-fundamentals-unit-2-chapter-2',
             title: 'Overfitting and Regularization',
             overview: emptyOverview(),
-            video: { title: 'Video: Keeping Models from Memorizing Noise' },
+            video: videoLesson('Video: Keeping Models from Memorizing Noise'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -255,7 +271,7 @@ export const courseItems: CourseItem[] = [
             id: 'calculus-ii-integration-unit-1-chapter-1',
             title: 'Substitution',
             overview: emptyOverview(),
-            video: { title: 'Video: Reversing the Chain Rule' },
+            video: videoLesson('Video: Reversing the Chain Rule'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -263,7 +279,7 @@ export const courseItems: CourseItem[] = [
             id: 'calculus-ii-integration-unit-1-chapter-2',
             title: 'Integration by Parts',
             overview: emptyOverview(),
-            video: { title: 'Video: Trading Derivatives for Integrals' },
+            video: videoLesson('Video: Trading Derivatives for Integrals'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -271,7 +287,7 @@ export const courseItems: CourseItem[] = [
             id: 'calculus-ii-integration-unit-1-chapter-3',
             title: 'Trigonometric Integrals',
             overview: emptyOverview(),
-            video: { title: 'Video: Pattern Matching with Identities' },
+            video: videoLesson('Video: Pattern Matching with Identities'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -288,7 +304,7 @@ export const courseItems: CourseItem[] = [
             id: 'calculus-ii-integration-unit-2-chapter-1',
             title: 'Partial Fractions',
             overview: emptyOverview(),
-            video: { title: 'Video: Breaking Rational Functions Apart' },
+            video: videoLesson('Video: Breaking Rational Functions Apart'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -296,7 +312,7 @@ export const courseItems: CourseItem[] = [
             id: 'calculus-ii-integration-unit-2-chapter-2',
             title: 'Improper Integrals',
             overview: emptyOverview(),
-            video: { title: 'Video: Handling Infinite Bounds and Discontinuities' },
+            video: videoLesson('Video: Handling Infinite Bounds and Discontinuities'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -320,7 +336,7 @@ export const courseItems: CourseItem[] = [
             id: 'react-performance-patterns-unit-1-chapter-1',
             title: 'Component Render Flow',
             overview: emptyOverview(),
-            video: { title: 'Video: Understanding What Actually Re-renders' },
+            video: videoLesson('Video: Understanding What Actually Re-renders'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -328,7 +344,7 @@ export const courseItems: CourseItem[] = [
             id: 'react-performance-patterns-unit-1-chapter-2',
             title: 'State Placement',
             overview: emptyOverview(),
-            video: { title: 'Video: Keeping Updates Close to Where They Matter' },
+            video: videoLesson('Video: Keeping Updates Close to Where They Matter'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -345,7 +361,7 @@ export const courseItems: CourseItem[] = [
             id: 'react-performance-patterns-unit-2-chapter-1',
             title: 'Memoization Tradeoffs',
             overview: emptyOverview(),
-            video: { title: 'Video: Using Memo Without Hiding Design Problems' },
+            video: videoLesson('Video: Using Memo Without Hiding Design Problems'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -353,7 +369,7 @@ export const courseItems: CourseItem[] = [
             id: 'react-performance-patterns-unit-2-chapter-2',
             title: 'Large Lists',
             overview: emptyOverview(),
-            video: { title: 'Video: Rendering Only What the User Can See' },
+            video: videoLesson('Video: Rendering Only What the User Can See'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
@@ -361,7 +377,7 @@ export const courseItems: CourseItem[] = [
             id: 'react-performance-patterns-unit-2-chapter-3',
             title: 'Input Responsiveness',
             overview: emptyOverview(),
-            video: { title: 'Video: Keeping Typing and Navigation Smooth' },
+            video: videoLesson('Video: Keeping Typing and Navigation Smooth'),
             quiz: emptyQuiz(),
             assignment: emptyAssignment(),
           },
