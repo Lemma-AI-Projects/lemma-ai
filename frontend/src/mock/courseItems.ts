@@ -44,6 +44,7 @@ interface CourseItem {
   id: string
   icon: LucideIcon
   label: string
+  conversationIds: string[]
   units: CourseUnit[]
 }
 
@@ -66,6 +67,7 @@ export const courseItems: CourseItem[] = [
     id: '1',
     icon: PlayCircle,
     label: 'Linear Algebra — Lecture 12',
+    conversationIds: ['course-conv-1', 'course-conv-2'],
     units: [
       {
         id: 'linear-algebra-lecture-12-unit-1',
@@ -131,6 +133,7 @@ export const courseItems: CourseItem[] = [
     id: '2',
     icon: FileText,
     label: 'Python Data Structures Notes',
+    conversationIds: ['course-conv-3', 'course-conv-4'],
     units: [
       {
         id: 'python-data-structures-notes-unit-1',
@@ -196,6 +199,7 @@ export const courseItems: CourseItem[] = [
     id: '3',
     icon: GraduationCap,
     label: 'Machine Learning Fundamentals',
+    conversationIds: ['course-conv-5', 'course-conv-6'],
     units: [
       {
         id: 'machine-learning-fundamentals-unit-1',
@@ -261,6 +265,7 @@ export const courseItems: CourseItem[] = [
     id: '4',
     icon: PlayCircle,
     label: 'Calculus II — Integration',
+    conversationIds: ['course-conv-7', 'course-conv-8'],
     units: [
       {
         id: 'calculus-ii-integration-unit-1',
@@ -326,6 +331,7 @@ export const courseItems: CourseItem[] = [
     id: '5',
     icon: FileText,
     label: 'React Performance Patterns',
+    conversationIds: ['course-conv-9', 'course-conv-10'],
     units: [
       {
         id: 'react-performance-patterns-unit-1',
