@@ -161,3 +161,66 @@
 *:has(> [data-streamdown="code-block-actions"]) {
   position: static !important;
 }
+
+/* Course sidebar AI markdown spacing knobs. */
+.course-conversation-message-list {
+  --course-ai-font-size: 0.875rem;
+  --course-ai-heading-2-font-size: 1.25rem;
+  --course-ai-heading-2-margin-top: 0px;
+  --course-ai-heading-2-margin-bottom: 8px;
+  --course-ai-heading-3-font-size: 1rem;
+  --course-ai-heading-3-margin-top: 18px;
+  --course-ai-heading-3-margin-bottom: 6px;
+  --course-ai-paragraph-margin-top: 10px;
+  --course-ai-paragraph-margin-bottom: 0px;
+  --course-ai-paragraph-line-height: 18px;
+  --course-ai-list-margin-top: 8px;
+  --course-ai-list-margin-bottom: 0px;
+  --course-ai-list-item-gap: 2px;
+  --course-ai-list-item-line-height: 22px;
+}
+
+.course-conversation-message-list [data-role="assistant"] {
+  font-size: var(--course-ai-font-size);
+}
+
+.course-conversation-message-list
+  [data-role="assistant"]
+  [data-streamdown="heading-2"] {
+  margin-top: var(--course-ai-heading-2-margin-top);
+  margin-bottom: var(--course-ai-heading-2-margin-bottom);
+  font-size: var(--course-ai-heading-2-font-size);
+}
+
+.course-conversation-message-list
+  [data-role="assistant"]
+  [data-streamdown="heading-3"] {
+  margin-top: var(--course-ai-heading-3-margin-top);
+  margin-bottom: var(--course-ai-heading-3-margin-bottom);
+  font-size: var(--course-ai-heading-3-font-size);
+}
+
+.course-conversation-message-list [data-role="assistant"] p {
+  margin-top: var(--course-ai-paragraph-margin-top);
+  margin-bottom: var(--course-ai-paragraph-margin-bottom);
+  line-height: var(--course-ai-paragraph-line-height);
+}
+
+.course-conversation-message-list [data-role="assistant"] p:first-child {
+  margin-top: 0;
+}
+
+.course-conversation-message-list [data-role="assistant"] ul,
+.course-conversation-message-list [data-role="assistant"] ol {
+  margin-top: var(--course-ai-list-margin-top);
+  margin-bottom: var(--course-ai-list-margin-bottom);
+}
+
+.course-conversation-message-list [data-role="assistant"] li {
+  margin-bottom: var(--course-ai-list-item-gap);
+  line-height: var(--course-ai-list-item-line-height);
+}
+
+.course-conversation-message-list [data-role="assistant"] li:last-child {
+  margin-bottom: 0;
+}

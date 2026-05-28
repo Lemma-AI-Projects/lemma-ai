@@ -10,6 +10,7 @@ import { courseConversationMessages } from '@/mock/courseConversationMessages'
 import { courseItems } from '@/mock/courseItems'
 
 const courseConversationListClassName = [
+  'course-conversation-message-list',
   'gap-5 py-4',
   "[&_[data-role='user']]:max-w-[86%]",
   "[&_[data-slot='conversation-text-block']]:rounded-[18px]",
@@ -18,14 +19,6 @@ const courseConversationListClassName = [
   "[&_[data-slot='conversation-text-block']]:text-[14.5px]",
   "[&_[data-slot='conversation-text-block']]:font-normal",
   "[&_[data-slot='conversation-text-block']]:leading-[23px]",
-  "[&_[data-role='assistant']]:text-sm",
-  "[&_[data-role='assistant']_p]:mt-[2px]",
-  "[&_[data-role='assistant']_p]:leading-[18px]",
-  "[&_[data-role='assistant']_ul]:mt-[2px]",
-  "[&_[data-role='assistant']_ol]:mt-[2px]",
-  "[&_[data-role='assistant']_li]:leading-[22px]",
-  "[&_[data-streamdown='heading-2']]:text-xl",
-  "[&_[data-streamdown='heading-3']]:text-base",
 ].join(' ')
 
 function getCourseConversationTurns(conversationId?: string) {
