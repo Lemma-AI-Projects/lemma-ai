@@ -1,9 +1,12 @@
+import { cn } from '@/lib/utils'
 import { ConversationTurn } from './ConversationTurn'
 import type { ConversationTurn as ConversationTurnData } from './types'
 
 export function ConversationMessageList({
+  className,
   turns,
 }: {
+  className?: string
   turns: ConversationTurnData[]
 }) {
   if (!turns.length) {
@@ -13,7 +16,7 @@ export function ConversationMessageList({
   return (
     <ol
       data-slot="conversation-message-list"
-      className="flex flex-col gap-8 py-6"
+      className={cn('flex flex-col gap-8 py-6', className)}
     >
       {turns.map((turn) => (
         <li

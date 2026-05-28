@@ -345,18 +345,23 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
     () => (course ? findCurrentUnitId(course, currentChapterId) : null),
     [course, currentChapterId]
   )
-  const [expandedChapterIds, setExpandedChapterIds] = useState<Set<string>>(
-    () => (currentChapterId ? new Set([currentChapterId]) : new Set())
-  )
-  const visibleExpandedChapterIds = useMemo(() => {
-    const next = new Set(expandedChapterIds)
+  const [chapterOpenOverrides, setChapterOpenOverrides] = useState<
+    Record<string, boolean>
+  >({})
 
-    if (currentChapterId) {
-      next.add(currentChapterId)
-    }
+  const isChapterOpen = (chapterId: string) =>
+    chapterOpenOverrides[chapterId] ?? chapterId === currentChapterId
 
-    return next
-  }, [currentChapterId, expandedChapterIds])
+  const toggleChapterOpen = (chapterId: string) => {
+    setChapterOpenOverrides((current) => {
+      const currentlyOpen = current[chapterId] ?? chapterId === currentChapterId
+
+      return {
+        ...current,
+        [chapterId]: !currentlyOpen,
+      }
+    })
+  }
 
   if (!course) {
     return (
@@ -401,20 +406,8 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
             <CourseChapterSection
               key={chapter.id}
               chapter={chapter}
-              open={visibleExpandedChapterIds.has(chapter.id)}
-              onToggle={() =>
-                setExpandedChapterIds((current) => {
-                  const next = new Set(current)
-
-                  if (next.has(chapter.id)) {
-                    next.delete(chapter.id)
-                  } else {
-                    next.add(chapter.id)
-                  }
-
-                  return next
-                })
-              }
+              open={isChapterOpen(chapter.id)}
+              onToggle={() => toggleChapterOpen(chapter.id)}
             />
           ))}
 
