@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   CalendarDays,
   Ellipsis,
   FolderPlus,
   Home,
   LibraryBig,
-  PanelLeftClose,
+  ListTree,
+  Menu,
   Puzzle,
   SquarePen,
 } from 'lucide-react'
@@ -19,6 +20,58 @@ import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
 import { chatItems } from '@/mock/chatItems'
 import { courseItems } from '@/mock/courseItems'
 import { projectItems } from '@/mock/projectItems'
+
+function SidebarHeader({ children }: { children?: ReactNode }) {
+  return (
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between bg-zinc-100 px-3">
+      <Button variant="ghost" size="icon-sm" aria-label="Home" asChild>
+        <Link to="/">
+          <Home className="size-4" />
+        </Link>
+      </Button>
+      {children}
+    </header>
+  )
+}
+
+function CourseSidebarSwitcher({
+  activeCourseId,
+  navigationSidebarContent,
+}: {
+  activeCourseId: string
+  navigationSidebarContent: ReactNode
+}) {
+  const [showCourseDirectory, setShowCourseDirectory] = useState(true)
+
+  return (
+    <>
+      <SidebarHeader>
+        <Button
+          variant="ghost"
+          aria-label={
+            showCourseDirectory
+              ? 'Show navigation sidebar'
+              : 'Show course directory'
+          }
+          className="size-7 rounded-full border border-zinc-200 p-0 hover:bg-zinc-200/70 hover:text-zinc-900"
+          onClick={() => setShowCourseDirectory((current) => !current)}
+        >
+          {showCourseDirectory ? (
+            <Menu className="size-3.5" />
+          ) : (
+            <ListTree className="size-3.5" />
+          )}
+        </Button>
+      </SidebarHeader>
+
+      {showCourseDirectory ? (
+        <CourseSidebarDirectory key={activeCourseId} courseId={activeCourseId} />
+      ) : (
+        navigationSidebarContent
+      )}
+    </>
+  )
+}
 
 export function AppLayout() {
   const navRef = useRef<HTMLElement>(null)
@@ -41,78 +94,77 @@ export function AppLayout() {
     return () => el.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
+  const navigationSidebarContent = (
+    <>
+      <div className="sticky top-14 z-10 flex flex-col gap-0.5 bg-zinc-100">
+        <SidebarItem icon={SquarePen} label="New chat" to="/" end />
+        <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
+        <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
+        <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
+        <div
+          className={cn(
+            'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',
+            isScrolledFromTop ? 'opacity-100' : 'opacity-0'
+          )}
+        />
+      </div>
+
+      <div className="mt-2 flex flex-col gap-1">
+        <SidebarSection title="Projects">
+          <SidebarItem
+            icon={FolderPlus}
+            label="New Project"
+            onClick={() => setCreateProjectOpen(true)}
+          />
+          {projectItems.slice(0, 3).map((item) => (
+            <SidebarItem
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              to={`/project/${item.id}`}
+            />
+          ))}
+          <SidebarItem icon={Ellipsis} label="More" />
+        </SidebarSection>
+
+        <SidebarSection title="Courses">
+          {courseItems.slice(0, 4).map((item) => (
+            <SidebarItem
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              to={`/course/${item.id}`}
+            />
+          ))}
+          <SidebarItem icon={Ellipsis} label="More" />
+        </SidebarSection>
+
+        <SidebarSection title="Chats" showLine={false}>
+          {chatItems.map((item) => (
+            <SidebarItem
+              key={item.id}
+              label={item.label}
+              to={`/chat/${item.id}`}
+            />
+          ))}
+        </SidebarSection>
+      </div>
+    </>
+  )
+
   return (
     <div className="flex h-screen gap-2 overflow-hidden bg-zinc-100 p-2 text-zinc-950 [--sidebar-width:240px]">
       <aside className="flex h-full w-[var(--sidebar-width)] shrink-0 flex-col">
         <nav ref={navRef} className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto">
-          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between bg-zinc-100 px-3">
-            <Button variant="ghost" size="icon-sm" aria-label="Home" asChild>
-              <Link to="/">
-                <Home className="size-4" />
-              </Link>
-            </Button>
-            <Button variant="ghost" size="icon-sm" aria-label="Collapse sidebar">
-              <PanelLeftClose className="size-4" />
-            </Button>
-          </header>
-
           {activeCourseId ? (
-            <CourseSidebarDirectory key={activeCourseId} courseId={activeCourseId} />
+            <CourseSidebarSwitcher
+              activeCourseId={activeCourseId}
+              navigationSidebarContent={navigationSidebarContent}
+            />
           ) : (
             <>
-              <div className="sticky top-14 z-10 flex flex-col gap-0.5 bg-zinc-100">
-                <SidebarItem icon={SquarePen} label="New chat" to="/" end />
-                <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
-                <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
-                <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
-                <div
-                  className={cn(
-                    'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',
-                    isScrolledFromTop ? 'opacity-100' : 'opacity-0'
-                  )}
-                />
-              </div>
-
-              <div className="mt-2 flex flex-col gap-1">
-                <SidebarSection title="Projects">
-                  <SidebarItem
-                    icon={FolderPlus}
-                    label="New Project"
-                    onClick={() => setCreateProjectOpen(true)}
-                  />
-                  {projectItems.slice(0, 3).map((item) => (
-                    <SidebarItem
-                      key={item.id}
-                      icon={item.icon}
-                      label={item.label}
-                      to={`/project/${item.id}`}
-                    />
-                  ))}
-                  <SidebarItem icon={Ellipsis} label="More" />
-                </SidebarSection>
-
-                <SidebarSection title="Courses">
-                  {courseItems.slice(0, 4).map((item) => (
-                    <SidebarItem
-                      key={item.id}
-                      icon={item.icon}
-                      label={item.label}
-                      to={`/course/${item.id}`}
-                    />
-                  ))}
-                  <SidebarItem icon={Ellipsis} label="More" />
-                </SidebarSection>
-
-                <SidebarSection title="Chats" showLine={false}>
-                  {chatItems.map((item) => (
-                    <SidebarItem
-                      key={item.id}
-                      label={item.label}
-                      to={`/chat/${item.id}`}
-                    />
-                  ))}
-                </SidebarSection>
-              </div>
+              <SidebarHeader />
+              {navigationSidebarContent}
             </>
           )}
 
