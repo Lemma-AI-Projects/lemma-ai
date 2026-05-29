@@ -39,6 +39,7 @@ interface InputToolsMenuPlugin {
 interface InputToolsMenuProps {
   actions?: InputToolsMenuAction[]
   align?: ComponentProps<typeof DropdownMenuPrimitive.Content>['align']
+  alignOffset?: number
   children: ReactNode
   plugins?: InputToolsMenuPlugin[]
   side?: ComponentProps<typeof DropdownMenuPrimitive.Content>['side']
@@ -102,6 +103,7 @@ function createInitialToggleState(toggles: InputToolsMenuToggle[]) {
 export function InputToolsMenu({
   actions = defaultActions,
   align = 'start',
+  alignOffset = 0,
   children,
   plugins = defaultPlugins,
   side = 'top',
@@ -132,6 +134,7 @@ export function InputToolsMenu({
       <DropdownMenuPrimitive.Portal>
         <DropdownMenuPrimitive.Content
           align={align}
+          alignOffset={alignOffset}
           side={side}
           sideOffset={sideOffset}
           className={contentClassName}

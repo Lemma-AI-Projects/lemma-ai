@@ -57,6 +57,7 @@ export function CourseAssistantInput({ className }: { className?: string }) {
           <InputToolsMenu
             toggles={courseInputMenuToggles}
             plugins={courseInputMenuPlugins}
+            alignOffset={-11}
           >
             <CourseAssistantIconButton
               type="button"
