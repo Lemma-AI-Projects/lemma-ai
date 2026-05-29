@@ -1,10 +1,34 @@
 import { useState, type CSSProperties } from 'react'
-import { ArrowUp, Plus } from 'lucide-react'
+import {
+  ArrowUp,
+  BookOpen,
+  Brain,
+  Copy,
+  FileText,
+  Globe,
+  ImagePlus,
+  Layers,
+  LayoutGrid,
+  Lightbulb,
+  ListChecks,
+  Plus,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  InputMenu,
+  InputMenuItem,
+  InputMenuLabel,
+  InputMenuSeparator,
+  InputMenuSub,
+  InputMenuSwitchItem,
+} from '@/components/InputMenu'
 import { CourseAssistantIconButton } from './CourseAssistantIconButton'
 
 export function CourseAssistantInput({ className }: { className?: string }) {
   const [value, setValue] = useState('')
+  const [includeContext, setIncludeContext] = useState(true)
+  const [deepThinking, setDeepThinking] = useState(false)
+  const [webSearch, setWebSearch] = useState(false)
   const hasContent = value.trim().length > 0
 
   return (
@@ -25,13 +49,51 @@ export function CourseAssistantInput({ className }: { className?: string }) {
 
       <div className="flex items-center gap-2 px-2.5 pt-1 pb-2.5">
         <div className="flex items-center gap-1.5">
-          <CourseAssistantIconButton
-            type="button"
-            tone="outline"
-            aria-label="Attach file"
+          <InputMenu
+            alignOffset={-11}
+            trigger={
+              <CourseAssistantIconButton
+                tone="outline"
+                aria-label="Add context and tools"
+              >
+                <Plus className="size-4 text-zinc-500" />
+              </CourseAssistantIconButton>
+            }
           >
-            <Plus className="size-4 text-zinc-500" />
-          </CourseAssistantIconButton>
+            <InputMenuItem icon={ImagePlus} label="Add photos & files" />
+            <InputMenuItem icon={BookOpen} label="Reference chapter" />
+
+            <InputMenuSeparator />
+
+            <InputMenuSwitchItem
+              icon={Layers}
+              label="Include course context"
+              checked={includeContext}
+              onCheckedChange={setIncludeContext}
+            />
+            <InputMenuSwitchItem
+              icon={Brain}
+              label="Deep thinking"
+              checked={deepThinking}
+              onCheckedChange={setDeepThinking}
+            />
+            <InputMenuSwitchItem
+              icon={Globe}
+              label="Web search"
+              checked={webSearch}
+              onCheckedChange={setWebSearch}
+            />
+
+            <InputMenuSeparator />
+
+            <InputMenuSub icon={LayoutGrid} label="Learning tools">
+              <InputMenuLabel>Course tools</InputMenuLabel>
+              <InputMenuItem icon={ListChecks} label="Generate quiz" />
+              <InputMenuItem icon={FileText} label="Summarize section" />
+              <InputMenuItem icon={Copy} label="Make flashcards" />
+              <InputMenuItem icon={Lightbulb} label="Explain concept" />
+            </InputMenuSub>
+          </InputMenu>
         </div>
 
         <CourseAssistantIconButton
