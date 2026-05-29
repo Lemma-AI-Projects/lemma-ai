@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import { ArrowUp, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { CourseAssistantIconButton } from './CourseAssistantIconButton'
 
 export function CourseAssistantInput({ className }: { className?: string }) {
   const [value, setValue] = useState('')
@@ -10,7 +10,7 @@ export function CourseAssistantInput({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex flex-col rounded-[22px] border border-zinc-200 bg-white',
+        'flex flex-col rounded-[20px] border border-zinc-200 bg-white',
         className
       )}
     >
@@ -23,34 +23,31 @@ export function CourseAssistantInput({ className }: { className?: string }) {
         style={{ fieldSizing: 'content' } as CSSProperties}
       />
 
-      <div className="flex items-center gap-2 px-3.5 pt-1 pb-3">
+      <div className="flex items-center gap-2 px-2.5 pt-1 pb-2.5">
         <div className="flex items-center gap-1.5">
-          <Button
+          <CourseAssistantIconButton
             type="button"
-            variant="outline"
-            size="icon-sm"
-            className="rounded-full border-zinc-200"
+            tone="outline"
             aria-label="Attach file"
           >
             <Plus className="size-4 text-zinc-500" />
-          </Button>
+          </CourseAssistantIconButton>
         </div>
 
-        <Button
+        <CourseAssistantIconButton
           type="button"
-          variant="default"
-          size="icon-sm"
+          tone="send"
           disabled={!hasContent}
           className={cn(
-            'ml-auto rounded-full transition-colors',
+            'ml-auto',
             hasContent
-              ? 'bg-zinc-900 text-white hover:bg-zinc-800'
+              ? 'bg-zinc-900 hover:bg-zinc-800'
               : 'cursor-default bg-zinc-200 text-zinc-400'
           )}
           aria-label="Send message"
         >
           <ArrowUp className="size-4" />
-        </Button>
+        </CourseAssistantIconButton>
       </div>
     </div>
   )
