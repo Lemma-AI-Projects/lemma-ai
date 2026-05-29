@@ -259,4 +259,74 @@ Treat \`memo\`, \`useMemo\`, and \`useCallback\` as performance tools, not defau
       date: '2026-05-16T17:04:25',
     },
   ],
+  'course-conv-11': [
+    {
+      role: 'user',
+      message:
+        'I can compute a confidence interval, but I want a better intuition for what it means.',
+      date: '2026-05-17T09:12:00',
+    },
+    {
+      role: 'assistant',
+      message: `## Confidence interval intuition
+
+A confidence interval is a range produced by a method that is reliable over repeated sampling.
+
+It does **not** mean there is a 95% chance this specific fixed parameter is inside the interval. It means the interval-building process would capture the true value about 95% of the time across many repeated samples.
+
+### Practical reading
+
+- Wider intervals mean more uncertainty
+- More data usually narrows the interval
+- Higher confidence usually widens the interval`,
+      date: '2026-05-17T09:12:27',
+    },
+  ],
+  'course-conv-12': [
+    {
+      role: 'user',
+      message:
+        'How do I quickly tell whether a database table needs normalization?',
+      date: '2026-05-17T10:35:00',
+    },
+    {
+      role: 'assistant',
+      message: `## Normalization quick check
+
+Look for repeated facts that could become inconsistent.
+
+Common warning signs:
+
+- The same customer name appears in many order rows
+- Updating one fact requires editing multiple rows
+- Deleting one row accidentally removes unrelated information
+
+If one row is trying to describe two different entities, split the entities into separate tables and connect them with keys.`,
+      date: '2026-05-17T10:35:31',
+    },
+  ],
+  'course-conv-13': [
+    {
+      role: 'user',
+      message:
+        'When I look at an activation funnel, what should I inspect before jumping to solutions?',
+      date: '2026-05-17T14:08:00',
+    },
+    {
+      role: 'assistant',
+      message: `## Funnel drop-off reading
+
+Start with the biggest absolute loss, not only the biggest percentage drop.
+
+Then segment the funnel:
+
+- New vs returning users
+- Acquisition channel
+- Device or platform
+- User intent or plan type
+
+The strongest product insight usually comes from asking **who drops off, where, and under what context** before proposing UI changes.`,
+      date: '2026-05-17T14:08:29',
+    },
+  ],
 }

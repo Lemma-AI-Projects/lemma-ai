@@ -37,4 +37,16 @@ export const projectSources: Record<string, ProjectSource[]> = {
     { id: 's5-1', fileName: '路演Pitch.pptx', addedDate: '2025-06-10' },
     { id: 's5-2', fileName: '财务模型.xlsx', addedDate: '2025-06-02' },
   ],
+  '6': [
+    { id: 's6-1', fileName: 'probability-review.pdf', addedDate: '2025-11-16' },
+    { id: 's6-2', fileName: 'hypothesis-testing-notes.md', addedDate: '2025-11-02' },
+  ],
+  '7': [
+    { id: 's7-1', fileName: 'sql-normalization-guide.pdf', addedDate: '2025-10-28' },
+    { id: 's7-2', fileName: 'query-plan-examples.sql', addedDate: '2025-10-14' },
+  ],
+  '8': [
+    { id: 's8-1', fileName: 'activation-metrics.xlsx', addedDate: '2025-09-22' },
+    { id: 's8-2', fileName: 'experiment-readout.pptx', addedDate: '2025-09-09' },
+  ],
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { ChevronRight, CircleCheckBig } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -14,15 +14,6 @@ interface CourseAggregateProgress {
   total: number
   percent: number
   status: CourseProgressStatus
-}
-
-function stripOutlinePrefix(title: string): string {
-  const stripped = title
-    .replace(/^(Unit|Chapter)\s+\d+\s*[:：]\s*/i, '')
-    .replace(/^第[\d一二三四五六七八九十百千万两]+(单元|章节|章)\s*[:：、.-]?\s*/, '')
-    .trim()
-
-  return stripped || title
 }
 
 function findCurrentChapterId(course: Course, hash: string): string | null {
@@ -225,14 +216,6 @@ function CourseUnitSection({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number | undefined>(undefined)
-
-  useEffect(() => {
-    if (contentRef.current) {
-      setHeight(contentRef.current.scrollHeight)
-    }
-  }, [children, open])
 
   return (
     <div className="flex flex-col">
@@ -259,12 +242,16 @@ function CourseUnitSection({
       </button>
 
       <div
-        className="overflow-hidden transition-[max-height] duration-200 ease-in-out"
-        style={{ maxHeight: open ? height ?? 'none' : 0 }}
+        className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-in-out',
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        )}
       >
-        <div ref={contentRef} className="relative flex flex-col gap-0.5 pl-7">
-          <div className="absolute top-0 bottom-0 left-[18px] w-px bg-zinc-300" />
-          {children}
+        <div className="overflow-hidden">
+          <div className="relative flex flex-col gap-0.5 pl-7">
+            <div className="absolute top-0 bottom-0 left-[18px] w-px bg-zinc-300" />
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -283,7 +270,7 @@ function CourseChapterSection({
   const progress = getChapterProgress(chapter)
 
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col">
       <button
         type="button"
         onClick={onToggle}
@@ -296,7 +283,7 @@ function CourseChapterSection({
           />
         </span>
         <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
-          {stripOutlinePrefix(chapter.title)}
+          {chapter.title}
         </span>
         <ChevronRight
           className={cn(
@@ -306,30 +293,37 @@ function CourseChapterSection({
         />
       </button>
 
-      {open && (
-        <div className="flex flex-col gap-0.5">
-          <CourseDirectoryMetaLink
-            status={chapter.overview.status}
-            label="Chapter overview"
-            href={`#${chapter.id}-overview`}
-          />
-          <CourseDirectoryMetaLink
-            status={chapter.video.status}
-            label={chapter.video.title}
-            href={`#${chapter.id}-video`}
-          />
-          <CourseDirectoryMetaLink
-            status={chapter.quiz.status}
-            label="Quiz"
-            href={`#${chapter.id}-quiz`}
-          />
-          <CourseDirectoryMetaLink
-            status={chapter.assignment.status}
-            label="Assignment"
-            href={`#${chapter.id}-assignment`}
-          />
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-200 ease-in-out',
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-0.5">
+            <CourseDirectoryMetaLink
+              status={chapter.overview.status}
+              label="Chapter overview"
+              href={`#${chapter.id}-overview`}
+            />
+            <CourseDirectoryMetaLink
+              status={chapter.video.status}
+              label={chapter.video.title}
+              href={`#${chapter.id}-video`}
+            />
+            <CourseDirectoryMetaLink
+              status={chapter.quiz.status}
+              label="Quiz"
+              href={`#${chapter.id}-quiz`}
+            />
+            <CourseDirectoryMetaLink
+              status={chapter.assignment.status}
+              label="Assignment"
+              href={`#${chapter.id}-assignment`}
+            />
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -392,7 +386,7 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
       {course.units.map((unit) => (
         <CourseUnitSection
           key={`${unit.id}-${unit.id === currentUnitId ? 'current' : 'idle'}`}
-          title={stripOutlinePrefix(unit.title)}
+          title={unit.title}
           progress={getUnitProgress(unit)}
           defaultOpen={unit.id === currentUnitId}
         >

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   CalendarDays,
-  Ellipsis,
   FolderPlus,
   Home,
   LibraryBig,
@@ -14,6 +13,7 @@ import { Link, Outlet, useMatch } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { SidebarItem } from '@/components/SidebarItem'
+import { SidebarMoreMenu } from '@/components/SidebarMoreMenu'
 import { SidebarSection } from '@/components/SidebarSection'
 import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
@@ -79,6 +79,10 @@ export function AppLayout() {
   const [isScrolledFromTop, setIsScrolledFromTop] = useState(false)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const activeCourseId = courseMatch?.params.id
+  const visibleProjects = projectItems.slice(0, 3)
+  const moreProjects = projectItems.slice(3)
+  const visibleCourses = courseItems.slice(0, 4)
+  const moreCourses = courseItems.slice(4)
 
   const handleScroll = useCallback(() => {
     const el = navRef.current
@@ -116,7 +120,7 @@ export function AppLayout() {
             label="New Project"
             onClick={() => setCreateProjectOpen(true)}
           />
-          {projectItems.slice(0, 3).map((item) => (
+          {visibleProjects.map((item) => (
             <SidebarItem
               key={item.id}
               icon={item.icon}
@@ -124,11 +128,14 @@ export function AppLayout() {
               to={`/project/${item.id}`}
             />
           ))}
-          <SidebarItem icon={Ellipsis} label="More" />
+          <SidebarMoreMenu
+            items={moreProjects}
+            getHref={(item) => `/project/${item.id}`}
+          />
         </SidebarSection>
 
         <SidebarSection title="Courses">
-          {courseItems.slice(0, 4).map((item) => (
+          {visibleCourses.map((item) => (
             <SidebarItem
               key={item.id}
               icon={item.icon}
@@ -136,7 +143,10 @@ export function AppLayout() {
               to={`/course/${item.id}`}
             />
           ))}
-          <SidebarItem icon={Ellipsis} label="More" />
+          <SidebarMoreMenu
+            items={moreCourses}
+            getHref={(item) => `/course/${item.id}`}
+          />
         </SidebarSection>
 
         <SidebarSection title="Chats" showLine={false}>

@@ -393,4 +393,103 @@ export const courseItems: CourseItem[] = [
       },
     ],
   },
+  {
+    id: '6',
+    icon: GraduationCap,
+    label: 'Statistics Essentials',
+    conversationIds: ['course-conv-11'],
+    units: [
+      {
+        id: 'statistics-essentials-unit-1',
+        title: 'Probability and Inference',
+        overview: emptyOverview('completed'),
+        chapters: [
+          {
+            id: 'statistics-essentials-unit-1-chapter-1',
+            title: 'Random Variables',
+            overview: emptyOverview('completed'),
+            video: videoLesson('Video: Mapping Outcomes to Numbers', 'completed'),
+            quiz: emptyQuiz('in-progress'),
+            assignment: emptyAssignment(),
+          },
+          {
+            id: 'statistics-essentials-unit-1-chapter-2',
+            title: 'Confidence Intervals',
+            overview: emptyOverview(),
+            video: videoLesson('Video: Estimating with Uncertainty'),
+            quiz: emptyQuiz(),
+            assignment: emptyAssignment(),
+          },
+        ],
+        quiz: emptyQuiz(),
+        assignment: emptyAssignment(),
+      },
+    ],
+  },
+  {
+    id: '7',
+    icon: FileText,
+    label: 'Database Systems Notes',
+    conversationIds: ['course-conv-12'],
+    units: [
+      {
+        id: 'database-systems-notes-unit-1',
+        title: 'Relational Modeling',
+        overview: emptyOverview(),
+        chapters: [
+          {
+            id: 'database-systems-notes-unit-1-chapter-1',
+            title: 'Keys and Relationships',
+            overview: emptyOverview(),
+            video: videoLesson('Video: Connecting Tables Without Duplication'),
+            quiz: emptyQuiz(),
+            assignment: emptyAssignment(),
+          },
+          {
+            id: 'database-systems-notes-unit-1-chapter-2',
+            title: 'Normalization',
+            overview: emptyOverview(),
+            video: videoLesson('Video: Reducing Update Anomalies'),
+            quiz: emptyQuiz(),
+            assignment: emptyAssignment(),
+          },
+        ],
+        quiz: emptyQuiz(),
+        assignment: emptyAssignment(),
+      },
+    ],
+  },
+  {
+    id: '8',
+    icon: PlayCircle,
+    label: 'Product Analytics Workshop',
+    conversationIds: ['course-conv-13'],
+    units: [
+      {
+        id: 'product-analytics-workshop-unit-1',
+        title: 'Funnels and Experiments',
+        overview: emptyOverview('completed'),
+        chapters: [
+          {
+            id: 'product-analytics-workshop-unit-1-chapter-1',
+            title: 'Activation Funnels',
+            overview: emptyOverview('completed'),
+            video: videoLesson('Video: Finding Drop-off in Onboarding', 'completed'),
+            quiz: emptyQuiz('completed'),
+            assignment: emptyAssignment('completed'),
+          },
+          {
+            id: 'product-analytics-workshop-unit-1-chapter-2',
+            title: 'A/B Test Readouts',
+            overview: emptyOverview('completed'),
+            video: videoLesson('Video: Reading Lift, Power, and Guardrails', 'in-progress'),
+            quiz: emptyQuiz(),
+            assignment: emptyAssignment(),
+          },
+        ],
+        quiz: emptyQuiz('in-progress'),
+        assignment: emptyAssignment(),
+      },
+    ],
+  },
 ]

@@ -44,4 +44,16 @@ export const courseConversationItems: CourseConversationItem[] = [
     id: 'course-conv-10',
     title: 'Memoization tradeoffs',
   },
+  {
+    id: 'course-conv-11',
+    title: 'Confidence intervals intuition',
+  },
+  {
+    id: 'course-conv-12',
+    title: 'Normalization quick check',
+  },
+  {
+    id: 'course-conv-13',
+    title: 'Reading funnel drop-off',
+  },
 ]
