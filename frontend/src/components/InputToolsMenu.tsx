@@ -88,10 +88,10 @@ const defaultPlugins: InputToolsMenuPlugin[] = [
 ]
 
 const itemClassName =
-  'flex h-8 w-full cursor-default items-center gap-2 rounded-[8px] px-2 text-left text-[13px] text-zinc-800 outline-none transition-colors select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-zinc-100 data-[state=open]:bg-zinc-100'
+  'flex h-[27px] w-full cursor-default items-center gap-1.5 rounded-[7px] px-1.5 text-left text-[12.5px] text-zinc-800 outline-none transition-colors select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-zinc-100 data-[state=open]:bg-zinc-100'
 
 const contentClassName =
-  'z-50 w-[236px] overflow-hidden rounded-[14px] border border-zinc-200 bg-white p-1.5 text-zinc-900 shadow-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2'
+  'z-50 w-[216px] overflow-hidden rounded-[12px] border border-zinc-200 bg-white p-1 text-zinc-900 shadow-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2'
 
 function createInitialToggleState(toggles: InputToolsMenuToggle[]) {
   return toggles.reduce<Record<string, boolean>>((state, toggle) => {
@@ -107,7 +107,7 @@ export function InputToolsMenu({
   children,
   plugins = defaultPlugins,
   side = 'top',
-  sideOffset = 8,
+  sideOffset = 6,
   toggles = defaultToggles,
 }: InputToolsMenuProps) {
   const [toggleState, setToggleState] = useState(() =>
@@ -145,13 +145,13 @@ export function InputToolsMenu({
               className={itemClassName}
               onSelect={action.onSelect}
             >
-              <action.Icon className="size-[15px] shrink-0 text-zinc-500" />
+              <action.Icon className="size-3.5 shrink-0 text-zinc-500" />
               <span className="truncate">{action.label}</span>
             </DropdownMenuPrimitive.Item>
           ))}
 
           {toggles.length > 0 && (
-            <DropdownMenuPrimitive.Separator className="mx-2 my-1.5 h-px bg-zinc-200" />
+            <DropdownMenuPrimitive.Separator className="mx-1.5 my-0.5 h-px bg-zinc-200" />
           )}
 
           {toggles.map((toggle) => (
@@ -163,7 +163,7 @@ export function InputToolsMenu({
                 updateToggle(toggle)
               }}
             >
-              <toggle.Icon className="size-[15px] shrink-0 text-zinc-500" />
+              <toggle.Icon className="size-3.5 shrink-0 text-zinc-500" />
               <span className="min-w-0 flex-1 truncate">{toggle.label}</span>
               <Switch
                 checked={toggleState[toggle.id]}
@@ -177,20 +177,20 @@ export function InputToolsMenu({
 
           {plugins.length > 0 && (
             <>
-              <DropdownMenuPrimitive.Separator className="mx-2 my-1.5 h-px bg-zinc-200" />
+              <DropdownMenuPrimitive.Separator className="mx-1.5 my-0.5 h-px bg-zinc-200" />
               <DropdownMenuPrimitive.Sub>
                 <DropdownMenuPrimitive.SubTrigger className={itemClassName}>
-                  <Blocks className="size-[15px] shrink-0 text-zinc-500" />
+                  <Blocks className="size-3.5 shrink-0 text-zinc-500" />
                   <span className="min-w-0 flex-1 truncate">Plugins</span>
-                  <ChevronRight className="size-3.5 shrink-0 text-zinc-400" />
+                  <ChevronRight className="size-3 shrink-0 text-zinc-400" />
                 </DropdownMenuPrimitive.SubTrigger>
 
                 <DropdownMenuPrimitive.Portal>
                   <DropdownMenuPrimitive.SubContent
-                    sideOffset={6}
-                    className={cn(contentClassName, 'w-[216px]')}
+                    sideOffset={5}
+                    className={cn(contentClassName, 'w-[200px]')}
                   >
-                    <div className="px-2 pt-1 pb-1.5 text-[12px] font-medium text-zinc-400">
+                    <div className="px-1.5 pt-0.5 pb-0.5 text-[11.5px] font-medium text-zinc-400">
                       {plugins.length} installed plugins
                     </div>
                     {plugins.map((plugin) => (
@@ -199,7 +199,7 @@ export function InputToolsMenu({
                         className={itemClassName}
                         onSelect={plugin.onSelect}
                       >
-                        <plugin.Icon className="size-[15px] shrink-0 text-zinc-500" />
+                        <plugin.Icon className="size-3.5 shrink-0 text-zinc-500" />
                         <span className="truncate">{plugin.label}</span>
                       </DropdownMenuPrimitive.Item>
                     ))}
