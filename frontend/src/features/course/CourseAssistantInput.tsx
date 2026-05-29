@@ -1,7 +1,36 @@
 import { useState, type CSSProperties } from 'react'
-import { ArrowUp, Plus } from 'lucide-react'
+import { ArrowUp, ListChecks, Plus, Sparkles, Target } from 'lucide-react'
+import { InputToolsMenu } from '@/components/InputToolsMenu'
 import { cn } from '@/lib/utils'
+import { pluginItems } from '@/mock/pluginItems'
 import { CourseAssistantIconButton } from './CourseAssistantIconButton'
+
+const courseInputMenuToggles = [
+  {
+    Icon: Sparkles,
+    defaultChecked: true,
+    id: 'course-context',
+    label: 'Include course context',
+  },
+  {
+    Icon: ListChecks,
+    id: 'plan-mode',
+    label: 'Plan mode',
+  },
+  {
+    Icon: Target,
+    id: 'track-goal',
+    label: 'Track goal',
+  },
+]
+
+const courseInputMenuPlugins = pluginItems
+  .filter((plugin) => plugin.installed)
+  .map((plugin) => ({
+    Icon: plugin.Icon,
+    id: plugin.id,
+    label: plugin.title,
+  }))
 
 export function CourseAssistantInput({ className }: { className?: string }) {
   const [value, setValue] = useState('')
@@ -25,13 +54,18 @@ export function CourseAssistantInput({ className }: { className?: string }) {
 
       <div className="flex items-center gap-2 px-2.5 pt-1 pb-2.5">
         <div className="flex items-center gap-1.5">
-          <CourseAssistantIconButton
-            type="button"
-            tone="outline"
-            aria-label="Attach file"
+          <InputToolsMenu
+            toggles={courseInputMenuToggles}
+            plugins={courseInputMenuPlugins}
           >
-            <Plus className="size-4 text-zinc-500" />
-          </CourseAssistantIconButton>
+            <CourseAssistantIconButton
+              type="button"
+              tone="outline"
+              aria-label="Open input tools"
+            >
+              <Plus className="size-4 text-zinc-500" />
+            </CourseAssistantIconButton>
+          </InputToolsMenu>
         </div>
 
         <CourseAssistantIconButton
