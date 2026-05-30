@@ -1,28 +1,28 @@
 import { FileText, GraduationCap, PlayCircle, type LucideIcon } from 'lucide-react'
 
-type CourseProgressStatus = 'not-started' | 'in-progress' | 'completed'
+export type CourseProgressStatus = 'not-started' | 'in-progress' | 'completed'
 
-interface CourseOverview {
+export interface CourseOverview {
   blocks: string[]
   status: CourseProgressStatus
 }
 
-interface CourseQuiz {
+export interface CourseQuiz {
   questions: string[]
   status: CourseProgressStatus
 }
 
-interface CourseAssignment {
+export interface CourseAssignment {
   prompts: string[]
   status: CourseProgressStatus
 }
 
-interface CourseVideoLesson {
+export interface CourseVideoLesson {
   title: string
   status: CourseProgressStatus
 }
 
-interface CourseChapter {
+export interface CourseChapter {
   id: string
   title: string
   overview: CourseOverview
@@ -31,7 +31,7 @@ interface CourseChapter {
   assignment: CourseAssignment
 }
 
-interface CourseUnit {
+export interface CourseUnit {
   id: string
   title: string
   overview: CourseOverview
@@ -40,7 +40,7 @@ interface CourseUnit {
   assignment: CourseAssignment
 }
 
-interface CourseItem {
+export interface CourseItem {
   id: string
   icon: LucideIcon
   label: string
