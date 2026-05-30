@@ -1,12 +1,11 @@
+import type { ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
-interface UserAvatarProps {
+interface UserAvatarProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   name: string
   color?: string
   showBadge?: boolean
   size?: number
-  onClick?: () => void
-  className?: string
 }
 
 export function UserAvatar({
@@ -14,18 +13,19 @@ export function UserAvatar({
   color = '#FF8F50',
   showBadge = false,
   size = 32,
-  onClick,
   className,
+  style,
+  ...props
 }: UserAvatarProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
       className={cn(
         'relative flex cursor-pointer items-center justify-center',
         className
       )}
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, ...style }}
+      {...props}
     >
       <div
         className="flex items-center justify-center rounded-full"

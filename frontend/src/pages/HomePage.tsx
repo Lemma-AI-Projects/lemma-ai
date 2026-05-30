@@ -1,9 +1,9 @@
 import { CalendarCheck2, CalendarClock, Languages } from 'lucide-react'
 import { ActionChip } from '@/components/ActionChip'
 import { CircularProgress } from '@/components/CircularProgress'
-import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { ChatInput } from '@/features/home/ChatInput'
+import { HomeUserMenu } from '@/features/home/HomeUserMenu'
 import { suggestions } from '@/mock/homeSuggestions'
 
 export function HomePage() {
@@ -44,12 +44,7 @@ export function HomePage() {
           />
           <TaskIcon className="size-[18px]" />
         </Button>
-        <UserAvatar
-          name="Alex"
-          showBadge
-          onClick={() => console.log('avatar clicked')}
-          className="ms-0.5"
-        />
+        <HomeUserMenu />
       </div>
       <div className="flex h-full flex-col items-center justify-center px-6">
         <div className="w-full max-w-2xl space-y-6">

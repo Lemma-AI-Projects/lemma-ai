@@ -107,10 +107,13 @@ export function ActionMenuItem({
 
 interface ActionMenuSubProps {
   children: ReactNode
-  icon: LucideIcon
-  label: string
+  contentClassName?: string
+  icon?: LucideIcon
+  label?: string
   onClick?: ComponentProps<typeof DropdownMenuPrimitive.SubTrigger>['onClick']
   sideOffset?: number
+  trigger?: ReactNode
+  triggerClassName?: string
   width?: ActionMenuWidth
 }
 
@@ -118,25 +121,32 @@ export function ActionMenuSub({
   children,
   icon: Icon,
   label,
+  contentClassName,
   onClick,
   sideOffset = 8,
+  trigger,
+  triggerClassName,
   width = 'md',
 }: ActionMenuSubProps) {
   return (
     <DropdownMenuPrimitive.Sub>
       <DropdownMenuPrimitive.SubTrigger
         onClick={onClick}
-        className={actionMenuItemClassName}
+        className={cn(actionMenuItemClassName, triggerClassName)}
       >
-        <Icon className="ml-0.5 size-[17px] shrink-0 text-inherit" />
-        <span>{label}</span>
-        <ChevronRight className="ml-auto translate-x-0.5 size-[19px] text-inherit" />
+        {trigger ?? (
+          <>
+            {Icon && <Icon className="ml-0.5 size-[17px] shrink-0 text-inherit" />}
+            {label && <span>{label}</span>}
+            <ChevronRight className="ml-auto translate-x-0.5 size-[19px] text-inherit" />
+          </>
+        )}
       </DropdownMenuPrimitive.SubTrigger>
 
       <DropdownMenuPrimitive.Portal>
         <DropdownMenuPrimitive.SubContent
           sideOffset={sideOffset}
-          className={getActionMenuContentClassName(width)}
+          className={getActionMenuContentClassName(width, contentClassName)}
         >
           {children}
         </DropdownMenuPrimitive.SubContent>
