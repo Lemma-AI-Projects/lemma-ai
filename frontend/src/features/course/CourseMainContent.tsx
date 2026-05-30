@@ -1,9 +1,9 @@
 import { useMemo, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
-import { CourseAssignmentView } from '@/features/course/CourseAssignmentView'
-import { CourseOverviewView } from '@/features/course/CourseOverviewView'
-import { CourseQuizView } from '@/features/course/CourseQuizView'
-import { CourseVideoView } from '@/features/course/CourseVideoView'
+import { CourseAssignmentView } from '@/features/course/assignment/CourseAssignmentView'
+import { CourseOverviewView } from '@/features/course/overview/CourseOverviewView'
+import { CourseQuizView } from '@/features/course/quiz/CourseQuizView'
+import { CourseVideoView } from '@/features/course/video/CourseVideoView'
 import type {
   CourseAssignment,
   CourseChapter,

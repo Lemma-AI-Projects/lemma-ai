@@ -1,7 +1,14 @@
 import { useState } from 'react'
-import { ArrowUp, Paperclip, Puzzle } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
+import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+
+// Project input plus button left offset. Negative margin moves it further left.
+const PROJECT_PLUS_LEFT_OFFSET_CLASS = 'ml-[-5px]'
+
+// Project input plus button bottom offset. Negative margin moves it further down.
+const PROJECT_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-8px]'
 
 export function ProjectInput({ className }: { className?: string }) {
   const [value, setValue] = useState('')
@@ -24,26 +31,17 @@ export function ProjectInput({ className }: { className?: string }) {
       />
 
       <div className="flex items-center gap-2 px-4 pt-1 pb-4">
-        <div className="mb-[-12px] ml-[-5px] flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="rounded-full border-zinc-200"
-            aria-label="Attach file"
-          >
-            <Paperclip className="size-4 text-zinc-500" />
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-full border-zinc-200 text-zinc-600"
-          >
-            <Puzzle className="size-3.5" />
-            Tools
-          </Button>
+        <div
+          className={cn(
+            PROJECT_PLUS_BOTTOM_OFFSET_CLASS,
+            PROJECT_PLUS_LEFT_OFFSET_CLASS,
+            'flex items-center gap-2'
+          )}
+        >
+          <InputAddMenu
+            contextLabel="Include project context"
+            referenceLabel="Reference project files"
+          />
         </div>
 
         <div className="mb-[-4px] ml-auto mr-[-4px]">
@@ -60,7 +58,7 @@ export function ProjectInput({ className }: { className?: string }) {
             )}
             aria-label="Send message"
           >
-            <ArrowUp className="size-4" />
+            <ArrowUp className="size-[18px]" />
           </Button>
         </div>
       </div>
