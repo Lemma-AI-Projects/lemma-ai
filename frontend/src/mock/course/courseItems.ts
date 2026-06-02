@@ -1,6 +1,7 @@
 import { FileText, GraduationCap, PlayCircle, type LucideIcon } from 'lucide-react'
 import { courseOverviewContent } from './courseOverviewContent'
 import { courseQuizContent, type CourseQuizCopy } from './courseQuizContent'
+import { courseQuizQuestionsContent } from './courseQuizQuestionsContent'
 
 export type CourseProgressStatus = 'not-started' | 'in-progress' | 'completed'
 
@@ -9,8 +10,28 @@ export interface CourseOverview {
   status: CourseProgressStatus
 }
 
+export type CourseQuizQuestionType =
+  | 'single-choice'
+  | 'multiple-choice'
+  | 'fill-blank'
+  | 'short-answer'
+
+export interface CourseQuizQuestion {
+  id: string
+  type: CourseQuizQuestionType
+  stem?: string
+  options?: CourseQuizQuestionOption[]
+  correctAnswer?: string
+}
+
+export interface CourseQuizQuestionOption {
+  id: string
+  label: string
+  text: string
+}
+
 export interface CourseQuiz {
-  questions: string[]
+  questions: CourseQuizQuestion[]
   copy: CourseQuizCopy
   status: CourseProgressStatus
 }
@@ -59,7 +80,7 @@ const courseQuiz = (
   id: string,
   status: CourseProgressStatus = 'not-started'
 ): CourseQuiz => ({
-  questions: [],
+  questions: courseQuizQuestionsContent[id] ?? [],
   copy:
     courseQuizContent[id] ??
     courseQuizContent['linear-algebra-lecture-12-unit-1'],
