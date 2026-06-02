@@ -44,5 +44,12 @@ export const courseQuizQuestionsContent: Record<string, CourseQuizQuestion[]> = 
       ],
       correctAnswer: 'AD',
     },
+    {
+      id: 'linear-algebra-lecture-12-unit-1-chapter-1-q3',
+      order: 3,
+      type: 'fill-blank',
+      stem: '某校篮球队的成员是来自学校高一 10 个班的 12 位同学，其中高一（3）班、高一（7）班各出 2 人，其余班级各出 1 人。从这 12 人中要选 6 人作为主力队员，则这 6 名主力队员来自不同的班级的概率为________．',
+      correctAnswer: '19/33',
+    },
   ],
 }

@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
-  BottomActionBar,
-  BottomActionBarButton,
-} from '@/components/BottomActionBar'
-import {
   RadioGroup,
   RadioGroupItem,
 } from '@/components/ui/radio-group'
+import { CourseQuizQuestionLayout } from '@/features/course/quiz/CourseQuizQuestionLayout'
 import type { CourseQuizQuestionViewProps } from '@/features/course/quiz/courseQuizQuestionViewMap'
 import { cn } from '@/lib/utils'
 
@@ -18,17 +15,6 @@ interface CourseQuizChoiceQuestionViewProps
   mode: CourseQuizChoiceMode
   title: string
 }
-
-// 题目标题的大小、字重和位置由这里控制。
-const questionTitleClassName =
-  'text-[22px] font-semibold leading-7 tracking-tight text-zinc-950'
-
-// 题面文字的字重单独由这里控制。
-const questionStemWeightClassName = 'font-normal'
-const questionStemClassName = cn(
-  'mt-6 text-[17px] leading-8 text-zinc-900',
-  questionStemWeightClassName
-)
 
 const answerOptionsWrapperClassName = 'mt-7'
 const answerOptionsClassName = 'grid gap-2.5'
@@ -52,9 +38,6 @@ const answerOptionCheckboxClassName =
 const answerOptionCheckboxSelectedClassName = 'border-zinc-900 bg-zinc-900'
 const answerOptionTextClassName =
   'flex min-w-0 items-baseline gap-2 text-[16px] leading-7 text-zinc-900'
-// 底部题目操作区在本页的上移距离和内容对齐由这里控制。
-const questionActionFooterOffsetClassName = 'bottom-4'
-const questionActionContentAlignClassName = 'pl-5'
 
 function measureOptionTextWidth(text: string, font: string): number {
   const canvas = document.createElement('canvas')
@@ -85,6 +68,7 @@ function CourseQuizChoiceOptionText({
 
 export function CourseQuizChoiceQuestionView({
   content,
+  currentContentId,
   mode,
   onNextQuestion,
   onPreviousQuestion,
@@ -174,135 +158,98 @@ export function CourseQuizChoiceQuestionView({
     useTwoColumnOptions && answerOptionsTwoColumnClassName
   )
   const hasSelectedOption = selectedOptionIds.length > 0
-  const isLastQuestion = questionIndex >= content.data.questions.length - 1
 
   return (
-    <div className="relative h-full min-h-0 overflow-hidden bg-zinc-50">
-      <div className="scrollbar-fade h-full min-h-0 overflow-y-auto px-10 pb-24 pt-28">
-        <article className="mx-auto w-full max-w-[650px] pl-5">
-          <h1 className={questionTitleClassName}>
-            {question?.order ?? questionIndex + 1}.{title}
-          </h1>
-          {question?.stem ? (
-            <p className={questionStemClassName}>{question.stem}</p>
-          ) : null}
-          {options.length ? (
+    <CourseQuizQuestionLayout
+      canContinue={hasSelectedOption}
+      content={content}
+      currentContentId={currentContentId}
+      onNextQuestion={onNextQuestion}
+      onPreviousQuestion={onPreviousQuestion}
+      question={question}
+      questionIndex={questionIndex}
+      title={title}
+    >
+      {options.length ? (
+        <div
+          ref={answerOptionsWrapperRef}
+          className={answerOptionsWrapperClassName}
+        >
+          {mode === 'single' ? (
+            <RadioGroup
+              value={selectedOptionIds[0]}
+              onValueChange={(optionId) => setSelectedOptionIds([optionId])}
+              className={optionListClassName}
+              aria-label="选择答案"
+            >
+              {options.map((option) => {
+                const optionElementId = `${questionId}-${option.id}`
+                const isSelected = selectedOptionIdSet.has(option.id)
+
+                return (
+                  <label
+                    key={option.id}
+                    htmlFor={optionElementId}
+                    className={cn(
+                      answerOptionCardClassName,
+                      isSelected && answerOptionCardSelectedClassName
+                    )}
+                  >
+                    <RadioGroupItem
+                      id={optionElementId}
+                      value={option.id}
+                      className={answerOptionRadioClassName}
+                    />
+                    <CourseQuizChoiceOptionText
+                      label={option.label}
+                      text={option.text}
+                    />
+                  </label>
+                )
+              })}
+            </RadioGroup>
+          ) : (
             <div
-              ref={answerOptionsWrapperRef}
-              className={answerOptionsWrapperClassName}
+              role="group"
+              className={optionListClassName}
+              aria-label="选择答案"
             >
-              {mode === 'single' ? (
-                <RadioGroup
-                  value={selectedOptionIds[0]}
-                  onValueChange={(optionId) => setSelectedOptionIds([optionId])}
-                  className={optionListClassName}
-                  aria-label="选择答案"
-                >
-                  {options.map((option) => {
-                    const optionElementId = `${questionId}-${option.id}`
-                    const isSelected = selectedOptionIdSet.has(option.id)
+              {options.map((option) => {
+                const isSelected = selectedOptionIdSet.has(option.id)
 
-                    return (
-                      <label
-                        key={option.id}
-                        htmlFor={optionElementId}
-                        className={cn(
-                          answerOptionCardClassName,
-                          isSelected && answerOptionCardSelectedClassName
-                        )}
-                      >
-                        <RadioGroupItem
-                          id={optionElementId}
-                          value={option.id}
-                          className={answerOptionRadioClassName}
-                        />
-                        <CourseQuizChoiceOptionText
-                          label={option.label}
-                          text={option.text}
-                        />
-                      </label>
-                    )
-                  })}
-                </RadioGroup>
-              ) : (
-                <div
-                  role="group"
-                  className={optionListClassName}
-                  aria-label="选择答案"
-                >
-                  {options.map((option) => {
-                    const isSelected = selectedOptionIdSet.has(option.id)
-
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => toggleMultipleOption(option.id)}
-                        className={cn(
-                          answerOptionCardClassName,
-                          isSelected && answerOptionCardSelectedClassName
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            answerOptionCheckboxClassName,
-                            isSelected && answerOptionCheckboxSelectedClassName
-                          )}
-                          aria-hidden="true"
-                        >
-                          {isSelected ? (
-                            <span className="size-2 rounded-full bg-white" />
-                          ) : null}
-                        </span>
-                        <CourseQuizChoiceOptionText
-                          label={option.label}
-                          text={option.text}
-                        />
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => toggleMultipleOption(option.id)}
+                    className={cn(
+                      answerOptionCardClassName,
+                      isSelected && answerOptionCardSelectedClassName
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        answerOptionCheckboxClassName,
+                        isSelected && answerOptionCheckboxSelectedClassName
+                      )}
+                      aria-hidden="true"
+                    >
+                      {isSelected ? (
+                        <span className="size-2 rounded-full bg-white" />
+                      ) : null}
+                    </span>
+                    <CourseQuizChoiceOptionText
+                      label={option.label}
+                      text={option.text}
+                    />
+                  </button>
+                )
+              })}
             </div>
-          ) : null}
-        </article>
-      </div>
-      <BottomActionBar
-        footerClassName={questionActionFooterOffsetClassName}
-        contentClassName={questionActionContentAlignClassName}
-        left={
-          questionIndex > 0 ? (
-            <BottomActionBarButton
-              type="button"
-              tone="light"
-              onClick={onPreviousQuestion}
-            >
-              上一题
-            </BottomActionBarButton>
-          ) : null
-        }
-        right={
-          <>
-            {!isLastQuestion ? (
-              <BottomActionBarButton
-                type="button"
-                tone="light"
-                onClick={onNextQuestion}
-              >
-                跳过
-              </BottomActionBarButton>
-            ) : null}
-            <BottomActionBarButton
-              type="button"
-              disabled={!hasSelectedOption}
-              onClick={onNextQuestion}
-            >
-              下一题
-            </BottomActionBarButton>
-          </>
-        }
-      />
-    </div>
+          )}
+        </div>
+      ) : null}
+    </CourseQuizQuestionLayout>
   )
 }

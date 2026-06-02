@@ -1,5 +1,94 @@
-import type { CourseQuizQuestionViewProps } from '@/features/course/quiz/courseQuizQuestionViewMap'
+import { useLayoutEffect, useRef, useState } from 'react'
 
-export function CourseQuizFillBlankQuestionView(_: CourseQuizQuestionViewProps) {
-  return null
+import { Input } from '@/components/ui/input'
+import type { CourseQuizQuestionViewProps } from '@/features/course/quiz/courseQuizQuestionViewMap'
+import { CourseQuizQuestionLayout } from '@/features/course/quiz/CourseQuizQuestionLayout'
+import { cn } from '@/lib/utils'
+
+// 引导文字、镜像文字、输入文字共用同一套字号/行高（不含颜色），保证三者宽度、基线完全一致。
+const fillBlankAnswerTextClassName = 'text-[17px] leading-7 font-normal'
+
+// 默认横线长度（px）：文字未超出时固定不动，超出后才随文字增长。
+const FILL_BLANK_DEFAULT_LINE_WIDTH = 60
+// 横线增长动画时长：调大更舒缓，调小更跟手。
+const FILL_BLANK_GROW_DURATION_CLASS = 'duration-150'
+
+const fillBlankAnswerWrapperClassName = 'relative mt-12 flex items-baseline gap-1'
+const fillBlankAnswerLabelClassName = cn(
+  'shrink-0 text-zinc-900',
+  fillBlankAnswerTextClassName
+)
+// 横线容器：宽度用显式 px 控制并做缓动；overflow-hidden 让文字随线条“扫”出来；border-b 即横线，聚焦时变深。
+const fillBlankAnswerFrameClassName = cn(
+  'relative inline-block h-7 max-w-full overflow-hidden border-b border-zinc-300 align-baseline transition-[width,border-color] ease-out [&:has(input:focus-visible)]:border-zinc-900',
+  FILL_BLANK_GROW_DURATION_CLASS
+)
+// 镜像层：用户实际看到的文字，左对齐且不滚动，因此已输入字符绝不位移；被容器裁剪以配合线条扫出。
+const fillBlankAnswerMirrorClassName = cn(
+  'block whitespace-pre text-zinc-900',
+  fillBlankAnswerTextClassName
+)
+// 真输入框：透明文字 + 可见光标，叠在镜像层之上，负责输入与让光标跟随线条末端。
+const fillBlankAnswerInputClassName = cn(
+  'absolute inset-x-0 bottom-0 block h-7 w-full rounded-none border-0 bg-transparent px-0 py-0 text-transparent caret-zinc-900 shadow-none focus-visible:ring-0 md:text-[17px]',
+  fillBlankAnswerTextClassName
+)
+// 隐藏测量元素：脱离布局、不被裁剪，给出文字真实像素宽度（whitespace-pre 保留空格）。
+const fillBlankAnswerMeasureClassName = cn(
+  'pointer-events-none invisible absolute left-0 top-0 whitespace-pre',
+  fillBlankAnswerTextClassName
+)
+
+export function CourseQuizFillBlankQuestionView(
+  props: CourseQuizQuestionViewProps
+) {
+  const [answer, setAnswer] = useState('')
+  const measureRef = useRef<HTMLSpanElement>(null)
+  const [lineWidth, setLineWidth] = useState(FILL_BLANK_DEFAULT_LINE_WIDTH)
+  const inputId = `${props.question?.id ?? 'fill-blank-question'}-answer`
+
+  // 文字变化时同帧测量真实宽度：未超过默认长度则保持固定，超过后让横线精确贴合文字宽度（容器再做缓动过渡）。
+  useLayoutEffect(() => {
+    const measuredWidth = measureRef.current?.getBoundingClientRect().width ?? 0
+    setLineWidth(
+      Math.max(FILL_BLANK_DEFAULT_LINE_WIDTH, Math.ceil(measuredWidth))
+    )
+  }, [answer])
+
+  return (
+    <CourseQuizQuestionLayout
+      {...props}
+      canContinue={answer.trim().length > 0}
+      title="填空题"
+    >
+      <div className={fillBlankAnswerWrapperClassName}>
+        <label className={fillBlankAnswerLabelClassName} htmlFor={inputId}>
+          请输入答案：
+        </label>
+        <span
+          className={fillBlankAnswerFrameClassName}
+          style={{ width: lineWidth }}
+        >
+          <span className={fillBlankAnswerMirrorClassName} aria-hidden="true">
+            {answer || '\u00A0'}
+          </span>
+          <Input
+            id={inputId}
+            value={answer}
+            onChange={(event) => setAnswer(event.target.value)}
+            autoComplete="off"
+            aria-label="请输入答案"
+            className={fillBlankAnswerInputClassName}
+          />
+        </span>
+        <span
+          ref={measureRef}
+          className={fillBlankAnswerMeasureClassName}
+          aria-hidden="true"
+        >
+          {answer}
+        </span>
+      </div>
+    </CourseQuizQuestionLayout>
+  )
 }
