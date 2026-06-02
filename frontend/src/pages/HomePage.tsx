@@ -1,4 +1,4 @@
-import { CalendarCheck2, CalendarClock, Languages } from 'lucide-react'
+import { CalendarCheck2, CalendarClock } from 'lucide-react'
 import { ActionChip } from '@/components/ActionChip'
 import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
@@ -16,13 +16,6 @@ export function HomePage() {
   return (
     <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
       <div className="absolute right-4 top-4 flex items-center gap-2">
-        <Button
-          variant="ghost"
-          aria-label="Switch language"
-          className="size-8 rounded-full border border-zinc-200 p-0"
-        >
-          <Languages className="size-[18px]" />
-        </Button>
         <Button
           variant="ghost"
           aria-label="Today's task progress"

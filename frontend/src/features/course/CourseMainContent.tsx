@@ -13,7 +13,7 @@ import type {
   CourseQuiz,
   CourseUnit,
   CourseVideoLesson,
-} from '@/mock/courseItems'
+} from '@/mock/course/courseItems'
 
 export type CourseContentType = 'overview' | 'video' | 'quiz' | 'assignment'
 export type CourseContentScope = 'unit' | 'chapter'

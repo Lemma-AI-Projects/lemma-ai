@@ -6,7 +6,6 @@ import { createConversationTurns } from '@/features/conversation/createConversat
 import { ConversationMessageList } from '@/features/conversation/ConversationMessageList'
 import { CourseAssistantInput } from '@/features/course/CourseAssistantInput'
 import { CourseConversationPills } from '@/features/course/CourseConversationPills'
-import { CourseMainContent } from '@/features/course/CourseMainContent'
 import { courseConversationMessages } from '@/mock/courseConversationMessages'
 import { courseItems } from '@/mock/courseItems'
 
@@ -61,9 +60,7 @@ export function CoursePage() {
 
   return (
     <div className="flex h-full gap-2">
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50">
-        <CourseMainContent course={course} />
-      </main>
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50" />
       <aside className="flex w-82 shrink-0 flex-col rounded-md border border-zinc-200/80 bg-zinc-50 p-3">
         <div className="-mt-1 flex h-7 shrink-0 items-center gap-2">
           <div className="min-w-0 flex-1">
