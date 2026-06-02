@@ -18,6 +18,7 @@ export type CourseQuizQuestionType =
 
 export interface CourseQuizQuestion {
   id: string
+  order: number
   type: CourseQuizQuestionType
   stem?: string
   options?: CourseQuizQuestionOption[]

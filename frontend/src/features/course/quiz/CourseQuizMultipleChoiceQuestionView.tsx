@@ -1,7 +1,14 @@
+import { CourseQuizChoiceQuestionView } from '@/features/course/quiz/CourseQuizChoiceQuestionView'
 import type { CourseQuizQuestionViewProps } from '@/features/course/quiz/courseQuizQuestionViewMap'
 
 export function CourseQuizMultipleChoiceQuestionView(
-  _: CourseQuizQuestionViewProps
+  props: CourseQuizQuestionViewProps
 ) {
-  return null
+  return (
+    <CourseQuizChoiceQuestionView
+      {...props}
+      mode="multiple"
+      title="多选题"
+    />
+  )
 }

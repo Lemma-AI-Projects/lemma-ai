@@ -12,6 +12,8 @@ import type {
 export interface CourseQuizQuestionViewProps {
   content: CourseQuizContent
   currentContentId: string
+  onNextQuestion?: () => void
+  onPreviousQuestion?: () => void
   question?: CourseQuizQuestion
   questionIndex: number
 }
