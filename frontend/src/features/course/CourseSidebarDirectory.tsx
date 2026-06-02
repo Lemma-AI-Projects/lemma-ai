@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { ChevronRight, CircleCheckBig } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { courseItems } from '@/mock/courseItems'
+import { courseItems } from '@/mock/course/courseItems'
 
 type Course = (typeof courseItems)[number]
 type CourseUnit = Course['units'][number]
@@ -34,14 +34,16 @@ function findCurrentChapterId(course: Course, hash: string): string | null {
   return null
 }
 
-function findCurrentUnitId(course: Course, chapterId: string | null): string | null {
-  if (!chapterId) {
-    return null
+function findCurrentUnitId(course: Course, hash: string): string | null {
+  const targetId = decodeURIComponent(hash.replace(/^#/, ''))
+
+  if (!targetId) {
+    return course.units[0]?.id ?? null
   }
 
   return (
-    course.units.find((unit) =>
-      unit.chapters.some((chapter) => chapter.id === chapterId)
+    course.units.find(
+      (unit) => targetId === unit.id || targetId.startsWith(`${unit.id}-`)
     )?.id ?? null
   )
 }
@@ -336,8 +338,8 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
     [course, location.hash]
   )
   const currentUnitId = useMemo(
-    () => (course ? findCurrentUnitId(course, currentChapterId) : null),
-    [course, currentChapterId]
+    () => (course ? findCurrentUnitId(course, location.hash) : null),
+    [course, location.hash]
   )
   const [chapterOpenOverrides, setChapterOpenOverrides] = useState<
     Record<string, boolean>

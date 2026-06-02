@@ -18,7 +18,7 @@ import { SidebarSection } from '@/components/SidebarSection'
 import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
 import { chatItems } from '@/mock/chatItems'
-import { courseItems } from '@/mock/courseItems'
+import { courseItems } from '@/mock/course/courseItems'
 import { projectItems } from '@/mock/projectItems'
 
 function SidebarHeader({ children }: { children?: ReactNode }) {

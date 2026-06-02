@@ -1,5 +1,5 @@
-import { courseConversationItems } from '@/mock/courseConversationItems'
-import { courseItems } from '@/mock/courseItems'
+import { courseConversationItems } from '@/mock/course/courseConversationItems'
+import { courseItems } from '@/mock/course/courseItems'
 import { cn } from '@/lib/utils'
 
 export function CourseConversationPills({
