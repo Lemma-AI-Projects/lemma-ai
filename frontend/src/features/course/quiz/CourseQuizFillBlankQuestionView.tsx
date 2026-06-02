@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { measureNaturalWidth, prepareWithSegments } from '@chenglou/pretext'
 
 import { Input } from '@/components/ui/input'
 import type { CourseQuizQuestionViewProps } from '@/features/course/quiz/courseQuizQuestionViewMap'
@@ -12,6 +13,9 @@ const fillBlankAnswerTextClassName = 'text-[17px] leading-7 font-normal'
 const FILL_BLANK_DEFAULT_LINE_WIDTH = 60
 // 横线增长动画时长：调大更舒缓，调小更跟手。
 const FILL_BLANK_GROW_DURATION_CLASS = 'duration-150'
+// 供 pretext 测量的字体串，必须与镜像/输入文字的实际渲染字体一致：字重 400 + 17px + index.css 的字体栈。
+const FILL_BLANK_MEASURE_FONT =
+  '400 17px Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 
 const fillBlankAnswerWrapperClassName = 'relative mt-12 flex items-baseline gap-1'
 const fillBlankAnswerLabelClassName = cn(
@@ -33,26 +37,22 @@ const fillBlankAnswerInputClassName = cn(
   'absolute inset-x-0 bottom-0 block h-7 w-full rounded-none border-0 bg-transparent px-0 py-0 text-transparent caret-zinc-900 shadow-none focus-visible:ring-0 md:text-[17px]',
   fillBlankAnswerTextClassName
 )
-// 隐藏测量元素：脱离布局、不被裁剪，给出文字真实像素宽度（whitespace-pre 保留空格）。
-const fillBlankAnswerMeasureClassName = cn(
-  'pointer-events-none invisible absolute left-0 top-0 whitespace-pre',
-  fillBlankAnswerTextClassName
-)
 
 export function CourseQuizFillBlankQuestionView(
   props: CourseQuizQuestionViewProps
 ) {
   const [answer, setAnswer] = useState('')
-  const measureRef = useRef<HTMLSpanElement>(null)
-  const [lineWidth, setLineWidth] = useState(FILL_BLANK_DEFAULT_LINE_WIDTH)
   const inputId = `${props.question?.id ?? 'fill-blank-question'}-answer`
 
-  // 文字变化时同帧测量真实宽度：未超过默认长度则保持固定，超过后让横线精确贴合文字宽度（容器再做缓动过渡）。
-  useLayoutEffect(() => {
-    const measuredWidth = measureRef.current?.getBoundingClientRect().width ?? 0
-    setLineWidth(
-      Math.max(FILL_BLANK_DEFAULT_LINE_WIDTH, Math.ceil(measuredWidth))
+  // pretext 用 canvas 字体引擎纯算文字像素宽度，不触发 DOM 回流；未超过默认长度则保持固定，超出后让横线精确贴合文字（容器再做缓动过渡）。
+  const lineWidth = useMemo(() => {
+    const measuredWidth = measureNaturalWidth(
+      prepareWithSegments(answer, FILL_BLANK_MEASURE_FONT, {
+        whiteSpace: 'pre-wrap',
+      })
     )
+
+    return Math.max(FILL_BLANK_DEFAULT_LINE_WIDTH, Math.ceil(measuredWidth))
   }, [answer])
 
   return (
@@ -80,13 +80,6 @@ export function CourseQuizFillBlankQuestionView(
             aria-label="请输入答案"
             className={fillBlankAnswerInputClassName}
           />
-        </span>
-        <span
-          ref={measureRef}
-          className={fillBlankAnswerMeasureClassName}
-          aria-hidden="true"
-        >
-          {answer}
         </span>
       </div>
     </CourseQuizQuestionLayout>

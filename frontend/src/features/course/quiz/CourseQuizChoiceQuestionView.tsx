@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { measureNaturalWidth, prepareWithSegments } from '@chenglou/pretext'
 
 import {
   RadioGroup,
@@ -38,18 +39,6 @@ const answerOptionCheckboxClassName =
 const answerOptionCheckboxSelectedClassName = 'border-zinc-900 bg-zinc-900'
 const answerOptionTextClassName =
   'flex min-w-0 items-baseline gap-2 text-[16px] leading-7 text-zinc-900'
-
-function measureOptionTextWidth(text: string, font: string): number {
-  const canvas = document.createElement('canvas')
-  const context = canvas.getContext('2d')
-
-  if (!context) {
-    return 0
-  }
-
-  context.font = font
-  return context.measureText(text).width
-}
 
 function CourseQuizChoiceOptionText({
   label,
@@ -103,9 +92,9 @@ export function CourseQuizChoiceQuestionView({
       return (
         columnWidth >= answerOptionMinimumColumnWidthPx &&
         options.every((option) => {
-          const optionTextWidth = measureOptionTextWidth(
-            `${option.label}. ${option.text}`,
-            textFont
+          // pretext 用浏览器字体引擎测量整段选项的自然单行宽度，对中英数字/符号/emoji/长词比裸 measureText 更准。
+          const optionTextWidth = measureNaturalWidth(
+            prepareWithSegments(`${option.label}. ${option.text}`, textFont)
           )
 
           return optionTextWidth + answerOptionReservedWidthPx <= columnWidth
