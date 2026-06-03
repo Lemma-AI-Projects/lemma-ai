@@ -28,6 +28,14 @@ const bottomActionBarContentClassName =
 const bottomActionBarSideClassName =
   'pointer-events-auto flex items-center gap-3'
 
+// 遮罩用页面底色盖住下方滚动内容，顶部分隔线避免长内容与操作栏重叠（与课程概览页底部一致）。
+const bottomActionBarMaskClassName =
+  'pointer-events-none absolute inset-x-0 -top-1 bottom-0 bg-zinc-50'
+// 分隔线外层与内容区同宽同偏移（复用 contentClassName），保证横线与按钮、题面左右对齐。
+const bottomActionBarLineWrapperClassName =
+  'pointer-events-none absolute left-1/2 -top-1 w-full max-w-[650px] -translate-x-1/2'
+const bottomActionBarLineClassName = 'h-px w-full bg-zinc-200'
+
 // 底部操作按钮尺寸、圆角由这里控制。
 const bottomActionBarButtonClassName =
   'h-10 rounded-full px-5 font-normal transition-colors'
@@ -44,6 +52,13 @@ export function BottomActionBar({
 }: BottomActionBarProps) {
   return (
     <footer className={cn(bottomActionBarFooterClassName, footerClassName)}>
+      <div aria-hidden className={bottomActionBarMaskClassName} />
+      <div
+        aria-hidden
+        className={cn(bottomActionBarLineWrapperClassName, contentClassName)}
+      >
+        <div className={bottomActionBarLineClassName} />
+      </div>
       <div className={cn(bottomActionBarContentClassName, contentClassName)}>
         <div className={bottomActionBarSideClassName}>{left}</div>
         <div className={bottomActionBarSideClassName}>{right}</div>

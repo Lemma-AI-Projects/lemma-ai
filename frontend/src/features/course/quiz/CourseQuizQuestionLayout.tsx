@@ -8,7 +8,16 @@ import type { CourseQuizQuestionViewProps } from '@/features/course/quiz/courseQ
 import { cn } from '@/lib/utils'
 
 interface CourseQuizQuestionLayoutProps
-  extends CourseQuizQuestionViewProps {
+  extends Pick<
+    CourseQuizQuestionViewProps,
+    | 'canSubmit'
+    | 'content'
+    | 'currentContentId'
+    | 'onNextQuestion'
+    | 'onPreviousQuestion'
+    | 'question'
+    | 'questionIndex'
+  > {
   canContinue: boolean
   children?: ReactNode
   title: string
@@ -25,12 +34,13 @@ const questionStemClassName = cn(
   questionStemWeightClassName
 )
 
-// 底部题目操作区在题目页的上移距离和内容对齐由这里控制。
-const questionActionFooterOffsetClassName = 'bottom-4'
+// 底部操作区：按钮上移用底部内边距实现（让遮罩能一直盖到页面底部），内容左对齐偏移由这里控制。
+const questionActionFooterClassName = 'pb-9'
 const questionActionContentAlignClassName = 'pl-5'
 
 export function CourseQuizQuestionLayout({
   canContinue,
+  canSubmit,
   children,
   content,
   onNextQuestion,
@@ -43,7 +53,7 @@ export function CourseQuizQuestionLayout({
 
   return (
     <div className="relative h-full min-h-0 overflow-hidden bg-zinc-50">
-      <div className="scrollbar-fade h-full min-h-0 overflow-y-auto px-10 pb-24 pt-28">
+      <div className="scrollbar-fade h-full min-h-0 overflow-y-auto px-10 pb-28 pt-28">
         <article className="mx-auto w-full max-w-[650px] pl-5">
           <h1 className={questionTitleClassName}>
             {question?.order ?? questionIndex + 1}.{title}
@@ -55,7 +65,7 @@ export function CourseQuizQuestionLayout({
         </article>
       </div>
       <BottomActionBar
-        footerClassName={questionActionFooterOffsetClassName}
+        footerClassName={questionActionFooterClassName}
         contentClassName={questionActionContentAlignClassName}
         left={
           questionIndex > 0 ? (
@@ -81,7 +91,7 @@ export function CourseQuizQuestionLayout({
             ) : null}
             <BottomActionBarButton
               type="button"
-              disabled={!canContinue}
+              disabled={isLastQuestion ? !canSubmit : !canContinue}
               onClick={onNextQuestion}
             >
               {isLastQuestion ? '提交' : '下一题'}

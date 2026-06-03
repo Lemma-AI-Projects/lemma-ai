@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { measureNaturalWidth, prepareWithSegments } from '@chenglou/pretext'
 
 import { Input } from '@/components/ui/input'
@@ -41,7 +41,8 @@ const fillBlankAnswerInputClassName = cn(
 export function CourseQuizFillBlankQuestionView(
   props: CourseQuizQuestionViewProps
 ) {
-  const [answer, setAnswer] = useState('')
+  const answer =
+    typeof props.answerValue === 'string' ? props.answerValue : ''
   const inputId = `${props.question?.id ?? 'fill-blank-question'}-answer`
 
   // pretext 用 canvas 字体引擎纯算文字像素宽度，不触发 DOM 回流；未超过默认长度则保持固定，超出后让横线精确贴合文字（容器再做缓动过渡）。
@@ -75,7 +76,7 @@ export function CourseQuizFillBlankQuestionView(
           <Input
             id={inputId}
             value={answer}
-            onChange={(event) => setAnswer(event.target.value)}
+            onChange={(event) => props.onAnswerValueChange(event.target.value)}
             autoComplete="off"
             aria-label="请输入答案"
             className={fillBlankAnswerInputClassName}

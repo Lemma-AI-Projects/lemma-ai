@@ -56,20 +56,26 @@ function CourseQuizChoiceOptionText({
 }
 
 export function CourseQuizChoiceQuestionView({
+  answerValue,
+  canSubmit,
   content,
   currentContentId,
   mode,
+  onAnswerValueChange,
   onNextQuestion,
   onPreviousQuestion,
   question,
   questionIndex,
   title,
 }: CourseQuizChoiceQuestionViewProps) {
-  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([])
   const [useTwoColumnOptions, setUseTwoColumnOptions] = useState(false)
   const answerOptionsWrapperRef = useRef<HTMLDivElement>(null)
   const options = useMemo(() => question?.options ?? [], [question?.options])
   const questionId = question?.id ?? 'question'
+  const selectedOptionIds = useMemo(
+    () => (Array.isArray(answerValue) ? answerValue : []),
+    [answerValue]
+  )
   const selectedOptionIdSet = useMemo(
     () => new Set(selectedOptionIds),
     [selectedOptionIds]
@@ -135,10 +141,12 @@ export function CourseQuizChoiceQuestionView({
   }, [options])
 
   function toggleMultipleOption(optionId: string) {
-    setSelectedOptionIds((current) =>
-      current.includes(optionId)
-        ? current.filter((selectedOptionId) => selectedOptionId !== optionId)
-        : [...current, optionId]
+    onAnswerValueChange(
+      selectedOptionIds.includes(optionId)
+        ? selectedOptionIds.filter(
+            (selectedOptionId) => selectedOptionId !== optionId
+          )
+        : [...selectedOptionIds, optionId]
     )
   }
 
@@ -151,6 +159,7 @@ export function CourseQuizChoiceQuestionView({
   return (
     <CourseQuizQuestionLayout
       canContinue={hasSelectedOption}
+      canSubmit={canSubmit}
       content={content}
       currentContentId={currentContentId}
       onNextQuestion={onNextQuestion}
@@ -166,8 +175,8 @@ export function CourseQuizChoiceQuestionView({
         >
           {mode === 'single' ? (
             <RadioGroup
-              value={selectedOptionIds[0]}
-              onValueChange={(optionId) => setSelectedOptionIds([optionId])}
+              value={selectedOptionIds[0] ?? ''}
+              onValueChange={(optionId) => onAnswerValueChange([optionId])}
               className={optionListClassName}
               aria-label="选择答案"
             >

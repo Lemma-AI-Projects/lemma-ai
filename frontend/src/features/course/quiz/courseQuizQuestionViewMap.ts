@@ -9,9 +9,14 @@ import type {
   CourseQuizQuestionType,
 } from '@/mock/course/courseItems'
 
+export type CourseQuizQuestionAnswerValue = string | string[]
+
 export interface CourseQuizQuestionViewProps {
+  answerValue?: CourseQuizQuestionAnswerValue
+  canSubmit: boolean
   content: CourseQuizContent
   currentContentId: string
+  onAnswerValueChange: (value: CourseQuizQuestionAnswerValue) => void
   onNextQuestion?: () => void
   onPreviousQuestion?: () => void
   question?: CourseQuizQuestion
