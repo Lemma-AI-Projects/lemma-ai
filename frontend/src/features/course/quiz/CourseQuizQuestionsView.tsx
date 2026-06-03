@@ -9,6 +9,7 @@ import type { CourseQuizQuestionType } from '@/mock/course/courseItems'
 interface CourseQuizQuestionsViewProps {
   content: CourseQuizContent
   currentContentId: string
+  onSubmit: () => void
 }
 
 function getCurrentQuestionType(
@@ -37,6 +38,7 @@ function isAnswerComplete(value?: CourseQuizQuestionAnswerValue) {
 export function CourseQuizQuestionsView({
   content,
   currentContentId,
+  onSubmit,
 }: CourseQuizQuestionsViewProps) {
   const [questionIndex, setQuestionIndex] = useState(0)
   const [questionAnswers, setQuestionAnswers] = useState<
@@ -63,6 +65,11 @@ export function CourseQuizQuestionsView({
     )
 
   function goToNextQuestion() {
+    if (questionIndex >= lastQuestionIndex) {
+      onSubmit()
+      return
+    }
+
     setQuestionIndex((currentQuestionIndex) =>
       Math.min(currentQuestionIndex + 1, lastQuestionIndex)
     )

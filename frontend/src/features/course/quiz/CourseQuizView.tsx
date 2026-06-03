@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import type { CourseQuizContent } from '@/features/course/CourseMainContent'
 import { CourseQuizInstructionsView } from '@/features/course/quiz/CourseQuizInstructionsView'
 import { CourseQuizQuestionsView } from '@/features/course/quiz/CourseQuizQuestionsView'
+import { CourseQuizResultView } from '@/features/course/quiz/CourseQuizResultView'
 
 interface CourseQuizViewProps {
   content: CourseQuizContent
 }
 
-type CourseQuizPage = 'instructions' | 'questions'
+type CourseQuizPage = 'instructions' | 'questions' | 'result'
 
 function getCurrentQuizId(content: CourseQuizContent): string {
   if (content.scope === 'unit') {
@@ -29,6 +30,16 @@ export function CourseQuizView({ content }: CourseQuizViewProps) {
   if (currentQuizPage === 'questions') {
     return (
       <CourseQuizQuestionsView
+        content={content}
+        currentContentId={currentContentId}
+        onSubmit={() => setCurrentQuizPage('result')}
+      />
+    )
+  }
+
+  if (currentQuizPage === 'result') {
+    return (
+      <CourseQuizResultView
         content={content}
         currentContentId={currentContentId}
       />
