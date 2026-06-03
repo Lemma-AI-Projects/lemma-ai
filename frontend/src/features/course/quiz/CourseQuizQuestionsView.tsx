@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { CourseQuizContent } from '@/features/course/CourseMainContent'
+import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import {
   courseQuizQuestionViewMap,
   type CourseQuizQuestionAnswerValue,
@@ -7,13 +7,13 @@ import {
 import type { CourseQuizQuestionType } from '@/mock/course/courseItems'
 
 interface CourseQuizQuestionsViewProps {
-  content: CourseQuizContent
+  content: CourseQuestionFlowContent
   currentContentId: string
   onSubmit: () => void
 }
 
 function getCurrentQuestionType(
-  content: CourseQuizContent,
+  content: CourseQuestionFlowContent,
   questionIndex: number
 ): CourseQuizQuestionType {
   return content.data.questions[questionIndex]?.type ?? 'single-choice'

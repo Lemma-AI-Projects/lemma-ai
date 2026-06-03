@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import type { CourseQuizContent } from '@/features/course/CourseMainContent'
+import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizFillBlankQuestionView } from '@/features/course/quiz/CourseQuizFillBlankQuestionView'
 import { CourseQuizMultipleChoiceQuestionView } from '@/features/course/quiz/CourseQuizMultipleChoiceQuestionView'
 import { CourseQuizShortAnswerQuestionView } from '@/features/course/quiz/CourseQuizShortAnswerQuestionView'
@@ -14,7 +14,7 @@ export type CourseQuizQuestionAnswerValue = string | string[]
 export interface CourseQuizQuestionViewProps {
   answerValue?: CourseQuizQuestionAnswerValue
   canSubmit: boolean
-  content: CourseQuizContent
+  content: CourseQuestionFlowContent
   currentContentId: string
   onAnswerValueChange: (value: CourseQuizQuestionAnswerValue) => void
   onNextQuestion?: () => void

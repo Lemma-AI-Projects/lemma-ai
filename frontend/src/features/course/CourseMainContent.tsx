@@ -48,6 +48,8 @@ export interface CourseAssignmentContent extends CourseContentBase {
   data: CourseAssignment
 }
 
+export type CourseQuestionFlowContent = CourseQuizContent | CourseAssignmentContent
+
 export type CourseContent =
   | CourseOverviewContent
   | CourseVideoContent

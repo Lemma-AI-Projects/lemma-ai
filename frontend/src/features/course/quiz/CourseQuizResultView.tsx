@@ -1,21 +1,23 @@
 import { CourseContentLayout } from '@/features/course/CourseContentLayout'
-import type { CourseQuizContent } from '@/features/course/CourseMainContent'
+import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizInstructionsMarkdown } from '@/features/course/quiz/CourseQuizInstructionsMarkdown'
 
 interface CourseQuizResultViewProps {
-  content: CourseQuizContent
+  content: CourseQuestionFlowContent
   currentContentId: string
+  title?: string
 }
 
 export function CourseQuizResultView({
   content,
   currentContentId,
+  title = '测验结果',
 }: CourseQuizResultViewProps) {
   return (
     <CourseContentLayout
       course={content.course}
       currentContentId={currentContentId}
-      title="测验结果"
+      title={title}
       titleAlign="center"
       contentClassName="max-w-[560px]"
     >

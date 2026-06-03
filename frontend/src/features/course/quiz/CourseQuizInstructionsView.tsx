@@ -3,16 +3,17 @@ import {
   CourseContentLayout,
   getNextCourseDirectoryHref,
 } from '@/features/course/CourseContentLayout'
-import type { CourseQuizContent } from '@/features/course/CourseMainContent'
+import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizInstructionsMarkdown } from '@/features/course/quiz/CourseQuizInstructionsMarkdown'
 
 interface CourseQuizInstructionsViewProps {
-  content: CourseQuizContent
+  content: CourseQuestionFlowContent
   currentContentId: string
   onStart: () => void
+  title?: string
 }
 
-function getQuizInstructionsMarkdown(content: CourseQuizContent): string {
+function getQuizInstructionsMarkdown(content: CourseQuestionFlowContent): string {
   return `${content.data.copy.instructions}
 
 ${content.data.copy.rules}`
@@ -22,6 +23,7 @@ export function CourseQuizInstructionsView({
   content,
   currentContentId,
   onStart,
+  title = '测验',
 }: CourseQuizInstructionsViewProps) {
   const skipHref = getNextCourseDirectoryHref(content.course, currentContentId)
 
@@ -29,7 +31,7 @@ export function CourseQuizInstructionsView({
     <CourseContentLayout
       course={content.course}
       currentContentId={currentContentId}
-      title="测验"
+      title={title}
       titleAlign="center"
       showFooter={false}
       contentClassName="max-w-[560px]"

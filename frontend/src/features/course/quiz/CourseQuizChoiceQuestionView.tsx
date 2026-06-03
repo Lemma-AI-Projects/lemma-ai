@@ -27,15 +27,15 @@ const answerOptionReservedWidthPx = 70
 const answerOptionMinimumColumnWidthPx = 160
 // 选项卡高度、内边距、圆角和 hover 高亮由这里控制。
 const answerOptionCardClassName =
-  'flex min-h-[48px] w-full cursor-pointer appearance-none items-center gap-3.5 rounded-[12px] border border-zinc-200 bg-transparent px-3.5 py-2.5 text-left shadow-none transition-colors hover:border-zinc-300 hover:bg-zinc-100/60'
+  'flex min-h-[48px] w-full cursor-pointer appearance-none items-center gap-3.5 rounded-[12px] border border-zinc-200 bg-transparent px-3.5 py-2.5 text-left shadow-none transition-[border-color,background-color] duration-150 ease-out hover:border-zinc-300 hover:bg-zinc-100/60'
 // 选中选项卡的边框和背景高亮由这里控制。
 const answerOptionCardSelectedClassName =
   'border-zinc-500 bg-zinc-100 hover:border-zinc-500 hover:bg-zinc-100'
 // 左侧选中圆圈的大小、描边和内点样式由这里控制。
 const answerOptionRadioClassName =
-  'size-4 border-zinc-300 bg-transparent text-white !shadow-none transition-colors focus-visible:ring-2 focus-visible:ring-zinc-300/70 data-[state=checked]:border-zinc-900 data-[state=checked]:bg-zinc-900 [&_svg]:size-2 [&_svg]:fill-white'
+  'size-4 border-zinc-300 bg-transparent text-white !shadow-none transition-none focus-visible:ring-2 focus-visible:ring-zinc-300/70 data-[state=checked]:border-zinc-900 data-[state=checked]:bg-zinc-900 [&_svg]:size-2 [&_svg]:fill-white'
 const answerOptionCheckboxClassName =
-  'flex size-4 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-transparent transition-colors'
+  'flex size-4 shrink-0 items-center justify-center rounded-full border border-zinc-300 bg-transparent transition-none'
 const answerOptionCheckboxSelectedClassName = 'border-zinc-900 bg-zinc-900'
 const answerOptionTextClassName =
   'flex min-w-0 items-baseline gap-2 text-[16px] leading-7 text-zinc-900'
