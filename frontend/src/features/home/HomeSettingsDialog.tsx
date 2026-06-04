@@ -12,6 +12,8 @@ import {
 import { Dialog as DialogPrimitive, Tabs as TabsPrimitive } from 'radix-ui'
 
 import { cn } from '@/lib/utils'
+import { HomeSettingsAccountPage } from './HomeSettingsAccountPage'
+import { HomeSettingsGeneralPage } from './HomeSettingsGeneralPage'
 import { HomeSettingsStoragePage } from './HomeSettingsStoragePage'
 
 export type HomeSettingsTab =
@@ -144,13 +146,16 @@ export function HomeSettingsDialog({
                 value={tab.value}
                 className={settingsPanelClassName}
               >
-                {tab.value === 'storage' ? (
-                  <HomeSettingsStoragePage />
-                ) : (
-                  <h2 className="text-lg font-normal text-zinc-900">
-                    {tab.label}
-                  </h2>
-                )}
+                {tab.value === 'account' && <HomeSettingsAccountPage />}
+                {tab.value === 'general' && <HomeSettingsGeneralPage />}
+                {tab.value === 'storage' && <HomeSettingsStoragePage />}
+                {tab.value !== 'account' &&
+                  tab.value !== 'general' &&
+                  tab.value !== 'storage' && (
+                    <h2 className="text-lg font-normal text-zinc-900">
+                      {tab.label}
+                    </h2>
+                  )}
               </TabsPrimitive.Content>
             ))}
           </TabsPrimitive.Root>
