@@ -4,6 +4,7 @@ import { courseAssignmentQuestionsContent } from './courseAssignmentQuestionsCon
 import { courseOverviewContent } from './courseOverviewContent'
 import { courseQuizContent, type CourseQuizCopy } from './courseQuizContent'
 import { courseQuizQuestionsContent } from './courseQuizQuestionsContent'
+import { courseVideoContent, type CourseVideoCopy } from './courseVideoContent'
 
 export type CourseProgressStatus = 'not-started' | 'in-progress' | 'completed'
 
@@ -47,6 +48,7 @@ export interface CourseAssignment {
 
 export interface CourseVideoLesson {
   title: string
+  copy?: CourseVideoCopy
   status: CourseProgressStatus
 }
 
@@ -105,8 +107,13 @@ const courseAssignment = (
 })
 const videoLesson = (
   title: string,
-  status: CourseProgressStatus = 'not-started'
-): CourseVideoLesson => ({ title, status })
+  status: CourseProgressStatus = 'not-started',
+  id?: string
+): CourseVideoLesson => ({
+  title,
+  copy: id ? courseVideoContent[id] : undefined,
+  status,
+})
 
 export const courseItems: CourseItem[] = [
   {
@@ -127,7 +134,11 @@ export const courseItems: CourseItem[] = [
               'linear-algebra-lecture-12-unit-1-chapter-1',
               'completed'
             ),
-            video: videoLesson('Video: Seeing Stable Directions in Linear Maps', 'completed'),
+            video: videoLesson(
+              'Video: Seeing Stable Directions in Linear Maps',
+              'completed',
+              'linear-algebra-lecture-12-unit-1-chapter-1'
+            ),
             quiz: courseQuiz('linear-algebra-lecture-12-unit-1-chapter-1', 'completed'),
             assignment: courseAssignment(
               'linear-algebra-lecture-12-unit-1-chapter-1',

@@ -161,3 +161,168 @@
 *:has(> [data-streamdown="code-block-actions"]) {
   position: static !important;
 }
+
+.course-video-chin {
+  --course-video-radius: calc(var(--radius) + 4px);
+  /* The aspect-ratio player lays out ~6px taller than its reported height, so a
+     -radius margin only tucks the chin under it by ~12px. Match the top padding
+     to that real overlap so the pills stay centered between the player's bottom
+     edge and the chin's bottom edge. */
+  --course-video-chin-overlap: 12px;
+  --course-video-chin-height: 2.625rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: calc(var(--course-video-chin-height) + var(--course-video-radius));
+  margin-top: calc(var(--course-video-radius) * -1);
+  padding: var(--course-video-chin-overlap) 14px 0;
+  border-bottom-left-radius: var(--course-video-radius);
+  border-bottom-right-radius: var(--course-video-radius);
+}
+
+.course-video-chin-pill-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  gap: 4px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.course-video-chin-pill-button-green {
+  background: #238636;
+}
+
+.course-video-chin-pill-button-blue {
+  background: #0969da;
+}
+
+.course-video-chin-pill-button:hover {
+  filter: brightness(1.08);
+}
+
+[data-slot="course-video-player"] {
+  --course-video-radius: calc(var(--radius) + 4px);
+  --video-bg: #050505;
+  --video-border: none;
+  --video-border-radius: var(--course-video-radius);
+  --video-brand: #fff;
+  --video-controls-color: #fff;
+  --video-focus-ring-color: rgb(255 255 255 / 0.45);
+  --media-brand: #fff;
+  --media-button-size: 32px;
+  --media-button-border-radius: 999px;
+  --media-button-hover-bg: rgb(255 255 255 / 0.12);
+  --media-button-hover-transform: none;
+  --media-controls-in-transition: none;
+  --media-controls-out-transition: none;
+  --media-slider-track-height: 5px;
+  --media-slider-focused-track-height: 5px;
+  --media-slider-track-border-radius: 999px;
+  --media-slider-track-bg: rgb(255 255 255 / 0.24);
+  --media-slider-track-fill-bg: #fff;
+  --media-slider-track-progress-bg: rgb(255 255 255 / 0.42);
+  --media-slider-thumb-size: 13px;
+  --media-slider-focused-thumb-size: 13px;
+  --media-slider-thumb-border: 0;
+  --media-slider-thumb-bg: #fff;
+  --media-slider-focused-thumb-shadow: none;
+  --media-slider-preview-border-radius: 8px;
+  --media-slider-value-border-radius: 5px;
+  --media-slider-value-padding: 5px 7.5px;
+  --media-slider-chapter-title-color: #fff;
+  --media-slider-chapter-hover-transform: scaleY(1.25);
+  --media-thumbnail-border: 0;
+  --media-menu-bg: rgb(255 255 255 / 0.96);
+  --media-menu-border-radius: 8px;
+  --media-menu-box-shadow: none;
+  --media-menu-padding: 7px;
+  --media-menu-item-border-radius: 4px;
+  --media-tooltip-bg: rgb(255 255 255 / 0.96);
+  --media-tooltip-color: rgb(39 39 42);
+  --media-tooltip-border-radius: 5px;
+  --media-tooltip-box-shadow: none;
+  background: #050505;
+}
+
+[data-slot="course-video-player"] .vds-button {
+  border-radius: 999px;
+}
+
+[data-slot="course-video-player"] .course-video-pill-button {
+  width: auto;
+  min-width: 0;
+  height: 24px;
+  gap: 3px;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+[data-slot="course-video-player"] .course-video-pill-button + .course-video-pill-button {
+  margin-left: 6px;
+}
+
+[data-slot="course-video-player"] .course-video-pill-button-green {
+  background: #238636;
+}
+
+[data-slot="course-video-player"] .course-video-pill-button-blue {
+  background: #0969da;
+}
+
+[data-slot="course-video-player"] .course-video-pill-button:hover {
+  filter: brightness(1.08);
+}
+
+[data-slot="course-video-player"] .vds-button .vds-icon {
+  border-radius: 0;
+  overflow: visible;
+}
+
+[data-slot="course-video-player"] .vds-button .vds-icon svg {
+  overflow: visible;
+}
+
+[data-slot="course-video-player"] .vds-video-layout .vds-controls[data-visible] {
+  background-image: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.32) 0,
+    rgb(0 0 0 / 0.32) 72px,
+    rgb(0 0 0 / 0) 116px
+  );
+}
+
+[data-slot="course-video-player"] .vds-controls {
+  transition: none;
+}
+
+[data-slot="course-video-player"] .vds-video-layout .vds-controls-group {
+  padding-inline: 12px;
+}
+
+[data-slot="course-video-player"] .vds-time-slider .vds-slider-chapter {
+  margin-right: 2px;
+}
+
+[data-slot="course-video-player"] .vds-time-slider {
+  transform: translateY(6px);
+}
+
+[data-slot="course-video-player"] .vds-slider-preview,
+[data-slot="course-video-player"] .vds-menu-items,
+[data-slot="course-video-player"] .vds-tooltip-content {
+  backdrop-filter: none;
+}
