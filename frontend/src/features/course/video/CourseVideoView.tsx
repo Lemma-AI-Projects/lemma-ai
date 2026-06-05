@@ -14,6 +14,8 @@ import '@vidstack/react/player/styles/base.css'
 import '@vidstack/react/player/styles/default/theme.css'
 import '@vidstack/react/player/styles/default/layouts/video.css'
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import type { CourseVideoContent } from '@/features/course/CourseMainContent'
 import { cn } from '@/lib/utils'
 
@@ -86,34 +88,26 @@ export function CourseVideoView({ content }: CourseVideoViewProps) {
               slots={{
                 beforeCaptionButton: (
                   <>
-                    <button
+                    <Button
                       type="button"
-                      className="vds-button course-video-pill-button course-video-pill-button-green"
                       aria-label="显示时间戳"
                       title="显示时间戳"
                       onClick={(event) => event.stopPropagation()}
+                      className="h-6 gap-[3px] rounded-full bg-[#238636] px-[7px] py-0 text-white hover:bg-[#238636]/90 has-[>svg]:px-[7px]"
                     >
-                      <Clock3
-                        className="vds-icon"
-                        strokeWidth={2.5}
-                        style={{ height: 14, width: 14 }}
-                      />
+                      <Clock3 className="size-[14px]" strokeWidth={2.5} />
                       <span>显示时间戳</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="vds-button course-video-pill-button course-video-pill-button-blue"
                       aria-label="显示笔记"
                       title="显示笔记"
                       onClick={(event) => event.stopPropagation()}
+                      className="ml-[8.5px] mr-[2.5px] h-6 gap-[3px] rounded-full bg-[#0969da] px-[7px] py-0 text-white hover:bg-[#0969da]/90 has-[>svg]:px-[7px]"
                     >
-                      <NotebookPen
-                        className="vds-icon"
-                        strokeWidth={2.5}
-                        style={{ height: 14, width: 14 }}
-                      />
+                      <NotebookPen className="size-[14px]" strokeWidth={2.5} />
                       <span>显示笔记</span>
-                    </button>
+                    </Button>
                   </>
                 ),
                 googleCastButton: null,
@@ -122,24 +116,51 @@ export function CourseVideoView({ content }: CourseVideoViewProps) {
             />
           </MediaPlayer>
           <div className="course-video-chin bg-zinc-200">
-            <button
+            <Button
               type="button"
-              className="course-video-chin-pill-button course-video-chin-pill-button-green"
+              aria-label="作者"
+              title="一数"
+              className="h-7 gap-1.5 rounded-full bg-[#717A7A2E] py-0 pl-0.5 pr-3 text-foreground hover:bg-zinc-300/80 has-[>svg]:pl-0.5"
+            >
+              <Avatar size="sm">
+                <AvatarImage alt="一数" />
+                <AvatarFallback>一</AvatarFallback>
+              </Avatar>
+              <span>一数</span>
+            </Button>
+            <Button
+              type="button"
+              aria-label="视频来源"
+              title="【统计】线性回归与非线性回归！最小二乘法！保姆级讲解！"
+              className="mr-auto h-7 max-w-[400px] gap-1.5 rounded-full bg-[#717A7A2E] py-0 pl-0.5 pr-3 text-foreground hover:bg-zinc-300/80 has-[>svg]:pl-0.5"
+            >
+              <img
+                src="/icons/bilibili.svg"
+                alt="bilibili"
+                className="size-6 shrink-0"
+              />
+              <span className="truncate">
+                【统计】线性回归与非线性回归！最小二乘法！保姆级讲解！
+              </span>
+            </Button>
+            <Button
+              type="button"
               aria-label="时间戳"
               title="时间戳"
+              className="h-7 gap-1 rounded-full bg-[#238636] px-2.5 py-0 text-white hover:bg-[#238636]/90 has-[>svg]:px-2.5"
             >
-              <Clock3 strokeWidth={2.5} style={{ height: 15, width: 15 }} />
+              <Clock3 className="size-[15px]" strokeWidth={2.5} />
               <span>时间戳</span>
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="course-video-chin-pill-button course-video-chin-pill-button-blue"
               aria-label="记笔记"
               title="记笔记"
+              className="h-7 gap-1 rounded-full bg-[#0969da] px-2.5 py-0 text-white hover:bg-[#0969da]/90 has-[>svg]:px-2.5"
             >
-              <NotebookPen strokeWidth={2.5} style={{ height: 15, width: 15 }} />
+              <NotebookPen className="size-[15px]" strokeWidth={2.5} />
               <span>记笔记</span>
-            </button>
+            </Button>
           </div>
 
           <div className="ml-3 mt-6">

@@ -182,33 +182,6 @@
   border-bottom-right-radius: var(--course-video-radius);
 }
 
-.course-video-chin-pill-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  gap: 4px;
-  padding: 0 10px;
-  border-radius: 999px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.course-video-chin-pill-button-green {
-  background: #238636;
-}
-
-.course-video-chin-pill-button-blue {
-  background: #0969da;
-}
-
-.course-video-chin-pill-button:hover {
-  filter: brightness(1.08);
-}
-
 [data-slot="course-video-player"] {
   --course-video-radius: calc(var(--radius) + 4px);
   --video-bg: #050505;
@@ -255,36 +228,6 @@
 
 [data-slot="course-video-player"] .vds-button {
   border-radius: 999px;
-}
-
-[data-slot="course-video-player"] .course-video-pill-button {
-  width: auto;
-  min-width: 0;
-  height: 24px;
-  gap: 3px;
-  padding: 0 7px;
-  border-radius: 999px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-[data-slot="course-video-player"] .course-video-pill-button + .course-video-pill-button {
-  margin-left: 6px;
-}
-
-[data-slot="course-video-player"] .course-video-pill-button-green {
-  background: #238636;
-}
-
-[data-slot="course-video-player"] .course-video-pill-button-blue {
-  background: #0969da;
-}
-
-[data-slot="course-video-player"] .course-video-pill-button:hover {
-  filter: brightness(1.08);
 }
 
 [data-slot="course-video-player"] .vds-button .vds-icon {
