@@ -1,4 +1,5 @@
 import { useRef, useState, type MouseEvent } from 'react'
+import { createPortal } from 'react-dom'
 import {
   MediaPlayer,
   MediaProvider,
@@ -19,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { getNextCourseDirectoryHref } from '@/features/course/CourseContentLayout'
 import type { CourseVideoContent } from '@/features/course/CourseMainContent'
 import { CourseOverviewMarkdown } from '@/features/course/overview/CourseOverviewMarkdown'
+import { CourseVideoChapterList } from '@/features/course/video/CourseVideoChapterList'
 import { cn } from '@/lib/utils'
 
 interface CourseVideoViewProps {
@@ -39,6 +41,8 @@ function getDisplayVideoTitle(title: string) {
 export function CourseVideoView({ content }: CourseVideoViewProps) {
   const title = getDisplayVideoTitle(content.title)
   const [activeTab, setActiveTab] = useState<CourseVideoTab>('课程信息')
+  const [chapterListContainer, setChapterListContainer] =
+    useState<HTMLDivElement | null>(null)
   const playerRef = useRef<MediaPlayerInstance>(null)
   const nextContentHref = getNextCourseDirectoryHref(
     content.course,
@@ -169,6 +173,21 @@ export function CourseVideoView({ content }: CourseVideoViewProps) {
                 pipButton: null,
               }}
             />
+            {/*
+              章节列表需要处在 MediaPlayer 上下文中，Vidstack Thumbnail 才能复用播放器的
+              媒体状态和缩略图解析能力。createPortal 保留这层 React 上下文，同时把列表 DOM
+              渲染到播放器下方的 chapterListContainer，而不是播放器画面内部。
+              thumbnailsSrc 与 DefaultVideoLayout 使用同一个 demoVideoThumbnailsSrc。
+            */}
+            {chapterListContainer && content.data.copy?.chapterSummaries
+              ? createPortal(
+                  <CourseVideoChapterList
+                    chapters={content.data.copy.chapterSummaries}
+                    thumbnailsSrc={demoVideoThumbnailsSrc}
+                  />,
+                  chapterListContainer
+                )
+              : null}
           </MediaPlayer>
           <div className="course-video-chin bg-zinc-200">
             <Button
@@ -289,6 +308,14 @@ export function CourseVideoView({ content }: CourseVideoViewProps) {
               <CourseOverviewMarkdown className="mt-6 w-full">
                 {content.data.copy.courseInfoMarkdown}
               </CourseOverviewMarkdown>
+            ) : null}
+
+            {activeTab === '章节速览' ? (
+              /*
+                mt-4：章节列表与上方 Tab 行间隔 16px。
+                此空容器是 createPortal 的实际 DOM 挂载位置。
+              */
+              <div ref={setChapterListContainer} className="mt-4" />
             ) : null}
           </div>
         </article>
