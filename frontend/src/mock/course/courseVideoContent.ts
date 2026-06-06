@@ -8,7 +8,7 @@ export interface CourseVideoChapterSummary {
 export interface CourseVideoCopy {
   source: string
   author: string
-  aiSummary: string
+  courseInfoMarkdown: string
   chapterSummaries: CourseVideoChapterSummary[]
 }
 
@@ -16,8 +16,27 @@ export const courseVideoContent: Record<string, CourseVideoCopy> = {
   'linear-algebra-lecture-12-unit-1-chapter-1': {
     source: 'MIT OpenCourseWare · Linear Algebra Lecture 12',
     author: 'Gilbert Strang',
-    aiSummary:
-      '本节用几何视角解释特征向量为什么重要：在线性变换中，大多数向量会被旋转到新的方向，而特征向量会保持在原来的直线上，只发生拉伸、压缩或翻转。理解这些稳定方向，可以帮助你把矩阵从一组数字转化为一个可解释的空间动作。',
+    courseInfoMarkdown: `## 本课内容
+
+本节从几何视角解释特征向量为什么重要。在线性变换中，大多数向量都会被旋转到新的方向，而特征向量仍停留在原来的直线上，只发生拉伸、压缩或翻转。
+
+课程会从“稳定方向”的直觉出发，逐步连接到 **Av = λv** 的代数表达，并说明特征向量与特征值如何帮助我们理解矩阵所代表的空间动作。
+
+## 关键概念
+
+- **特征向量**：经过线性变换后方向保持不变的非零向量。
+- **特征值**：描述特征向量在对应方向上被缩放、压缩或翻转的比例。
+- **稳定方向**：在线性变换中不会偏离原直线的特殊方向。
+- **几何解释**：把矩阵理解为对空间的作用，而不仅是一组需要计算的数字。
+- **对角化基础**：用特征向量构造更自然的坐标系，使复杂变换更容易分析。
+
+## 学完本节你将能…
+
+- 用自己的语言解释特征向量和特征值的几何意义。
+- 判断一个向量在线性变换后是否保持原有方向。
+- 根据特征值的正负和大小，描述向量的拉伸、压缩与翻转。
+- 将 **Av = λv** 与图像中的稳定方向联系起来。
+- 说明特征向量为什么能简化矩阵分析，并为后续学习对角化建立直觉。`,
     chapterSummaries: [
       {
         id: 'forest',
