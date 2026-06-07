@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import { currentUserAccount } from '@/mock/userAccounts'
+import type { UserAccount } from '@/mock/userAccounts'
 
 interface AccountRowProps {
   label: string
@@ -23,7 +23,11 @@ function AccountRow({ label, children }: AccountRowProps) {
   )
 }
 
-export function HomeSettingsAccountPage() {
+export function HomeSettingsAccountPage({
+  account,
+}: {
+  account: UserAccount
+}) {
   return (
     <>
       <h2 className="text-lg font-normal text-zinc-900">账户</h2>
@@ -32,21 +36,21 @@ export function HomeSettingsAccountPage() {
       <AccountRow label="头像">
         <Avatar
           className="size-8"
-          style={{ backgroundColor: currentUserAccount.color }}
+          style={{ backgroundColor: account.color }}
         >
           <AvatarFallback className="bg-transparent text-[13px] font-semibold leading-none text-white/90">
-            {currentUserAccount.avatarLabel}
+            {account.avatarLabel}
           </AvatarFallback>
         </Avatar>
       </AccountRow>
       <AccountRow label="昵称">
         <span className="max-w-[320px] truncate text-[16px] font-normal leading-7 text-zinc-500">
-          {currentUserAccount.name}
+          {account.nickname}
         </span>
       </AccountRow>
       <AccountRow label="邮箱">
         <span className="max-w-[320px] truncate text-[16px] font-normal leading-7 text-zinc-500">
-          {currentUserAccount.email}
+          {account.email}
         </span>
       </AccountRow>
     </>

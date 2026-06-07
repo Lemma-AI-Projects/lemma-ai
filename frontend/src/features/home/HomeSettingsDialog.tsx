@@ -12,7 +12,9 @@ import {
 import { Dialog as DialogPrimitive, Tabs as TabsPrimitive } from 'radix-ui'
 
 import { cn } from '@/lib/utils'
+import type { UserAccount } from '@/mock/userAccounts'
 import { HomeSettingsAccountPage } from './HomeSettingsAccountPage'
+import { HomeSettingsBillingPage } from './HomeSettingsBillingPage'
 import { HomeSettingsGeneralPage } from './HomeSettingsGeneralPage'
 import { HomeSettingsStoragePage } from './HomeSettingsStoragePage'
 
@@ -40,6 +42,7 @@ const homeSettingsTabs: HomeSettingsTabItem[] = [
 ]
 
 interface HomeSettingsDialogProps {
+  account: UserAccount
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultTab?: HomeSettingsTab
@@ -73,6 +76,7 @@ const settingsPanelClassName =
   'min-h-0 grow overflow-y-auto px-5 py-4 text-sm text-zinc-900 max-md:px-4'
 
 export function HomeSettingsDialog({
+  account,
   open,
   onOpenChange,
   defaultTab = 'general',
@@ -146,10 +150,16 @@ export function HomeSettingsDialog({
                 value={tab.value}
                 className={settingsPanelClassName}
               >
-                {tab.value === 'account' && <HomeSettingsAccountPage />}
+                {tab.value === 'account' && (
+                  <HomeSettingsAccountPage account={account} />
+                )}
+                {tab.value === 'billing' && (
+                  <HomeSettingsBillingPage account={account} />
+                )}
                 {tab.value === 'general' && <HomeSettingsGeneralPage />}
                 {tab.value === 'storage' && <HomeSettingsStoragePage />}
                 {tab.value !== 'account' &&
+                  tab.value !== 'billing' &&
                   tab.value !== 'general' &&
                   tab.value !== 'storage' && (
                     <h2 className="text-lg font-normal text-zinc-900">
