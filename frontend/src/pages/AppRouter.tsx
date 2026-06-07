@@ -1,45 +1,56 @@
 import { type RouteObject, useRoutes } from 'react-router-dom'
+import { RequireAuth } from '@/features/auth/RequireAuth'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
+import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 
 const routes: RouteObject[] = [
   {
-    path: '/',
-    element: <AppLayout />,
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
+    element: <RequireAuth />,
     children: [
       {
-        index: true,
-        element: <HomePage />,
-      },
-      {
-        path: 'schedule',
-        element: <SchedulePage />,
-      },
-      {
-        path: 'knowledge',
-        element: <KnowledgeBasePage />,
-      },
-      {
-        path: 'plugins',
-        element: <PluginsPage />,
-      },
-      {
-        path: 'chat/:id',
-        element: <ConversationPage />,
-      },
-      {
-        path: 'course/:id',
-        element: <CoursePage />,
-      },
-      {
-        path: 'project/:id',
-        element: <ProjectPage />,
+        path: '/',
+        element: <AppLayout />,
+        children: [
+          {
+            index: true,
+            element: <HomePage />,
+          },
+          {
+            path: 'schedule',
+            element: <SchedulePage />,
+          },
+          {
+            path: 'knowledge',
+            element: <KnowledgeBasePage />,
+          },
+          {
+            path: 'plugins',
+            element: <PluginsPage />,
+          },
+          {
+            path: 'chat/:id',
+            element: <ConversationPage />,
+          },
+          {
+            path: 'course/:id',
+            element: <CoursePage />,
+          },
+          {
+            path: 'project/:id',
+            element: <ProjectPage />,
+          },
+        ],
       },
     ],
   },
