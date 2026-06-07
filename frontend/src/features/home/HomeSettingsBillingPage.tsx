@@ -2,7 +2,10 @@ import { BadgeCheckIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import type { UserAccount } from '@/mock/userAccounts'
+import type {
+  CurrentUser,
+  DisplaySubscriptionPlan,
+} from '@/features/auth/useCurrentUser'
 
 // FREE 徽章样式：这里可以手动微调底色、文字颜色、内边距、字号等 Tailwind class。
 const freeBadgeClassName = 'bg-zinc-200 text-zinc-950'
@@ -11,14 +14,14 @@ const freeBadgeClassName = 'bg-zinc-200 text-zinc-950'
 // 注意：shadcn Badge 默认在父级写了 [&>svg]:size-3，所以图标大小要在这里覆盖，直接改 BadgeCheckIcon 的 size 不会生效。
 const proBadgeClassName = 'bg-[#f66a0a] text-white [&>svg]:size-3.5'
 
-function getStorageSpaceLabel(subscriptionPlan: UserAccount['subscriptionPlan']) {
+function getStorageSpaceLabel(subscriptionPlan: DisplaySubscriptionPlan) {
   return subscriptionPlan === 'Pro' ? '80G' : '5G'
 }
 
 function SubscriptionPlanBadge({
   subscriptionPlan,
 }: {
-  subscriptionPlan: UserAccount['subscriptionPlan']
+  subscriptionPlan: DisplaySubscriptionPlan
 }) {
   if (subscriptionPlan === 'Pro') {
     return (
@@ -35,21 +38,23 @@ function SubscriptionPlanBadge({
 export function HomeSettingsBillingPage({
   account,
 }: {
-  account: UserAccount
+  account: CurrentUser | undefined
 }) {
-  const isPro = account.subscriptionPlan === 'Pro'
+  const isPro = account?.subscriptionPlan === 'Pro'
   const quotaItems = [
     {
       label: '存储空间',
-      value: getStorageSpaceLabel(account.subscriptionPlan),
+      value: account
+        ? getStorageSpaceLabel(account.subscriptionPlan)
+        : '加载中',
     },
     {
       label: '课程创建',
-      value: isPro ? '无限制' : '每周 2 次',
+      value: account ? (isPro ? '无限制' : '每周 2 次') : '加载中',
     },
     {
       label: '每日 Credits',
-      value: isPro ? '3000点/日' : '300点/日',
+      value: account ? (isPro ? '3000点/日' : '300点/日') : '加载中',
     },
   ]
 
@@ -62,7 +67,13 @@ export function HomeSettingsBillingPage({
         <span className="text-[16px] font-normal leading-7 text-zinc-600">
           订阅
         </span>
-        <SubscriptionPlanBadge subscriptionPlan={account.subscriptionPlan} />
+        {account ? (
+          <SubscriptionPlanBadge subscriptionPlan={account.subscriptionPlan} />
+        ) : (
+          <span className="text-[16px] font-normal leading-7 text-zinc-500">
+            加载中
+          </span>
+        )}
       </div>
       <Separator className="bg-zinc-200" />
 

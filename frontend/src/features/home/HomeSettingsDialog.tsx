@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import {
   Brain,
   CircleUserRound,
@@ -11,8 +10,8 @@ import {
 } from 'lucide-react'
 import { Dialog as DialogPrimitive, Tabs as TabsPrimitive } from 'radix-ui'
 
+import type { CurrentUser } from '@/features/auth/useCurrentUser'
 import { cn } from '@/lib/utils'
-import type { UserAccount } from '@/mock/userAccounts'
 import { HomeSettingsAccountPage } from './HomeSettingsAccountPage'
 import { HomeSettingsBillingPage } from './HomeSettingsBillingPage'
 import { HomeSettingsGeneralPage } from './HomeSettingsGeneralPage'
@@ -42,7 +41,7 @@ const homeSettingsTabs: HomeSettingsTabItem[] = [
 ]
 
 interface HomeSettingsDialogProps {
-  account: UserAccount
+  account: CurrentUser | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultTab?: HomeSettingsTab
@@ -67,10 +66,7 @@ const settingsNavCloseButtonClassName =
   'mt-1.5 ms-1.5 flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-600 outline-none transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-300'
 
 const settingsTabBaseClassName =
-  'flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-zinc-300 max-md:shrink-0'
-const settingsTabActiveClassName = 'bg-zinc-100 text-zinc-900'
-const settingsTabIdleClassName =
-  'text-zinc-700 hover:bg-zinc-100/70 hover:text-zinc-900'
+  'flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm text-zinc-700 outline-none transition-colors hover:bg-zinc-100/70 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-zinc-300 data-[state=active]:bg-zinc-100 data-[state=active]:text-zinc-900 max-md:shrink-0'
 
 const settingsPanelClassName =
   'min-h-0 grow overflow-y-auto px-5 py-4 text-sm text-zinc-900 max-md:px-4'
@@ -81,15 +77,6 @@ export function HomeSettingsDialog({
   onOpenChange,
   defaultTab = 'general',
 }: HomeSettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<HomeSettingsTab>(defaultTab)
-
-  // 每次打开都回到入口对应的分类（设置/个性化/个人资料）。
-  useEffect(() => {
-    if (open) {
-      setActiveTab(defaultTab)
-    }
-  }, [open, defaultTab])
-
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -101,9 +88,9 @@ export function HomeSettingsDialog({
           <DialogPrimitive.Title className="sr-only">设置</DialogPrimitive.Title>
 
           <TabsPrimitive.Root
+            key={`${open}-${defaultTab}`}
             orientation="vertical"
-            value={activeTab}
-            onValueChange={(value) => setActiveTab(value as HomeSettingsTab)}
+            defaultValue={defaultTab}
             className="flex h-full min-h-0 flex-col md:flex-row"
           >
             <div className={settingsNavClassName}>
@@ -120,18 +107,12 @@ export function HomeSettingsDialog({
               >
                 {homeSettingsTabs.map((tab) => {
                   const Icon = tab.icon
-                  const isActive = activeTab === tab.value
 
                   return (
                     <TabsPrimitive.Trigger
                       key={tab.value}
                       value={tab.value}
-                      className={cn(
-                        settingsTabBaseClassName,
-                        isActive
-                          ? settingsTabActiveClassName
-                          : settingsTabIdleClassName
-                      )}
+                      className={settingsTabBaseClassName}
                     >
                       <Icon
                         className="size-[18px] shrink-0"

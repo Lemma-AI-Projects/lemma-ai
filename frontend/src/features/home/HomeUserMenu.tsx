@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Check,
   ChevronRight,
@@ -21,18 +22,46 @@ import {
   HomeSettingsDialog,
   type HomeSettingsTab,
 } from '@/features/home/HomeSettingsDialog'
-import { currentUserAccount, userAccounts } from '@/mock/userAccounts'
+import {
+  currentUserQueryKey,
+  useCurrentUser,
+} from '@/features/auth/useCurrentUser'
+import { useAuth } from '@/features/auth/useAuth'
+import { supabase } from '@/lib/supabaseClient'
+import { currentUserAccountId, userAccounts } from '@/mock/userAccounts'
 
 export function HomeUserMenu() {
+  const queryClient = useQueryClient()
+  const { session } = useAuth()
+  const { data: currentUser } = useCurrentUser()
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<HomeSettingsTab>('general')
-  const [selectedAccountId, setSelectedAccountId] = useState(currentUserAccount.id)
-  const selectedAccount =
-    userAccounts.find((account) => account.id === selectedAccountId) ??
-    currentUserAccount
+  const fallbackEmail = session?.user.email ?? ''
+  const fallbackNickname = fallbackEmail.split('@')[0] || '用户'
+  const displayNickname = currentUser?.nickname ?? fallbackNickname
+  const displayEmail = currentUser?.email ?? fallbackEmail
+  const displayColor = currentUser?.avatarColor ?? '#71717a'
+  const displayAvatarLabel =
+    currentUser?.avatarLabel ??
+    Array.from(fallbackNickname)[0]?.toUpperCase() ??
+    'U'
+  const secondaryAccounts = userAccounts.filter(
+    (account) => account.id !== currentUserAccountId
+  )
 
   const handleAction = (label: string) => {
     console.log(label)
+  }
+
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      console.error('Failed to sign out', error)
+      return
+    }
+
+    queryClient.removeQueries({ queryKey: currentUserQueryKey })
   }
 
   const openSettings = (tab: HomeSettingsTab) => {
@@ -49,8 +78,8 @@ export function HomeUserMenu() {
         width="lg"
         trigger={
           <UserAvatar
-            name={selectedAccount.nickname}
-            color={selectedAccount.color}
+            name={displayNickname}
+            color={displayColor}
             showBadge
             aria-label="Open account menu"
             className="ms-0.5 rounded-full outline-none transition-colors hover:ring-2 hover:ring-zinc-200 data-[state=open]:ring-2 data-[state=open]:ring-zinc-200"
@@ -66,19 +95,19 @@ export function HomeUserMenu() {
             <>
               <span
                 className="flex size-8 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: selectedAccount.color }}
+                style={{ backgroundColor: displayColor }}
               >
                 <span className="text-[16px] font-bold leading-none text-white/90">
-                  {selectedAccount.avatarLabel}
+                  {displayAvatarLabel}
                 </span>
               </span>
 
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-medium leading-[18px]">
-                  {selectedAccount.nickname}
+                  {displayNickname}
                 </span>
                 <span className="block truncate text-[13px] leading-[16px] text-muted-foreground">
-                  {selectedAccount.subscriptionPlan}
+                  {currentUser?.subscriptionPlan ?? '加载中'}
                 </span>
               </span>
 
@@ -86,11 +115,33 @@ export function HomeUserMenu() {
             </>
           }
         >
-          {userAccounts.map((account) => (
+          <ActionMenuItem className="gap-2.5 rounded-md px-2 py-1.5">
+            <span
+              className="flex size-7 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: displayColor }}
+            >
+              <span className="text-[12.5px] font-bold leading-none text-white/90">
+                {displayAvatarLabel}
+              </span>
+            </span>
+
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13.5px] font-medium leading-[18px]">
+                {displayNickname}
+              </span>
+              <span className="block truncate text-[12.5px] leading-4 text-muted-foreground">
+                {displayEmail}
+              </span>
+            </span>
+
+            <Check className="size-[17px] shrink-0 text-foreground" />
+          </ActionMenuItem>
+
+          {secondaryAccounts.map((account) => (
             <ActionMenuItem
               key={account.id}
               className="gap-2.5 rounded-md px-2 py-1.5"
-              onSelect={() => setSelectedAccountId(account.id)}
+              onSelect={() => handleAction(`Switch account: ${account.id}`)}
             >
               <span
                 className="flex size-7 shrink-0 items-center justify-center rounded-full"
@@ -109,10 +160,6 @@ export function HomeUserMenu() {
                   {account.email}
                 </span>
               </span>
-
-              {account.id === selectedAccount.id && (
-                <Check className="size-[17px] shrink-0 text-foreground" />
-              )}
             </ActionMenuItem>
           ))}
 
@@ -160,11 +207,11 @@ export function HomeUserMenu() {
         <ActionMenuItem
           label="退出登录"
           icon={LogOut}
-          onSelect={() => handleAction('Log out')}
+          onSelect={() => void handleSignOut()}
         />
       </ActionMenu>
       <HomeSettingsDialog
-        account={selectedAccount}
+        account={currentUser}
         open={settingsDialogOpen}
         onOpenChange={setSettingsDialogOpen}
         defaultTab={settingsTab}

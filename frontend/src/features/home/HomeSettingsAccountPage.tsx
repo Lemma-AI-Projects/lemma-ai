@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
-import type { UserAccount } from '@/mock/userAccounts'
+import type { CurrentUser } from '@/features/auth/useCurrentUser'
 
 interface AccountRowProps {
   label: string
@@ -26,7 +26,7 @@ function AccountRow({ label, children }: AccountRowProps) {
 export function HomeSettingsAccountPage({
   account,
 }: {
-  account: UserAccount
+  account: CurrentUser | undefined
 }) {
   return (
     <>
@@ -36,21 +36,21 @@ export function HomeSettingsAccountPage({
       <AccountRow label="头像">
         <Avatar
           className="size-8"
-          style={{ backgroundColor: account.color }}
+          style={{ backgroundColor: account?.avatarColor ?? '#71717a' }}
         >
           <AvatarFallback className="bg-transparent text-[13px] font-semibold leading-none text-white/90">
-            {account.avatarLabel}
+            {account?.avatarLabel ?? 'U'}
           </AvatarFallback>
         </Avatar>
       </AccountRow>
       <AccountRow label="昵称">
         <span className="max-w-[320px] truncate text-[16px] font-normal leading-7 text-zinc-500">
-          {account.nickname}
+          {account?.nickname ?? '加载中'}
         </span>
       </AccountRow>
       <AccountRow label="邮箱">
         <span className="max-w-[320px] truncate text-[16px] font-normal leading-7 text-zinc-500">
-          {account.email}
+          {account?.email ?? '加载中'}
         </span>
       </AccountRow>
     </>
