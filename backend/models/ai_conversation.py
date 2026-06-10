@@ -1,0 +1,69 @@
+import uuid
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import CheckConstraint, ForeignKey, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from core.database import Base
+
+
+class AiConversation(Base):
+    __tablename__ = "ai_conversations"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class AiMessage(Base):
+    """Dual-track message storage (终稿第十一章, 防框架 schema 锁定).
+
+    role + content_text are the SOURCE OF TRUTH (display, search, migration).
+    raw_parts_json is an optional attachment: the framework-serialized message
+    (ModelMessagesTypeAdapter) for exact multimodal/tool-call history rebuild.
+    A framework major upgrade can never break the neutral columns.
+    """
+
+    __tablename__ = "ai_messages"
+    __table_args__ = (
+        CheckConstraint(
+            "role in ('system', 'user', 'assistant')",
+            name="ck_ai_messages_role",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("ai_conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    role: Mapped[str] = mapped_column(String, nullable=False)
+    content_text: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_parts_json: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
+    )

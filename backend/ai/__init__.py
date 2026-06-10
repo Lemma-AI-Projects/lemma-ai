@@ -19,7 +19,10 @@ from ai.errors import (
     AITimeoutError,
     UnsupportedCapabilityError,
 )
+from ai.media.inputs import from_provider_file, from_url
+from ai.media.provider_files import delete_video, upload_video
 from ai.model_factory import init_http_client, shutdown_http_client
+from ai.native.gemini_video import close_shared_client
 from ai.types import (
     AIChunk,
     AIResponse,
@@ -39,8 +42,9 @@ def init_ai_runtime() -> None:
 
 
 async def shutdown_ai_runtime() -> None:
-    """Close the shared HTTP client (lifespan shutdown)."""
+    """Close the shared HTTP clients (lifespan shutdown)."""
     await shutdown_http_client()
+    await close_shared_client()
 
 
 __all__ = [
@@ -61,6 +65,10 @@ __all__ = [
     "VideoInput",
     "VideoInputKind",
     "ai_client",
+    "delete_video",
+    "from_provider_file",
+    "from_url",
     "init_ai_runtime",
     "shutdown_ai_runtime",
+    "upload_video",
 ]

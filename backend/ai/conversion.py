@@ -3,17 +3,21 @@
 Stateless thin functions; nothing here talks to the network or the database.
 """
 
+from typing import Any
+
+from google.genai import types as genai_types
 from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
     ModelResponse,
     TextPart,
     UserPromptPart,
+    VideoUrl,
 )
 from pydantic_ai.usage import RunUsage
 
 from ai.errors import UnsupportedCapabilityError
-from ai.types import ChatMessage, TokenUsage
+from ai.types import ChatMessage, TokenUsage, VideoInput
 
 
 def split_history_and_prompt(
@@ -75,3 +79,42 @@ def response_metadata(
         if isinstance(message, ModelResponse):
             return message.model_name, message.provider_response_id
     return None, None
+
+
+def to_video_part(video: VideoInput, engine: str) -> Any:
+    """Provider file reference -> the video part each engine understands.
+
+    Callers run media/resolver.ensure_ready() first, so only PROVIDER_FILE_ID
+    with a valid URI reaches this point (最新决策 2: Files API only).
+    """
+    mime_type = video.mime_type or "video/mp4"
+    if engine == "pydantic_ai":
+        return VideoUrl(url=video.url or "", media_type=mime_type)
+    return genai_types.Part.from_uri(file_uri=video.url or "", mime_type=mime_type)
+
+
+def gemini_usage_to_token_usage(
+    metadata: genai_types.GenerateContentResponseUsageMetadata | None,
+) -> TokenUsage:
+    """usage_metadata (native video channel) -> boundary TokenUsage.
+
+    Gemini bills thinking tokens as output, but reports them separately from
+    candidates_token_count — fold them into output_tokens and keep the
+    breakdown in raw so input + output stays ≈ total.
+    """
+    if metadata is None:
+        return TokenUsage()
+    raw: dict[str, Any] = {}
+    if metadata.thoughts_token_count:
+        raw["thoughts_token_count"] = metadata.thoughts_token_count
+    if metadata.cached_content_token_count:
+        raw["cached_content_token_count"] = metadata.cached_content_token_count
+    output_tokens = (metadata.candidates_token_count or 0) + (
+        metadata.thoughts_token_count or 0
+    )
+    return TokenUsage(
+        input_tokens=metadata.prompt_token_count,
+        output_tokens=output_tokens or None,
+        total_tokens=metadata.total_token_count,
+        raw=raw,
+    )

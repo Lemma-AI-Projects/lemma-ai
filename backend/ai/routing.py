@@ -35,13 +35,16 @@ def _is_retryable(exc: Exception) -> bool:
     return False
 
 
-def _record_and_decide(exc: Exception) -> bool:
+async def _record_and_decide(exc: Exception) -> bool:
     """fallback_on hook: account for the failure, then tell FallbackModel
-    whether to move on (True) or re-raise immediately (False)."""
+    whether to move on (True) or re-raise immediately (False).
+
+    Async on purpose — FallbackModel awaits async handlers, which lets the
+    ledger write to the database from inside the hook."""
     will_fallback = _is_retryable(exc)
     tracker = current_tracker()
     if tracker is not None:
-        record_failure(tracker, error=exc, will_fallback=will_fallback)
+        await record_failure(tracker, error=exc, will_fallback=will_fallback)
     return will_fallback
 
 

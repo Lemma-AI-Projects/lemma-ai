@@ -24,16 +24,28 @@ class LemmaDeps:
     # Phase 3: profile lookups / db handles land here.
 
 
-text_chat_agent: Agent[LemmaDeps, str] = Agent(deps_type=LemmaDeps)
+def _build_agent() -> Agent[LemmaDeps, str]:
+    agent: Agent[LemmaDeps, str] = Agent(deps_type=LemmaDeps)
+
+    @agent.instructions
+    def _inject_system_prompt(ctx: RunContext[LemmaDeps]) -> str:
+        return ctx.deps.system_prompt
+
+    return agent
 
 
-@text_chat_agent.instructions
-def _inject_system_prompt(ctx: RunContext[LemmaDeps]) -> str:
-    return ctx.deps.system_prompt
-
+text_chat_agent = _build_agent()
+# Video agents serve the framework engine path (AI_VIDEO_ENGINE=pydantic_ai);
+# the native engine takes the system prompt directly, without an Agent.
+video_qa_agent = _build_agent()
+video_summary_agent = _build_agent()
+video_locate_agent = _build_agent()
 
 _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.TEXT_CHAT: text_chat_agent,
+    AIUseCase.VIDEO_QA: video_qa_agent,
+    AIUseCase.VIDEO_SUMMARY: video_summary_agent,
+    AIUseCase.VIDEO_LOCATE: video_locate_agent,
 }
 
 

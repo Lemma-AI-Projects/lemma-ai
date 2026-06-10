@@ -10,6 +10,15 @@ _DEFAULT_AI_ROUTES_JSON = (
     ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 30},'
     ' {"platform": "openrouter", "adapter": "openrouter",'
     ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 30}'
+    '], "video_qa": ['
+    '{"platform": "aihubmix", "adapter": "gemini_video",'
+    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 90}'
+    '], "video_summary": ['
+    '{"platform": "aihubmix", "adapter": "gemini_video",'
+    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 90}'
+    '], "video_locate": ['
+    '{"platform": "aihubmix", "adapter": "gemini_video",'
+    ' "model": "gemini-2.5-pro", "priority": 0, "timeout_s": 90}'
     "]}"
 )
 
@@ -32,8 +41,17 @@ class Settings(BaseSettings):
     openrouter_api_key: str
     aihubmix_api_key: str
     aihubmix_openai_base_url: str = "https://aihubmix.com/v1"
+    aihubmix_gemini_base_url: str = "https://aihubmix.com/gemini"
     ai_default_timeout_seconds: float = 30
+    # native | pydantic_ai — stays native until probes 3-6 all pass (终稿 8.2).
+    ai_video_engine: str = "native"
     ai_routes_json: str = _DEFAULT_AI_ROUTES_JSON
+
+    redis_url: str = "redis://localhost:6379/0"
+    # Netscape-format cookie file for yt-dlp. B站 risk control (HTTP 412)
+    # requires real browser cookies; without this only direct file URLs and
+    # cookie-free sites can be ingested.
+    ytdlp_cookie_file: str | None = None
 
     @property
     def cors_origins_list(self) -> list[str]:

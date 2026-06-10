@@ -8,6 +8,7 @@ in `raw` for logs and must never be sent to the frontend.
 
 from typing import Any
 
+from google.genai import errors as genai_errors
 from pydantic_ai.exceptions import (
     FallbackExceptionGroup,
     ModelAPIError,
@@ -69,6 +70,15 @@ def map_framework_error(exc: Exception) -> AIError:
 
     if isinstance(exc, (UsageLimitExceeded, UnexpectedModelBehavior)):
         return AIProviderError(str(exc), raw=exc)
+
+    # google-genai exceptions from the native video channel (终稿 6.1 同表归一化).
+    if isinstance(exc, genai_errors.APIError):
+        status = getattr(exc, "code", None)
+        if status == 429:
+            return AIRateLimitError("AI provider rate limited the request", raw=exc)
+        if status in (408, 504):
+            return AITimeoutError("AI provider timed out", raw=exc)
+        return AIProviderError(f"AI provider returned HTTP {status}", raw=exc)
 
     if isinstance(exc, TimeoutError):
         return AITimeoutError("AI request timed out", raw=exc)

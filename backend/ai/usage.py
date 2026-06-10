@@ -1,7 +1,8 @@
 """Usage accounting (终稿 6.2 full field list).
 
-Phase 1 sink: structured JSON logs under the "lemma.ai.usage" logger. Phase 2
-swaps the sink for the ai_usage_log table without touching callers.
+Sink: structured JSON log line + a row in ai_usage_logs (the ledger). A DB
+hiccup must never break an AI response, so persistence failures are logged
+and swallowed.
 
 Three accounting paths, none optional (rules 第八章: failures cost money too):
 1. success          -> record_success() in the AIClient facade
@@ -21,6 +22,9 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
+from core.database import AsyncSessionLocal
+from models.ai_usage_log import AiUsageLog
+
 from ai.types import AIUseCase, ModelRoute, TokenUsage
 
 logger = logging.getLogger("lemma.ai.usage")
@@ -36,6 +40,7 @@ class UsageTracker:
     trace_id: str
     use_case: AIUseCase
     routes: tuple[ModelRoute, ...]
+    user_id: str | None = None
     started_at: float = field(default_factory=time.monotonic)
     # Failed attempts so far == index of the route currently being tried,
     # because the fallback chain is ordered by route priority.
@@ -58,8 +63,15 @@ _tracker_var: ContextVar[UsageTracker | None] = ContextVar(
 )
 
 
-def start_tracking(use_case: AIUseCase, routes: tuple[ModelRoute, ...]) -> UsageTracker:
-    tracker = UsageTracker(trace_id=uuid.uuid4().hex, use_case=use_case, routes=routes)
+def start_tracking(
+    use_case: AIUseCase,
+    routes: tuple[ModelRoute, ...],
+    *,
+    user_id: str | None = None,
+) -> UsageTracker:
+    tracker = UsageTracker(
+        trace_id=uuid.uuid4().hex, use_case=use_case, routes=routes, user_id=user_id
+    )
     _tracker_var.set(tracker)
     return tracker
 
@@ -68,12 +80,12 @@ def current_tracker() -> UsageTracker | None:
     return _tracker_var.get()
 
 
-def record_failure(
+async def record_failure(
     tracker: UsageTracker, *, error: Exception, will_fallback: bool
 ) -> None:
     """One row per failed attempt, written BEFORE switching to the next route."""
     route = tracker.current_route
-    _emit(
+    await _emit(
         tracker,
         route=route,
         success=False,
@@ -90,16 +102,16 @@ def record_failure(
         tracker.finished = True
 
 
-def ensure_failure_recorded(tracker: UsageTracker, *, error: Exception) -> None:
+async def ensure_failure_recorded(tracker: UsageTracker, *, error: Exception) -> None:
     """Facade-level catch: record the failure unless the fallback hook already did."""
     if tracker.finished:
         return
     if tracker.recorded_failures == 0:
-        record_failure(tracker, error=error, will_fallback=False)
+        await record_failure(tracker, error=error, will_fallback=False)
     tracker.finished = True
 
 
-def record_success(
+async def record_success(
     tracker: UsageTracker,
     *,
     usage: TokenUsage,
@@ -116,7 +128,7 @@ def record_success(
             total_tokens=None,
             raw=usage.raw,
         )
-    _emit(
+    await _emit(
         tracker,
         route=tracker.current_route,
         success=True,
@@ -129,12 +141,12 @@ def record_success(
     tracker.finished = True
 
 
-def finalize_stream(tracker: UsageTracker, *, emitted_chars: int) -> None:
+async def finalize_stream(tracker: UsageTracker, *, emitted_chars: int) -> None:
     """Last line of defence for client disconnects mid-stream (终稿 6.2 纪律 2)."""
     if tracker.finished:
         return
     estimated = TokenUsage(output_tokens=estimate_tokens(emitted_chars))
-    _emit(
+    await _emit(
         tracker,
         route=tracker.current_route,
         success=False,
@@ -147,7 +159,7 @@ def finalize_stream(tracker: UsageTracker, *, emitted_chars: int) -> None:
     tracker.finished = True
 
 
-def _emit(
+async def _emit(
     tracker: UsageTracker,
     *,
     route: ModelRoute,
@@ -177,3 +189,17 @@ def _emit(
         "usage_missing": usage_missing,
     }
     logger.info("ai_usage %s", json.dumps(record, ensure_ascii=False, default=str))
+    await _persist(record, user_id=tracker.user_id)
+
+
+async def _persist(record: dict[str, Any], *, user_id: str | None) -> None:
+    try:
+        row = AiUsageLog(
+            **record,
+            user_id=uuid.UUID(user_id) if user_id else None,
+        )
+        async with AsyncSessionLocal() as session:
+            session.add(row)
+            await session.commit()
+    except Exception:  # noqa: BLE001 — the ledger must never break the AI call
+        logger.exception("failed to persist ai_usage_log row (trace_id=%s)", record["trace_id"])

@@ -5,6 +5,7 @@ see. Framework types (ModelMessage, RunUsage, AgentRunResult, ...) must never
 leak out of ai/ — conversion.py translates at the boundary.
 """
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -33,6 +34,8 @@ class ChatMessage(BaseModel):
 
 class VideoInput(BaseModel):
     kind: VideoInputKind
+    # For PROVIDER_FILE_ID this carries the provider file URI (genai File.uri);
+    # for URL kinds it is the public video URL.
     url: str | None = None
     base64_data: str | None = None
     file_id: str | None = None
@@ -40,6 +43,9 @@ class VideoInput(BaseModel):
     # OpenRouter. Resolution must refuse cross-platform reuse.
     file_platform: str | None = None
     mime_type: str | None = None
+    # Provider files auto-delete (~48h on Gemini Files API); reuse must check
+    # this before sending (终稿 8.3).
+    expires_at: datetime | None = None
 
 
 class TokenUsage(BaseModel):

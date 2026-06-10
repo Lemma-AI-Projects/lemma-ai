@@ -9,12 +9,15 @@ Never stack tenacity or custom transports on top — retries would multiply.
 import httpx
 from openai import AsyncOpenAI
 from pydantic_ai.models import Model
+from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
+from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from ai.errors import AIConfigError
+from ai.native import gemini_video
 from ai.types import ModelRoute
 from core.config import settings
 
@@ -70,10 +73,14 @@ def build_model(route: ModelRoute) -> Model:
         model = _build_aihubmix_openai(route)
     elif channel == ("openrouter", "openrouter"):
         model = _build_openrouter(route)
+    elif channel == ("aihubmix", "gemini_video"):
+        # Framework video channel — only reached when AI_VIDEO_ENGINE=
+        # pydantic_ai (终稿 8.2); the default native engine bypasses the
+        # factory entirely (client.ask_video -> native/gemini_video.py).
+        model = _build_gemini_framework(route)
     else:
         raise AIConfigError(
-            f"no factory branch for {route.platform}/{route.adapter} "
-            "(video channels arrive in Phase 2)"
+            f"no factory branch for {route.platform}/{route.adapter}"
         )
     _model_cache[key] = model
     return model
@@ -121,4 +128,14 @@ def _build_openrouter(route: ModelRoute) -> Model:
         route.model,
         provider=OpenRouterProvider(openai_client=client),
         settings=model_settings,
+    )
+
+
+def _build_gemini_framework(route: ModelRoute) -> Model:
+    # Reuses the native channel's client builder so base_url/retry discipline
+    # stays in one place; the genai SDK manages its own connection pool.
+    return GoogleModel(
+        route.model,
+        provider=GoogleProvider(client=gemini_video.build_client()),
+        settings=GoogleModelSettings(timeout=route.timeout_s),
     )

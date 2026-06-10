@@ -1,10 +1,11 @@
 """AIClient — the only door services/ may use to reach any LLM (rules 第八章).
 
-chat()        -> AIResponse                      (non-streaming)
+chat()        -> AIResponse                      (non-streaming text)
 stream_chat() -> AsyncIterator[str]              (Lemma SSE-encoded events)
+ask_video()   -> AIResponse                      (video Q&A, engine-switched)
 
 One flow for everything: render prompt -> resolve route -> convert types ->
-run agent -> map errors -> account usage. Framework objects never escape.
+run engine -> map errors -> account usage. Framework objects never escape.
 
 The facade signature matches the all-self-built design (终稿 2.2 退路边界):
 if the framework ever has to go, only the inside of this package changes.
@@ -18,17 +19,31 @@ from pydantic_ai.models import Model
 
 from ai.agents import LemmaDeps, agent_for
 from ai.config import routes_for
-from ai.conversion import response_metadata, split_history_and_prompt, to_token_usage
-from ai.errors import map_framework_error
+from ai.conversion import (
+    gemini_usage_to_token_usage,
+    response_metadata,
+    split_history_and_prompt,
+    to_token_usage,
+    to_video_part,
+)
+from ai.errors import UnsupportedCapabilityError, map_framework_error
+from ai.media.resolver import ensure_ready
+from ai.model_factory import build_model
+from ai.native import gemini_video
 from ai.prompts.registry import render_system_prompt
 from ai.routing import resolve
 from ai.streaming import delta_event, done_event, error_event, usage_event
-from ai.types import AIResponse, AIUseCase, ChatMessage, ModelRoute
+from ai.types import AIResponse, AIUseCase, ChatMessage, ModelRoute, VideoInput
 from ai.usage import (
     ensure_failure_recorded,
     finalize_stream,
     record_success,
     start_tracking,
+)
+from core.config import settings
+
+_VIDEO_USE_CASES = frozenset(
+    {AIUseCase.VIDEO_QA, AIUseCase.VIDEO_SUMMARY, AIUseCase.VIDEO_LOCATE}
 )
 
 
@@ -45,19 +60,19 @@ class AIClient:
         agent, deps, history, prompt, model, routes = self._prepare(
             use_case, messages, user_id, course_id, prompt_vars
         )
-        tracker = start_tracking(use_case, routes)
+        tracker = start_tracking(use_case, routes, user_id=user_id)
         try:
             result = await agent.run(
                 prompt, model=model, deps=deps, message_history=history
             )
         except Exception as exc:
-            ensure_failure_recorded(tracker, error=exc)
+            await ensure_failure_recorded(tracker, error=exc)
             raise map_framework_error(exc) from exc
 
         token_usage = to_token_usage(result.usage)
         actual_model, request_id = response_metadata(result.new_messages())
         route = tracker.current_route
-        record_success(
+        await record_success(
             tracker,
             usage=token_usage,
             actual_model=actual_model,
@@ -89,7 +104,7 @@ class AIClient:
             agent, deps, history, prompt, model, routes = self._prepare(
                 use_case, messages, user_id, course_id, prompt_vars
             )
-            tracker = start_tracking(use_case, routes)
+            tracker = start_tracking(use_case, routes, user_id=user_id)
             async with agent.run_stream(
                 prompt, model=model, deps=deps, message_history=history
             ) as stream:
@@ -98,7 +113,7 @@ class AIClient:
                     yield delta_event(delta)
                 token_usage = to_token_usage(stream.usage)
                 actual_model, request_id = response_metadata(stream.all_messages())
-                record_success(
+                await record_success(
                     tracker,
                     usage=token_usage,
                     actual_model=actual_model,
@@ -110,13 +125,79 @@ class AIClient:
         except Exception as exc:
             error = map_framework_error(exc)
             if tracker is not None:
-                ensure_failure_recorded(tracker, error=exc)
+                await ensure_failure_recorded(tracker, error=exc)
             yield error_event(error)
         finally:
             # Client disconnects (CancelledError/GeneratorExit) skip the except
             # block above but always land here: book the interrupted attempt.
             if tracker is not None:
-                finalize_stream(tracker, emitted_chars=emitted_chars)
+                await finalize_stream(tracker, emitted_chars=emitted_chars)
+
+    async def ask_video(
+        self,
+        use_case: AIUseCase,
+        video: VideoInput,
+        question: str,
+        *,
+        user_id: str | None = None,
+        course_id: str | None = None,
+        prompt_vars: dict[str, str] | None = None,
+    ) -> AIResponse:
+        """Video Q&A (终稿 9.2). AI_VIDEO_ENGINE picks the execution path:
+        native (default) -> google-genai direct; pydantic_ai -> GoogleModel.
+        Both paths share routing, prompts, error mapping and the ledger."""
+        if use_case not in _VIDEO_USE_CASES:
+            raise UnsupportedCapabilityError(
+                f"'{use_case}' is not a video use case"
+            )
+        ensure_ready(video)
+        routes = routes_for(use_case)
+        route = routes[0]
+        system_prompt = render_system_prompt(use_case, prompt_vars)
+        engine = settings.ai_video_engine
+        tracker = start_tracking(use_case, routes, user_id=user_id)
+        try:
+            if engine == "pydantic_ai":
+                agent = agent_for(use_case)
+                deps = LemmaDeps(
+                    system_prompt=system_prompt, user_id=user_id, course_id=course_id
+                )
+                result = await agent.run(
+                    [question, to_video_part(video, engine)],
+                    model=build_model(route),
+                    deps=deps,
+                )
+                text = result.output
+                token_usage = to_token_usage(result.usage)
+                actual_model, request_id = response_metadata(result.new_messages())
+            else:
+                text, usage_metadata, actual_model = await gemini_video.answer(
+                    model=route.model,
+                    system_prompt=system_prompt,
+                    question=question,
+                    file_uri=video.url or "",
+                    mime_type=video.mime_type,
+                    timeout_s=route.timeout_s,
+                )
+                token_usage = gemini_usage_to_token_usage(usage_metadata)
+                request_id = None
+        except Exception as exc:
+            await ensure_failure_recorded(tracker, error=exc)
+            raise map_framework_error(exc) from exc
+
+        await record_success(
+            tracker,
+            usage=token_usage,
+            actual_model=actual_model,
+            request_id=request_id,
+            output_chars=len(text),
+        )
+        return AIResponse(
+            text=text,
+            platform=route.platform,
+            model=actual_model or route.model,
+            usage=token_usage,
+        )
 
     def _prepare(
         self,
