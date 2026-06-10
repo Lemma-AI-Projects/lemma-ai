@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Boolean, Integer, String, func
+from sqlalchemy import Boolean, Index, Integer, Numeric, String, func
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,6 +18,12 @@ class AiUsageLog(Base):
     """
 
     __tablename__ = "ai_usage_logs"
+    # Quota checks and cost reports always ask "this user, this time window";
+    # the composite index serves that and plain user_id lookups (leftmost
+    # column), so there is no separate user_id index.
+    __table_args__ = (
+        Index("ix_ai_usage_logs_user_id_created_at", "user_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -35,6 +42,10 @@ class AiUsageLog(Base):
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     raw_usage: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # Money the platform itself reported for this call. OpenRouter returns it
+    # per response; AiHubMix doesn't -> NULL (estimate from tokens instead).
+    # Never a guess: NULL means "platform sent no figure".
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(12, 8), nullable=True)
 
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     request_id: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -50,6 +61,9 @@ class AiUsageLog(Base):
     )
 
     # Intentionally no FK: the ledger must outlive account deletions.
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # Same no-FK policy: links spend to a conversation while it exists, stays
+    # meaningful in aggregates after the conversation is deleted.
+    conversation_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), nullable=True, index=True
     )

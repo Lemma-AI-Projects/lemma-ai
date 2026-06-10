@@ -3,6 +3,7 @@
 Stateless thin functions; nothing here talks to the network or the database.
 """
 
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from google.genai import types as genai_types
@@ -79,6 +80,26 @@ def response_metadata(
         if isinstance(message, ModelResponse):
             return message.model_name, message.provider_response_id
     return None, None
+
+
+def response_cost_usd(messages: list[ModelMessage]) -> Decimal | None:
+    """Money the platform itself reported for this call, if any.
+
+    OpenRouter puts a `cost` field in provider_details when the route demands
+    usage accounting (openrouter_usage include — 终稿 6.2 纪律 3). Platforms
+    that report nothing yield None: the ledger stores NULL, never a guess.
+    """
+    for message in reversed(messages):
+        if isinstance(message, ModelResponse):
+            cost = (message.provider_details or {}).get("cost")
+            if cost is None:
+                return None
+            try:
+                # str() first: Decimal(0.0000319) would inherit float noise.
+                return Decimal(str(cost))
+            except (InvalidOperation, ValueError):
+                return None
+    return None
 
 
 def to_video_part(video: VideoInput, engine: str) -> Any:

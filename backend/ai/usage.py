@@ -20,6 +20,7 @@ import time
 import uuid
 from contextvars import ContextVar
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any
 
 from core.database import AsyncSessionLocal
@@ -41,6 +42,7 @@ class UsageTracker:
     use_case: AIUseCase
     routes: tuple[ModelRoute, ...]
     user_id: str | None = None
+    conversation_id: str | None = None
     started_at: float = field(default_factory=time.monotonic)
     # Failed attempts so far == index of the route currently being tried,
     # because the fallback chain is ordered by route priority.
@@ -68,9 +70,14 @@ def start_tracking(
     routes: tuple[ModelRoute, ...],
     *,
     user_id: str | None = None,
+    conversation_id: str | None = None,
 ) -> UsageTracker:
     tracker = UsageTracker(
-        trace_id=uuid.uuid4().hex, use_case=use_case, routes=routes, user_id=user_id
+        trace_id=uuid.uuid4().hex,
+        use_case=use_case,
+        routes=routes,
+        user_id=user_id,
+        conversation_id=conversation_id,
     )
     _tracker_var.set(tracker)
     return tracker
@@ -118,6 +125,7 @@ async def record_success(
     actual_model: str | None,
     request_id: str | None,
     output_chars: int,
+    cost_usd: Decimal | None = None,
 ) -> None:
     usage_missing = not usage.total_tokens
     if usage_missing:
@@ -137,6 +145,7 @@ async def record_success(
         usage=usage,
         usage_missing=usage_missing,
         request_id=request_id,
+        cost_usd=cost_usd,
     )
     tracker.finished = True
 
@@ -169,6 +178,7 @@ async def _emit(
     usage: TokenUsage | None,
     usage_missing: bool,
     request_id: str | None,
+    cost_usd: Decimal | None = None,
 ) -> None:
     record: dict[str, Any] = {
         "use_case": tracker.use_case.value,
@@ -180,6 +190,7 @@ async def _emit(
         "output_tokens": usage.output_tokens if usage else None,
         "total_tokens": usage.total_tokens if usage else None,
         "raw_usage": usage.raw if usage else None,
+        "cost_usd": cost_usd,
         "latency_ms": tracker.latency_ms,
         "request_id": request_id,
         "trace_id": tracker.trace_id,
@@ -189,14 +200,19 @@ async def _emit(
         "usage_missing": usage_missing,
     }
     logger.info("ai_usage %s", json.dumps(record, ensure_ascii=False, default=str))
-    await _persist(record, user_id=tracker.user_id)
+    await _persist(
+        record, user_id=tracker.user_id, conversation_id=tracker.conversation_id
+    )
 
 
-async def _persist(record: dict[str, Any], *, user_id: str | None) -> None:
+async def _persist(
+    record: dict[str, Any], *, user_id: str | None, conversation_id: str | None
+) -> None:
     try:
         row = AiUsageLog(
             **record,
             user_id=uuid.UUID(user_id) if user_id else None,
+            conversation_id=uuid.UUID(conversation_id) if conversation_id else None,
         )
         async with AsyncSessionLocal() as session:
             session.add(row)

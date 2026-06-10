@@ -21,6 +21,7 @@ from ai.agents import LemmaDeps, agent_for
 from ai.config import routes_for
 from ai.conversion import (
     gemini_usage_to_token_usage,
+    response_cost_usd,
     response_metadata,
     split_history_and_prompt,
     to_token_usage,
@@ -55,12 +56,15 @@ class AIClient:
         *,
         user_id: str | None = None,
         course_id: str | None = None,
+        conversation_id: str | None = None,
         prompt_vars: dict[str, str] | None = None,
     ) -> AIResponse:
         agent, deps, history, prompt, model, routes = self._prepare(
             use_case, messages, user_id, course_id, prompt_vars
         )
-        tracker = start_tracking(use_case, routes, user_id=user_id)
+        tracker = start_tracking(
+            use_case, routes, user_id=user_id, conversation_id=conversation_id
+        )
         try:
             result = await agent.run(
                 prompt, model=model, deps=deps, message_history=history
@@ -70,7 +74,8 @@ class AIClient:
             raise map_framework_error(exc) from exc
 
         token_usage = to_token_usage(result.usage)
-        actual_model, request_id = response_metadata(result.new_messages())
+        new_messages = result.new_messages()
+        actual_model, request_id = response_metadata(new_messages)
         route = tracker.current_route
         await record_success(
             tracker,
@@ -78,6 +83,7 @@ class AIClient:
             actual_model=actual_model,
             request_id=request_id,
             output_chars=len(result.output),
+            cost_usd=response_cost_usd(new_messages),
         )
         return AIResponse(
             text=result.output,
@@ -93,6 +99,7 @@ class AIClient:
         *,
         user_id: str | None = None,
         course_id: str | None = None,
+        conversation_id: str | None = None,
         prompt_vars: dict[str, str] | None = None,
     ) -> AsyncIterator[str]:
         """Yield Lemma SSE events. Errors end the stream with an `error` event:
@@ -104,7 +111,9 @@ class AIClient:
             agent, deps, history, prompt, model, routes = self._prepare(
                 use_case, messages, user_id, course_id, prompt_vars
             )
-            tracker = start_tracking(use_case, routes, user_id=user_id)
+            tracker = start_tracking(
+                use_case, routes, user_id=user_id, conversation_id=conversation_id
+            )
             async with agent.run_stream(
                 prompt, model=model, deps=deps, message_history=history
             ) as stream:
@@ -112,13 +121,15 @@ class AIClient:
                     emitted_chars += len(delta)
                     yield delta_event(delta)
                 token_usage = to_token_usage(stream.usage)
-                actual_model, request_id = response_metadata(stream.all_messages())
+                all_messages = stream.all_messages()
+                actual_model, request_id = response_metadata(all_messages)
                 await record_success(
                     tracker,
                     usage=token_usage,
                     actual_model=actual_model,
                     request_id=request_id,
                     output_chars=emitted_chars,
+                    cost_usd=response_cost_usd(all_messages),
                 )
                 yield usage_event(token_usage)
             yield done_event()
@@ -141,6 +152,7 @@ class AIClient:
         *,
         user_id: str | None = None,
         course_id: str | None = None,
+        conversation_id: str | None = None,
         prompt_vars: dict[str, str] | None = None,
     ) -> AIResponse:
         """Video Q&A (终稿 9.2). AI_VIDEO_ENGINE picks the execution path:
@@ -155,7 +167,10 @@ class AIClient:
         route = routes[0]
         system_prompt = render_system_prompt(use_case, prompt_vars)
         engine = settings.ai_video_engine
-        tracker = start_tracking(use_case, routes, user_id=user_id)
+        tracker = start_tracking(
+            use_case, routes, user_id=user_id, conversation_id=conversation_id
+        )
+        cost_usd = None
         try:
             if engine == "pydantic_ai":
                 agent = agent_for(use_case)
@@ -169,8 +184,11 @@ class AIClient:
                 )
                 text = result.output
                 token_usage = to_token_usage(result.usage)
-                actual_model, request_id = response_metadata(result.new_messages())
+                new_messages = result.new_messages()
+                actual_model, request_id = response_metadata(new_messages)
+                cost_usd = response_cost_usd(new_messages)
             else:
+                # Native channel: AiHubMix reports no per-call cost -> NULL.
                 text, usage_metadata, actual_model = await gemini_video.answer(
                     model=route.model,
                     system_prompt=system_prompt,
@@ -191,6 +209,7 @@ class AIClient:
             actual_model=actual_model,
             request_id=request_id,
             output_chars=len(text),
+            cost_usd=cost_usd,
         )
         return AIResponse(
             text=text,
