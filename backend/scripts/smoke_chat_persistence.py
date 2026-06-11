@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy import func, select
 
 from ai import init_ai_runtime, shutdown_ai_runtime
+from core.aio import drain_protected_writes
 from core.database import AsyncSessionLocal
 from core.security import CurrentUser
 from models.ai_conversation import AiMessage
@@ -164,6 +165,8 @@ async def main() -> int:
         )
         check(rows[-1].raw_parts_json is None, "中断轮无附件轨（无完整框架消息）")
 
+        # 台账成功行现在走受保护后台任务，先排空再认账
+        await drain_protected_writes()
         async with AsyncSessionLocal() as s:
             interrupted = (
                 await s.execute(
@@ -185,15 +188,15 @@ async def main() -> int:
         check(interrupted == 1, f"台账补记 stream_interrupted ({interrupted} 行)")
         check(linked >= 3, f"台账 conversation_id 回填 ({linked} 行关联本会话)")
 
-        # --- 3b. 浏览器竞态：收到 done 的瞬间数据必须已可查 ---
-        # 真实浏览器在收到 done 后立刻 reader.cancel() 挂断；后端不变式是
-        # 落库发生在吐出 done 之前（2026-06-12 真实 bug 的回归项）。
+        # --- 3b. 浏览器竞态：done 不等落库，立刻续聊必须被宽限重试兜住 ---
+        # done 即时送达（按钮立刻解锁），写在受保护后台任务上在途；
+        # 新会话的行可能尚未可见——prepare_turn 的在途宽限重试是兜底
+        # （2026-06-12 真实 bug + 尾延迟优化的回归项）。
         async with AsyncSessionLocal() as db:
             ctx_b = await prepare_turn(
                 db,
                 ChatRequest(
-                    conversation_id=conv_id,
-                    messages=[ChatMessageIn(role="user", content="用一个词回答：好")],
+                    messages=[ChatMessageIn(role="user", content="用一个词回答：好")]
                 ),
                 user,
             )
@@ -204,10 +207,31 @@ async def main() -> int:
             if chunk.kind == "done":
                 done_seen = True
                 break  # 模拟浏览器：见到 done 即不再读
-        rows = await message_rows(conv_id)
         check(done_seen, "3b 收到 done 事件")
-        check(len(rows) == 8, f"done 已送达时本轮已落库（{len(rows)} 行，期望 8）")
+        # 不等任何排空，立刻用刚拿到的 id 续聊（最坏竞态）
+        async with AsyncSessionLocal() as db:
+            ctx_race = await prepare_turn(
+                db,
+                ChatRequest(
+                    conversation_id=ctx_b.conversation_id,
+                    messages=[ChatMessageIn(role="user", content="再答一次")],
+                ),
+                user,
+            )
+        check(
+            ctx_race is not None and len(ctx_race.history) == 2,
+            "3b done 后立刻续聊不 404，历史完整（在途写宽限生效）",
+        )
         await gen_b.aclose()
+        await drain_protected_writes()
+        rows_b = await message_rows(ctx_b.conversation_id)
+        check(len(rows_b) == 2, f"3b 新会话成对落库（{len(rows_b)} 行）")
+        async with AsyncSessionLocal() as s:
+            conv_b = await conversation_service.get_owned_conversation(
+                s, user_id=user.id, conversation_id=ctx_b.conversation_id
+            )
+            if conv_b is not None:
+                await conversation_service.delete_conversation(s, conv_b)
 
         # --- 3c. anyio 风格中途断连：取消风暴下部分回答仍落库 ---
         # starlette/uvicorn 在客户端断开后用 anyio cancel scope 取消响应任务，
@@ -233,9 +257,10 @@ async def main() -> int:
                     deltas_c += 1
                     if deltas_c >= 2:
                         scope.cancel()
-        await asyncio.sleep(1.5)  # 受保护写在独立任务上完成
+        await asyncio.sleep(1.5)  # 异步生成器终结器需要时间触发
+        await drain_protected_writes()
         rows = await message_rows(conv_id)
-        check(len(rows) == 10, f"取消风暴下中断轮成对落库（{len(rows)} 行，期望 10）")
+        check(len(rows) == 8, f"取消风暴下中断轮成对落库（{len(rows)} 行，期望 8）")
         check(
             rows[-1].role == "assistant" and rows[-1].content_text == received_c,
             "3c 部分回答内容与已收到的增量一致",

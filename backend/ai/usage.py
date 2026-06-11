@@ -127,6 +127,10 @@ async def record_success(
     output_chars: int,
     cost_usd: Decimal | None = None,
 ) -> None:
+    # State flips synchronously so callers may run this off the critical path
+    # (spawn_protected) without racing finalize_stream into a spurious
+    # "interrupted" row; only the persistence below is the slow tail.
+    tracker.finished = True
     usage_missing = not usage.total_tokens
     if usage_missing:
         # Never leave the ledger empty (终稿 6.2): flag it and estimate.
@@ -147,7 +151,6 @@ async def record_success(
         request_id=request_id,
         cost_usd=cost_usd,
     )
-    tracker.finished = True
 
 
 async def finalize_stream(tracker: UsageTracker, *, emitted_chars: int) -> None:

@@ -5,15 +5,16 @@ filter by user_id as well. Callers never get to see whether a foreign
 conversation exists — "not yours" and "not there" are both None -> 404.
 """
 
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.database import AsyncSessionLocal
+from core.database import AsyncSessionLocal, engine
 from models.ai_conversation import AiConversation, AiMessage
 
 logger = logging.getLogger(__name__)
@@ -99,6 +100,45 @@ async def delete_conversation(
     await db.commit()
 
 
+# One statement per case: the user is WAITING on this write (`done` is held
+# back until the pair is durable), and the dev topology talks to a far-away
+# Postgres — so transaction ceremony (BEGIN/.../COMMIT roundtrips) is real
+# user-visible latency. A single data-modifying-CTE statement under
+# autocommit is still fully atomic (one statement = one implicit
+# transaction; FK checks run at end of statement) but costs ONE roundtrip.
+_PERSIST_TURN_NEW_CONVERSATION = text(
+    """
+    WITH conv AS (
+        INSERT INTO ai_conversations (id, user_id, title, created_at, updated_at)
+        VALUES (:conversation_id, :user_id, :title, now(), now())
+    )
+    INSERT INTO ai_messages
+        (id, conversation_id, role, content_text, raw_parts_json, created_at)
+    VALUES
+        (:user_msg_id, :conversation_id, 'user', :user_content,
+         NULL, :user_sent_at),
+        (:assistant_msg_id, :conversation_id, 'assistant', :assistant_content,
+         CAST(:raw_parts AS jsonb), :assistant_at)
+    """
+)
+
+_PERSIST_TURN_EXISTING_CONVERSATION = text(
+    """
+    WITH msgs AS (
+        INSERT INTO ai_messages
+            (id, conversation_id, role, content_text, raw_parts_json, created_at)
+        VALUES
+            (:user_msg_id, :conversation_id, 'user', :user_content,
+             NULL, :user_sent_at),
+            (:assistant_msg_id, :conversation_id, 'assistant', :assistant_content,
+             CAST(:raw_parts AS jsonb), :assistant_at)
+    )
+    UPDATE ai_conversations SET updated_at = now()
+    WHERE id = :conversation_id
+    """
+)
+
+
 async def persist_turn(
     *,
     conversation_id: uuid.UUID,
@@ -109,59 +149,43 @@ async def persist_turn(
     assistant_content: str,
     raw_parts: dict[str, Any] | None,
 ) -> None:
-    """Write one finished turn (user + assistant) in a single transaction.
+    """Write one finished turn (user + assistant) atomically, in one roundtrip.
 
     For a NEW conversation (new_conversation_title set) the conversation row
-    itself lands in this same transaction: a conversation only exists once it
+    itself lands in the same statement: a conversation only exists once it
     has messages. Its id was pre-generated and already announced in the
-    X-Conversation-Id header — until this commit that id resolves to 404, and
+    X-Conversation-Id header — until this write that id resolves to 404, and
     if the turn dies before the first token the id simply never materializes
     (no empty conversations in the sidebar).
 
-    Opens its OWN session: this runs in the stream's teardown path, possibly
-    shielded from cancellation while the request-scoped session is already
-    closing. Explicit timestamps keep ordering deterministic (user message =
-    request arrival, assistant = completion; server now() would give both the
-    same transaction time).
+    Uses its OWN connection: this may run while the request that spawned it
+    is already being torn down. Explicit timestamps keep ordering
+    deterministic (user message = request arrival, assistant = completion).
 
     Never raises — losing one turn beats crashing teardown; failures go to
     the log with the conversation id for manual recovery.
     """
+    params: dict[str, Any] = {
+        "conversation_id": conversation_id,
+        "user_msg_id": uuid.uuid4(),
+        "assistant_msg_id": uuid.uuid4(),
+        "user_content": user_content,
+        "user_sent_at": user_sent_at,
+        "assistant_content": assistant_content,
+        "assistant_at": datetime.now(UTC),
+        "raw_parts": json.dumps(raw_parts) if raw_parts is not None else None,
+    }
+    if new_conversation_title is not None:
+        statement = _PERSIST_TURN_NEW_CONVERSATION
+        params |= {"user_id": user_id, "title": new_conversation_title}
+    else:
+        statement = _PERSIST_TURN_EXISTING_CONVERSATION
     try:
-        async with AsyncSessionLocal() as session:
-            if new_conversation_title is not None:
-                session.add(
-                    AiConversation(
-                        id=conversation_id,
-                        user_id=user_id,
-                        title=new_conversation_title,
-                    )
-                )
-            else:
-                # Bump updated_at so the sidebar list reflects latest activity.
-                await session.execute(
-                    update(AiConversation)
-                    .where(AiConversation.id == conversation_id)
-                    .values(updated_at=func.now())
-                )
-            session.add_all(
-                [
-                    AiMessage(
-                        conversation_id=conversation_id,
-                        role="user",
-                        content_text=user_content,
-                        created_at=user_sent_at,
-                    ),
-                    AiMessage(
-                        conversation_id=conversation_id,
-                        role="assistant",
-                        content_text=assistant_content,
-                        raw_parts_json=raw_parts,
-                        created_at=datetime.now(UTC),
-                    ),
-                ]
+        async with engine.connect() as connection:
+            autocommit = await connection.execution_options(
+                isolation_level="AUTOCOMMIT"
             )
-            await session.commit()
+            await autocommit.execute(statement, params)
     except Exception:  # noqa: BLE001 — teardown path must never crash the stream
         logger.exception(
             "failed to persist chat turn (conversation_id=%s)", conversation_id

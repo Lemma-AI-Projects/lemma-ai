@@ -141,15 +141,19 @@ class AIClient:
                     token_usage = to_token_usage(stream.usage)
                     all_messages = stream.all_messages()
                     actual_model, request_id = response_metadata(all_messages)
-                    # Ledger first, regardless of output: the provider call
+                    # Ledger row regardless of output: the provider call
                     # happened and is billed even if it produced no text.
-                    await record_success(
-                        tracker,
-                        usage=token_usage,
-                        actual_model=actual_model,
-                        request_id=request_id,
-                        output_chars=emitted_chars,
-                        cost_usd=response_cost_usd(all_messages),
+                    # Internal accounting — off the user's critical path
+                    # (tracker state flips synchronously inside).
+                    aio.spawn_protected(
+                        record_success(
+                            tracker,
+                            usage=token_usage,
+                            actual_model=actual_model,
+                            request_id=request_id,
+                            output_chars=emitted_chars,
+                            cost_usd=response_cost_usd(all_messages),
+                        )
                     )
                     if emitted_chars > 0:
                         yield AIChunk(kind="usage", usage=token_usage)

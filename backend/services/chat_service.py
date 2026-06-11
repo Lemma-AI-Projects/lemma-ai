@@ -41,6 +41,13 @@ class TurnContext:
     new_conversation_title: str | None = None
 
 
+# The previous turn's write is async (done doesn't wait for it); a fast
+# follow-up message may race it. Total grace ≈ 7 × 250ms — generously above
+# the worst observed write latency (~1.2s); forged ids pay ~1.75s before 404.
+_LOOKUP_GRACE_ATTEMPTS = 8
+_LOOKUP_GRACE_INTERVAL_S = 0.25
+
+
 async def prepare_turn(
     db: AsyncSession, payload: ChatRequest, user: CurrentUser
 ) -> TurnContext | None:
@@ -64,9 +71,15 @@ async def prepare_turn(
             ),
         )
 
-    conversation = await conversation_service.get_owned_conversation(
-        db, user_id=user.id, conversation_id=payload.conversation_id
-    )
+    conversation = None
+    for attempt in range(_LOOKUP_GRACE_ATTEMPTS):
+        conversation = await conversation_service.get_owned_conversation(
+            db, user_id=user.id, conversation_id=payload.conversation_id
+        )
+        if conversation is not None:
+            break
+        if attempt < _LOOKUP_GRACE_ATTEMPTS - 1:
+            await asyncio.sleep(_LOOKUP_GRACE_INTERVAL_S)
     if conversation is None:
         return None
     rows = await conversation_service.load_recent_history(
@@ -84,16 +97,15 @@ async def prepare_turn(
 async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
     """Run one AI turn and persist the message pair.
 
-    Persistence timing (bug fix 2026-06-12 — browsers close the connection
-    the instant they see `done`, and uvicorn then cancels this generator with
-    anyio-style repeating cancellation):
-    - Normal completion: the pair is written BEFORE `done` is yielded, so by
-      the time the client can possibly hang up, the data is already durable.
-      Invariant for the frontend: `done` received ⇒ rows queryable.
-    - Disconnect mid-stream: the finally block schedules the write via
-      spawn_protected() — synchronous scheduling, own task, module-held
-      strong reference — so it survives even when every await here is
-      instantly re-cancelled and this generator's frame is torn down.
+    Persistence runs on a protected background task (spawn_protected:
+    synchronous scheduling, own task, module-held strong reference), never
+    awaited on the user's critical path:
+    - `done` is yielded immediately; the write lands ~roundtrip later.
+      The follow-up-message race is covered by prepare_turn's grace retry.
+    - Disconnect mid-stream (browsers cancel with anyio-style repeating
+      cancellation, bug 2026-06-12): the finally block schedules the write
+      synchronously, so it survives even when every await here insta-raises
+      and this generator's frame is torn down.
     """
     parts: list[str] = []
     raw_parts: dict[str, Any] | None = None
@@ -128,10 +140,12 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                 parts.append(chunk.text)
             elif chunk.kind == "done":
                 raw_parts = chunk.raw_parts
-                task = ensure_persist_scheduled()
-                if task is not None:
-                    # Durable before the client ever sees `done`.
-                    await asyncio.shield(task)
+                # Scheduled, NOT awaited: a DB roundtrip before `done` would
+                # hold the user's send button hostage (~1s on dev topology).
+                # Durability is guaranteed by the protected task; the
+                # "next message races the write" window is covered by
+                # prepare_turn's in-flight grace retry.
+                ensure_persist_scheduled()
             yield chunk
     finally:
         # Schedule FIRST and synchronously: under re-cancellation every await
