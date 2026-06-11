@@ -12,8 +12,7 @@ Reserved for later phases (裁决 10): tool_call / tool_result / reasoning.
 import json
 from typing import Any
 
-from ai.errors import AIError
-from ai.types import TokenUsage
+from ai.types import AIChunk, TokenUsage
 
 
 def _encode(event: str, data: dict[str, Any]) -> str:
@@ -39,7 +38,22 @@ def done_event() -> str:
     return _encode("done", {})
 
 
-def error_event(error: AIError) -> str:
+def error_event(code: str, message: str) -> str:
     # Only the stable business code and a safe message — raw provider details
     # stay in the logs (errors.py keeps them on error.raw).
-    return _encode("error", {"code": error.code, "message": error.message})
+    return _encode("error", {"code": code, "message": message})
+
+
+def encode_chunk(chunk: AIChunk) -> str:
+    """Typed facade event -> Lemma SSE frame (the API layer calls this).
+
+    Internal-only payloads (raw_parts on done) deliberately never reach the
+    wire — they exist for persistence, not for the frontend.
+    """
+    if chunk.kind == "delta":
+        return delta_event(chunk.text or "")
+    if chunk.kind == "usage":
+        return usage_event(chunk.usage or TokenUsage())
+    if chunk.kind == "done":
+        return done_event()
+    return error_event(chunk.error_code or "ai_error", chunk.error_message or "")
