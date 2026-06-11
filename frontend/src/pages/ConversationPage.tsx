@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Share2 } from 'lucide-react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ConversationInput } from '@/features/conversation/ConversationInput'
 import { ConversationMessageList } from '@/features/conversation/ConversationMessageList'
@@ -13,12 +13,21 @@ import {
 import { createConversationTurns } from '@/features/conversation/createConversationTurns'
 import { useConversationChat } from '@/features/conversation/useConversationChat'
 
+interface ConversationLocationState {
+  initialMessage?: string
+  messageKey?: string
+}
+
+// 模块级防重：StrictMode 双挂载与重渲染下，同一条首页带入的消息只发送一次
+let consumedInitialMessageKey: string | null = null
+
 export function ConversationPage() {
   // 可选参数路由 chat/:id?：/chat（新会话态）与 /chat/{id} 共用本组件。
   // 采纳预生成 id 时仅 replace URL，组件不 remount，进行中的流不中断；
   // 切换到其他会话时由 useConversationChat 内部检测 id 变化并重置。
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const [draft, setDraft] = useState('')
 
   const chat = useConversationChat({
@@ -27,6 +36,25 @@ export function ConversationPage() {
       navigate(`/chat/${conversationId}`, { replace: true }),
     onRestoreDraft: setDraft,
   })
+
+  // 首页输入框带入的初始消息：进入新会话态后自动发出。发送由首页的
+  // 点击/回车触发，这里只是跨页面接力；发出前清掉浏览器 history state
+  // （绕过 React Router，不触发本组件更新），防止刷新后重发。
+  const { send } = chat
+  useEffect(() => {
+    if (id) return
+    const state = location.state as ConversationLocationState | null
+    const text = state?.initialMessage?.trim()
+    const messageKey = state?.messageKey
+    if (!text || !messageKey || consumedInitialMessageKey === messageKey) return
+    consumedInitialMessageKey = messageKey
+    window.history.replaceState(
+      { ...window.history.state, usr: undefined },
+      '',
+      window.location.href
+    )
+    send(text)
+  }, [id, location.state, send])
 
   // 本轮自建的会话内存态即完整历史，不启用回填；带 id 进入/刷新时才拉
   const isPersistedConversation = Boolean(id) && id !== chat.selfCreatedId
@@ -142,7 +170,7 @@ export function ConversationPage() {
         </Button>
         <ConversationMoreMenu
           conversationId={id}
-          onDeleted={() => navigate('/chat')}
+          onDeleted={() => navigate('/')}
         />
       </div>
 

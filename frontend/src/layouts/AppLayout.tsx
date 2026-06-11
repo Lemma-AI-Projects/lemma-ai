@@ -103,7 +103,7 @@ export function AppLayout() {
   const navigationSidebarContent = (
     <>
       <div className="sticky top-14 z-10 flex flex-col gap-0.5 bg-zinc-100">
-        <SidebarItem icon={SquarePen} label="New chat" to="/chat" end />
+        <SidebarItem icon={SquarePen} label="New chat" to="/" end />
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />

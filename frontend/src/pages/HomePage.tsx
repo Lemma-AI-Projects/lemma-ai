@@ -1,4 +1,5 @@
 import { CalendarCheck2, CalendarClock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { ActionChip } from '@/components/ActionChip'
 import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
@@ -7,6 +8,16 @@ import { HomeUserMenu } from '@/features/home/HomeUserMenu'
 import { suggestions } from '@/mock/homeSuggestions'
 
 export function HomePage() {
+  const navigate = useNavigate()
+
+  // 首页发送 → 进入新会话态的 chat 页并自动发出这条消息，
+  // 对话创建（采纳预生成 id）由 chat 页的流式链路完成
+  const handleSend = (text: string) => {
+    navigate('/chat', {
+      state: { initialMessage: text, messageKey: crypto.randomUUID() },
+    })
+  }
+
   // TODO: wire to real schedule data (e.g. completed / total tasks for today).
   // Kept as a placeholder so the ring + icon swap can be exercised visually.
   const todayTaskProgress = 40
@@ -49,7 +60,7 @@ export function HomePage() {
               Describe a topic, paste a link, or ask a question to get started.
             </p>
           </div>
-          <ChatInput />
+          <ChatInput onSend={handleSend} />
           <div className="flex flex-wrap justify-center gap-2">
             {suggestions.map((s) => (
               <ActionChip

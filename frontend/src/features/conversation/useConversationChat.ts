@@ -345,8 +345,14 @@ export function useConversationChat({
 
   useEffect(() => {
     return () => {
-      requestIdRef.current += 1
-      controllerRef.current?.abort()
+      // 卸载时不 abort：进行中的流让它自然走完（已生成内容后端照常
+      // 落库），仅静默导航/草稿回调，避免卸载后把用户拉回 chat 页。
+      // StrictMode 的假卸载会被上面的同步 effect 立即恢复真回调，
+      // 因此首页带入的初始消息流不会被双挂载杀死。
+      callbacksRef.current = {
+        onConversationAdopted: () => undefined,
+        onRestoreDraft: () => undefined,
+      }
     }
   }, [])
 
