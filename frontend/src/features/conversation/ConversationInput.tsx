@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import { type KeyboardEvent } from 'react'
 import { ArrowUp, Square } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
@@ -10,18 +10,22 @@ const CONVERSATION_PLUS_LEFT_OFFSET_CLASS = 'ml-[-5px]'
 // Conversation input plus button bottom offset. Negative margin moves it further down.
 const CONVERSATION_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-8px]'
 
+// 受控输入：value 由页面持有，便于首字前失败时把草稿还原到输入框。
 export function ConversationInput({
   className,
+  value,
+  onValueChange,
   isStreaming,
   onSend,
   onStop,
 }: {
   className?: string
+  value: string
+  onValueChange: (value: string) => void
   isStreaming: boolean
   onSend: (text: string) => void
   onStop: () => void
 }) {
-  const [value, setValue] = useState('')
   const hasContent = value.trim().length > 0
 
   const submit = () => {
@@ -30,7 +34,7 @@ export function ConversationInput({
       return
     }
     onSend(text)
-    setValue('')
+    onValueChange('')
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -52,7 +56,7 @@ export function ConversationInput({
         placeholder="Ask anything about this lesson..."
         rows={1}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => onValueChange(e.target.value)}
         onKeyDown={handleKeyDown}
         className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
         style={{ fieldSizing: 'content' } as React.CSSProperties}

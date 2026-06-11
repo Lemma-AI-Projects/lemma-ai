@@ -12,12 +12,13 @@ import {
 import { Link, Outlet, useMatch } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { SidebarItem } from '@/components/SidebarItem'
 import { SidebarMoreMenu } from '@/components/SidebarMoreMenu'
 import { SidebarSection } from '@/components/SidebarSection'
+import { useConversationsQuery } from '@/features/conversation/conversationApi'
 import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
-import { chatItems } from '@/mock/chatItems'
 import { courseItems } from '@/mock/course/courseItems'
 import { projectItems } from '@/mock/projectItems'
 
@@ -79,6 +80,7 @@ export function AppLayout() {
   const [isScrolledFromTop, setIsScrolledFromTop] = useState(false)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const activeCourseId = courseMatch?.params.id
+  const conversationsQuery = useConversationsQuery()
   const visibleProjects = projectItems.slice(0, 3)
   const moreProjects = projectItems.slice(3)
   const visibleCourses = courseItems.slice(0, 4)
@@ -101,7 +103,7 @@ export function AppLayout() {
   const navigationSidebarContent = (
     <>
       <div className="sticky top-14 z-10 flex flex-col gap-0.5 bg-zinc-100">
-        <SidebarItem icon={SquarePen} label="New chat" to="/" end />
+        <SidebarItem icon={SquarePen} label="New chat" to="/chat" end />
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
@@ -150,13 +152,23 @@ export function AppLayout() {
         </SidebarSection>
 
         <SidebarSection title="Chats" showLine={false}>
-          {chatItems.map((item) => (
-            <SidebarItem
-              key={item.id}
-              label={item.label}
-              to={`/chat/${item.id}`}
-            />
-          ))}
+          {conversationsQuery.isPending ? (
+            <div className="flex flex-col gap-2 px-3 py-1.5">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-4/5" />
+              <Skeleton className="h-5 w-3/5" />
+            </div>
+          ) : conversationsQuery.isError ? (
+            <p className="px-3 py-1.5 text-sm text-zinc-400">加载失败</p>
+          ) : (
+            (conversationsQuery.data ?? []).map((item) => (
+              <SidebarItem
+                key={item.id}
+                label={item.title}
+                to={`/chat/${item.id}`}
+              />
+            ))
+          )}
         </SidebarSection>
       </div>
     </>

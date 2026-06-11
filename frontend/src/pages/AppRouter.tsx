@@ -39,7 +39,9 @@ const routes: RouteObject[] = [
             element: <PluginsPage />,
           },
           {
-            path: 'chat/:id',
+            // 可选 id：/chat 为新会话态，采纳预生成 id 后 replace 为
+            // /chat/{id}，同一路由避免 remount 杀死进行中的流
+            path: 'chat/:id?',
             element: <ConversationPage />,
           },
           {

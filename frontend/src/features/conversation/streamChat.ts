@@ -1,11 +1,6 @@
 import { env } from '@/lib/env'
 import { supabase } from '@/lib/supabaseClient'
 
-export interface ChatApiMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 export interface ChatStreamUsage {
   inputTokens: number | null
   outputTokens: number | null
@@ -23,11 +18,16 @@ export class ChatStreamError extends Error {
 }
 
 export interface StreamChatOptions {
-  /** 按时间顺序的整段对话历史，最后一条必须是 user。 */
-  messages: ChatApiMessage[]
-  /** Phase 2 预留：后端支持会话落库后再传，本阶段不发送。 */
+  /** 最新一条 user 消息。历史由服务端按 conversationId 从库中重建。 */
+  content: string
+  /** 续聊时携带；新会话整个字段省略（不要传 null）。 */
   conversationId?: string
   signal: AbortSignal
+  /**
+   * 新会话时后端通过响应头 X-Conversation-Id 返回预生成 id，
+   * 在消费流之前触发。是否采纳由调用方按首字规则决定。
+   */
+  onConversationId?: (id: string) => void
   onDelta: (text: string) => void
   onUsage?: (usage: ChatStreamUsage) => void
 }
@@ -43,7 +43,8 @@ export interface StreamChatOptions {
  * 调用方 abort 时抛 AbortError。
  */
 export async function streamChat(options: StreamChatOptions): Promise<void> {
-  const { messages, signal, onDelta, onUsage } = options
+  const { content, conversationId, signal, onConversationId, onDelta, onUsage } =
+    options
 
   const {
     data: { session },
@@ -63,16 +64,21 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
         Accept: 'text/event-stream',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({
+        ...(conversationId ? { conversationId } : {}),
+        messages: [{ role: 'user', content }],
+      }),
       signal,
     }
   )
 
   if (!response.ok) {
-    throw new ChatStreamError(
-      response.status === 401 ? 'invalid_token' : `http_${response.status}`,
-      await readErrorMessage(response)
-    )
+    throw await toStreamError(response)
+  }
+
+  const headerConversationId = response.headers.get('X-Conversation-Id')
+  if (headerConversationId) {
+    onConversationId?.(headerConversationId)
   }
 
   if (!response.body) {
@@ -82,17 +88,29 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
   await consumeSseStream(response.body, { onDelta, onUsage })
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+/**
+ * 业务错误（invalid_token / conversation_not_found）以 detail 字符串
+ * 承载，直接作为错误码；其余（如 422 校验数组）归为 http_<status>。
+ */
+async function toStreamError(response: Response): Promise<ChatStreamError> {
+  let detail: unknown
   try {
     const body: unknown = await response.json()
     if (body !== null && typeof body === 'object' && 'detail' in body) {
-      const { detail } = body as { detail: unknown }
-      return typeof detail === 'string' ? detail : JSON.stringify(detail)
+      detail = (body as { detail: unknown }).detail
     }
   } catch {
     // 非 JSON 响应体，退回状态码描述
   }
-  return `HTTP ${response.status}`
+
+  if (typeof detail === 'string' && detail.length > 0) {
+    return new ChatStreamError(detail, detail)
+  }
+
+  return new ChatStreamError(
+    `http_${response.status}`,
+    detail !== undefined ? JSON.stringify(detail) : `HTTP ${response.status}`
+  )
 }
 
 interface SseFrame {
