@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text, func
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,12 @@ from core.database import Base
 
 class AiConversation(Base):
     __tablename__ = "ai_conversations"
+    # Sidebar query is WHERE user_id ORDER BY updated_at DESC — the composite
+    # index serves filter + order in one pass and (leftmost column) covers
+    # plain user_id lookups, so no separate single-column index.
+    __table_args__ = (
+        Index("ix_ai_conversations_user_id_updated_at", "user_id", "updated_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -19,7 +25,6 @@ class AiConversation(Base):
         UUID(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -48,6 +53,9 @@ class AiMessage(Base):
             "role in ('system', 'user', 'assistant')",
             name="ck_ai_messages_role",
         ),
+        # History rebuild/display is WHERE conversation_id ORDER BY created_at;
+        # composite covers both, leftmost column replaces the single index.
+        Index("ix_ai_messages_conversation_id_created_at", "conversation_id", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -57,7 +65,6 @@ class AiMessage(Base):
         UUID(as_uuid=True),
         ForeignKey("ai_conversations.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     role: Mapped[str] = mapped_column(String, nullable=False)
     content_text: Mapped[str] = mapped_column(Text, nullable=False)

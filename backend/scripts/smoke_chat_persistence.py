@@ -103,6 +103,22 @@ async def main() -> int:
             profile = (await s.execute(select(Profile).limit(1))).scalar_one()
         user = CurrentUser(id=profile.id, email=profile.email)
 
+        # --- 0. 空会话防线：prepare 只发 id 不落行 ---
+        async with AsyncSessionLocal() as db:
+            ghost_ctx = await prepare_turn(
+                db,
+                ChatRequest(
+                    messages=[ChatMessageIn(role="user", content="这轮永远不会被发送")]
+                ),
+                user,
+            )
+        assert ghost_ctx is not None
+        async with AsyncSessionLocal() as s:
+            ghost = await conversation_service.get_owned_conversation(
+                s, user_id=user.id, conversation_id=ghost_ctx.conversation_id
+            )
+        check(ghost is None, "新会话在首轮产出前不存在（首字前失败无空会话残留）")
+
         # --- 1. 新会话首轮 ---
         question1 = "我的幸运数字是 47，记住它。然后用一句话介绍勾股定理。"
         conv_id, text1, kinds = await run_turn(user, question1)

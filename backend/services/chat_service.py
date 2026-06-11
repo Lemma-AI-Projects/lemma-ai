@@ -35,6 +35,9 @@ class TurnContext:
     user_content: str
     user_sent_at: datetime
     history: list[ChatMessage]
+    # Set for a NEW conversation: the row doesn't exist yet (its id is
+    # pre-generated); persist_turn creates it together with the first turn.
+    new_conversation_title: str | None = None
 
 
 async def prepare_turn(
@@ -42,36 +45,38 @@ async def prepare_turn(
 ) -> TurnContext | None:
     """Resolve the conversation for this turn before streaming starts.
 
+    A new conversation is NOT written here — only its id is generated, so a
+    turn that dies before the first token leaves no empty conversation behind.
     Returns None when the requested conversation doesn't belong to the caller
     (the API layer answers 404 — indistinguishable from "doesn't exist").
     """
     content = payload.user_content
     if payload.conversation_id is None:
-        conversation = await conversation_service.create_conversation(
-            db,
+        return TurnContext(
+            conversation_id=uuid.uuid4(),
             user_id=user.id,
-            title=conversation_service.title_from_first_message(content),
+            user_content=content,
+            user_sent_at=datetime.now(UTC),
+            history=[],
+            new_conversation_title=conversation_service.title_from_first_message(
+                content
+            ),
         )
-        history: list[ChatMessage] = []
-    else:
-        conversation = await conversation_service.get_owned_conversation(
-            db, user_id=user.id, conversation_id=payload.conversation_id
-        )
-        if conversation is None:
-            return None
-        rows = await conversation_service.load_recent_history(
-            db, conversation_id=conversation.id
-        )
-        history = [
-            ChatMessage(role=row.role, content=row.content_text) for row in rows
-        ]
 
+    conversation = await conversation_service.get_owned_conversation(
+        db, user_id=user.id, conversation_id=payload.conversation_id
+    )
+    if conversation is None:
+        return None
+    rows = await conversation_service.load_recent_history(
+        db, conversation_id=conversation.id
+    )
     return TurnContext(
         conversation_id=conversation.id,
         user_id=user.id,
         user_content=content,
         user_sent_at=datetime.now(UTC),
-        history=history,
+        history=[ChatMessage(role=row.role, content=row.content_text) for row in rows],
     )
 
 
@@ -120,6 +125,8 @@ async def _persist_pair_protected(
     task = asyncio.create_task(
         conversation_service.persist_turn(
             conversation_id=context.conversation_id,
+            user_id=context.user_id,
+            new_conversation_title=context.new_conversation_title,
             user_content=context.user_content,
             user_sent_at=context.user_sent_at,
             assistant_content=assistant_text,

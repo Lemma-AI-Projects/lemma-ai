@@ -31,16 +31,6 @@ def title_from_first_message(content: str) -> str:
     return title[:TITLE_MAX_CHARS] or "New chat"
 
 
-async def create_conversation(
-    db: AsyncSession, *, user_id: uuid.UUID, title: str
-) -> AiConversation:
-    conversation = AiConversation(user_id=user_id, title=title)
-    db.add(conversation)
-    await db.commit()
-    await db.refresh(conversation)
-    return conversation
-
-
 async def get_owned_conversation(
     db: AsyncSession, *, user_id: uuid.UUID, conversation_id: uuid.UUID
 ) -> AiConversation | None:
@@ -112,12 +102,21 @@ async def delete_conversation(
 async def persist_turn(
     *,
     conversation_id: uuid.UUID,
+    user_id: uuid.UUID,
+    new_conversation_title: str | None,
     user_content: str,
     user_sent_at: datetime,
     assistant_content: str,
     raw_parts: dict[str, Any] | None,
 ) -> None:
     """Write one finished turn (user + assistant) in a single transaction.
+
+    For a NEW conversation (new_conversation_title set) the conversation row
+    itself lands in this same transaction: a conversation only exists once it
+    has messages. Its id was pre-generated and already announced in the
+    X-Conversation-Id header — until this commit that id resolves to 404, and
+    if the turn dies before the first token the id simply never materializes
+    (no empty conversations in the sidebar).
 
     Opens its OWN session: this runs in the stream's teardown path, possibly
     shielded from cancellation while the request-scoped session is already
@@ -130,6 +129,21 @@ async def persist_turn(
     """
     try:
         async with AsyncSessionLocal() as session:
+            if new_conversation_title is not None:
+                session.add(
+                    AiConversation(
+                        id=conversation_id,
+                        user_id=user_id,
+                        title=new_conversation_title,
+                    )
+                )
+            else:
+                # Bump updated_at so the sidebar list reflects latest activity.
+                await session.execute(
+                    update(AiConversation)
+                    .where(AiConversation.id == conversation_id)
+                    .values(updated_at=func.now())
+                )
             session.add_all(
                 [
                     AiMessage(
@@ -146,12 +160,6 @@ async def persist_turn(
                         created_at=datetime.now(UTC),
                     ),
                 ]
-            )
-            # Bump updated_at so the sidebar list reflects latest activity.
-            await session.execute(
-                update(AiConversation)
-                .where(AiConversation.id == conversation_id)
-                .values(updated_at=func.now())
             )
             await session.commit()
     except Exception:  # noqa: BLE001 — teardown path must never crash the stream

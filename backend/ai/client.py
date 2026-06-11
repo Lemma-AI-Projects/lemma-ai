@@ -130,6 +130,7 @@ class AIClient:
             )
             stream = await stream_cm.__aenter__()
             interrupted: BaseException | None = None
+            empty_response = False
             try:
                 try:
                     async for delta in stream.stream_text(delta=True):
@@ -138,6 +139,8 @@ class AIClient:
                     token_usage = to_token_usage(stream.usage)
                     all_messages = stream.all_messages()
                     actual_model, request_id = response_metadata(all_messages)
+                    # Ledger first, regardless of output: the provider call
+                    # happened and is billed even if it produced no text.
                     await record_success(
                         tracker,
                         usage=token_usage,
@@ -146,8 +149,11 @@ class AIClient:
                         output_chars=emitted_chars,
                         cost_usd=response_cost_usd(all_messages),
                     )
-                    yield AIChunk(kind="usage", usage=token_usage)
-                    raw_parts = serialize_turn(stream.new_messages())
+                    if emitted_chars > 0:
+                        yield AIChunk(kind="usage", usage=token_usage)
+                        raw_parts = serialize_turn(stream.new_messages())
+                    else:
+                        empty_response = True
                 except (GeneratorExit, asyncio.CancelledError) as exc:
                     # Client disconnect / stop button: stop token generation
                     # and close the provider connection cleanly.
@@ -157,6 +163,18 @@ class AIClient:
                 await stream_cm.__aexit__(None, None, None)
             if interrupted is not None:
                 raise interrupted
+            if empty_response:
+                # Contract invariant: `done` means the turn produced content
+                # (and the pair persists). A provider quirk returning zero
+                # output must not look like success — the consumer would adopt
+                # a conversation id that never materializes. End as an error;
+                # the frontend's pre-first-token failure path handles it.
+                yield AIChunk(
+                    kind="error",
+                    error_code="ai_provider_error",
+                    error_message="model returned an empty response",
+                )
+                return
             yield AIChunk(kind="done", raw_parts=raw_parts)
         except Exception as exc:
             error = map_framework_error(exc)
