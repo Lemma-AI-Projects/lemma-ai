@@ -16,6 +16,8 @@ import sys
 import uuid
 from pathlib import Path
 
+import anyio
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import func, select
@@ -182,6 +184,74 @@ async def main() -> int:
             ).scalar_one()
         check(interrupted == 1, f"台账补记 stream_interrupted ({interrupted} 行)")
         check(linked >= 3, f"台账 conversation_id 回填 ({linked} 行关联本会话)")
+
+        # --- 3b. 浏览器竞态：收到 done 的瞬间数据必须已可查 ---
+        # 真实浏览器在收到 done 后立刻 reader.cancel() 挂断；后端不变式是
+        # 落库发生在吐出 done 之前（2026-06-12 真实 bug 的回归项）。
+        async with AsyncSessionLocal() as db:
+            ctx_b = await prepare_turn(
+                db,
+                ChatRequest(
+                    conversation_id=conv_id,
+                    messages=[ChatMessageIn(role="user", content="用一个词回答：好")],
+                ),
+                user,
+            )
+        assert ctx_b is not None
+        gen_b = stream_turn(ctx_b)
+        done_seen = False
+        async for chunk in gen_b:
+            if chunk.kind == "done":
+                done_seen = True
+                break  # 模拟浏览器：见到 done 即不再读
+        rows = await message_rows(conv_id)
+        check(done_seen, "3b 收到 done 事件")
+        check(len(rows) == 8, f"done 已送达时本轮已落库（{len(rows)} 行，期望 8）")
+        await gen_b.aclose()
+
+        # --- 3c. anyio 风格中途断连：取消风暴下部分回答仍落库 ---
+        # starlette/uvicorn 在客户端断开后用 anyio cancel scope 取消响应任务，
+        # 此后每个 await 都会再次抛取消——受保护后台写必须在这种环境下存活。
+        async with AsyncSessionLocal() as db:
+            ctx_c = await prepare_turn(
+                db,
+                ChatRequest(
+                    conversation_id=conv_id,
+                    messages=[
+                        ChatMessageIn(role="user", content="用十句话讲讲圆周率的历史。")
+                    ],
+                ),
+                user,
+            )
+        assert ctx_c is not None
+        received_c = ""
+        deltas_c = 0
+        with anyio.CancelScope() as scope:
+            async for chunk in stream_turn(ctx_c):
+                if chunk.kind == "delta" and chunk.text:
+                    received_c += chunk.text
+                    deltas_c += 1
+                    if deltas_c >= 2:
+                        scope.cancel()
+        await asyncio.sleep(1.5)  # 受保护写在独立任务上完成
+        rows = await message_rows(conv_id)
+        check(len(rows) == 10, f"取消风暴下中断轮成对落库（{len(rows)} 行，期望 10）")
+        check(
+            rows[-1].role == "assistant" and rows[-1].content_text == received_c,
+            "3c 部分回答内容与已收到的增量一致",
+        )
+        async with AsyncSessionLocal() as s:
+            interrupted2 = (
+                await s.execute(
+                    select(func.count())
+                    .select_from(AiUsageLog)
+                    .where(
+                        AiUsageLog.conversation_id == conv_id,
+                        AiUsageLog.error_type == "stream_interrupted",
+                    )
+                )
+            ).scalar_one()
+        check(interrupted2 == 2, f"3c 台账补记中断（共 {interrupted2} 行，期望 2）")
 
         # --- 4. 越权红线 ---
         stranger = CurrentUser(id=uuid.uuid4(), email=None)

@@ -16,6 +16,7 @@ if the framework ever has to go, only the inside of this package changes.
 """
 
 import asyncio
+import contextlib
 from collections.abc import AsyncIterator
 
 from pydantic_ai import Agent
@@ -40,6 +41,7 @@ from ai.native import gemini_video
 from ai.prompts.registry import render_system_prompt
 from ai.routing import resolve
 from ai.types import AIChunk, AIResponse, AIUseCase, ChatMessage, ModelRoute, VideoInput
+from core import aio
 from ai.usage import (
     ensure_failure_recorded,
     finalize_stream,
@@ -186,8 +188,14 @@ class AIClient:
         finally:
             # Client disconnects (CancelledError/GeneratorExit) skip the except
             # block above but always land here: book the interrupted attempt.
+            # spawn_protected: under anyio-style re-cancellation a plain await
+            # would die instantly and the ledger row would be lost.
             if tracker is not None:
-                await finalize_stream(tracker, emitted_chars=emitted_chars)
+                task = aio.spawn_protected(
+                    finalize_stream(tracker, emitted_chars=emitted_chars)
+                )
+                with contextlib.suppress(asyncio.CancelledError):
+                    await asyncio.shield(task)
 
     async def ask_video(
         self,

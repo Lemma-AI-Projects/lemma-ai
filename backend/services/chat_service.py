@@ -23,6 +23,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai import AIChunk, AIUseCase, ChatMessage, ai_client
+from core import aio
 from core.security import CurrentUser
 from schemas.ai import ChatRequest
 from services import conversation_service
@@ -81,14 +82,40 @@ async def prepare_turn(
 
 
 async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
-    """Run one AI turn and persist the message pair on the way out.
+    """Run one AI turn and persist the message pair.
 
-    The finally block also runs on client disconnect (CancelledError /
-    GeneratorExit), which is exactly when the partial answer must be saved —
-    the write is shielded so cancellation can't kill it mid-flight.
+    Persistence timing (bug fix 2026-06-12 — browsers close the connection
+    the instant they see `done`, and uvicorn then cancels this generator with
+    anyio-style repeating cancellation):
+    - Normal completion: the pair is written BEFORE `done` is yielded, so by
+      the time the client can possibly hang up, the data is already durable.
+      Invariant for the frontend: `done` received ⇒ rows queryable.
+    - Disconnect mid-stream: the finally block schedules the write via
+      spawn_protected() — synchronous scheduling, own task, module-held
+      strong reference — so it survives even when every await here is
+      instantly re-cancelled and this generator's frame is torn down.
     """
     parts: list[str] = []
     raw_parts: dict[str, Any] | None = None
+    persist_task: asyncio.Task[Any] | None = None
+
+    def ensure_persist_scheduled() -> asyncio.Task[Any] | None:
+        nonlocal persist_task
+        assistant_text = "".join(parts)
+        if persist_task is None and assistant_text:
+            persist_task = aio.spawn_protected(
+                conversation_service.persist_turn(
+                    conversation_id=context.conversation_id,
+                    user_id=context.user_id,
+                    new_conversation_title=context.new_conversation_title,
+                    user_content=context.user_content,
+                    user_sent_at=context.user_sent_at,
+                    assistant_content=assistant_text,
+                    raw_parts=raw_parts,
+                )
+            )
+        return persist_task
+
     chunk_stream = ai_client.stream_chat(
         AIUseCase.TEXT_CHAT,
         [*context.history, ChatMessage(role="user", content=context.user_content)],
@@ -101,40 +128,21 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                 parts.append(chunk.text)
             elif chunk.kind == "done":
                 raw_parts = chunk.raw_parts
+                task = ensure_persist_scheduled()
+                if task is not None:
+                    # Durable before the client ever sees `done`.
+                    await asyncio.shield(task)
             yield chunk
     finally:
+        # Schedule FIRST and synchronously: under re-cancellation every await
+        # below may raise immediately, but the write is already on its own
+        # protected task by then.
+        ensure_persist_scheduled()
         # Close the inner generator deterministically (books the interrupted
-        # ledger row right now, instead of whenever GC finalizes it).
+        # ledger row now instead of whenever GC finalizes it). May insta-raise
+        # under cancellation — the persist above no longer depends on it.
         with contextlib.suppress(Exception):
             await chunk_stream.aclose()
-        assistant_text = "".join(parts)
-        if assistant_text:
-            await _persist_pair_protected(context, assistant_text, raw_parts)
-
-
-async def _persist_pair_protected(
-    context: TurnContext, assistant_text: str, raw_parts: dict[str, Any] | None
-) -> None:
-    """Persist the turn even while being cancelled.
-
-    asyncio.shield keeps the write running when the surrounding task is
-    cancelled, but the await itself still raises CancelledError — so we
-    re-await the task to guarantee the transaction finished before teardown
-    continues. persist_turn never raises (it logs), so the bare await is safe.
-    """
-    task = asyncio.create_task(
-        conversation_service.persist_turn(
-            conversation_id=context.conversation_id,
-            user_id=context.user_id,
-            new_conversation_title=context.new_conversation_title,
-            user_content=context.user_content,
-            user_sent_at=context.user_sent_at,
-            assistant_content=assistant_text,
-            raw_parts=raw_parts,
-        )
-    )
-    try:
-        await asyncio.shield(task)
-    except asyncio.CancelledError:
-        await task
-        raise
+        if persist_task is not None and not persist_task.done():
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.shield(persist_task)

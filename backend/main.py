@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ai import init_ai_runtime, shutdown_ai_runtime
 from api.v1.router import api_router
+from core.aio import drain_protected_writes
 from core.config import settings
 
 
@@ -17,6 +18,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     try:
         yield
     finally:
+        # In-flight protected writes (chat persistence, ledger rows spawned by
+        # disconnected requests) land before pools close.
+        await drain_protected_writes()
         await shutdown_ai_runtime()
 
 
