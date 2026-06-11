@@ -1,0 +1,160 @@
+"""Conversation persistence and ownership rules.
+
+Hard rule (IDOR red line): every query that touches a conversation by id MUST
+filter by user_id as well. Callers never get to see whether a foreign
+conversation exists — "not yours" and "not there" are both None -> 404.
+"""
+
+import logging
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from core.database import AsyncSessionLocal
+from models.ai_conversation import AiConversation, AiMessage
+
+logger = logging.getLogger(__name__)
+
+# Context window for rebuilding history server-side: enough for coherent
+# multi-turn chat without letting old conversations inflate token spend
+# forever. Becomes a setting if a real need to tune it appears.
+HISTORY_MESSAGE_LIMIT = 40
+
+TITLE_MAX_CHARS = 50
+
+
+def title_from_first_message(content: str) -> str:
+    title = " ".join(content.strip().split())
+    return title[:TITLE_MAX_CHARS] or "New chat"
+
+
+async def create_conversation(
+    db: AsyncSession, *, user_id: uuid.UUID, title: str
+) -> AiConversation:
+    conversation = AiConversation(user_id=user_id, title=title)
+    db.add(conversation)
+    await db.commit()
+    await db.refresh(conversation)
+    return conversation
+
+
+async def get_owned_conversation(
+    db: AsyncSession, *, user_id: uuid.UUID, conversation_id: uuid.UUID
+) -> AiConversation | None:
+    result = await db.execute(
+        select(AiConversation).where(
+            AiConversation.id == conversation_id,
+            AiConversation.user_id == user_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_conversations(
+    db: AsyncSession, *, user_id: uuid.UUID, limit: int = 50, offset: int = 0
+) -> list[AiConversation]:
+    result = await db.execute(
+        select(AiConversation)
+        .where(AiConversation.user_id == user_id)
+        .order_by(AiConversation.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result.scalars())
+
+
+async def list_messages(
+    db: AsyncSession, *, conversation_id: uuid.UUID
+) -> list[AiMessage]:
+    """Full message history, chronological. Ownership is checked by the caller
+    via get_owned_conversation before this runs."""
+    result = await db.execute(
+        select(AiMessage)
+        .where(AiMessage.conversation_id == conversation_id)
+        .order_by(AiMessage.created_at.asc())
+    )
+    return list(result.scalars())
+
+
+async def load_recent_history(
+    db: AsyncSession, *, conversation_id: uuid.UUID
+) -> list[AiMessage]:
+    """Last N messages in chronological order (the model's context window)."""
+    result = await db.execute(
+        select(AiMessage)
+        .where(AiMessage.conversation_id == conversation_id)
+        .order_by(AiMessage.created_at.desc())
+        .limit(HISTORY_MESSAGE_LIMIT)
+    )
+    return list(reversed(result.scalars().all()))
+
+
+async def rename_conversation(
+    db: AsyncSession, conversation: AiConversation, *, title: str
+) -> AiConversation:
+    conversation.title = title
+    await db.commit()
+    await db.refresh(conversation)
+    return conversation
+
+
+async def delete_conversation(
+    db: AsyncSession, conversation: AiConversation
+) -> None:
+    # Hard delete by design; ai_messages rows go with it (FK CASCADE).
+    await db.delete(conversation)
+    await db.commit()
+
+
+async def persist_turn(
+    *,
+    conversation_id: uuid.UUID,
+    user_content: str,
+    user_sent_at: datetime,
+    assistant_content: str,
+    raw_parts: dict[str, Any] | None,
+) -> None:
+    """Write one finished turn (user + assistant) in a single transaction.
+
+    Opens its OWN session: this runs in the stream's teardown path, possibly
+    shielded from cancellation while the request-scoped session is already
+    closing. Explicit timestamps keep ordering deterministic (user message =
+    request arrival, assistant = completion; server now() would give both the
+    same transaction time).
+
+    Never raises — losing one turn beats crashing teardown; failures go to
+    the log with the conversation id for manual recovery.
+    """
+    try:
+        async with AsyncSessionLocal() as session:
+            session.add_all(
+                [
+                    AiMessage(
+                        conversation_id=conversation_id,
+                        role="user",
+                        content_text=user_content,
+                        created_at=user_sent_at,
+                    ),
+                    AiMessage(
+                        conversation_id=conversation_id,
+                        role="assistant",
+                        content_text=assistant_content,
+                        raw_parts_json=raw_parts,
+                        created_at=datetime.now(UTC),
+                    ),
+                ]
+            )
+            # Bump updated_at so the sidebar list reflects latest activity.
+            await session.execute(
+                update(AiConversation)
+                .where(AiConversation.id == conversation_id)
+                .values(updated_at=func.now())
+            )
+            await session.commit()
+    except Exception:  # noqa: BLE001 — teardown path must never crash the stream
+        logger.exception(
+            "failed to persist chat turn (conversation_id=%s)", conversation_id
+        )

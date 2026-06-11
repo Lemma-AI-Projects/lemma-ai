@@ -9,6 +9,7 @@ from typing import Any
 from google.genai import types as genai_types
 from pydantic_ai.messages import (
     ModelMessage,
+    ModelMessagesTypeAdapter,
     ModelRequest,
     ModelResponse,
     TextPart,
@@ -80,6 +81,19 @@ def response_metadata(
         if isinstance(message, ModelResponse):
             return message.model_name, message.provider_response_id
     return None, None
+
+
+def serialize_turn(messages: list[ModelMessage]) -> dict[str, Any]:
+    """Framework messages -> JSON-safe attachment for ai_messages.raw_parts_json.
+
+    Dual-track storage (终稿第十一章): content_text stays the source of truth;
+    this blob is the optional exact-rebuild attachment. The schema tag lets a
+    future framework swap recognize and migrate (or ignore) old blobs.
+    """
+    return {
+        "schema": "pydantic_ai/v1",
+        "messages": ModelMessagesTypeAdapter.dump_python(messages, mode="json"),
+    }
 
 
 def response_cost_usd(messages: list[ModelMessage]) -> Decimal | None:

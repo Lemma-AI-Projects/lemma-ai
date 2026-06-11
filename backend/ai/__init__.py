@@ -23,6 +23,7 @@ from ai.media.inputs import from_provider_file, from_url
 from ai.media.provider_files import delete_video, upload_video
 from ai.model_factory import init_http_client, shutdown_http_client
 from ai.native.gemini_video import close_shared_client
+from ai.streaming import encode_chunk
 from ai.types import (
     AIChunk,
     AIResponse,
@@ -66,6 +67,7 @@ __all__ = [
     "VideoInputKind",
     "ai_client",
     "delete_video",
+    "encode_chunk",
     "from_provider_file",
     "from_url",
     "init_ai_runtime",

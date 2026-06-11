@@ -65,8 +65,23 @@ class AIResponse(BaseModel):
 
 
 class AIChunk(BaseModel):
-    delta: str
+    """One typed streaming event from the AIClient facade.
+
+    services/ subscribe to these for persistence; the API layer encodes them
+    to SSE via ai/streaming.py. Exactly one terminal event ends every stream:
+    done (success) or error (failure — possibly after some deltas).
+    """
+
+    kind: Literal["delta", "usage", "done", "error"]
+    # delta
+    text: str | None = None
+    # usage
     usage: TokenUsage | None = None
+    # done: framework-serialized turn (schema-tagged) for ai_messages.raw_parts_json
+    raw_parts: dict[str, Any] | None = None
+    # error
+    error_code: str | None = None
+    error_message: str | None = None
 
 
 class ModelRoute(BaseModel):

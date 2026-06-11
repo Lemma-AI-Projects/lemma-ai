@@ -1,16 +1,21 @@
 """AIClient — the only door services/ may use to reach any LLM (rules 第八章).
 
 chat()        -> AIResponse                      (non-streaming text)
-stream_chat() -> AsyncIterator[str]              (Lemma SSE-encoded events)
+stream_chat() -> AsyncIterator[AIChunk]          (typed streaming events)
 ask_video()   -> AIResponse                      (video Q&A, engine-switched)
 
 One flow for everything: render prompt -> resolve route -> convert types ->
 run engine -> map errors -> account usage. Framework objects never escape.
 
+stream_chat yields typed AIChunk events so services/ can subscribe (e.g.
+persist the finished turn) without parsing wire bytes; the API layer encodes
+chunks to SSE via ai/streaming.encode_chunk. Protocol ownership stays here.
+
 The facade signature matches the all-self-built design (终稿 2.2 退路边界):
 if the framework ever has to go, only the inside of this package changes.
 """
 
+import asyncio
 from collections.abc import AsyncIterator
 
 from pydantic_ai import Agent
@@ -23,6 +28,7 @@ from ai.conversion import (
     gemini_usage_to_token_usage,
     response_cost_usd,
     response_metadata,
+    serialize_turn,
     split_history_and_prompt,
     to_token_usage,
     to_video_part,
@@ -33,8 +39,7 @@ from ai.model_factory import build_model
 from ai.native import gemini_video
 from ai.prompts.registry import render_system_prompt
 from ai.routing import resolve
-from ai.streaming import delta_event, done_event, error_event, usage_event
-from ai.types import AIResponse, AIUseCase, ChatMessage, ModelRoute, VideoInput
+from ai.types import AIChunk, AIResponse, AIUseCase, ChatMessage, ModelRoute, VideoInput
 from ai.usage import (
     ensure_failure_recorded,
     finalize_stream,
@@ -101,10 +106,10 @@ class AIClient:
         course_id: str | None = None,
         conversation_id: str | None = None,
         prompt_vars: dict[str, str] | None = None,
-    ) -> AsyncIterator[str]:
-        """Yield Lemma SSE events. Errors end the stream with an `error` event:
-        once the first token is out there is no silent model switching (终稿 5.3),
-        the frontend decides whether to retry."""
+    ) -> AsyncIterator[AIChunk]:
+        """Yield typed AIChunk events. Errors end the stream with an `error`
+        chunk: once the first token is out there is no silent model switching
+        (终稿 5.3), the caller decides whether to retry."""
         tracker = None
         emitted_chars = 0
         try:
@@ -114,30 +119,52 @@ class AIClient:
             tracker = start_tracking(
                 use_case, routes, user_id=user_id, conversation_id=conversation_id
             )
-            async with agent.run_stream(
+            # Entered manually instead of `async with`: when the consumer
+            # disconnects, a GeneratorExit would otherwise unwind THROUGH the
+            # framework's context manager and trip its internals ("coroutine
+            # ignored GeneratorExit" cascade — found by smoke test). Instead we
+            # cancel via the official API, exit the context cleanly, and only
+            # then re-raise the interruption.
+            stream_cm = agent.run_stream(
                 prompt, model=model, deps=deps, message_history=history
-            ) as stream:
-                async for delta in stream.stream_text(delta=True):
-                    emitted_chars += len(delta)
-                    yield delta_event(delta)
-                token_usage = to_token_usage(stream.usage)
-                all_messages = stream.all_messages()
-                actual_model, request_id = response_metadata(all_messages)
-                await record_success(
-                    tracker,
-                    usage=token_usage,
-                    actual_model=actual_model,
-                    request_id=request_id,
-                    output_chars=emitted_chars,
-                    cost_usd=response_cost_usd(all_messages),
-                )
-                yield usage_event(token_usage)
-            yield done_event()
+            )
+            stream = await stream_cm.__aenter__()
+            interrupted: BaseException | None = None
+            try:
+                try:
+                    async for delta in stream.stream_text(delta=True):
+                        emitted_chars += len(delta)
+                        yield AIChunk(kind="delta", text=delta)
+                    token_usage = to_token_usage(stream.usage)
+                    all_messages = stream.all_messages()
+                    actual_model, request_id = response_metadata(all_messages)
+                    await record_success(
+                        tracker,
+                        usage=token_usage,
+                        actual_model=actual_model,
+                        request_id=request_id,
+                        output_chars=emitted_chars,
+                        cost_usd=response_cost_usd(all_messages),
+                    )
+                    yield AIChunk(kind="usage", usage=token_usage)
+                    raw_parts = serialize_turn(stream.new_messages())
+                except (GeneratorExit, asyncio.CancelledError) as exc:
+                    # Client disconnect / stop button: stop token generation
+                    # and close the provider connection cleanly.
+                    await stream.cancel()
+                    interrupted = exc
+            finally:
+                await stream_cm.__aexit__(None, None, None)
+            if interrupted is not None:
+                raise interrupted
+            yield AIChunk(kind="done", raw_parts=raw_parts)
         except Exception as exc:
             error = map_framework_error(exc)
             if tracker is not None:
                 await ensure_failure_recorded(tracker, error=exc)
-            yield error_event(error)
+            yield AIChunk(
+                kind="error", error_code=error.code, error_message=error.message
+            )
         finally:
             # Client disconnects (CancelledError/GeneratorExit) skip the except
             # block above but always land here: book the interrupted attempt.
