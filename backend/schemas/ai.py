@@ -35,6 +35,10 @@ class ChatRequest(BaseModel):
     # message field) is kept for wire compatibility with Phase 1 clients and
     # future needs (e.g. edited-turn regeneration).
     conversation_id: uuid.UUID | None = None
+    # Only meaningful when starting a NEW conversation: the conversation is
+    # born inside this project. Ignored when conversationId is present
+    # (moving an existing conversation goes through PATCH /conversations).
+    project_id: uuid.UUID | None = None
     messages: list[ChatMessageIn] = Field(min_length=1, max_length=1)
 
     @field_validator("messages")

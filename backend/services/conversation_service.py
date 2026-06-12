@@ -47,14 +47,65 @@ async def get_owned_conversation(
 async def list_conversations(
     db: AsyncSession, *, user_id: uuid.UUID, limit: int = 50, offset: int = 0
 ) -> list[AiConversation]:
+    """Main sidebar list: unfiled conversations only (拍板 2026-06-13).
+
+    Conversations moved into a project live in the project page instead —
+    ChatGPT-style information architecture, no double listing.
+    """
     result = await db.execute(
         select(AiConversation)
-        .where(AiConversation.user_id == user_id)
+        .where(
+            AiConversation.user_id == user_id,
+            AiConversation.project_id.is_(None),
+        )
         .order_by(AiConversation.updated_at.desc())
         .limit(limit)
         .offset(offset)
     )
     return list(result.scalars())
+
+
+async def list_project_conversations(
+    db: AsyncSession, *, project_id: uuid.UUID, limit: int = 50, offset: int = 0
+) -> list[tuple[AiConversation, str | None]]:
+    """Project chat list with previews: (conversation, last user message).
+
+    Ownership of the project is checked by the caller. The preview is the
+    last USER message (the question reads better than a markdown answer);
+    correlated subquery rides the (conversation_id, created_at) index.
+    """
+    last_user_message = (
+        select(AiMessage.content_text)
+        .where(
+            AiMessage.conversation_id == AiConversation.id,
+            AiMessage.role == "user",
+        )
+        .order_by(AiMessage.created_at.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+    result = await db.execute(
+        select(AiConversation, last_user_message)
+        .where(AiConversation.project_id == project_id)
+        .order_by(AiConversation.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return [(row[0], row[1]) for row in result.all()]
+
+
+async def set_conversation_project(
+    db: AsyncSession, conversation: AiConversation, *, project_id: uuid.UUID | None
+) -> AiConversation:
+    """Move a conversation into a project (or out, with None).
+
+    Target project ownership is validated by the caller (api layer) — this
+    function only flips the link.
+    """
+    conversation.project_id = project_id
+    await db.commit()
+    await db.refresh(conversation)
+    return conversation
 
 
 async def list_messages(
@@ -109,8 +160,9 @@ async def delete_conversation(
 _PERSIST_TURN_NEW_CONVERSATION = text(
     """
     WITH conv AS (
-        INSERT INTO ai_conversations (id, user_id, title, created_at, updated_at)
-        VALUES (:conversation_id, :user_id, :title, now(), now())
+        INSERT INTO ai_conversations
+            (id, user_id, title, project_id, created_at, updated_at)
+        VALUES (:conversation_id, :user_id, :title, :project_id, now(), now())
     )
     INSERT INTO ai_messages
         (id, conversation_id, role, content_text, raw_parts_json, created_at)
@@ -144,6 +196,7 @@ async def persist_turn(
     conversation_id: uuid.UUID,
     user_id: uuid.UUID,
     new_conversation_title: str | None,
+    new_conversation_project_id: uuid.UUID | None = None,
     user_content: str,
     user_sent_at: datetime,
     assistant_content: str,
@@ -177,7 +230,11 @@ async def persist_turn(
     }
     if new_conversation_title is not None:
         statement = _PERSIST_TURN_NEW_CONVERSATION
-        params |= {"user_id": user_id, "title": new_conversation_title}
+        params |= {
+            "user_id": user_id,
+            "title": new_conversation_title,
+            "project_id": new_conversation_project_id,
+        }
     else:
         statement = _PERSIST_TURN_EXISTING_CONVERSATION
     try:

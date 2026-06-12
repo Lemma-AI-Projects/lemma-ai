@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -31,7 +31,25 @@ class ConversationMessageOut(BaseModel):
     created_at: datetime
 
 
-class ConversationRenameIn(BaseModel):
+class ConversationUpdateIn(BaseModel):
+    """PATCH payload: rename and/or move between projects.
+
+    projectId has move-out semantics on explicit null — "field absent" and
+    "field: null" mean different things, distinguished via model_fields_set.
+    """
+
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
-    title: str = Field(min_length=1, max_length=200)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    # set uuid -> move into that project; set null -> move out to main list
+    project_id: uuid.UUID | None = None
+
+    @property
+    def moves_project(self) -> bool:
+        return "project_id" in self.model_fields_set
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "ConversationUpdateIn":
+        if self.title is None and not self.moves_project:
+            raise ValueError("provide title and/or projectId")
+        return self

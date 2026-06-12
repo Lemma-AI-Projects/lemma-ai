@@ -9,9 +9,9 @@ from models.ai_conversation import AiConversation
 from schemas.conversation import (
     ConversationMessageOut,
     ConversationOut,
-    ConversationRenameIn,
+    ConversationUpdateIn,
 )
-from services import conversation_service
+from services import conversation_service, project_service
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -56,16 +56,32 @@ async def list_messages(
 
 
 @router.patch("/{conversation_id}", response_model=ConversationOut)
-async def rename_conversation(
+async def update_conversation(
     conversation_id: uuid.UUID,
-    payload: ConversationRenameIn,
+    payload: ConversationUpdateIn,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AiConversation:
     conversation = await _owned_or_404(db, current_user, conversation_id)
-    return await conversation_service.rename_conversation(
-        db, conversation, title=payload.title
-    )
+    if payload.moves_project:
+        if payload.project_id is not None:
+            # Moving INTO a project requires owning the target (IDOR rule).
+            target = await project_service.get_owned_project(
+                db, user_id=current_user.id, project_id=payload.project_id
+            )
+            if target is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="project_not_found",
+                )
+        conversation = await conversation_service.set_conversation_project(
+            db, conversation, project_id=payload.project_id
+        )
+    if payload.title is not None:
+        conversation = await conversation_service.rename_conversation(
+            db, conversation, title=payload.title
+        )
+    return conversation
 
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)

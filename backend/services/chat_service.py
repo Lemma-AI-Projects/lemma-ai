@@ -26,7 +26,7 @@ from ai import AIChunk, AIUseCase, ChatMessage, ai_client
 from core import aio
 from core.security import CurrentUser
 from schemas.ai import ChatRequest
-from services import conversation_service
+from services import conversation_service, project_service
 
 
 @dataclass
@@ -39,6 +39,8 @@ class TurnContext:
     # Set for a NEW conversation: the row doesn't exist yet (its id is
     # pre-generated); persist_turn creates it together with the first turn.
     new_conversation_title: str | None = None
+    # New conversation born inside a project (ownership already verified).
+    new_conversation_project_id: uuid.UUID | None = None
 
 
 # The previous turn's write is async (done doesn't wait for it); a fast
@@ -60,6 +62,13 @@ async def prepare_turn(
     """
     content = payload.user_content
     if payload.conversation_id is None:
+        if payload.project_id is not None:
+            # Same IDOR rule as conversations: foreign/unknown project -> 404.
+            project = await project_service.get_owned_project(
+                db, user_id=user.id, project_id=payload.project_id
+            )
+            if project is None:
+                return None
         return TurnContext(
             conversation_id=uuid.uuid4(),
             user_id=user.id,
@@ -69,6 +78,7 @@ async def prepare_turn(
             new_conversation_title=conversation_service.title_from_first_message(
                 content
             ),
+            new_conversation_project_id=payload.project_id,
         )
 
     conversation = None
@@ -120,6 +130,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                     conversation_id=context.conversation_id,
                     user_id=context.user_id,
                     new_conversation_title=context.new_conversation_title,
+                    new_conversation_project_id=context.new_conversation_project_id,
                     user_content=context.user_content,
                     user_sent_at=context.user_sent_at,
                     assistant_content=assistant_text,

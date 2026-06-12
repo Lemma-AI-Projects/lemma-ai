@@ -14,8 +14,13 @@ class AiConversation(Base):
     # Sidebar query is WHERE user_id ORDER BY updated_at DESC — the composite
     # index serves filter + order in one pass and (leftmost column) covers
     # plain user_id lookups, so no separate single-column index.
+    # Project chat list is WHERE project_id ORDER BY updated_at DESC — same
+    # pattern, own composite.
     __table_args__ = (
         Index("ix_ai_conversations_user_id_updated_at", "user_id", "updated_at"),
+        Index(
+            "ix_ai_conversations_project_id_updated_at", "project_id", "updated_at"
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -25,6 +30,14 @@ class AiConversation(Base):
         UUID(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
         nullable=False,
+    )
+    # Single-home project link (拍板 2026-06-13): a conversation lives in at
+    # most one project. SET NULL on project delete — conversations fall back
+    # to the main list, never cascade-deleted (data safety over tidiness).
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
     )
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
