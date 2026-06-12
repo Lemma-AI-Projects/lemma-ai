@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useMoveConversationMutation } from '@/hooks/useMoveConversation'
 import {
-  useConversationsQuery,
+  useConversationDetailQuery,
   useDeleteConversationMutation,
 } from './conversationApi'
 import { RenameConversationDialog } from './RenameConversationDialog'
@@ -41,12 +41,12 @@ export function ConversationMoreMenu({
   onDeleted: () => void
 }) {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
-  // 与侧边栏共享同一份列表缓存，仅用于取当前标题作为重命名初始值
-  const { data: conversations } = useConversationsQuery()
+  // 标题走详情接口：主列表缓存查不到项目内会话（主列表按设计排除它们），
+  // 用列表缓存当真相源会让项目内会话的重命名弹窗初始值为空。
+  const { data: detail } = useConversationDetailQuery(conversationId)
   const deleteMutation = useDeleteConversationMutation()
   const moveMutation = useMoveConversationMutation()
-  const currentTitle =
-    conversations?.find((item) => item.id === conversationId)?.title ?? ''
+  const currentTitle = detail?.title ?? ''
 
   const handleAction = (label: string) => {
     console.log(label)

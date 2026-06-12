@@ -7,6 +7,7 @@ from core.database import get_db
 from core.security import CurrentUser, get_current_user
 from models.ai_conversation import AiConversation
 from schemas.conversation import (
+    ConversationDetailOut,
     ConversationMessageOut,
     ConversationOut,
     ConversationUpdateIn,
@@ -41,6 +42,15 @@ async def list_conversations(
     return await conversation_service.list_conversations(
         db, user_id=current_user.id, limit=limit, offset=offset
     )
+
+
+@router.get("/{conversation_id}", response_model=ConversationDetailOut)
+async def get_conversation(
+    conversation_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AiConversation:
+    return await _owned_or_404(db, current_user, conversation_id)
 
 
 @router.get("/{conversation_id}/messages", response_model=list[ConversationMessageOut])

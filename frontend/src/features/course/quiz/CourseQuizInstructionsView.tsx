@@ -1,8 +1,6 @@
 import { Button } from '@/components/ui/button'
-import {
-  CourseContentLayout,
-  getNextCourseDirectoryHref,
-} from '@/features/course/CourseContentLayout'
+import { CourseContentLayout } from '@/features/course/CourseContentLayout'
+import { getNextCourseDirectoryHref } from '@/features/course/getNextCourseDirectoryHref'
 import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizInstructionsMarkdown } from '@/features/course/quiz/CourseQuizInstructionsMarkdown'
 

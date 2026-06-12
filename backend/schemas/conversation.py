@@ -18,6 +18,24 @@ class ConversationOut(BaseModel):
     updated_at: datetime
 
 
+class ConversationDetailOut(BaseModel):
+    """Single-conversation detail: the chat page's own source of truth.
+
+    List caches can't serve this — the main list excludes project-homed
+    conversations by design, so title/project lookups by id need a real
+    endpoint (bug found 2026-06-13: rename dialog opened empty for them).
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel, populate_by_name=True, from_attributes=True
+    )
+
+    id: uuid.UUID
+    title: str | None
+    project_id: uuid.UUID | None
+    updated_at: datetime
+
+
 class ConversationMessageOut(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel, populate_by_name=True, from_attributes=True

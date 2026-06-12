@@ -2,7 +2,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '@/lib/apiClient'
 import { signOutOn401 } from '@/lib/apiUtils'
-import { conversationsQueryRootKey } from '@/lib/queryKeys'
+import {
+  conversationDetailQueryKey,
+  conversationsQueryRootKey,
+} from '@/lib/queryKeys'
 
 /**
  * 会话移入项目（projectId 为 uuid）或移出回主列表（projectId 为 null）。
@@ -22,9 +25,13 @@ export function useMoveConversationMutation() {
         })
       )
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       // 移入/移出涉及主列表与项目列表，两者共用前缀，一并失效
       void queryClient.invalidateQueries({ queryKey: conversationsQueryRootKey })
+      // 详情里的归属项目变了
+      void queryClient.invalidateQueries({
+        queryKey: conversationDetailQueryKey(variables.conversationId),
+      })
     },
   })
 }

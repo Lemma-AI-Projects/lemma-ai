@@ -17,7 +17,7 @@ import '@vidstack/react/player/styles/default/layouts/video.css'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { getNextCourseDirectoryHref } from '@/features/course/CourseContentLayout'
+import { getNextCourseDirectoryHref } from '@/features/course/getNextCourseDirectoryHref'
 import type { CourseVideoContent } from '@/features/course/CourseMainContent'
 import { CourseOverviewMarkdown } from '@/features/course/overview/CourseOverviewMarkdown'
 import { CourseVideoChapterList } from '@/features/course/video/CourseVideoChapterList'

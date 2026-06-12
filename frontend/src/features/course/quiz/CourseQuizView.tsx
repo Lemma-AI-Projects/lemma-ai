@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizInstructionsView } from '@/features/course/quiz/CourseQuizInstructionsView'
 import { CourseQuizQuestionsView } from '@/features/course/quiz/CourseQuizQuestionsView'
@@ -35,14 +35,29 @@ function getCourseQuizPageTitles(content: CourseQuestionFlowContent) {
 }
 
 export function CourseQuizView({ content }: CourseQuizViewProps) {
+  // 切换到另一个测验/作业时用 key 重挂载答题流程，使页面状态
+  // 自然回到说明页，替代先渲染旧页再被 effect 重置的双趟渲染
   const currentContentId = getCurrentQuizId(content)
+
+  return (
+    <CourseQuizFlow
+      key={currentContentId}
+      content={content}
+      currentContentId={currentContentId}
+    />
+  )
+}
+
+function CourseQuizFlow({
+  content,
+  currentContentId,
+}: {
+  content: CourseQuestionFlowContent
+  currentContentId: string
+}) {
   const pageTitles = getCourseQuizPageTitles(content)
   const [currentQuizPage, setCurrentQuizPage] =
     useState<CourseQuizPage>('instructions')
-
-  useEffect(() => {
-    setCurrentQuizPage('instructions')
-  }, [currentContentId])
 
   if (currentQuizPage === 'questions') {
     return (

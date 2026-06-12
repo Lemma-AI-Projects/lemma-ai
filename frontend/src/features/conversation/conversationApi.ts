@@ -2,11 +2,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '@/lib/apiClient'
 import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
-import { conversationsQueryRootKey } from '@/lib/queryKeys'
+import {
+  conversationDetailQueryKey,
+  conversationsQueryRootKey,
+} from '@/lib/queryKeys'
 
 export interface ConversationListItem {
   id: string
   title: string
+  updatedAt: string
+}
+
+export interface ConversationDetail {
+  id: string
+  title: string | null
+  projectId: string | null
   updatedAt: string
 }
 
@@ -49,6 +59,28 @@ async function getConversationMessages(
   return data
 }
 
+async function getConversationDetail(
+  conversationId: string
+): Promise<ConversationDetail> {
+  const { data } = await signOutOn401(
+    apiClient.get<ConversationDetail>(`/api/v1/conversations/${conversationId}`)
+  )
+  return data
+}
+
+/**
+ * 会话详情（标题/归属项目）。列表缓存查不到项目内会话（主列表按设计
+ * 排除它们），按 id 的标题/归属一律走这里。
+ */
+export function useConversationDetailQuery(conversationId: string | undefined) {
+  return useQuery({
+    queryKey: conversationDetailQueryKey(conversationId ?? 'none'),
+    queryFn: () => getConversationDetail(conversationId as string),
+    enabled: Boolean(conversationId),
+    retry: retryUnlessClientError,
+  })
+}
+
 /** 主侧边栏会话列表，按 updatedAt 倒序。 */
 export function useConversationsQuery() {
   return useQuery({
@@ -89,9 +121,12 @@ export function useRenameConversationMutation() {
       )
       return data
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       // 主列表与项目列表共用前缀，无论会话归属哪边都能刷新到
       void queryClient.invalidateQueries({ queryKey: conversationsQueryRootKey })
+      void queryClient.invalidateQueries({
+        queryKey: conversationDetailQueryKey(variables.conversationId),
+      })
     },
   })
 }
@@ -108,6 +143,9 @@ export function useDeleteConversationMutation() {
     onSuccess: (_data, variables) => {
       queryClient.removeQueries({
         queryKey: conversationMessagesQueryKey(variables.conversationId),
+      })
+      queryClient.removeQueries({
+        queryKey: conversationDetailQueryKey(variables.conversationId),
       })
       void queryClient.invalidateQueries({ queryKey: conversationsQueryRootKey })
     },
