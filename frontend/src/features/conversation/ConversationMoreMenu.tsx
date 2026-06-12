@@ -17,30 +17,49 @@ import {
   ActionMenuSub,
 } from '@/components/ActionMenu'
 import { Button } from '@/components/ui/button'
-import { projectItems } from '@/mock/projectItems'
+import { useMoveConversationMutation } from '@/hooks/useMoveConversation'
 import {
   useConversationsQuery,
   useDeleteConversationMutation,
 } from './conversationApi'
 import { RenameConversationDialog } from './RenameConversationDialog'
 
+/** 跨域数据由页面层注入（feature 间不直接引用），仅取菜单所需字段。 */
+export interface MoveTargetProject {
+  id: string
+  name: string
+}
+
 export function ConversationMoreMenu({
   conversationId,
+  projects,
   onDeleted,
 }: {
-  /** 新会话态（尚未产生 id）为 undefined，重命名/删除不可用。 */
+  /** 新会话态（尚未产生 id）为 undefined，重命名/删除/移动不可用。 */
   conversationId?: string
+  projects: MoveTargetProject[]
   onDeleted: () => void
 }) {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   // 与侧边栏共享同一份列表缓存，仅用于取当前标题作为重命名初始值
   const { data: conversations } = useConversationsQuery()
   const deleteMutation = useDeleteConversationMutation()
+  const moveMutation = useMoveConversationMutation()
   const currentTitle =
     conversations?.find((item) => item.id === conversationId)?.title ?? ''
 
   const handleAction = (label: string) => {
     console.log(label)
+  }
+
+  const handleMove = (projectId: string) => {
+    if (!conversationId) return
+    moveMutation.mutate(
+      { conversationId, projectId },
+      {
+        onError: (error) => console.error('Failed to move conversation', error),
+      }
+    )
   }
 
   const handleDelete = () => {
@@ -86,12 +105,13 @@ export function ConversationMoreMenu({
 
           <ActionMenuSeparator />
 
-          {projectItems.map((item) => (
+          {projects.map((project) => (
             <ActionMenuItem
-              key={item.label}
-              label={item.label}
+              key={project.id}
+              label={project.name}
               icon={Folder}
-              onSelect={() => handleAction(item.label)}
+              disabled={!conversationId || moveMutation.isPending}
+              onSelect={() => handleMove(project.id)}
             />
           ))}
         </ActionMenuSub>

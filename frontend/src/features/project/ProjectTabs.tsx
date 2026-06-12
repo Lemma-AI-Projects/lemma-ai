@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export const projectTabValues = ['Chats', 'Courses', 'Sources'] as const
+const projectTabValues = ['Chats', 'Courses', 'Sources'] as const
 export type ProjectTab = (typeof projectTabValues)[number]
 
 export function ProjectTabs({

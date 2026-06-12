@@ -22,6 +22,8 @@ export interface StreamChatOptions {
   content: string
   /** 续聊时携带；新会话整个字段省略（不要传 null）。 */
   conversationId?: string
+  /** 新会话直接诞生在该项目里；conversationId 存在时无意义，不发送。 */
+  projectId?: string
   signal: AbortSignal
   /**
    * 新会话时后端通过响应头 X-Conversation-Id 返回预生成 id，
@@ -43,8 +45,15 @@ export interface StreamChatOptions {
  * 调用方 abort 时抛 AbortError。
  */
 export async function streamChat(options: StreamChatOptions): Promise<void> {
-  const { content, conversationId, signal, onConversationId, onDelta, onUsage } =
-    options
+  const {
+    content,
+    conversationId,
+    projectId,
+    signal,
+    onConversationId,
+    onDelta,
+    onUsage,
+  } = options
 
   const {
     data: { session },
@@ -66,6 +75,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
       },
       body: JSON.stringify({
         ...(conversationId ? { conversationId } : {}),
+        ...(!conversationId && projectId ? { projectId } : {}),
         messages: [{ role: 'user', content }],
       }),
       signal,

@@ -3,33 +3,43 @@ import { Folder, Info, Pencil, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useCreateProjectMutation } from './projectApi'
 
 export function CreateProjectDialog({
   open,
   onOpenChange,
-  onCreate,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCreate: (name: string) => void
 }) {
   const [projectName, setProjectName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const createMutation = useCreateProjectMutation()
 
-  const isSubmitDisabled = projectName.trim().length === 0
+  const isSubmitDisabled =
+    projectName.trim().length === 0 || createMutation.isPending
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setProjectName('')
+    if (!nextOpen) {
+      setProjectName('')
+      createMutation.reset()
+    }
     onOpenChange(nextOpen)
   }
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmed = projectName.trim()
-    if (!trimmed) return
-    onCreate(trimmed)
-    setProjectName('')
-    onOpenChange(false)
+    if (!trimmed || createMutation.isPending) return
+    createMutation.mutate(
+      { name: trimmed },
+      {
+        onSuccess: () => {
+          setProjectName('')
+          onOpenChange(false)
+        },
+      }
+    )
   }
 
   return (
@@ -121,6 +131,12 @@ export function CreateProjectDialog({
                   项目功能可将聊天、文件和自定义指令集中保存，以便用于持续进行的工作，或者单纯用于整理内容，让一切更井然有序。
                 </p>
               </aside>
+
+              {createMutation.isError && (
+                <p className="mt-2 text-xs text-destructive">
+                  创建项目失败，请重试
+                </p>
+              )}
             </div>
 
             {/* Footer */}
@@ -132,7 +148,7 @@ export function CreateProjectDialog({
                   disabled={isSubmitDisabled}
                   className="-translate-x-px -translate-y-px rounded-full"
                 >
-                  创建项目
+                  {createMutation.isPending ? '创建中…' : '创建项目'}
                 </Button>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
@@ -10,9 +10,32 @@ const PROJECT_PLUS_LEFT_OFFSET_CLASS = 'ml-[-5px]'
 // Project input plus button bottom offset. Negative margin moves it further down.
 const PROJECT_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-8px]'
 
-export function ProjectInput({ className }: { className?: string }) {
+export function ProjectInput({
+  className,
+  onSend,
+}: {
+  className?: string
+  onSend: (text: string) => void
+}) {
   const [value, setValue] = useState('')
   const hasContent = value.trim().length > 0
+
+  const submit = () => {
+    const text = value.trim()
+    if (!text) {
+      return
+    }
+    onSend(text)
+    setValue('')
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter 发送，Shift+Enter 换行；输入法候选确认（composing）不触发发送
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault()
+      submit()
+    }
+  }
 
   return (
     <div
@@ -26,6 +49,7 @@ export function ProjectInput({ className }: { className?: string }) {
         rows={1}
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
         style={{ fieldSizing: 'content' } as React.CSSProperties}
       />
@@ -50,6 +74,7 @@ export function ProjectInput({ className }: { className?: string }) {
             variant="default"
             size="icon"
             disabled={!hasContent}
+            onClick={submit}
             className={cn(
               'rounded-full transition-colors',
               hasContent

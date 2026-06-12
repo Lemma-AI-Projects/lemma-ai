@@ -17,20 +17,37 @@ import {
   ActionMenuSub,
 } from '@/components/ActionMenu'
 import { Button } from '@/components/ui/button'
-import { projectItems } from '@/mock/projectItems'
+import { useMoveConversationMutation } from '@/hooks/useMoveConversation'
+import { useProjectsQuery } from './projectApi'
 
-export function ProjectChatItemMenu({ chatId, projectName }: { chatId: string; projectName: string }) {
+export function ProjectChatItemMenu({
+  chatId,
+  projectId,
+  projectName,
+}: {
+  chatId: string
+  projectId: string
+  projectName: string
+}) {
+  const { data: projects } = useProjectsQuery()
+  const moveMutation = useMoveConversationMutation()
+  // 移到其他项目：排除当前所在项目
+  const otherProjects = (projects ?? []).filter((item) => item.id !== projectId)
+
   const log = (action: string) => console.log(action, chatId)
+
+  const handleMove = (targetProjectId: string | null) => {
+    moveMutation.mutate(
+      { conversationId: chatId, projectId: targetProjectId },
+      {
+        onError: (error) => console.error('Failed to move conversation', error),
+      }
+    )
+  }
 
   const topItems: { icon: LucideIcon; label: string }[] = [
     { icon: Share, label: 'Share' },
     { icon: Pencil, label: 'Rename' },
-  ]
-
-  const bottomItems: { icon: LucideIcon; label: string; destructive?: boolean }[] = [
-    { icon: FolderMinus, label: `Remove from ${projectName}` },
-    { icon: Archive, label: 'Archive' },
-    { icon: Trash2, label: 'Delete', destructive: true },
   ]
 
   return (
@@ -62,23 +79,30 @@ export function ProjectChatItemMenu({ chatId, projectName }: { chatId: string; p
           onSelect={() => log('New Project')}
         />
         <ActionMenuSeparator />
-        {projectItems.map((project) => (
+        {otherProjects.map((project) => (
           <ActionMenuItem
-            key={project.label}
+            key={project.id}
             icon={Folder}
-            label={project.label}
-            onSelect={() => log(project.label)}
+            label={project.name}
+            disabled={moveMutation.isPending}
+            onSelect={() => handleMove(project.id)}
           />
         ))}
       </ActionMenuSub>
 
-      {bottomItems.map((item) => (
-        <ActionMenuItem
-          key={item.label}
-          {...item}
-          onSelect={() => log(item.label)}
-        />
-      ))}
+      <ActionMenuItem
+        icon={FolderMinus}
+        label={`Remove from ${projectName}`}
+        disabled={moveMutation.isPending}
+        onSelect={() => handleMove(null)}
+      />
+      <ActionMenuItem icon={Archive} label="Archive" onSelect={() => log('Archive')} />
+      <ActionMenuItem
+        icon={Trash2}
+        label="Delete"
+        destructive
+        onSelect={() => log('Delete')}
+      />
     </ActionMenu>
   )
 }

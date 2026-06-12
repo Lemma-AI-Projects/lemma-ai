@@ -1,28 +1,65 @@
 import { useState } from 'react'
 import { FolderOpen } from 'lucide-react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ProjectChatList } from '@/features/project/ProjectChatList'
 import { ProjectInput } from '@/features/project/ProjectInput'
 import { ProjectPageActions } from '@/features/project/ProjectPageActions'
 import { ProjectSourceList } from '@/features/project/ProjectSourceList'
 import { ProjectTabs, type ProjectTab } from '@/features/project/ProjectTabs'
-import { projectItems } from '@/mock/projectItems'
+import { useProjectQuery } from '@/features/project/projectApi'
+import { isNotFoundError } from '@/lib/apiUtils'
 
 export function ProjectPage() {
   const { id } = useParams<{ id: string }>()
-  const projectName = projectItems.find((item) => item.id === id)?.label ?? ''
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<ProjectTab>('Chats')
+  const projectQuery = useProjectQuery(id)
+
+  // 项目内发起新对话：复用首页接力模式，带 projectId 进入 chat 页，
+  // 新会话直接诞生在该项目里
+  const handleSend = (text: string) => {
+    navigate('/chat', {
+      state: {
+        initialMessage: text,
+        messageKey: crypto.randomUUID(),
+        projectId: id,
+      },
+    })
+  }
+
+  if (projectQuery.isError && isNotFoundError(projectQuery.error)) {
+    return (
+      <div className="relative flex h-full items-center justify-center rounded-md border border-zinc-200/80 bg-zinc-50">
+        <p className="text-sm text-zinc-400">项目不存在或已删除</p>
+      </div>
+    )
+  }
+
+  if (projectQuery.isError) {
+    return (
+      <div className="relative flex h-full items-center justify-center rounded-md border border-zinc-200/80 bg-zinc-50">
+        <p className="text-sm text-zinc-400">项目加载失败，请刷新重试</p>
+      </div>
+    )
+  }
+
+  const projectName = projectQuery.data?.name ?? ''
 
   return (
     <div className="relative h-full rounded-md border border-zinc-200/80 bg-zinc-50">
-      <ProjectPageActions />
+      <ProjectPageActions projectId={id} projectName={projectName} />
       <div className="flex h-full flex-col items-center justify-start overflow-y-auto px-6 pt-[8%]">
         <div className="flex w-full max-w-[48rem] flex-col">
           <div className="mb-7 flex translate-x-2 items-center gap-3">
             <FolderOpen className="size-9 text-foreground" strokeWidth={1.75} />
-            <h1 className="text-2xl font-medium text-foreground">{projectName}</h1>
+            {projectQuery.isPending ? (
+              <Skeleton className="h-8 w-56" />
+            ) : (
+              <h1 className="text-2xl font-medium text-foreground">{projectName}</h1>
+            )}
           </div>
-          <ProjectInput />
+          <ProjectInput onSend={handleSend} />
           <div className="mt-7 translate-x-3">
             <ProjectTabs value={activeTab} onChange={setActiveTab} />
           </div>

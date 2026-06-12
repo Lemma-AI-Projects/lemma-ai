@@ -1,8 +1,8 @@
-import { isAxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '@/lib/apiClient'
-import { supabase } from '@/lib/supabaseClient'
+import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
+import { conversationsQueryRootKey } from '@/lib/queryKeys'
 
 export interface ConversationListItem {
   id: string
@@ -17,35 +17,16 @@ export interface ConversationMessage {
   createdAt: string
 }
 
-export const conversationsQueryKey = ['conversations'] as const
+/** 主侧边栏列表（仅未归属项目的会话）。 */
+export const conversationsQueryKey = conversationsQueryRootKey
 
+/**
+ * 历史回填快照的 key 故意不放在 ['conversations'] 前缀下：流结束后
+ * hook 按该前缀 invalidate 各列表，若快照也被失效会触发 refetch，
+ * 与内存中的 liveMessages 重复渲染。
+ */
 export function conversationMessagesQueryKey(conversationId: string) {
-  return ['conversations', conversationId, 'messages'] as const
-}
-
-/** 404 统一含义「不存在或不是你的」，UI 一律当不存在处理。 */
-export function isNotFoundError(error: unknown): boolean {
-  return isAxiosError(error) && error.response?.status === 404
-}
-
-/** 4xx 不重试（401 走守卫回登录、404 当不存在），其余至多重试一次。 */
-function retryUnlessClientError(failureCount: number, error: unknown) {
-  if (isAxiosError(error) && error.response && error.response.status < 500) {
-    return false
-  }
-  return failureCount < 1
-}
-
-/** token 失效时清掉本地会话，让 RequireAuth 守卫把用户带回登录页。 */
-async function signOutOn401<T>(request: Promise<T>): Promise<T> {
-  try {
-    return await request
-  } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 401) {
-      void supabase.auth.signOut()
-    }
-    throw error
-  }
+  return ['conversation-messages', conversationId] as const
 }
 
 async function getConversations(): Promise<ConversationListItem[]> {
@@ -68,7 +49,7 @@ async function getConversationMessages(
   return data
 }
 
-/** 侧边栏会话列表，按 updatedAt 倒序。 */
+/** 主侧边栏会话列表，按 updatedAt 倒序。 */
 export function useConversationsQuery() {
   return useQuery({
     queryKey: conversationsQueryKey,
@@ -109,7 +90,8 @@ export function useRenameConversationMutation() {
       return data
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: conversationsQueryKey })
+      // 主列表与项目列表共用前缀，无论会话归属哪边都能刷新到
+      void queryClient.invalidateQueries({ queryKey: conversationsQueryRootKey })
     },
   })
 }
@@ -127,7 +109,7 @@ export function useDeleteConversationMutation() {
       queryClient.removeQueries({
         queryKey: conversationMessagesQueryKey(variables.conversationId),
       })
-      void queryClient.invalidateQueries({ queryKey: conversationsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: conversationsQueryRootKey })
     },
   })
 }

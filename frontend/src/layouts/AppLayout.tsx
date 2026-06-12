@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   CalendarDays,
+  FolderOpen,
   FolderPlus,
   Home,
   LibraryBig,
@@ -19,8 +20,8 @@ import { SidebarSection } from '@/components/SidebarSection'
 import { useConversationsQuery } from '@/features/conversation/conversationApi'
 import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
+import { useProjectsQuery } from '@/features/project/projectApi'
 import { courseItems } from '@/mock/course/courseItems'
-import { projectItems } from '@/mock/projectItems'
 
 function SidebarHeader({ children }: { children?: ReactNode }) {
   return (
@@ -81,8 +82,11 @@ export function AppLayout() {
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const activeCourseId = courseMatch?.params.id
   const conversationsQuery = useConversationsQuery()
-  const visibleProjects = projectItems.slice(0, 3)
-  const moreProjects = projectItems.slice(3)
+  const projectsQuery = useProjectsQuery()
+  const projects = projectsQuery.data ?? []
+  // 图标统一 FolderOpen（后端不下发图标）
+  const visibleProjects = projects.slice(0, 3)
+  const moreProjects = projects.slice(3)
   const visibleCourses = courseItems.slice(0, 4)
   const moreCourses = courseItems.slice(4)
 
@@ -122,18 +126,33 @@ export function AppLayout() {
             label="New Project"
             onClick={() => setCreateProjectOpen(true)}
           />
-          {visibleProjects.map((item) => (
-            <SidebarItem
-              key={item.id}
-              icon={item.icon}
-              label={item.label}
-              to={`/project/${item.id}`}
-            />
-          ))}
-          <SidebarMoreMenu
-            items={moreProjects}
-            getHref={(item) => `/project/${item.id}`}
-          />
+          {projectsQuery.isPending ? (
+            <div className="flex flex-col gap-2 px-3 py-1.5">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-4/5" />
+            </div>
+          ) : projectsQuery.isError ? (
+            <p className="px-3 py-1.5 text-sm text-zinc-400">加载失败</p>
+          ) : (
+            <>
+              {visibleProjects.map((item) => (
+                <SidebarItem
+                  key={item.id}
+                  icon={FolderOpen}
+                  label={item.name}
+                  to={`/project/${item.id}`}
+                />
+              ))}
+              <SidebarMoreMenu
+                items={moreProjects.map((item) => ({
+                  id: item.id,
+                  icon: FolderOpen,
+                  label: item.name,
+                }))}
+                getHref={(item) => `/project/${item.id}`}
+              />
+            </>
+          )}
         </SidebarSection>
 
         <SidebarSection title="Courses">
@@ -200,7 +219,6 @@ export function AppLayout() {
       <CreateProjectDialog
         open={createProjectOpen}
         onOpenChange={setCreateProjectOpen}
-        onCreate={(name) => console.log('TODO: create project', name)}
       />
     </div>
   )

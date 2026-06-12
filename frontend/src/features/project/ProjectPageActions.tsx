@@ -1,10 +1,36 @@
-import { Ellipsis, Settings, Share2 } from 'lucide-react'
+import { useState } from 'react'
+import { Ellipsis, Pencil, Settings, Share2, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { ActionMenu, ActionMenuItem } from '@/components/ActionMenu'
 import { Button } from '@/components/ui/button'
+import { useDeleteProjectMutation } from './projectApi'
+import { RenameProjectDialog } from './RenameProjectDialog'
 
-export function ProjectPageActions() {
+export function ProjectPageActions({
+  projectId,
+  projectName,
+}: {
+  projectId?: string
+  projectName: string
+}) {
+  const navigate = useNavigate()
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const deleteMutation = useDeleteProjectMutation()
+
   const handleAction = (label: string) => {
     console.log(label)
+  }
+
+  const handleDelete = () => {
+    if (!projectId) return
+    // 项目内会话不删除，自动回落主列表（mutation 内已按前缀刷新两侧列表）
+    deleteMutation.mutate(
+      { projectId },
+      {
+        onSuccess: () => navigate('/'),
+        onError: (error) => console.error('Failed to delete project', error),
+      }
+    )
   }
 
   return (
@@ -30,11 +56,34 @@ export function ProjectPageActions() {
         }
       >
         <ActionMenuItem
+          label="重命名"
+          icon={Pencil}
+          disabled={!projectId}
+          onSelect={() => setRenameDialogOpen(true)}
+        />
+        <ActionMenuItem
           label="项目设置"
           icon={Settings}
           onSelect={() => handleAction('项目设置')}
         />
+        <ActionMenuItem
+          label="删除项目"
+          icon={Trash2}
+          destructive
+          disabled={!projectId || deleteMutation.isPending}
+          onSelect={handleDelete}
+        />
       </ActionMenu>
+
+      {projectId && (
+        <RenameProjectDialog
+          key={`${projectId}-${projectName}`}
+          open={renameDialogOpen}
+          onOpenChange={setRenameDialogOpen}
+          projectId={projectId}
+          initialName={projectName}
+        />
+      )}
     </div>
   )
 }

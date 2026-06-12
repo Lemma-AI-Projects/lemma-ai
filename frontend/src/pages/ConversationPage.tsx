@@ -6,16 +6,17 @@ import { ConversationInput } from '@/features/conversation/ConversationInput'
 import { ConversationMessageList } from '@/features/conversation/ConversationMessageList'
 import { ConversationMoreMenu } from '@/features/conversation/ConversationMoreMenu'
 import { ConversationStreamingTurn } from '@/features/conversation/ConversationStreamingTurn'
-import {
-  isNotFoundError,
-  useConversationMessagesQuery,
-} from '@/features/conversation/conversationApi'
+import { useConversationMessagesQuery } from '@/features/conversation/conversationApi'
+import { useProjectsQuery } from '@/features/project/projectApi'
+import { isNotFoundError } from '@/lib/apiUtils'
 import { createConversationTurns } from '@/features/conversation/createConversationTurns'
 import { useConversationChat } from '@/features/conversation/useConversationChat'
 
 interface ConversationLocationState {
   initialMessage?: string
   messageKey?: string
+  /** 项目页发起的新会话：直接诞生在该项目里。 */
+  projectId?: string
 }
 
 // 模块级防重：StrictMode 双挂载与重渲染下，同一条首页带入的消息只发送一次
@@ -53,7 +54,7 @@ export function ConversationPage() {
       '',
       window.location.href
     )
-    send(text)
+    send(text, { projectId: state?.projectId })
   }, [id, location.state, send])
 
   // 本轮自建的会话内存态即完整历史，不启用回填；带 id 进入/刷新时才拉
@@ -61,6 +62,8 @@ export function ConversationPage() {
   const messagesQuery = useConversationMessagesQuery(id, {
     enabled: isPersistedConversation,
   })
+  // 「Move to Project」子菜单的目标项目，页面层注入（feature 间不直接引用）
+  const projectsQuery = useProjectsQuery()
 
   // 历史快照与本轮内存增量分别构造 turns 后拼接（不混合排序，
   // 避免服务端与本地时钟偏差导致顺序错乱）
@@ -170,6 +173,7 @@ export function ConversationPage() {
         </Button>
         <ConversationMoreMenu
           conversationId={id}
+          projects={projectsQuery.data ?? []}
           onDeleted={() => navigate('/')}
         />
       </div>

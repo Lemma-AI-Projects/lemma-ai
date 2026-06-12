@@ -126,6 +126,7 @@ const chatErrorMessages: Record<string, string> = {
   ai_provider_error: 'AI 服务暂时不可用，请重试',
   ai_fallback_exhausted: 'AI 服务暂时不可用，请重试',
   conversation_not_found: '会话不存在或已删除',
+  project_not_found: '项目不存在或已删除',
   stream_interrupted: '连接中断，请重试',
 }
 
@@ -183,6 +184,8 @@ export function useConversationChat({
   const hasOutputRef = useRef(false)
   const pendingIdRef = useRef<string | null>(null)
   const lastUserTextRef = useRef<string | null>(null)
+  /** 项目内发起新会话的目标项目；记住它使首字前失败后的重发仍落进项目。 */
+  const targetProjectIdRef = useRef<string | null>(null)
 
   // 流回调跨多次渲染存活，经 ref 始终调用最新的页面回调
   const callbacksRef = useRef({ onConversationAdopted, onRestoreDraft })
@@ -219,6 +222,7 @@ export function useConversationChat({
     hasOutputRef.current = false
     pendingIdRef.current = null
     lastUserTextRef.current = null
+    targetProjectIdRef.current = null
     selfCreatedIdRef.current = null
     // 路由驱动的一次性重置（prev 守卫保证不级联），且必须与上面的
     // abort、下面的缓存清理原子完成，属于该规则的已知误报场景
@@ -233,7 +237,11 @@ export function useConversationChat({
     apply({ type: 'reset' })
   }, [conversationId, queryClient])
 
-  const startStream = (content: string, activeConversationId: string | undefined) => {
+  const startStream = (
+    content: string,
+    activeConversationId: string | undefined,
+    projectId: string | undefined
+  ) => {
     controllerRef.current?.abort()
     const controller = new AbortController()
     controllerRef.current = controller
@@ -256,6 +264,7 @@ export function useConversationChat({
         await streamChat({
           content,
           conversationId: activeConversationId,
+          projectId,
           signal: controller.signal,
           onConversationId: (id) => {
             if (requestIdRef.current === requestId) {
@@ -301,15 +310,25 @@ export function useConversationChat({
     })()
   }
 
-  const send = (content: string) => {
+  const send = (content: string, options?: { projectId?: string }) => {
     const trimmed = content.trim()
     const { status } = stateRef.current
     if (!trimmed || status === 'submitted' || status === 'streaming') {
       return
     }
+    if (options?.projectId) {
+      targetProjectIdRef.current = options.projectId
+    }
     lastUserTextRef.current = trimmed
     apply({ type: 'send', content: trimmed, createdAt: new Date().toISOString() })
-    startStream(trimmed, conversationId ?? selfCreatedIdRef.current ?? undefined)
+    const activeConversationId =
+      conversationId ?? selfCreatedIdRef.current ?? undefined
+    startStream(
+      trimmed,
+      activeConversationId,
+      // 仅新会话需要目标项目；已有会话时后端忽略该字段，干脆不发
+      activeConversationId ? undefined : targetProjectIdRef.current ?? undefined
+    )
   }
 
   /** 重试 = 同文本的普通新消息（首字后出错场景；上一轮半截已定稿保留）。 */
