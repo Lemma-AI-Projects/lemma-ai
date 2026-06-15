@@ -14,9 +14,33 @@ export interface ConversationMarkdownBlock {
   content: string
 }
 
+export interface ConversationToolChapter {
+  id: string
+  title: string
+  status?: 'not-started' | 'in-progress' | 'completed'
+  progress?: number
+}
+
+export interface ConversationToolUnit {
+  id: string
+  title: string
+  chapters: ConversationToolChapter[]
+  status?: 'not-started' | 'in-progress' | 'completed'
+  progress?: number
+}
+
+export interface ConversationToolBlock {
+  id: string
+  type: 'tool'
+  title: string
+  units: ConversationToolUnit[]
+  progress?: number
+}
+
 export type ConversationTurnBlock =
   | ConversationTextBlock
   | ConversationMarkdownBlock
+  | ConversationToolBlock
 
 export interface ConversationTurnMetaData {
   label?: string

@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { ChevronRight, CircleCheckBig } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
+import { ProgressStatusIcon } from '@/components/ProgressStatusIcon'
 import { cn } from '@/lib/utils'
 import { courseItems } from '@/mock/course/courseItems'
 
@@ -94,94 +95,6 @@ function getCourseProgress(course: Course): CourseAggregateProgress {
   return getAggregateProgress(course.units.flatMap(getUnitTaskStatuses))
 }
 
-function BacklogStatusIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <circle
-        cx="7"
-        cy="7"
-        r="6"
-        fill="none"
-        stroke="#53565A"
-        strokeWidth="2"
-        strokeDasharray="1.4 1.74"
-        strokeDashoffset="0.65"
-      />
-      <circle
-        cx="7"
-        cy="7"
-        r="2"
-        fill="none"
-        stroke="#53565A"
-        strokeWidth="4"
-        strokeDasharray="0 100"
-        strokeDashoffset="0"
-        transform="rotate(-90 7 7)"
-      />
-    </svg>
-  )
-}
-
-function TechnicalReviewStatusIcon({ value }: { value?: number }) {
-  const radius = 2
-  const circumference = 2 * Math.PI * radius
-  const clampedValue = Math.min(Math.max(value ?? 33, 0), 100)
-  const offset = circumference * (1 - clampedValue / 100)
-  const dynamicProgressProps =
-    value === undefined
-      ? {
-          strokeDasharray: '4.167846253762459 100',
-          strokeDashoffset: 0,
-        }
-      : {
-          strokeDasharray: circumference,
-          strokeDashoffset: offset,
-        }
-
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <circle
-        cx="7"
-        cy="7"
-        r="6"
-        fill="none"
-        stroke="#22c55e"
-        strokeWidth="2"
-        strokeDasharray="3.14 0"
-        strokeDashoffset="-0.7"
-      />
-      <circle
-        cx="7"
-        cy="7"
-        r="2"
-        fill="none"
-        stroke="#22c55e"
-        strokeWidth="4"
-        {...dynamicProgressProps}
-        transform="rotate(-90 7 7)"
-      />
-    </svg>
-  )
-}
-
-function CourseProgressStatusIcon({
-  status,
-  value,
-}: {
-  status: CourseProgressStatus
-  value?: number
-}) {
-  if (status === 'completed') {
-    return <CircleCheckBig className="size-4 text-green-500" />
-  }
-
-  if (status === 'in-progress') {
-    return <TechnicalReviewStatusIcon value={value} />
-  }
-
-  return <BacklogStatusIcon />
-}
-
 function CourseDirectoryMetaLink({
   status,
   label,
@@ -197,7 +110,7 @@ function CourseDirectoryMetaLink({
       className="flex min-h-9 w-full items-start gap-2 rounded-sm py-2 pl-8 pr-3 text-sm text-zinc-600 transition-colors hover:bg-zinc-200/70 hover:text-black"
     >
       <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
-        <CourseProgressStatusIcon status={status} />
+        <ProgressStatusIcon status={status} />
       </span>
       <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
         {label}
@@ -227,7 +140,7 @@ function CourseUnitSection({
         className="flex min-h-8 w-full items-start gap-1.5 px-3 py-1.5 text-left text-sm text-zinc-700 hover:text-zinc-900"
       >
         <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
-          <CourseProgressStatusIcon
+          <ProgressStatusIcon
             status={progress.status}
             value={progress.percent}
           />
@@ -279,7 +192,7 @@ function CourseChapterSection({
         className="flex min-h-8 w-full items-start gap-1.5 rounded-sm px-3 py-1.5 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-200/70 hover:text-zinc-900"
       >
         <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
-          <CourseProgressStatusIcon
+          <ProgressStatusIcon
             status={progress.status}
             value={progress.percent}
           />
@@ -374,7 +287,7 @@ export function CourseSidebarDirectory({ courseId }: { courseId?: string }) {
       <div className="px-3 py-2">
         <div className="flex items-start gap-2 text-sm font-medium text-black">
           <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
-            <CourseProgressStatusIcon
+            <ProgressStatusIcon
               status={courseProgress.status}
               value={courseProgress.percent}
             />
