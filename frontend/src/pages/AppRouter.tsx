@@ -2,6 +2,7 @@ import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
+import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
@@ -43,6 +44,11 @@ const routes: RouteObject[] = [
             // /chat/{id}，同一路由避免 remount 杀死进行中的流
             path: 'chat/:id?',
             element: <ConversationPage />,
+          },
+          {
+            // [sandbox] 临时调试路由，开发完成后可连同沙盒页面整体移除。
+            path: 'sandbox',
+            element: <ConversationSandboxPage />,
           },
           {
             path: 'course/:id',

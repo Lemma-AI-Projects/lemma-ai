@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   CalendarDays,
+  FlaskConical,
   FolderOpen,
   FolderPlus,
   Home,
@@ -171,6 +172,12 @@ export function AppLayout() {
         </SidebarSection>
 
         <SidebarSection title="Chats" showLine={false}>
+          {/* [sandbox] 临时调试入口，开发完成后可连同路由和沙盒页面整体移除。 */}
+          <SidebarItem
+            icon={FlaskConical}
+            label="Sandbox(调试)"
+            to="/sandbox"
+          />
           {conversationsQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">
               <Skeleton className="h-5 w-full" />

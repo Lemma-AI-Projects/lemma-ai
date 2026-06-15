@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
+import { ConversationToolShell } from './ConversationToolShell'
 import type { ConversationTurn as ConversationTurnData, ConversationTurnBlock } from './types'
 
 function renderBlock(block: ConversationTurnBlock) {
@@ -15,10 +16,21 @@ function renderBlock(block: ConversationTurnBlock) {
     )
   }
 
+  if (block.type === 'markdown') {
+    return (
+      <AssistantMarkdown key={block.id} className="text-foreground">
+        {block.content}
+      </AssistantMarkdown>
+    )
+  }
+
   return (
-    <AssistantMarkdown key={block.id} className="text-foreground">
-      {block.content}
-    </AssistantMarkdown>
+    <ConversationToolShell
+      key={block.id}
+      title={block.title}
+      units={block.units}
+      progress={block.progress}
+    />
   )
 }
 
