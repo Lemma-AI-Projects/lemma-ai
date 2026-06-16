@@ -22,6 +22,18 @@ _DEFAULT_AI_ROUTES_JSON = (
     "]}"
 )
 
+# Default video-search routing table: one Apify provider per platform (lower
+# priority wins, multiple entries form a fallback chain). Schema and startup
+# validation live in ai/search/config.py. Actor IDs live here (config = truth),
+# never hardcoded in provider code. max_total_charge_usd caps pay-per-event
+# cost, max_items caps per-result cost.
+_DEFAULT_SEARCH_ROUTES_JSON = (
+    '{"youtube": [{"provider": "apify_youtube", "actor_id": "h7sDV53CddomktSi5",'
+    ' "max_items": 20, "max_total_charge_usd": 0.3, "timeout_s": 120, "priority": 0}],'
+    ' "bilibili": [{"provider": "apify_bilibili", "actor_id": "hQpkxbmfApbahVZ2B",'
+    ' "max_items": 20, "max_total_charge_usd": 0.3, "timeout_s": 120, "priority": 0}]}'
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -52,6 +64,12 @@ class Settings(BaseSettings):
     # requires real browser cookies; without this only direct file URLs and
     # cookie-free sites can be ingested.
     ytdlp_cookie_file: str | None = None
+
+    # --- Video search (Apify) ---
+    # Default empty so the app boots and the offline smoke runs without a key;
+    # video search isn't on the web request path. Real value goes in backend/.env.
+    apify_api_token: str = ""
+    search_routes_json: str = _DEFAULT_SEARCH_ROUTES_JSON
 
     @property
     def cors_origins_list(self) -> list[str]:
