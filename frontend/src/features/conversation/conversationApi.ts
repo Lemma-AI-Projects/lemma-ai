@@ -6,6 +6,7 @@ import {
   conversationDetailQueryKey,
   conversationsQueryRootKey,
 } from '@/lib/queryKeys'
+import type { ConversationToolRef } from './types'
 
 export interface ConversationListItem {
   id: string
@@ -25,6 +26,8 @@ export interface ConversationMessage {
   role: 'user' | 'assistant'
   content: string
   createdAt: string
+  /** Tool card attached to this turn (present only on tool turns). */
+  tool?: ConversationToolRef
 }
 
 /** 主侧边栏列表（仅未归属项目的会话）。 */

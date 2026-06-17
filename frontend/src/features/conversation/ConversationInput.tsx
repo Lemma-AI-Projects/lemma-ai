@@ -21,6 +21,8 @@ export function ConversationInput({
   isStreaming,
   onSend,
   onStop,
+  coursePlanningEnabled = false,
+  onCoursePlanningChange,
 }: {
   className?: string
   value: string
@@ -28,6 +30,8 @@ export function ConversationInput({
   isStreaming: boolean
   onSend: (text: string) => void
   onStop: () => void
+  coursePlanningEnabled?: boolean
+  onCoursePlanningChange?: (enabled: boolean) => void
 }) {
   const hasContent = value.trim().length > 0
 
@@ -79,6 +83,8 @@ export function ConversationInput({
             planningIcon={BookOpenCheck}
             planningLabel="Course Planning"
             referenceLabel="Reference conversation"
+            planningEnabled={coursePlanningEnabled}
+            onPlanningEnabledChange={onCoursePlanningChange}
           />
         </div>
 

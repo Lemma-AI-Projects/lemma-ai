@@ -13,17 +13,23 @@ export interface QuestionnaireQuestion {
   options: string[]
 }
 
+export interface CourseQuestionnaire {
+  questions: QuestionnaireQuestion[]
+}
+
 export interface CoursePlan {
   courseId: string
-  questionnaire: {
-    questions: QuestionnaireQuestion[]
-  }
+  questionnaire: CourseQuestionnaire
 }
 
 export interface CourseIntakeAnswer {
   questionId: string
   answer: string
 }
+
+// Selected option per question id (null = unanswered). The course domain owns
+// this shape; the conversation tool shell re-exports it for its consumers.
+export type QuestionnaireAnswers = Record<string, string | null>
 
 export interface CourseChapter {
   id: string
@@ -96,6 +102,10 @@ export const coursePlannerQueryRootKey = ['course-planner'] as const
 
 export function courseQueryKey(courseId: string) {
   return [...coursePlannerQueryRootKey, 'course', courseId] as const
+}
+
+export function courseQuestionnaireQueryKey(courseId: string) {
+  return [...coursePlannerQueryRootKey, 'questionnaire', courseId] as const
 }
 
 function clampProgress(progress: number): number {
@@ -220,6 +230,17 @@ export async function getCourse(courseId: string): Promise<CourseDetail> {
   return data
 }
 
+export async function getCourseQuestionnaire(
+  courseId: string
+): Promise<CourseQuestionnaire> {
+  const { data } = await signOutOn401(
+    apiClient.get<CourseQuestionnaire>(
+      `/api/v1/courses/${courseId}/questionnaire`
+    )
+  )
+  return data
+}
+
 export async function startBuild(courseId: string): Promise<CourseBuildAccepted> {
   const { data } = await signOutOn401(
     apiClient.post<CourseBuildAccepted>(`/api/v1/courses/${courseId}/build`)
@@ -252,6 +273,20 @@ export function useCourseQuery(
     queryKey: courseQueryKey(courseId ?? 'none'),
     queryFn: () => getCourse(courseId as string),
     enabled: Boolean(courseId) && (options?.enabled ?? true),
+    retry: retryUnlessClientError,
+  })
+}
+
+export function useCourseQuestionnaireQuery(
+  courseId: string | undefined,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: courseQuestionnaireQueryKey(courseId ?? 'none'),
+    queryFn: () => getCourseQuestionnaire(courseId as string),
+    enabled: Boolean(courseId) && (options?.enabled ?? true),
+    // The questionnaire is immutable once generated — never refetch it.
+    staleTime: Infinity,
     retry: retryUnlessClientError,
   })
 }

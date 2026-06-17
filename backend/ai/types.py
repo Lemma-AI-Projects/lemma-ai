@@ -24,6 +24,11 @@ class AIUseCase(StrEnum):
     COURSE_OUTLINE = "course_outline"
     CHAPTER_QUERY = "chapter_query"
     VIDEO_SELECT = "video_select"
+    # Short conversational acknowledgement streamed BEFORE the course-planning
+    # tool card is attached to a chat turn (the "AI replies first" beat). A
+    # plain text agent like TEXT_CHAT, but with its own prompt so it stays a
+    # tight intro instead of answering the topic itself.
+    COURSE_PLAN_INTRO = "course_plan_intro"
 
 
 class VideoInputKind(StrEnum):
@@ -78,7 +83,7 @@ class AIChunk(BaseModel):
     done (success) or error (failure — possibly after some deltas).
     """
 
-    kind: Literal["delta", "usage", "done", "error"]
+    kind: Literal["delta", "usage", "done", "error", "tool"]
     # delta
     text: str | None = None
     # usage
@@ -88,6 +93,10 @@ class AIChunk(BaseModel):
     # error
     error_code: str | None = None
     error_message: str | None = None
+    # tool: a wire-ready (camelCase) payload attaching a tool card to this turn,
+    # e.g. {"type": "course_planning", "courseId": "<uuid>"}. Lemma-owned, not
+    # framework-shaped; the frontend renders the matching tool block.
+    tool: dict[str, Any] | None = None
 
 
 class ModelRoute(BaseModel):

@@ -52,6 +52,8 @@ def _build_structured_agent(output_type: type[Any]) -> Agent[LemmaDeps, Any]:
 
 
 text_chat_agent = _build_agent()
+# The course-planning intro is a plain streaming-text turn (own prompt only).
+course_plan_intro_agent = _build_agent()
 # Video agents serve the framework engine path (AI_VIDEO_ENGINE=pydantic_ai);
 # the native engine takes the system prompt directly, without an Agent.
 video_qa_agent = _build_agent()
@@ -60,6 +62,7 @@ video_locate_agent = _build_agent()
 
 _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.TEXT_CHAT: text_chat_agent,
+    AIUseCase.COURSE_PLAN_INTRO: course_plan_intro_agent,
     AIUseCase.VIDEO_QA: video_qa_agent,
     AIUseCase.VIDEO_SUMMARY: video_summary_agent,
     AIUseCase.VIDEO_LOCATE: video_locate_agent,

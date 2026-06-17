@@ -17,13 +17,14 @@ export function ProjectPage() {
   const projectQuery = useProjectQuery(id)
 
   // 项目内发起新对话：复用首页接力模式，带 projectId 进入 chat 页，
-  // 新会话直接诞生在该项目里
-  const handleSend = (text: string) => {
+  // 新会话直接诞生在该项目里；Course Planning 开关一并带入。
+  const handleSend = (text: string, options?: { tool?: 'course_planning' }) => {
     navigate('/chat', {
       state: {
         initialMessage: text,
         messageKey: crypto.randomUUID(),
         projectId: id,
+        tool: options?.tool,
       },
     })
   }

@@ -11,10 +11,15 @@ export function HomePage() {
   const navigate = useNavigate()
 
   // 首页发送 → 进入新会话态的 chat 页并自动发出这条消息，
-  // 对话创建（采纳预生成 id）由 chat 页的流式链路完成
-  const handleSend = (text: string) => {
+  // 对话创建（采纳预生成 id）由 chat 页的流式链路完成。Course Planning 开关
+  // 经 location.state 带入，由 chat 页在首条消息上走工具回合。
+  const handleSend = (text: string, options?: { tool?: 'course_planning' }) => {
     navigate('/chat', {
-      state: { initialMessage: text, messageKey: crypto.randomUUID() },
+      state: {
+        initialMessage: text,
+        messageKey: crypto.randomUUID(),
+        tool: options?.tool,
+      },
     })
   }
 

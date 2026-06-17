@@ -123,6 +123,22 @@ async def get_course(
     return detail
 
 
+@router.get("/{course_id}/questionnaire", response_model=QuestionnaireOut)
+async def get_questionnaire(
+    course_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> QuestionnaireOut:
+    # The intake-stage tool card fetches the questionnaire by courseId (live and
+    # on reload). 404 when not owned / gone / already past intake.
+    questionnaire = await course_service.get_questionnaire(
+        db, user_id=current_user.id, course_id=course_id
+    )
+    if questionnaire is None:
+        raise _NOT_FOUND
+    return questionnaire
+
+
 @router.post(
     "/{course_id}/build",
     response_model=CourseBuildAcceptedOut,

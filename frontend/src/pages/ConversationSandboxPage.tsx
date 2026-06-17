@@ -1,263 +1,211 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { Ellipsis, Share2 } from 'lucide-react'
+import { useState } from 'react'
 
-import { Button } from '@/components/ui/button'
-import { ConversationInput } from '@/features/conversation/ConversationInput'
-import { ConversationMessageList } from '@/features/conversation/ConversationMessageList'
 import {
   ConversationToolShell,
   type QuestionnaireAnswers,
 } from '@/features/conversation/ConversationToolShell'
-import { ConversationStreamingTurn } from '@/features/conversation/ConversationStreamingTurn'
-import { createConversationTurns } from '@/features/conversation/createConversationTurns'
-import {
-  courseQueryKey,
-  mapCourseToToolShellData,
-  useCourseBuildStream,
-  useCourseQuery,
-  useCreateCoursePlanMutation,
-  useStartCourseBuildMutation,
-  useSubmitCourseIntakeMutation,
-  type CourseIntakeAnswer,
-  type QuestionnaireQuestion,
-} from '@/features/coursePlanner/courseApi'
+import type {
+  ConversationToolQuestion,
+  ConversationToolStage,
+  ConversationToolUnit,
+} from '@/features/conversation/types'
 
-function createEmptyAnswers(
-  questions: QuestionnaireQuestion[]
-): QuestionnaireAnswers {
-  return Object.fromEntries(
-    questions.map((question) => [question.id, null])
-  ) as QuestionnaireAnswers
+// [sandbox] 课程编排工具卡片的「各阶段静态预览」调试页：不连后端，把
+// ConversationToolShell 的每个 stage 用样例数据一次性铺开，方便调样式与交互。
+// 真实端到端流程请在对话里开启 Course Planning 开关验证。
+
+const SAMPLE_QUESTIONS: ConversationToolQuestion[] = [
+  {
+    id: 'current-level',
+    title: '你目前的微积分基础是？',
+    options: ['零基础', '学过一点', '比较熟悉'],
+  },
+  {
+    id: 'learning-goal',
+    title: '你的主要学习目标是？',
+    options: ['应付考试', '打牢基础', '工程应用'],
+  },
+  {
+    id: 'time-budget',
+    title: '每周可投入的学习时间？',
+    options: ['1-3 小时', '3-6 小时', '6 小时以上'],
+  },
+]
+
+const PENDING_UNITS: ConversationToolUnit[] = [
+  {
+    id: 'u1',
+    title: '单元一：极限——微积分的基石',
+    status: 'not-started',
+    chapters: [
+      { id: 'c1', title: '第一章：什么是极限？', status: 'not-started' },
+      { id: 'c2', title: '第二章：极限的运算法则与连续性', status: 'not-started' },
+    ],
+  },
+  {
+    id: 'u2',
+    title: '单元二：导数——变化率的量化',
+    status: 'not-started',
+    chapters: [
+      { id: 'c3', title: '第一章：导数的定义与几何意义', status: 'not-started' },
+      { id: 'c4', title: '第二章：基本求导法则', status: 'not-started' },
+    ],
+  },
+]
+
+const BUILDING_UNITS: ConversationToolUnit[] = [
+  {
+    id: 'u1',
+    title: '单元一：极限——微积分的基石',
+    status: 'in-progress',
+    progress: 50,
+    chapters: [
+      { id: 'c1', title: '第一章：什么是极限？', status: 'completed', progress: 100 },
+      {
+        id: 'c2',
+        title: '第二章：极限的运算法则与连续性',
+        status: 'in-progress',
+        progress: 60,
+      },
+    ],
+  },
+  {
+    id: 'u2',
+    title: '单元二：导数——变化率的量化',
+    status: 'not-started',
+    chapters: [
+      { id: 'c3', title: '第一章：导数的定义与几何意义', status: 'not-started' },
+      { id: 'c4', title: '第二章：基本求导法则', status: 'not-started' },
+    ],
+  },
+]
+
+const READY_UNITS: ConversationToolUnit[] = [
+  {
+    id: 'u1',
+    title: '单元一：极限——微积分的基石',
+    status: 'completed',
+    progress: 100,
+    chapters: [
+      { id: 'c1', title: '第一章：什么是极限？', status: 'completed', progress: 100 },
+      {
+        id: 'c2',
+        title: '第二章：极限的运算法则与连续性',
+        status: 'completed',
+        progress: 100,
+      },
+    ],
+  },
+]
+
+const FAILED_UNITS: ConversationToolUnit[] = [
+  {
+    id: 'u1',
+    title: '单元一：极限——微积分的基石',
+    status: 'failed',
+    chapters: [
+      { id: 'c1', title: '第一章：什么是极限？', status: 'failed' },
+      { id: 'c2', title: '第二章：极限的运算法则与连续性', status: 'failed' },
+    ],
+  },
+]
+
+interface StagePreview {
+  key: string
+  label: string
+  stage: ConversationToolStage
+  units?: ConversationToolUnit[]
+  questions?: ConversationToolQuestion[]
+  progress?: number
+  failed?: boolean
 }
 
-// [sandbox] 课程编排端到端调试页：真实请求课程 plan/intake/build/stream，
-// 用于验证 ConversationToolShell 的后端驱动四态。
+const STAGE_PREVIEWS: StagePreview[] = [
+  {
+    key: 'questionnaire',
+    label: 'questionnaire · 问卷',
+    stage: 'questionnaire',
+    questions: SAMPLE_QUESTIONS,
+  },
+  {
+    key: 'questionnaire-loading',
+    label: 'questionnaire · 加载骨架（空问卷）',
+    stage: 'questionnaire',
+    questions: [],
+  },
+  {
+    key: 'pending',
+    label: 'pending · 大纲待构建',
+    stage: 'pending',
+    units: PENDING_UNITS,
+  },
+  {
+    key: 'in-progress',
+    label: 'in-progress · 构建中',
+    stage: 'in-progress',
+    units: BUILDING_UNITS,
+    progress: 45,
+  },
+  {
+    key: 'ready',
+    label: 'ready · 已就绪',
+    stage: 'ready',
+    units: READY_UNITS,
+    progress: 100,
+  },
+  {
+    key: 'failed',
+    label: 'ready + failed · 生成未完成',
+    stage: 'ready',
+    units: FAILED_UNITS,
+    progress: 100,
+    failed: true,
+  },
+]
+
 export function ConversationSandboxPage() {
-  const queryClient = useQueryClient()
-  const [draft, setDraft] = useState('')
-  const [topic, setTopic] = useState<string | null>(null)
-  const [sentAt, setSentAt] = useState<string | null>(null)
-  const [courseId, setCourseId] = useState<string | undefined>()
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({})
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  const createPlanMutation = useCreateCoursePlanMutation()
-  const submitIntakeMutation = useSubmitCourseIntakeMutation()
-  const startBuildMutation = useStartCourseBuildMutation()
-  const courseQuery = useCourseQuery(courseId, { enabled: Boolean(courseId) })
-  const courseShellData = courseQuery.data
-    ? mapCourseToToolShellData(courseQuery.data)
-    : null
-  const buildStream = useCourseBuildStream(courseId, {
-    enabled: courseShellData?.stage === 'in-progress',
-  })
-
-  const questions = createPlanMutation.data?.questionnaire.questions ?? []
-  const toolStage =
-    courseShellData?.stage ?? (createPlanMutation.data ? 'questionnaire' : null)
-  const toolTitle =
-    courseShellData?.title ?? (topic ? `${topic} 学习计划` : '课程规划')
-  const toolUnits = courseShellData?.units ?? []
-  const toolProgress = courseShellData?.progress ?? 0
-  const toolFailed = courseShellData?.failed ?? false
-
-  const turns = useMemo(
-    () =>
-      topic && sentAt
-        ? createConversationTurns('course-planner-sandbox', [
-            {
-              role: 'user',
-              message: topic,
-              date: sentAt,
-            },
-          ])
-        : [],
-    [sentAt, topic]
-  )
-  const messageList = useMemo(
-    () => (turns.length > 0 ? <ConversationMessageList turns={turns} /> : null),
-    [turns]
-  )
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: 'smooth',
-    })
-  }, [
-    createPlanMutation.isPending,
-    courseShellData?.stage,
-    toolProgress,
-    turns.length,
-  ])
-
-  const resetPlanner = () => {
-    if (courseId) {
-      queryClient.removeQueries({ queryKey: courseQueryKey(courseId) })
-    }
-    setTopic(null)
-    setSentAt(null)
-    setCourseId(undefined)
-    setAnswers({})
-    setDraft('')
-    createPlanMutation.reset()
-    submitIntakeMutation.reset()
-    startBuildMutation.reset()
-  }
-
-  const handleSend = (text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || createPlanMutation.isPending) {
-      return
-    }
-
-    resetPlanner()
-    const nextSentAt = new Date().toISOString()
-    setTopic(trimmed)
-    setSentAt(nextSentAt)
-
-    createPlanMutation.mutate(
-      { topic: trimmed },
-      {
-        onSuccess: (plan) => {
-          setCourseId(plan.courseId)
-          setAnswers(createEmptyAnswers(plan.questionnaire.questions))
-        },
-      }
-    )
-  }
 
   const handleAnswerChange = (questionId: string, option: string) => {
-    setAnswers((currentAnswers) => ({
-      ...currentAnswers,
-      [questionId]: currentAnswers[questionId] === option ? null : option,
+    setAnswers((current) => ({
+      ...current,
+      [questionId]: current[questionId] === option ? null : option,
     }))
   }
 
-  const handleSubmitAnswers = (selectedAnswers: CourseIntakeAnswer[]) => {
-    if (!courseId || selectedAnswers.length === 0) {
-      return
-    }
-
-    submitIntakeMutation.mutate({
-      courseId,
-      answers: selectedAnswers,
-    })
-  }
-
-  const handleApproveBuild = () => {
-    if (!courseId) {
-      return
-    }
-
-    startBuildMutation.mutate(courseId, {
-      onSuccess: () => {
-        void courseQuery.refetch()
-      },
-    })
-  }
-
-  const toolErrorMessage =
-    createPlanMutation.isError
-      ? '生成问卷失败，请重试'
-      : submitIntakeMutation.isError
-        ? '生成大纲失败，请重试'
-        : startBuildMutation.isError
-          ? '启动课程构建失败，请重试'
-          : buildStream.error
-            ? '构建进度连接中断，正在尝试恢复'
-            : null
-
   return (
-    <div className="relative flex h-full flex-col rounded-md border border-zinc-200/80 bg-zinc-50">
-      <div className="absolute right-3.75 top-3.75 z-10 flex items-center gap-2.75">
-        <Button
-          variant="outline"
-          aria-label="Share conversation"
-          className="size-[34px] rounded-full bg-transparent p-0 hover:bg-muted"
-        >
-          <Share2 className="size-4" />
-        </Button>
-        <Button
-          variant="outline"
-          aria-label="More actions"
-          className="size-[34px] rounded-full bg-transparent p-0 hover:bg-muted"
-        >
-          <Ellipsis className="size-4" />
-        </Button>
-      </div>
+    <div className="h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
+      <div className="mx-auto flex w-full max-w-[44rem] flex-col gap-10 px-6 py-12">
+        <header className="flex flex-col gap-1">
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900">
+            课程工具卡片 · 各阶段预览
+          </h1>
+          <p className="text-sm text-zinc-500">
+            纯前端样例，逐一展示 ConversationToolShell 的每个 stage。真实端到端流程请在对话中开启「Course Planning」开关测试。
+          </p>
+        </header>
 
-      <div className="relative flex min-h-0 flex-1 flex-col pt-16">
-        <div
-          ref={scrollRef}
-          className="scrollbar-fade min-h-0 flex-1 overflow-y-auto"
-        >
-          <div className="mx-auto flex min-h-full w-full max-w-[55rem] flex-col px-6 pb-40">
-            {messageList ?? (
-              <div className="flex flex-1 items-center justify-center py-10">
-                <p className="text-sm text-zinc-400">
-                  输入一个主题，开始真实课程编排流程。
-                </p>
-              </div>
-            )}
-
-            {createPlanMutation.isPending ? (
-              <div className="py-6">
-                <p className="text-sm text-zinc-500">正在生成问卷…</p>
-              </div>
-            ) : createPlanMutation.isError ? (
-              <div className="py-6">
-                <p className="text-sm text-destructive">
-                  {toolErrorMessage ?? '生成问卷失败，请重试'}
-                </p>
-              </div>
-            ) : toolStage ? (
-              <div className="py-6">
-                <ConversationToolShell
-                  title={toolTitle}
-                  stage={toolStage}
-                  questions={questions}
-                  answers={answers}
-                  units={toolUnits}
-                  progress={toolProgress}
-                  failed={toolFailed}
-                  errorMessage={toolErrorMessage}
-                  isSubmittingAnswers={submitIntakeMutation.isPending}
-                  isStartingBuild={startBuildMutation.isPending}
-                  onAnswerChange={handleAnswerChange}
-                  onSubmitAnswers={handleSubmitAnswers}
-                  onApproveBuild={handleApproveBuild}
-                  onCancel={resetPlanner}
-                />
-              </div>
-            ) : null}
-
-            <ConversationStreamingTurn
-              status="idle"
-              text=""
-              errorMessage={null}
-              canRetry={false}
-              onRetry={() => undefined}
+        {STAGE_PREVIEWS.map((preview) => (
+          <section key={preview.key} className="flex flex-col gap-3">
+            <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+              {preview.label}
+            </span>
+            <ConversationToolShell
+              title="微积分速成：核心概念与应用基础"
+              stage={preview.stage}
+              questions={preview.questions}
+              answers={answers}
+              units={preview.units}
+              progress={preview.progress}
+              failed={preview.failed}
+              onAnswerChange={handleAnswerChange}
+              onSubmitAnswers={() => undefined}
+              onApproveBuild={() => undefined}
+              onCancel={() => undefined}
+              onEnterCourse={() => undefined}
             />
-          </div>
-        </div>
-
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col">
-          <div className="pointer-events-auto relative z-10 px-6">
-            <ConversationInput
-              className="mx-auto w-full max-w-[52rem]"
-              value={draft}
-              onValueChange={setDraft}
-              isStreaming={createPlanMutation.isPending}
-              onSend={handleSend}
-              onStop={() => undefined}
-            />
-          </div>
-          <div aria-hidden className="relative z-0 -mt-6 px-6">
-            <div className="mx-auto h-12 w-full max-w-[52rem] bg-zinc-50" />
-          </div>
-        </div>
+          </section>
+        ))}
       </div>
     </div>
   )

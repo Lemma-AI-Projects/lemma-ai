@@ -46,14 +46,22 @@ export interface ConversationToolUnit {
   progress?: number
 }
 
+// Wire/persistence shape of a tool attached to a turn (matches the backend SSE
+// `tool` event and ai_messages.tool_json). `type` discriminates the tool.
+export interface ConversationToolRef {
+  type: 'course_planning'
+  courseId: string
+}
+
+// A tool block is a thin REFERENCE: which tool sits in this turn and which
+// resource it drives. The card hydrates its own live data (stage / progress /
+// questions) from that id, so the same block renders identically live and on
+// history reload. `toolType` discriminates future tools (quiz / flashcards).
 export interface ConversationToolBlock {
   id: string
   type: 'tool'
-  title: string
-  stage?: ConversationToolStage
-  questions?: ConversationToolQuestion[]
-  units: ConversationToolUnit[]
-  progress?: number
+  toolType: ConversationToolRef['type']
+  courseId: string
 }
 
 export type ConversationTurnBlock =

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
-import { ConversationToolShell } from './ConversationToolShell'
+import { ConversationCourseTool } from './ConversationCourseTool'
 import type { ConversationTurn as ConversationTurnData, ConversationTurnBlock } from './types'
 
 function renderBlock(block: ConversationTurnBlock) {
@@ -24,16 +24,9 @@ function renderBlock(block: ConversationTurnBlock) {
     )
   }
 
-  return (
-    <ConversationToolShell
-      key={block.id}
-      title={block.title}
-      stage={block.stage ?? 'ready'}
-      questions={block.questions}
-      units={block.units}
-      progress={block.progress}
-    />
-  )
+  // tool block: render the matching connected tool. Only course_planning exists
+  // today; a future tool adds a branch on block.toolType here.
+  return <ConversationCourseTool key={block.id} courseId={block.courseId} />
 }
 
 export function ConversationTurnContent({
