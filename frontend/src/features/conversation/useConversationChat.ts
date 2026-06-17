@@ -7,6 +7,7 @@ import {
   conversationsQueryKey,
 } from './conversationApi'
 import { ChatStreamError, streamChat } from './streamChat'
+import type { ConversationToolRef } from './types'
 
 export type ConversationChatStatus = 'idle' | 'submitted' | 'streaming' | 'error'
 
@@ -14,12 +15,16 @@ export interface LiveChatMessage {
   role: 'user' | 'assistant'
   content: string
   createdAt: string
+  /** Tool card attached to an assistant turn (course planning, etc.). */
+  tool?: ConversationToolRef
 }
 
 interface ConversationChatState {
   status: ConversationChatStatus
   liveMessages: LiveChatMessage[]
   streamingText: string
+  /** Tool card collected mid-stream; attached to the assistant turn on finalize. */
+  streamingTool: ConversationToolRef | null
   errorMessage: string | null
   /** 仅首字后出错可一键重试；首字前失败草稿已还原，用户重新发送即重试。 */
   canRetry: boolean
@@ -28,6 +33,7 @@ interface ConversationChatState {
 type ConversationChatAction =
   | { type: 'send'; content: string; createdAt: string }
   | { type: 'delta'; text: string }
+  | { type: 'tool'; tool: ConversationToolRef }
   /** done 与首字后停止共用：已生成内容就是这条消息的最终内容（后端已落库）。 */
   | { type: 'finalize'; createdAt: string }
   /** 首字前停止：整轮未落库，回滚乐观渲染的 user 气泡。 */
@@ -40,6 +46,7 @@ const initialState: ConversationChatState = {
   status: 'idle',
   liveMessages: [],
   streamingText: '',
+  streamingTool: null,
   errorMessage: null,
   canRetry: false,
 }
@@ -52,12 +59,19 @@ function finalizeStreamingText(
   state: ConversationChatState,
   createdAt: string
 ): LiveChatMessage[] {
-  if (state.streamingText.length === 0) {
+  // A tool turn always has intro text, but guard on either so a tool card is
+  // never dropped.
+  if (state.streamingText.length === 0 && state.streamingTool === null) {
     return state.liveMessages
   }
   return [
     ...state.liveMessages,
-    { role: 'assistant', content: state.streamingText, createdAt },
+    {
+      role: 'assistant',
+      content: state.streamingText,
+      createdAt,
+      ...(state.streamingTool ? { tool: state.streamingTool } : {}),
+    },
   ]
 }
 
@@ -74,6 +88,7 @@ function reduce(
           { role: 'user', content: action.content, createdAt: action.createdAt },
         ],
         streamingText: '',
+        streamingTool: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -83,11 +98,18 @@ function reduce(
         status: 'streaming',
         streamingText: state.streamingText + action.text,
       }
+    case 'tool':
+      return {
+        ...state,
+        status: 'streaming',
+        streamingTool: action.tool,
+      }
     case 'finalize':
       return {
         status: 'idle',
         liveMessages: finalizeStreamingText(state, action.createdAt),
         streamingText: '',
+        streamingTool: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -96,6 +118,7 @@ function reduce(
         status: 'idle',
         liveMessages: withoutTrailingUserMessage(state.liveMessages),
         streamingText: '',
+        streamingTool: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -104,6 +127,7 @@ function reduce(
         status: 'error',
         liveMessages: withoutTrailingUserMessage(state.liveMessages),
         streamingText: '',
+        streamingTool: null,
         errorMessage: action.message,
         canRetry: false,
       }
@@ -112,6 +136,7 @@ function reduce(
         status: 'error',
         liveMessages: finalizeStreamingText(state, action.createdAt),
         streamingText: '',
+        streamingTool: null,
         errorMessage: action.message,
         canRetry: true,
       }
@@ -184,6 +209,8 @@ export function useConversationChat({
   const hasOutputRef = useRef(false)
   const pendingIdRef = useRef<string | null>(null)
   const lastUserTextRef = useRef<string | null>(null)
+  /** Tool used by the last send, so a retry re-runs the same tool (not plain chat). */
+  const lastToolRef = useRef<ConversationToolRef['type'] | undefined>(undefined)
   /** 项目内发起新会话的目标项目；记住它使首字前失败后的重发仍落进项目。 */
   const targetProjectIdRef = useRef<string | null>(null)
 
@@ -222,6 +249,7 @@ export function useConversationChat({
     hasOutputRef.current = false
     pendingIdRef.current = null
     lastUserTextRef.current = null
+    lastToolRef.current = undefined
     targetProjectIdRef.current = null
     selfCreatedIdRef.current = null
     // 路由驱动的一次性重置（prev 守卫保证不级联），且必须与上面的
@@ -240,7 +268,8 @@ export function useConversationChat({
   const startStream = (
     content: string,
     activeConversationId: string | undefined,
-    projectId: string | undefined
+    projectId: string | undefined,
+    tool: ConversationToolRef['type'] | undefined
   ) => {
     controllerRef.current?.abort()
     const controller = new AbortController()
@@ -265,6 +294,7 @@ export function useConversationChat({
           content,
           conversationId: activeConversationId,
           projectId,
+          tool,
           signal: controller.signal,
           onConversationId: (id) => {
             if (requestIdRef.current === requestId) {
@@ -278,6 +308,15 @@ export function useConversationChat({
               adoptPendingId()
             }
             apply({ type: 'delta', text })
+          },
+          onTool: (tool) => {
+            if (requestIdRef.current !== requestId) return
+            // A tool event means the turn produced output (the card persists).
+            if (!hasOutputRef.current) {
+              hasOutputRef.current = true
+              adoptPendingId()
+            }
+            apply({ type: 'tool', tool })
           },
         })
         if (requestIdRef.current !== requestId) return
@@ -310,7 +349,10 @@ export function useConversationChat({
     })()
   }
 
-  const send = (content: string, options?: { projectId?: string }) => {
+  const send = (
+    content: string,
+    options?: { projectId?: string; tool?: ConversationToolRef['type'] }
+  ) => {
     const trimmed = content.trim()
     const { status } = stateRef.current
     if (!trimmed || status === 'submitted' || status === 'streaming') {
@@ -320,6 +362,7 @@ export function useConversationChat({
       targetProjectIdRef.current = options.projectId
     }
     lastUserTextRef.current = trimmed
+    lastToolRef.current = options?.tool
     apply({ type: 'send', content: trimmed, createdAt: new Date().toISOString() })
     const activeConversationId =
       conversationId ?? selfCreatedIdRef.current ?? undefined
@@ -327,16 +370,17 @@ export function useConversationChat({
       trimmed,
       activeConversationId,
       // 仅新会话需要目标项目；已有会话时后端忽略该字段，干脆不发
-      activeConversationId ? undefined : targetProjectIdRef.current ?? undefined
+      activeConversationId ? undefined : targetProjectIdRef.current ?? undefined,
+      options?.tool
     )
   }
 
-  /** 重试 = 同文本的普通新消息（首字后出错场景；上一轮半截已定稿保留）。 */
+  /** 重试 = 同文本同工具的普通新消息（首字后出错场景；上一轮半截已定稿保留）。 */
   const retry = () => {
     if (stateRef.current.status !== 'error') return
     const text = lastUserTextRef.current
     if (!text) return
-    send(text)
+    send(text, { tool: lastToolRef.current })
   }
 
   const stop = () => {

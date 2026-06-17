@@ -1,5 +1,6 @@
 import { env } from '@/lib/env'
 import { supabase } from '@/lib/supabaseClient'
+import type { ConversationToolRef } from './types'
 
 export interface ChatStreamUsage {
   inputTokens: number | null
@@ -24,6 +25,8 @@ export interface StreamChatOptions {
   conversationId?: string
   /** 新会话直接诞生在该项目里；conversationId 存在时无意义，不发送。 */
   projectId?: string
+  /** 本轮启用的工具（输入菜单开关）；省略则是普通文本回合。 */
+  tool?: ConversationToolRef['type']
   signal: AbortSignal
   /**
    * 新会话时后端通过响应头 X-Conversation-Id 返回预生成 id，
@@ -32,6 +35,8 @@ export interface StreamChatOptions {
   onConversationId?: (id: string) => void
   onDelta: (text: string) => void
   onUsage?: (usage: ChatStreamUsage) => void
+  /** 工具回合：引导语流式输出后，后端发来一个 tool 事件挂载工具卡片。 */
+  onTool?: (tool: ConversationToolRef) => void
 }
 
 /**
@@ -49,10 +54,12 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     content,
     conversationId,
     projectId,
+    tool,
     signal,
     onConversationId,
     onDelta,
     onUsage,
+    onTool,
   } = options
 
   const {
@@ -76,6 +83,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
       body: JSON.stringify({
         ...(conversationId ? { conversationId } : {}),
         ...(!conversationId && projectId ? { projectId } : {}),
+        ...(tool ? { tool } : {}),
         messages: [{ role: 'user', content }],
       }),
       signal,
@@ -95,7 +103,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     throw new ChatStreamError('stream_interrupted', 'Response has no readable body')
   }
 
-  await consumeSseStream(response.body, { onDelta, onUsage })
+  await consumeSseStream(response.body, { onDelta, onUsage, onTool })
 }
 
 /**
@@ -150,7 +158,7 @@ function parseSseFrame(frame: string): SseFrame | null {
 
 async function consumeSseStream(
   body: ReadableStream<Uint8Array>,
-  handlers: Pick<StreamChatOptions, 'onDelta' | 'onUsage'>
+  handlers: Pick<StreamChatOptions, 'onDelta' | 'onUsage' | 'onTool'>
 ): Promise<void> {
   const reader = body.getReader()
   // 中文等多字节字符可能被网络分块从中间切断，必须用 stream 模式增量解码。
@@ -172,6 +180,10 @@ async function consumeSseStream(
       }
       case 'usage': {
         handlers.onUsage?.(JSON.parse(parsed.data) as ChatStreamUsage)
+        return
+      }
+      case 'tool': {
+        handlers.onTool?.(JSON.parse(parsed.data) as ConversationToolRef)
         return
       }
       case 'done': {

@@ -18,9 +18,11 @@ export function ChatInput({
   onSend,
 }: {
   className?: string
-  onSend: (text: string) => void
+  onSend: (text: string, options?: { tool?: 'course_planning' }) => void
 }) {
   const [value, setValue] = useState('')
+  // One-shot Course Planning toggle for the message this input sends.
+  const [coursePlanningEnabled, setCoursePlanningEnabled] = useState(false)
   const hasContent = value.trim().length > 0
 
   const submit = () => {
@@ -28,8 +30,9 @@ export function ChatInput({
     if (!text) {
       return
     }
-    onSend(text)
+    onSend(text, coursePlanningEnabled ? { tool: 'course_planning' } : undefined)
     setValue('')
+    setCoursePlanningEnabled(false)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -71,6 +74,8 @@ export function ChatInput({
             planningIcon={BookOpenCheck}
             planningLabel="Course Planning"
             referenceLabel="Reference materials"
+            planningEnabled={coursePlanningEnabled}
+            onPlanningEnabledChange={setCoursePlanningEnabled}
           />
         </div>
 

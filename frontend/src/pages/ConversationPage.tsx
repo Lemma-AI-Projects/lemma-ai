@@ -17,6 +17,8 @@ interface ConversationLocationState {
   messageKey?: string
   /** 项目页发起的新会话：直接诞生在该项目里。 */
   projectId?: string
+  /** 首页/项目页开启 Course Planning 后带入：本条消息走工具回合。 */
+  tool?: 'course_planning'
 }
 
 // 模块级防重：StrictMode 双挂载与重渲染下，同一条首页带入的消息只发送一次
@@ -30,6 +32,9 @@ export function ConversationPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [draft, setDraft] = useState('')
+  // One-shot per the design: toggling Course Planning applies to the next send,
+  // then resets. Page-local UI state (rules 第四章), not server data.
+  const [coursePlanningEnabled, setCoursePlanningEnabled] = useState(false)
 
   const chat = useConversationChat({
     conversationId: id,
@@ -54,7 +59,7 @@ export function ConversationPage() {
       '',
       window.location.href
     )
-    send(text, { projectId: state?.projectId })
+    send(text, { projectId: state?.projectId, tool: state?.tool })
   }, [id, location.state, send])
 
   // 本轮自建的会话内存态即完整历史，不启用回填；带 id 进入/刷新时才拉
@@ -74,6 +79,7 @@ export function ConversationPage() {
         role: message.role,
         message: message.content,
         date: message.createdAt,
+        tool: message.tool,
       }))
     )
     const liveTurns = createConversationTurns(
@@ -82,10 +88,22 @@ export function ConversationPage() {
         role: message.role,
         message: message.content,
         date: message.createdAt,
+        tool: message.tool,
       }))
     )
     return [...historyTurns, ...liveTurns]
   }, [id, messagesQuery.data, chat.liveMessages])
+
+  const handleSend = (text: string) => {
+    chat.send(
+      text,
+      coursePlanningEnabled ? { tool: 'course_planning' } : undefined
+    )
+    // One-shot: the tool applies to this message only.
+    if (coursePlanningEnabled) {
+      setCoursePlanningEnabled(false)
+    }
+  }
 
   const isBusy = chat.status === 'submitted' || chat.status === 'streaming'
   const isLoadingHistory = isPersistedConversation && messagesQuery.isPending
@@ -192,8 +210,10 @@ export function ConversationPage() {
               value={draft}
               onValueChange={setDraft}
               isStreaming={isBusy}
-              onSend={chat.send}
+              onSend={handleSend}
               onStop={chat.stop}
+              coursePlanningEnabled={coursePlanningEnabled}
+              onCoursePlanningChange={setCoursePlanningEnabled}
             />
           </div>
           {/* Mask sits one layer below the input and is pulled up by the input's

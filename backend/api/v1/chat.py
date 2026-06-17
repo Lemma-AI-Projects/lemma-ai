@@ -8,7 +8,7 @@ from ai import AIChunk, encode_chunk
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
 from schemas.ai import ChatRequest
-from services.chat_service import prepare_turn, stream_turn
+from services.chat_service import prepare_turn, run_turn
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -35,7 +35,7 @@ async def create_chat_stream(
             status_code=status.HTTP_404_NOT_FOUND, detail="conversation_not_found"
         )
     return StreamingResponse(
-        _encode_sse(stream_turn(context)),
+        _encode_sse(run_turn(context, tool=payload.tool, user=current_user)),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

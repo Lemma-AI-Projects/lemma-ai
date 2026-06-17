@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
@@ -46,6 +46,10 @@ class ConversationMessageOut(BaseModel):
     # DB column is content_text (dual-track storage); the wire keeps the same
     # `content` name the chat request uses.
     content: str = Field(validation_alias="content_text")
+    # Optional tool card attached to this turn (wire-shaped, e.g.
+    # {"type": "course_planning", "courseId": "..."}); lets reload re-render the
+    # card in place. Sourced from the ai_messages.tool_json column.
+    tool: dict[str, Any] | None = Field(default=None, validation_alias="tool_json")
     created_at: datetime
 
 

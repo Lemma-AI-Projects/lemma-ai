@@ -21,7 +21,7 @@ import uuid
 from ai import init_ai_runtime, shutdown_ai_runtime
 from ai.coursegen import research_chapter
 from ai.search import aclose_client, build_client
-from core.database import AsyncSessionLocal
+from core.database import AsyncSessionLocal, engine
 from services import course_build_service
 from tasks.celery_app import celery_app
 
@@ -101,6 +101,14 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
     finally:
         await aclose_client(client)
         await shutdown_ai_runtime()
+        # Each Celery task runs in its OWN asyncio.run() loop, but the
+        # module-level engine pools connections bound to whatever loop first
+        # opened them. Dispose here — inside this task's loop — so the next task
+        # in the same worker process starts with a clean pool instead of
+        # inheriting connections bound to a now-closed loop ("attached to a
+        # different loop" / "Event loop is closed"). Worker-only: the API
+        # process keeps its own long-lived engine, untouched.
+        await engine.dispose()
 
 
 @celery_app.task(

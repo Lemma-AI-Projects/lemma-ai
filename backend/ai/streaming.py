@@ -3,10 +3,14 @@ and never follow the framework — the frontend codes against this contract:
 
     event: delta   data: {"text": "..."}
     event: usage   data: {"inputTokens": n, "outputTokens": n, "totalTokens": n}
+    event: tool    data: {"type": "course_planning", "courseId": "<uuid>"}
     event: done    data: {}
     event: error   data: {"code": "<business code>", "message": "..."}
 
-Reserved for later phases (裁决 10): tool_call / tool_result / reasoning.
+The `tool` event attaches an interactive tool card to the current turn (a
+deterministic, client-triggered tool — distinct from the LLM tool_call /
+tool_result / reasoning events still reserved for later phases, 裁决 10). Its
+payload is already wire-shaped (camelCase) and passed through verbatim.
 """
 
 import json
@@ -34,6 +38,11 @@ def usage_event(usage: TokenUsage) -> str:
     )
 
 
+def tool_event(payload: dict[str, Any]) -> str:
+    # Payload is already wire-shaped (camelCase) and Lemma-owned; pass through.
+    return _encode("tool", payload)
+
+
 def done_event() -> str:
     return _encode("done", {})
 
@@ -54,6 +63,8 @@ def encode_chunk(chunk: AIChunk) -> str:
         return delta_event(chunk.text or "")
     if chunk.kind == "usage":
         return usage_event(chunk.usage or TokenUsage())
+    if chunk.kind == "tool":
+        return tool_event(chunk.tool or {})
     if chunk.kind == "done":
         return done_event()
     return error_event(chunk.error_code or "ai_error", chunk.error_message or "")

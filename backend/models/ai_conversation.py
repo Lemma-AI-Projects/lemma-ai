@@ -84,6 +84,12 @@ class AiMessage(Base):
     raw_parts_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB, nullable=True
     )
+    # Optional reference to an interactive tool card attached to this turn, e.g.
+    # {"type": "course_planning", "courseId": "<uuid>"}. The card's DATA lives in
+    # its own domain (course tables); this only records which tool sits here and
+    # where, so history reload can re-render it in place. Discriminated by
+    # `type` so future tools (quiz/flashcards) reuse the same column.
+    tool_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

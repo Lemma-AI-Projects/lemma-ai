@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from ai.coursegen.types import CourseOutline
 from models.course import Course, CourseChapter, CourseUnit
-from schemas.course import CourseDetailOut
+from schemas.course import CourseDetailOut, QuestionnaireOut
 
 # Only fully-built courses appear in the list (拍板: status < ready stay hidden,
 # failed drafts too). Everything below this is a draft swept by cleanup.
@@ -108,6 +108,24 @@ async def get_course_detail(
     detail = CourseDetailOut.model_validate(course)
     _apply_progress(detail)
     return detail
+
+
+async def get_questionnaire(
+    db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID
+) -> QuestionnaireOut | None:
+    """The intake questionnaire for an owned course (stored in intake_json).
+
+    Lets the in-conversation tool card hydrate the questionnaire stage from just
+    a courseId — the same path live and on history reload. None -> 404 (not
+    owned / gone) or the course has no questionnaire (already past intake).
+    """
+    course = await get_owned_course(db, user_id=user_id, course_id=course_id)
+    if course is None:
+        return None
+    data = (course.intake_json or {}).get("questionnaire")
+    if not data:
+        return None
+    return QuestionnaireOut.model_validate(data)
 
 
 def _apply_progress(detail: CourseDetailOut) -> None:

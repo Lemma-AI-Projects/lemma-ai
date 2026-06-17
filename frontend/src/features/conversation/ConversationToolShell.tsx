@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import type { QuestionnaireAnswers } from '@/features/coursePlanner/courseApi'
 import type {
   ConversationToolAnswer,
   ConversationToolQuestion,
@@ -16,7 +17,9 @@ import type {
   ConversationToolUnit,
 } from './types'
 
-export type QuestionnaireAnswers = Record<string, string | null>
+// Re-exported so existing importers keep a single import site; the type itself
+// is owned by the course domain (coursePlanner/courseApi).
+export type { QuestionnaireAnswers }
 
 // 工具卡片底部按钮尺寸：h-[33px] 控制 33px 高度，px-[12.5px] 控制横向内边距。
 const actionButtonClassName =
@@ -143,8 +146,18 @@ function QuestionnaireContent({
   onAnswerChange?: (questionId: string, option: string) => void
 }) {
   if (questions.length === 0) {
+    // Neutral skeleton while the (already-generated) questionnaire is fetched —
+    // never the "generating questionnaire" text: by the time this card mounts in
+    // a conversation the questionnaire already exists, this is just a quick load.
     return (
-      <p className="mt-4 text-sm text-zinc-500">正在生成问卷，请稍候…</p>
+      <div className="mt-4 flex flex-col gap-3" aria-hidden>
+        <div className="h-4 w-2/5 animate-pulse rounded bg-zinc-100" />
+        <div className="flex flex-wrap gap-2">
+          <div className="h-[34px] w-24 animate-pulse rounded-full bg-zinc-100" />
+          <div className="h-[34px] w-28 animate-pulse rounded-full bg-zinc-100" />
+          <div className="h-[34px] w-20 animate-pulse rounded-full bg-zinc-100" />
+        </div>
+      </div>
     )
   }
 
@@ -223,8 +236,14 @@ function OutlineContent({
   units: ConversationToolUnit[]
 }) {
   if (units.length === 0) {
+    // Neutral skeleton; the outline arrives with the intake response, so this
+    // only flashes briefly (no "organizing outline" text).
     return (
-      <p className="mt-4 text-sm text-zinc-500">正在整理课程大纲…</p>
+      <div className="mt-4 flex flex-col gap-2" aria-hidden>
+        <div className="h-4 w-1/2 animate-pulse rounded bg-zinc-100" />
+        <div className="ml-7 h-4 w-2/3 animate-pulse rounded bg-zinc-100" />
+        <div className="ml-7 h-4 w-3/5 animate-pulse rounded bg-zinc-100" />
+      </div>
     )
   }
 

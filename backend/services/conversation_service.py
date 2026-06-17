@@ -165,12 +165,13 @@ _PERSIST_TURN_NEW_CONVERSATION = text(
         VALUES (:conversation_id, :user_id, :title, :project_id, now(), now())
     )
     INSERT INTO ai_messages
-        (id, conversation_id, role, content_text, raw_parts_json, created_at)
+        (id, conversation_id, role, content_text, raw_parts_json, tool_json,
+         created_at)
     VALUES
         (:user_msg_id, :conversation_id, 'user', :user_content,
-         NULL, :user_sent_at),
+         NULL, NULL, :user_sent_at),
         (:assistant_msg_id, :conversation_id, 'assistant', :assistant_content,
-         CAST(:raw_parts AS jsonb), :assistant_at)
+         CAST(:raw_parts AS jsonb), CAST(:tool_json AS jsonb), :assistant_at)
     """
 )
 
@@ -178,12 +179,13 @@ _PERSIST_TURN_EXISTING_CONVERSATION = text(
     """
     WITH msgs AS (
         INSERT INTO ai_messages
-            (id, conversation_id, role, content_text, raw_parts_json, created_at)
+            (id, conversation_id, role, content_text, raw_parts_json, tool_json,
+             created_at)
         VALUES
             (:user_msg_id, :conversation_id, 'user', :user_content,
-             NULL, :user_sent_at),
+             NULL, NULL, :user_sent_at),
             (:assistant_msg_id, :conversation_id, 'assistant', :assistant_content,
-             CAST(:raw_parts AS jsonb), :assistant_at)
+             CAST(:raw_parts AS jsonb), CAST(:tool_json AS jsonb), :assistant_at)
     )
     UPDATE ai_conversations SET updated_at = now()
     WHERE id = :conversation_id
@@ -201,6 +203,7 @@ async def persist_turn(
     user_sent_at: datetime,
     assistant_content: str,
     raw_parts: dict[str, Any] | None,
+    tool_ref: dict[str, Any] | None = None,
 ) -> None:
     """Write one finished turn (user + assistant) atomically, in one roundtrip.
 
@@ -227,6 +230,7 @@ async def persist_turn(
         "assistant_content": assistant_content,
         "assistant_at": datetime.now(UTC),
         "raw_parts": json.dumps(raw_parts) if raw_parts is not None else None,
+        "tool_json": json.dumps(tool_ref) if tool_ref is not None else None,
     }
     if new_conversation_title is not None:
         statement = _PERSIST_TURN_NEW_CONVERSATION

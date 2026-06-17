@@ -1,4 +1,5 @@
 import type {
+  ConversationToolRef,
   ConversationTurn,
   ConversationTurnBlock,
   ConversationTurnRole,
@@ -9,6 +10,8 @@ export interface ConversationSourceMessage {
   message: string
   date: string
   attachments?: ConversationTurn['attachments']
+  /** Tool card attached to an assistant turn (renders after its text). */
+  tool?: ConversationToolRef
 }
 
 function createTurnBlocks(
@@ -16,25 +19,31 @@ function createTurnBlocks(
   message: ConversationSourceMessage,
   messageIndex: number
 ): ConversationTurnBlock[] {
-  const blockId = `${conversationId}-${messageIndex}-block-0`
+  const baseId = `${conversationId}-${messageIndex}`
 
-  if (message.role === 'assistant') {
-    return [
-      {
-        id: blockId,
-        type: 'markdown',
-        content: message.message,
-      },
-    ]
+  if (message.role !== 'assistant') {
+    return [{ id: `${baseId}-block-0`, type: 'text', content: message.message }]
   }
 
-  return [
-    {
-      id: blockId,
-      type: 'text',
-      content: message.message,
-    },
-  ]
+  // Assistant turn: its text first, then any tool card (the "reply, then tool"
+  // order the conversation flow requires).
+  const blocks: ConversationTurnBlock[] = []
+  if (message.message.length > 0) {
+    blocks.push({ id: `${baseId}-block-0`, type: 'markdown', content: message.message })
+  }
+  if (message.tool) {
+    blocks.push({
+      id: `${baseId}-tool`,
+      type: 'tool',
+      toolType: message.tool.type,
+      courseId: message.tool.courseId,
+    })
+  }
+  // Never emit an empty turn (defensive — assistant turns always carry content).
+  if (blocks.length === 0) {
+    blocks.push({ id: `${baseId}-block-0`, type: 'markdown', content: message.message })
+  }
+  return blocks
 }
 
 export function createConversationTurns(

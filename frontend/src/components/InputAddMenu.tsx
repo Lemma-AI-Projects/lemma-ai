@@ -31,6 +31,10 @@ interface InputAddMenuProps {
   planningLabel?: string
   referenceLabel?: string
   toolsLabel?: string
+  // Controlled course-planning toggle. When provided, the caller owns the state
+  // (so a send can read/reset it); omitted -> the switch stays self-managed.
+  planningEnabled?: boolean
+  onPlanningEnabledChange?: (enabled: boolean) => void
 }
 
 // Plus button size. Change this value to adjust the circular button diameter.
@@ -50,10 +54,15 @@ export function InputAddMenu({
   planningLabel = 'Deep thinking',
   referenceLabel = 'Reference materials',
   toolsLabel = 'Tools',
+  planningEnabled,
+  onPlanningEnabledChange,
 }: InputAddMenuProps) {
   const [includeContext, setIncludeContext] = useState(true)
-  const [planningEnabled, setPlanningEnabled] = useState(false)
+  const [planningLocal, setPlanningLocal] = useState(false)
   const [webSearch, setWebSearch] = useState(false)
+  // Controlled when the caller passes the toggle; otherwise self-managed.
+  const planningChecked = planningEnabled ?? planningLocal
+  const setPlanning = onPlanningEnabledChange ?? setPlanningLocal
 
   return (
     <InputMenu
@@ -88,8 +97,8 @@ export function InputAddMenu({
       <InputMenuSwitchItem
         icon={PlanningIcon}
         label={planningLabel}
-        checked={planningEnabled}
-        onCheckedChange={setPlanningEnabled}
+        checked={planningChecked}
+        onCheckedChange={setPlanning}
       />
       <InputMenuSwitchItem
         icon={Globe}
