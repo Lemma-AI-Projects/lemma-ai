@@ -17,11 +17,6 @@ export interface CourseQuestionnaire {
   questions: QuestionnaireQuestion[]
 }
 
-export interface CoursePlan {
-  courseId: string
-  questionnaire: CourseQuestionnaire
-}
-
 export interface CourseIntakeAnswer {
   questionId: string
   answer: string
@@ -52,6 +47,9 @@ export interface CourseDetail {
   status: string
   progress: number
   units: CourseUnit[]
+  // True once the intake questionnaire has been generated (it is produced on a
+  // background task, so an intake course can briefly have it false).
+  questionnaireReady: boolean
 }
 
 export interface CourseBuildAccepted {
@@ -97,6 +95,11 @@ interface SseFrame {
   event: string
   data: string
 }
+
+// While the intake questionnaire is still generating, poll the course snapshot
+// this often. The interval self-stops (returns false) once it's ready or the
+// course advances/fails, so there is no polling while the user answers.
+const QUESTIONNAIRE_POLL_MS = 1200
 
 export const coursePlannerQueryRootKey = ['course-planner'] as const
 
@@ -195,21 +198,6 @@ function isTerminalCourseStatus(status: string): boolean {
   return status === 'ready' || status === 'failed'
 }
 
-export async function createPlan(variables: {
-  topic: string
-  conversationId?: string
-}): Promise<CoursePlan> {
-  const { data } = await signOutOn401(
-    apiClient.post<CoursePlan>('/api/v1/courses/plan', {
-      topic: variables.topic,
-      ...(variables.conversationId
-        ? { conversationId: variables.conversationId }
-        : {}),
-    })
-  )
-  return data
-}
-
 export async function submitIntake(variables: {
   courseId: string
   answers: CourseIntakeAnswer[]
@@ -248,12 +236,6 @@ export async function startBuild(courseId: string): Promise<CourseBuildAccepted>
   return data
 }
 
-export function useCreateCoursePlanMutation() {
-  return useMutation({
-    mutationFn: createPlan,
-  })
-}
-
 export function useSubmitCourseIntakeMutation() {
   const queryClient = useQueryClient()
 
@@ -273,6 +255,18 @@ export function useCourseQuery(
     queryKey: courseQueryKey(courseId ?? 'none'),
     queryFn: () => getCourse(courseId as string),
     enabled: Boolean(courseId) && (options?.enabled ?? true),
+    // Self-stopping poll: only while the questionnaire is still being generated
+    // (intake + not ready). Stops the moment it is ready or the course
+    // advances/fails — so it catches a background-generation failure too,
+    // without polling during the answer phase or the build (SSE handles that).
+    refetchInterval: (query) => {
+      const course = query.state.data
+      return course &&
+        course.status === 'intake' &&
+        !course.questionnaireReady
+        ? QUESTIONNAIRE_POLL_MS
+        : false
+    },
     retry: retryUnlessClientError,
   })
 }

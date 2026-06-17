@@ -106,6 +106,7 @@ async def get_course_detail(
     if course is None:
         return None
     detail = CourseDetailOut.model_validate(course)
+    detail.questionnaire_ready = bool((course.intake_json or {}).get("questionnaire"))
     _apply_progress(detail)
     return detail
 
@@ -116,16 +117,49 @@ async def get_questionnaire(
     """The intake questionnaire for an owned course (stored in intake_json).
 
     Lets the in-conversation tool card hydrate the questionnaire stage from just
-    a courseId — the same path live and on history reload. None -> 404 (not
-    owned / gone) or the course has no questionnaire (already past intake).
+    a courseId — the same path live and on history reload.
+
+    Returns an EMPTY questionnaire (not None) when the course is owned but its
+    questionnaire is still being generated in the background, so the card can
+    poll until it's ready. None means 404 (not owned / gone) only.
     """
     course = await get_owned_course(db, user_id=user_id, course_id=course_id)
     if course is None:
         return None
     data = (course.intake_json or {}).get("questionnaire")
     if not data:
-        return None
+        return QuestionnaireOut(questions=[])
     return QuestionnaireOut.model_validate(data)
+
+
+async def store_questionnaire(
+    db: AsyncSession, *, course_id: uuid.UUID, questionnaire: dict
+) -> None:
+    """Fill a freshly generated questionnaire onto an existing intake course.
+
+    The course shell is created first (id available immediately); this lands the
+    questionnaire once the background LLM call finishes. Reassigns intake_json (a
+    new dict) so SQLAlchemy flags the JSONB column dirty. No-op if the course is
+    gone (deleted mid-generation)."""
+    course = await db.get(Course, course_id)
+    if course is not None:
+        course.intake_json = {
+            **(course.intake_json or {}),
+            "questionnaire": questionnaire,
+        }
+        await db.commit()
+
+
+async def mark_intake_failed(db: AsyncSession, *, course_id: uuid.UUID) -> None:
+    """Questionnaire generation failed -> move the intake course to failed.
+
+    Lets the in-conversation card stop polling and show the failure instead of an
+    endless skeleton. Guarded on `intake` so it never clobbers a course that has
+    already advanced."""
+    course = await db.get(Course, course_id)
+    if course is not None and course.status == "intake":
+        course.status = "failed"
+        await db.commit()
 
 
 def _apply_progress(detail: CourseDetailOut) -> None:

@@ -10,6 +10,10 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import type { QuestionnaireAnswers } from '@/features/coursePlanner/courseApi'
+import {
+  ConversationOutlineSkeleton,
+  ConversationQuestionnaireSkeleton,
+} from './ConversationToolSkeleton'
 import type {
   ConversationToolAnswer,
   ConversationToolQuestion,
@@ -146,19 +150,9 @@ function QuestionnaireContent({
   onAnswerChange?: (questionId: string, option: string) => void
 }) {
   if (questions.length === 0) {
-    // Neutral skeleton while the (already-generated) questionnaire is fetched —
-    // never the "generating questionnaire" text: by the time this card mounts in
-    // a conversation the questionnaire already exists, this is just a quick load.
-    return (
-      <div className="mt-4 flex flex-col gap-3" aria-hidden>
-        <div className="h-4 w-2/5 animate-pulse rounded bg-zinc-100" />
-        <div className="flex flex-wrap gap-2">
-          <div className="h-[34px] w-24 animate-pulse rounded-full bg-zinc-100" />
-          <div className="h-[34px] w-28 animate-pulse rounded-full bg-zinc-100" />
-          <div className="h-[34px] w-20 animate-pulse rounded-full bg-zinc-100" />
-        </div>
-      </div>
-    )
+    // Questionnaire still generating in the background -> shadcn form skeleton
+    // (never the "generating questionnaire" text).
+    return <ConversationQuestionnaireSkeleton />
   }
 
   return (
@@ -236,15 +230,8 @@ function OutlineContent({
   units: ConversationToolUnit[]
 }) {
   if (units.length === 0) {
-    // Neutral skeleton; the outline arrives with the intake response, so this
-    // only flashes briefly (no "organizing outline" text).
-    return (
-      <div className="mt-4 flex flex-col gap-2" aria-hidden>
-        <div className="h-4 w-1/2 animate-pulse rounded bg-zinc-100" />
-        <div className="ml-7 h-4 w-2/3 animate-pulse rounded bg-zinc-100" />
-        <div className="ml-7 h-4 w-3/5 animate-pulse rounded bg-zinc-100" />
-      </div>
-    )
+    // Outline arrives with the intake response, so this only flashes briefly.
+    return <ConversationOutlineSkeleton />
   }
 
   return (
