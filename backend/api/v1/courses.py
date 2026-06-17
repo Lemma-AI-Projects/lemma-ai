@@ -16,13 +16,10 @@ from schemas.course import (
     CourseDetailOut,
     CourseListItemOut,
     CourseOutlineOut,
-    CoursePlanIn,
-    CoursePlanOut,
     IntakeAnswersIn,
     QuestionnaireOut,
 )
 from services import (
-    conversation_service,
     course_build_service,
     course_planning_service,
     course_service,
@@ -44,38 +41,6 @@ def _ai_unavailable(exc: AIError) -> HTTPException:
     # Interactive generation failed (provider down / rate limited / timed out).
     # Surface a stable business code the frontend can act on; raw stays in logs.
     return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.code)
-
-
-@router.post("/plan", response_model=CoursePlanOut, status_code=status.HTTP_201_CREATED)
-async def create_plan(
-    payload: CoursePlanIn,
-    current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> CoursePlanOut:
-    if payload.conversation_id is not None:
-        # Linking to a conversation requires owning it (IDOR + avoids a dangling
-        # FK / 500). Foreign and missing are indistinguishable: both 404.
-        owned = await conversation_service.get_owned_conversation(
-            db, user_id=current_user.id, conversation_id=payload.conversation_id
-        )
-        if owned is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="conversation_not_found",
-            )
-    try:
-        course, questionnaire = await course_planning_service.create_plan(
-            db,
-            current_user,
-            topic=payload.topic,
-            conversation_id=payload.conversation_id,
-        )
-    except AIError as exc:
-        raise _ai_unavailable(exc) from exc
-    return CoursePlanOut(
-        course_id=course.id,
-        questionnaire=QuestionnaireOut.model_validate(questionnaire.model_dump()),
-    )
 
 
 @router.post("/{course_id}/intake", response_model=CourseOutlineOut)

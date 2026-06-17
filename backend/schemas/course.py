@@ -43,25 +43,6 @@ class QuestionnaireOut(BaseModel):
     questions: list[QuestionnaireQuestionOut]
 
 
-class CoursePlanIn(BaseModel):
-    """POST /courses/plan body. conversationId records which chat the course was
-    born in (拍板) — optional, must be one of the caller's own conversations."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    topic: str = Field(min_length=1, max_length=500)
-    conversation_id: uuid.UUID | None = None
-
-
-class CoursePlanOut(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel, populate_by_name=True, from_attributes=True
-    )
-
-    course_id: uuid.UUID
-    questionnaire: QuestionnaireOut
-
-
 class IntakeAnswerIn(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -121,6 +102,12 @@ class CourseDetailOut(CourseOutlineOut):
     """Full course snapshot. Same tree shape as the outline today; kept as its
     own type so the detail and outline endpoints can diverge later without
     breaking either contract."""
+
+    # True once the intake questionnaire has been generated and stored. The
+    # in-conversation card polls this snapshot while it's still generating, then
+    # fetches the questionnaire exactly once it flips true (or shows failure if
+    # the course moved to `failed`).
+    questionnaire_ready: bool = False
 
 
 class CourseListItemOut(BaseModel):

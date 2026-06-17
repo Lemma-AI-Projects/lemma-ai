@@ -27,7 +27,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai import AIChunk, AIError, AIUseCase, ChatMessage, ai_client
+from ai import AIChunk, AIUseCase, ChatMessage, ai_client
 from core import aio
 from core.database import AsyncSessionLocal
 from core.security import CurrentUser
@@ -193,30 +193,50 @@ def run_turn(
 async def stream_course_planning_turn(
     context: TurnContext, user: CurrentUser
 ) -> AsyncIterator[AIChunk]:
-    """Course-planning tool turn: stream a short AI intro, create the plan, then
-    attach the course-planning card with one `tool` chunk.
+    """Course-planning tool turn: create the course up front, stream a short AI
+    intro, then attach the card with one `tool` chunk.
 
-    Ordering matters: the intro streams first (the "AI replies first" beat), the
-    questionnaire is generated next, and only then does the card appear — so the
-    UI never shows an empty "generating questionnaire" shell.
+    Ordering matters for two reasons:
+    - The course shell is created BEFORE the intro streams, so the turn has a
+      course id from the first token. Closing the tab mid-intro still persists
+      the turn (same "first token persists" guarantee as a plain chat turn).
+    - The questionnaire is generated on a protected background task, NOT inline,
+      so `done` fires right after the intro: the card appears immediately (with
+      a skeleton) instead of after the slow questionnaire LLM call.
 
-    Persistence mirrors stream_turn (protected task, scheduled not awaited). The
-    turn is persisted only once the course exists, with the assistant intro text
-    and a tool_json reference to the course; a NEW conversation isn't in the DB
-    yet, so create_plan links via that message reference rather than
-    course.conversation_id (which would violate the FK pre-persist).
+    A NEW conversation isn't in the DB yet, so the course links via the message
+    tool_json reference rather than course.conversation_id (which would violate
+    the FK pre-persist).
     """
     intro_parts: list[str] = []
     raw_parts: dict[str, Any] | None = None
-    course_id: uuid.UUID | None = None
     persist_task: asyncio.Task[Any] | None = None
+
+    plan_conversation_id = (
+        None if context.new_conversation_title else context.conversation_id
+    )
+    async with AsyncSessionLocal() as db:
+        course = await course_planning_service.create_course_shell(
+            db,
+            user,
+            topic=context.user_content,
+            conversation_id=plan_conversation_id,
+        )
+    course_id = course.id
+    # Generate the questionnaire off the critical path: it fills the course
+    # afterwards (the card polls for it) and survives a client disconnect.
+    aio.spawn_protected(
+        course_planning_service.generate_and_store_questionnaire(
+            course_id, topic=context.user_content
+        )
+    )
 
     def ensure_persist_scheduled() -> None:
         nonlocal persist_task
         intro_text = "".join(intro_parts)
-        # Persist only a turn that actually produced a card: intro text + a real
-        # course. A failed plan leaves nothing behind (retry starts clean).
-        if persist_task is None and intro_text and course_id is not None:
+        # course_id always exists here (created above); persist once the intro
+        # has produced output, mirroring the plain chat turn.
+        if persist_task is None and intro_text:
             persist_task = aio.spawn_protected(
                 conversation_service.persist_turn(
                     conversation_id=context.conversation_id,
@@ -253,34 +273,12 @@ async def stream_course_planning_turn(
                 # done until the card is attached below.
                 raw_parts = chunk.raw_parts
             elif chunk.kind == "error":
-                # Intro failed before any tool work: surface and stop. Nothing
-                # is persisted, so a retry is clean.
+                # Intro failed before producing output: surface and stop. The
+                # orphan course shell is swept later; nothing is persisted.
                 yield chunk
                 return
 
-        # New conversations aren't persisted yet -> link via the message
-        # reference, not course.conversation_id (avoids the pre-persist FK).
-        plan_conversation_id = (
-            None if context.new_conversation_title else context.conversation_id
-        )
-        try:
-            async with AsyncSessionLocal() as db:
-                course, _questionnaire = await course_planning_service.create_plan(
-                    db,
-                    user,
-                    topic=context.user_content,
-                    conversation_id=plan_conversation_id,
-                )
-        except AIError as exc:
-            # Questionnaire generation failed after the intro: the user has seen
-            # output, so end with an error chunk (frontend keeps the intro and
-            # offers retry). No card, no persistence.
-            yield AIChunk(
-                kind="error", error_code=exc.code, error_message=exc.message
-            )
-            return
-
-        course_id = course.id
+        # Intro streamed OK -> attach the card and finish the turn.
         yield AIChunk(
             kind="tool",
             tool={"type": "course_planning", "courseId": str(course_id)},

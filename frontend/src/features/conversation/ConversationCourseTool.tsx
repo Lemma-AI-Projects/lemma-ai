@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useCoursePlanner } from '@/features/coursePlanner/useCoursePlanner'
 import { ConversationToolShell } from './ConversationToolShell'
+import { ConversationToolCardSkeleton } from './ConversationToolSkeleton'
 
 // Binds a course-planning tool block (just a courseId) to its live data and the
 // presentational shell. The conversation feature hosts the course tool, so it
@@ -15,16 +16,7 @@ export function ConversationCourseTool({ courseId }: { courseId: string }) {
   // neutral card skeleton instead of guessing a stage (which would flash the
   // wrong layout on reload of a built course).
   if (!view.stage) {
-    return (
-      <div
-        data-slot="conversation-tool-shell"
-        aria-hidden
-        className="flex w-full max-w-[36rem] flex-col gap-3 rounded-2xl border border-zinc-200/80 px-5 py-5"
-      >
-        <div className="h-5 w-1/2 animate-pulse rounded bg-zinc-100" />
-        <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-100" />
-      </div>
-    )
+    return <ConversationToolCardSkeleton />
   }
 
   return (

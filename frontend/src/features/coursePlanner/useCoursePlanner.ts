@@ -48,16 +48,20 @@ export interface CoursePlannerView {
  * the transient answer selections.
  */
 export function useCoursePlanner(courseId: string | undefined): CoursePlannerView {
+  // The course query self-polls while the questionnaire is generating (see
+  // useCourseQuery), so stage/questionnaireReady stay fresh without extra logic.
   const courseQuery = useCourseQuery(courseId, { enabled: Boolean(courseId) })
   const shellData = courseQuery.data
     ? mapCourseToToolShellData(courseQuery.data)
     : null
   const stage = shellData?.stage
+  const questionnaireReady = courseQuery.data?.questionnaireReady ?? false
 
-  // The questionnaire only matters at the intake stage; once past it the course
-  // tree carries everything the card renders.
+  // The questionnaire only matters at the intake stage, and only once it has
+  // actually been generated — until then the card shows a skeleton (the poll
+  // above keeps the snapshot fresh).
   const questionnaireQuery = useCourseQuestionnaireQuery(courseId, {
-    enabled: Boolean(courseId) && stage === 'questionnaire',
+    enabled: Boolean(courseId) && stage === 'questionnaire' && questionnaireReady,
   })
   const questions = questionnaireQuery.data?.questions ?? []
 
