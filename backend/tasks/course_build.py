@@ -18,6 +18,7 @@ import asyncio
 import logging
 import uuid
 
+from ai import init_ai_runtime, shutdown_ai_runtime
 from ai.coursegen import research_chapter
 from ai.search import aclose_client, build_client
 from core.database import AsyncSessionLocal
@@ -38,7 +39,15 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
     coursegen.research_chapter in production. Its signature is fixed
     (chapter_plan, profile, *, course_id, client, on_progress) so this code never
     changes between stub and real.
+
+    The AI runtime is initialised PER TASK (its own asyncio.run loop) and torn
+    down in finally — the same discipline ai/model_factory documents for Celery
+    (the shared httpx client can't outlive the per-task event loop) and that the
+    FastAPI lifespan / smoke scripts follow. Without this, ai_client.generate
+    (query expansion / video selection) raises "AI runtime not initialised" and
+    every chapter fails at the search/select step.
     """
+    init_ai_runtime()
     client = build_client()
     try:
         async with AsyncSessionLocal() as db:
@@ -91,6 +100,7 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
             await course_build_service.finalize_course(db, course_id=course_id)
     finally:
         await aclose_client(client)
+        await shutdown_ai_runtime()
 
 
 @celery_app.task(

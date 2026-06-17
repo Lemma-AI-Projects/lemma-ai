@@ -1,5 +1,5 @@
 import { type KeyboardEvent } from 'react'
-import { ArrowUp, Square } from 'lucide-react'
+import { ArrowUp, BookOpenCheck, Square } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,9 @@ const CONVERSATION_PLUS_LEFT_OFFSET_CLASS = 'ml-[-5px]'
 
 // Conversation input plus button bottom offset. Negative margin moves it further down.
 const CONVERSATION_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-8px]'
+
+// Conversation add menu horizontal offset. Aligns the menu left edge with the input border.
+const CONVERSATION_ADD_MENU_ALIGN_OFFSET = -12
 
 // 受控输入：value 由页面持有，便于首字前失败时把草稿还原到输入框。
 export function ConversationInput({
@@ -72,6 +75,9 @@ export function ConversationInput({
         >
           <InputAddMenu
             contextLabel="Include conversation context"
+            menuAlignOffset={CONVERSATION_ADD_MENU_ALIGN_OFFSET}
+            planningIcon={BookOpenCheck}
+            planningLabel="Course Planning"
             referenceLabel="Reference conversation"
           />
         </div>
