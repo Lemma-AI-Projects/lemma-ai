@@ -1,13 +1,18 @@
+import asyncio
 import uuid
+from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.errors import AIError
-from core.database import get_db
+from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from models.course import Course
 from schemas.course import (
+    BuildProgressEvent,
+    CourseBuildAcceptedOut,
     CourseDetailOut,
     CourseListItemOut,
     CourseOutlineOut,
@@ -16,13 +21,23 @@ from schemas.course import (
     IntakeAnswersIn,
     QuestionnaireOut,
 )
-from services import conversation_service, course_planning_service, course_service
+from services import (
+    conversation_service,
+    course_build_service,
+    course_planning_service,
+    course_service,
+)
+from tasks.course_build import build_course
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 _NOT_FOUND = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="course_not_found"
 )
+
+# SSE build progress: poll the DB snapshot this often; stop at a terminal state.
+_BUILD_POLL_INTERVAL_S = 1.0
+_TERMINAL_STATUSES = frozenset({"ready", "failed"})
 
 
 def _ai_unavailable(exc: AIError) -> HTTPException:
@@ -106,3 +121,75 @@ async def get_course(
     if detail is None:
         raise _NOT_FOUND
     return detail
+
+
+@router.post(
+    "/{course_id}/build",
+    response_model=CourseBuildAcceptedOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def start_build(
+    course_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CourseBuildAcceptedOut:
+    # Flip to building synchronously (SSE shows it immediately), then hand the
+    # long search/select work to Celery (rules 第九章) and return 202.
+    course = await course_build_service.mark_building(
+        db, user_id=current_user.id, course_id=course_id
+    )
+    if course is None:
+        raise _NOT_FOUND
+    build_course.delay(str(course_id))
+    return CourseBuildAcceptedOut(course_id=course_id)
+
+
+@router.get("/{course_id}/build/stream")
+async def stream_build(
+    course_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    # Ownership checked once up front (consistent 404); the stream then polls the
+    # DB snapshot — it never talks to the worker directly (DB is the truth).
+    detail = await course_service.get_course_detail(
+        db, user_id=current_user.id, course_id=course_id
+    )
+    if detail is None:
+        raise _NOT_FOUND
+    return StreamingResponse(
+        _build_event_stream(user_id=current_user.id, course_id=course_id),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # tell nginx not to buffer SSE
+        },
+    )
+
+
+def _progress_frame(detail: CourseDetailOut) -> str:
+    payload = BuildProgressEvent(course=detail).model_dump_json(by_alias=True)
+    return f"event: progress\ndata: {payload}\n\n"
+
+
+async def _build_event_stream(
+    *, user_id: uuid.UUID, course_id: uuid.UUID
+) -> AsyncIterator[str]:
+    """Emit a full snapshot each tick (no diff) until the build is terminal.
+
+    Each poll uses its own short-lived session (never holds the request's db for
+    the stream's lifetime). Reconnect is naturally correct: the first frame is a
+    fresh full snapshot.
+    """
+    while True:
+        async with AsyncSessionLocal() as db:
+            detail = await course_service.get_course_detail(
+                db, user_id=user_id, course_id=course_id
+            )
+        if detail is None:
+            return  # course deleted mid-stream — just end
+        yield _progress_frame(detail)
+        if detail.status in _TERMINAL_STATUSES:
+            yield "event: done\ndata: {}\n\n"
+            return
+        await asyncio.sleep(_BUILD_POLL_INTERVAL_S)

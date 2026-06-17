@@ -105,7 +105,29 @@ async def get_course_detail(
     course = result.scalar_one_or_none()
     if course is None:
         return None
-    return CourseDetailOut.model_validate(course)
+    detail = CourseDetailOut.model_validate(course)
+    _apply_progress(detail)
+    return detail
+
+
+def _apply_progress(detail: CourseDetailOut) -> None:
+    """Roll chapter progress up to unit and course (已完成章节占比).
+
+    Chapter progress is stored (0 until researched, 100 at terminal ready/
+    failed); unit/course progress are derived here for the snapshot. Build
+    progress therefore rises monotonically and hits 100 once every chapter is
+    terminal.
+    """
+    all_chapters = [chapter for unit in detail.units for chapter in unit.chapters]
+    for unit in detail.units:
+        if unit.chapters:
+            unit.progress = round(
+                sum(c.progress for c in unit.chapters) / len(unit.chapters)
+            )
+    if all_chapters:
+        detail.progress = round(
+            sum(c.progress for c in all_chapters) / len(all_chapters)
+        )
 
 
 async def list_courses(

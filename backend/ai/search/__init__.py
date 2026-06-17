@@ -21,10 +21,13 @@ from ai.search.routing import SearchContext, run_search_chain
 from ai.search.types import SearchPlatform, VideoCandidate, VideoSearchQuery
 
 __all__ = [
+    "ApifyClient",
     "SearchPlatform",
     "SearchProviderError",
     "VideoCandidate",
     "VideoSearchQuery",
+    "aclose_client",
+    "build_client",
     "search_videos",
     "validate_search_routes",
 ]

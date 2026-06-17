@@ -12,7 +12,7 @@ celery_app = Celery(
     "lemma",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["tasks.video_ingest"],
+    include=["tasks.video_ingest", "tasks.course_build"],
 )
 
 celery_app.conf.update(

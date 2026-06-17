@@ -19,7 +19,13 @@ from ai.coursegen.types import (
     VideoSelection,
 )
 from ai.errors import AIError
-from ai.search import SearchPlatform, VideoCandidate, VideoSearchQuery, search_videos
+from ai.search import (
+    ApifyClient,
+    SearchPlatform,
+    VideoCandidate,
+    VideoSearchQuery,
+    search_videos,
+)
 from ai.types import AIUseCase
 
 logger = logging.getLogger("lemma.ai.coursegen")
@@ -39,9 +45,12 @@ async def research_chapter(
     profile: dict[str, str] | None = None,
     *,
     course_id: uuid.UUID | None = None,
+    client: ApifyClient | None = None,
 ) -> ChapterResearchResult:
+    # `client` lets the build task reuse ONE Apify client across all chapters
+    # (Phase 5); None -> search_videos builds its own (standalone use).
     queries = await _expand_queries(chapter_plan, profile)
-    candidates = await _search_all(queries, course_id=course_id)
+    candidates = await _search_all(queries, course_id=course_id, client=client)
     if not candidates:
         return ChapterResearchResult(
             candidates=[], chosen=None, reason="未找到任何候选视频"
@@ -78,7 +87,10 @@ async def _expand_queries(
 
 
 async def _search_all(
-    queries: list[str], *, course_id: uuid.UUID | None
+    queries: list[str],
+    *,
+    course_id: uuid.UUID | None,
+    client: ApifyClient | None,
 ) -> list[VideoCandidate]:
     search_queries = queries[:_MAX_SEARCH_QUERIES]
     tasks = [
@@ -88,6 +100,7 @@ async def _search_all(
             limit=_PER_QUERY_LIMIT,
             use_case=_SEARCH_USE_CASE,
             course_id=course_id,
+            client=client,
         )
         for platform in _SEARCH_PLATFORMS
         for query in search_queries
