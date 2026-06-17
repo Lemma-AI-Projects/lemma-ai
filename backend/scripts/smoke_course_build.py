@@ -26,7 +26,7 @@ from core.security import CurrentUser
 from models.course import Course, CourseChapter, CourseUnit
 from models.course_candidate import ChapterVideoCandidate
 from models.profile import Profile
-from services import course_service
+from services import course_build_service, course_service
 from tasks.course_build import run_build
 
 FAILURES: list[str] = []
@@ -58,7 +58,9 @@ def _fake_candidate(plan_title: str, n: int) -> VideoCandidate:
     )
 
 
-async def _stub_ok(plan, profile, *, course_id=None, client=None) -> ChapterResearchResult:
+async def _stub_ok(
+    plan, profile, *, course_id=None, client=None, on_progress=None
+) -> ChapterResearchResult:
     candidates = [_fake_candidate(plan.title, 0), _fake_candidate(plan.title, 1)]
     return ChapterResearchResult(
         candidates=candidates, chosen=candidates[0], reason="stub chosen"
@@ -66,7 +68,9 @@ async def _stub_ok(plan, profile, *, course_id=None, client=None) -> ChapterRese
 
 
 def _make_stub_err(fail_title: str):
-    async def _stub(plan, profile, *, course_id=None, client=None) -> ChapterResearchResult:
+    async def _stub(
+        plan, profile, *, course_id=None, client=None, on_progress=None
+    ) -> ChapterResearchResult:
         if plan.title == fail_title:
             raise RuntimeError("injected chapter failure")
         candidates = [_fake_candidate(plan.title, 0)]
@@ -77,8 +81,15 @@ def _make_stub_err(fail_title: str):
     return _stub
 
 
-async def _stub_slow(plan, profile, *, course_id=None, client=None) -> ChapterResearchResult:
-    await asyncio.sleep(0.3)
+async def _stub_slow(
+    plan, profile, *, course_id=None, client=None, on_progress=None
+) -> ChapterResearchResult:
+    # Emit the real 25/50/75 beats with pauses so the poller observes the
+    # fine-grained climb (not just a 0 -> 100 jump).
+    for pct in (25, 50, 75):
+        if on_progress is not None:
+            await on_progress(pct)
+        await asyncio.sleep(0.15)
     candidates = [_fake_candidate(plan.title, 0)]
     return ChapterResearchResult(candidates=candidates, chosen=candidates[0], reason="ok")
 
@@ -268,6 +279,37 @@ async def section_progress_monotonic(user_id: uuid.UUID) -> None:
     samples.append(final.progress)
     check(_monotonic(samples), f"进度: 总 progress 单调不降 {samples}")
     check(samples[-1] == 100, "进度: 终态 progress=100")
+    check(
+        any(0 < s < 100 for s in samples),
+        f"进度: 观察到章节内细颗粒进度（非 0/100 跳变）{samples}",
+    )
+
+
+async def section_progress_beats(user_id: uuid.UUID) -> None:
+    """确定性校验 in-flight 节拍契约：25/50/75 推进、回退忽略、超额封顶 99
+    （不依赖时序，直接打 course_build_service.mark_chapter_progress）。"""
+    _, chapter_ids = await _make_course(user_id, n_units=1, n_chapters=1, answers={})
+    chapter_id = chapter_ids[0]
+    async with AsyncSessionLocal() as db:
+        await course_build_service.mark_chapter_researching(db, chapter_id=chapter_id)
+    for pct in (25, 50, 75):
+        async with AsyncSessionLocal() as db:
+            await course_build_service.mark_chapter_progress(
+                db, chapter_id=chapter_id, progress=pct
+            )
+    check((await _chapters(chapter_ids))[0].progress == 75, "细颗粒: 25→50→75 推进到 75")
+
+    async with AsyncSessionLocal() as db:  # backward beat ignored
+        await course_build_service.mark_chapter_progress(
+            db, chapter_id=chapter_id, progress=50
+        )
+    check((await _chapters(chapter_ids))[0].progress == 75, "细颗粒: 回退节拍被忽略（单调）")
+
+    async with AsyncSessionLocal() as db:  # >100 capped (terminal owns 100)
+        await course_build_service.mark_chapter_progress(
+            db, chapter_id=chapter_id, progress=150
+        )
+    check((await _chapters(chapter_ids))[0].progress == 99, "细颗粒: 超额节拍封顶 99")
 
 
 async def section_real_research(user_id: uuid.UUID) -> None:
@@ -330,6 +372,7 @@ async def main() -> int:
         course_id, chapter_ids = await section_happy_path(user.id)
         await section_idempotent(user.id, course_id, chapter_ids)
         await section_error_isolation(user.id)
+        await section_progress_beats(user.id)
         await section_progress_monotonic(user.id)
         await section_real_research(user.id)
     finally:

@@ -17,15 +17,32 @@ export interface ConversationMarkdownBlock {
 export interface ConversationToolChapter {
   id: string
   title: string
-  status?: 'not-started' | 'in-progress' | 'completed'
+  status?: 'not-started' | 'in-progress' | 'completed' | 'failed'
   progress?: number
+}
+
+export type ConversationToolStage =
+  | 'questionnaire'
+  | 'pending'
+  | 'in-progress'
+  | 'ready'
+
+export interface ConversationToolQuestion {
+  id: string
+  title: string
+  options: string[]
+}
+
+export interface ConversationToolAnswer {
+  questionId: string
+  answer: string
 }
 
 export interface ConversationToolUnit {
   id: string
   title: string
   chapters: ConversationToolChapter[]
-  status?: 'not-started' | 'in-progress' | 'completed'
+  status?: 'not-started' | 'in-progress' | 'completed' | 'failed'
   progress?: number
 }
 
@@ -33,6 +50,8 @@ export interface ConversationToolBlock {
   id: string
   type: 'tool'
   title: string
+  stage?: ConversationToolStage
+  questions?: ConversationToolQuestion[]
   units: ConversationToolUnit[]
   progress?: number
 }

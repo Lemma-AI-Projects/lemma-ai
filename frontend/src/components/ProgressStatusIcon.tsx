@@ -1,7 +1,11 @@
-import { CircleCheckBig } from 'lucide-react'
+import { CircleCheckBig, CircleX } from 'lucide-react'
 import { BacklogStatusIcon } from '@/components/BacklogStatusIcon'
 
-export type ProgressStatus = 'not-started' | 'in-progress' | 'completed'
+export type ProgressStatus =
+  | 'not-started'
+  | 'in-progress'
+  | 'completed'
+  | 'failed'
 
 function InProgressStatusIcon({ value }: { value?: number }) {
   const radius = 2
@@ -54,6 +58,10 @@ export function ProgressStatusIcon({
 }) {
   if (status === 'completed') {
     return <CircleCheckBig className="size-4 text-green-500" />
+  }
+
+  if (status === 'failed') {
+    return <CircleX className="size-4 text-red-500" />
   }
 
   if (status === 'in-progress') {

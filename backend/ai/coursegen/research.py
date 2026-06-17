@@ -9,6 +9,7 @@ provider_usage_logs（不自己造）。
 import asyncio
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 
 from ai.client import ai_client
 from ai.coursegen.ranking import rank
@@ -39,6 +40,19 @@ _MAX_SEARCH_QUERIES = 2  # distinct expanded queries actually searched
 _PER_QUERY_LIMIT = 5  # candidates per (platform, query)
 _SELECT_TOP_K = 8  # how many top-ranked candidates the LLM picks among
 
+# An async sink the caller (the build task) supplies to land in-flight chapter
+# progress. coursegen stays ORM-free: it only reports a percent; the task
+# persists it. None -> standalone use (smoke/tests) reports nothing.
+ProgressCallback = Callable[[int], Awaitable[None]]
+
+# Sub-chapter progress beats (拍板 25/50/75/100). The chapter only reaches 100 on
+# a TERMINAL write (persist/failed) in course_build_service, never from here.
+# 25 dwells through query-prep + the slow web search; 75 dwells through the slow
+# LLM selection; 50 (ranking) is near-instant between them.
+_PROGRESS_SEARCHING = 25  # 搜索中：扩词 + YT/B站 检索
+_PROGRESS_RANKING = 50  # 排序：去重 + 确定性打分
+_PROGRESS_SELECTING = 75  # 选片：LLM 在候选中挑选
+
 
 async def research_chapter(
     chapter_plan: ChapterPlan,
@@ -46,16 +60,22 @@ async def research_chapter(
     *,
     course_id: uuid.UUID | None = None,
     client: ApifyClient | None = None,
+    on_progress: ProgressCallback | None = None,
 ) -> ChapterResearchResult:
     # `client` lets the build task reuse ONE Apify client across all chapters
     # (Phase 5); None -> search_videos builds its own (standalone use).
+    # `on_progress` lands fine-grained beats so the bar moves during the slow
+    # search instead of jumping 0 -> 100 when the chapter finishes.
+    await _report(on_progress, _PROGRESS_SEARCHING)  # 搜索中
     queries = await _expand_queries(chapter_plan, profile)
     candidates = await _search_all(queries, course_id=course_id, client=client)
     if not candidates:
         return ChapterResearchResult(
             candidates=[], chosen=None, reason="未找到任何候选视频"
         )
+    await _report(on_progress, _PROGRESS_RANKING)  # 排序
     ranked = rank(candidates, chapter_plan)
+    await _report(on_progress, _PROGRESS_SELECTING)  # 选片
     try:
         chosen, reason = await _select(chapter_plan, profile, ranked)
     except AIError as exc:
@@ -64,6 +84,17 @@ async def research_chapter(
             candidates=ranked, chosen=None, reason=f"选片失败：{exc.message}"
         )
     return ChapterResearchResult(candidates=ranked, chosen=chosen, reason=reason)
+
+
+async def _report(on_progress: ProgressCallback | None, progress: int) -> None:
+    """Fire a progress beat if the caller wired a sink. Failures here must never
+    break research (it's cosmetic), so swallow and log at debug."""
+    if on_progress is None:
+        return
+    try:
+        await on_progress(progress)
+    except Exception:  # noqa: BLE001 — progress is best-effort, never fatal
+        logger.debug("progress callback failed", exc_info=True)
 
 
 async def _expand_queries(
@@ -93,7 +124,7 @@ async def _search_all(
     client: ApifyClient | None,
 ) -> list[VideoCandidate]:
     search_queries = queries[:_MAX_SEARCH_QUERIES]
-    tasks = [
+    legs = [
         search_videos(
             VideoSearchQuery(keyword=query),
             platform=platform,
@@ -105,7 +136,7 @@ async def _search_all(
         for platform in _SEARCH_PLATFORMS
         for query in search_queries
     ]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    results = await asyncio.gather(*legs, return_exceptions=True)
     candidates: list[VideoCandidate] = []
     for result in results:
         if isinstance(result, AIError):

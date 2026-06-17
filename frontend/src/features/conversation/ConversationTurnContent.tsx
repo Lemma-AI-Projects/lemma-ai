@@ -28,6 +28,8 @@ function renderBlock(block: ConversationTurnBlock) {
     <ConversationToolShell
       key={block.id}
       title={block.title}
+      stage={block.stage ?? 'ready'}
+      questions={block.questions}
       units={block.units}
       progress={block.progress}
     />

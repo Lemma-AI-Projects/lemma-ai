@@ -21,6 +21,8 @@ _FAILED = "failed"
 _BUILDING = "building"
 _RESEARCHING = "researching"
 _CHAPTER_DONE = 100
+# Cap for in-flight beats: only a terminal write (persist/failed) may reach 100.
+_CHAPTER_IN_FLIGHT_MAX = 99
 
 
 async def mark_building(
@@ -72,9 +74,31 @@ async def load_build_context(
 async def mark_chapter_researching(
     db: AsyncSession, *, chapter_id: uuid.UUID
 ) -> None:
+    """Pick a chapter up for (re)research: status=researching, progress reset to 0
+    so the 25/50/75 beats climb from a clean slate (a re-built failed chapter sits
+    at 100, which would otherwise block its monotonic in-flight beats)."""
     chapter = await db.get(CourseChapter, chapter_id)
     if chapter is not None:
         chapter.status = _RESEARCHING
+        chapter.progress = 0
+        await db.commit()
+
+
+async def mark_chapter_progress(
+    db: AsyncSession, *, chapter_id: uuid.UUID, progress: int
+) -> None:
+    """Land an in-flight progress beat fired by the research pipeline.
+
+    Clamped to [0, 99] (terminal writes own 100) and monotonic — a later beat
+    never drags the bar backwards, so concurrent/out-of-order updates are safe.
+    Skips the write entirely when it wouldn't advance the value.
+    """
+    chapter = await db.get(CourseChapter, chapter_id)
+    if chapter is None:
+        return
+    capped = max(0, min(progress, _CHAPTER_IN_FLIGHT_MAX))
+    if capped > chapter.progress:
+        chapter.progress = capped
         await db.commit()
 
 

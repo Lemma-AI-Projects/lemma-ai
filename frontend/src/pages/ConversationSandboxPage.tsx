@@ -1,112 +1,173 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Ellipsis, Share2 } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { ConversationInput } from '@/features/conversation/ConversationInput'
 import { ConversationMessageList } from '@/features/conversation/ConversationMessageList'
+import {
+  ConversationToolShell,
+  type QuestionnaireAnswers,
+} from '@/features/conversation/ConversationToolShell'
 import { ConversationStreamingTurn } from '@/features/conversation/ConversationStreamingTurn'
 import { createConversationTurns } from '@/features/conversation/createConversationTurns'
-import type { ConversationTurn } from '@/features/conversation/types'
-import { conversationSandboxMessages } from '@/mock/conversationSandbox'
+import {
+  courseQueryKey,
+  mapCourseToToolShellData,
+  useCourseBuildStream,
+  useCourseQuery,
+  useCreateCoursePlanMutation,
+  useStartCourseBuildMutation,
+  useSubmitCourseIntakeMutation,
+  type CourseIntakeAnswer,
+  type QuestionnaireQuestion,
+} from '@/features/coursePlanner/courseApi'
 
-const sandboxToolTurn: ConversationTurn = {
-  id: 'conversation-sandbox-tool',
-  role: 'assistant',
-  createdAt: '2026-06-15T09:00:01.000Z',
-  attachments: [],
-  blocks: [
-    {
-      id: 'conversation-sandbox-tool-block',
-      type: 'tool',
-      title: '微积分入门课程',
-      progress: 24,
-      units: [
-        {
-          id: 'calculus-foundations',
-          title: '单元一：函数、极限与连续',
-          status: 'completed',
-          progress: 100,
-          chapters: [
-            {
-              id: 'functions-and-graphs',
-              title: '函数与图像',
-              status: 'completed',
-              progress: 100,
-            },
-            {
-              id: 'limits-and-continuity',
-              title: '极限与连续性的直观理解',
-              status: 'completed',
-              progress: 100,
-            },
-          ],
-        },
-        {
-          id: 'calculus-derivatives',
-          title: '单元二：导数与变化率',
-          status: 'in-progress',
-          progress: 50,
-          chapters: [
-            {
-              id: 'derivative-definition',
-              title: '导数的定义与几何意义',
-              status: 'completed',
-              progress: 100,
-            },
-            {
-              id: 'derivative-rules',
-              title: '常见函数的求导法则',
-              status: 'in-progress',
-              progress: 50,
-            },
-          ],
-        },
-        {
-          id: 'calculus-integrals',
-          title: '单元三：积分与累积',
-          status: 'not-started',
-          progress: 0,
-          chapters: [
-            {
-              id: 'definite-integrals',
-              title: '定积分与面积',
-              status: 'not-started',
-              progress: 0,
-            },
-            {
-              id: 'fundamental-theorem',
-              title: '微积分基本定理',
-              status: 'not-started',
-              progress: 0,
-            },
-          ],
-        },
-      ],
-    },
-  ],
+function createEmptyAnswers(
+  questions: QuestionnaireQuestion[]
+): QuestionnaireAnswers {
+  return Object.fromEntries(
+    questions.map((question) => [question.id, null])
+  ) as QuestionnaireAnswers
 }
 
-// [sandbox] 临时会话组件调试页，开发完成后可删除本文件及对应 mock、路由和侧边栏入口。
+// [sandbox] 课程编排端到端调试页：真实请求课程 plan/intake/build/stream，
+// 用于验证 ConversationToolShell 的后端驱动四态。
 export function ConversationSandboxPage() {
+  const queryClient = useQueryClient()
   const [draft, setDraft] = useState('')
+  const [topic, setTopic] = useState<string | null>(null)
+  const [sentAt, setSentAt] = useState<string | null>(null)
+  const [courseId, setCourseId] = useState<string | undefined>()
+  const [answers, setAnswers] = useState<QuestionnaireAnswers>({})
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const createPlanMutation = useCreateCoursePlanMutation()
+  const submitIntakeMutation = useSubmitCourseIntakeMutation()
+  const startBuildMutation = useStartCourseBuildMutation()
+  const courseQuery = useCourseQuery(courseId, { enabled: Boolean(courseId) })
+  const courseShellData = courseQuery.data
+    ? mapCourseToToolShellData(courseQuery.data)
+    : null
+  const buildStream = useCourseBuildStream(courseId, {
+    enabled: courseShellData?.stage === 'in-progress',
+  })
+
+  const questions = createPlanMutation.data?.questionnaire.questions ?? []
+  const toolStage =
+    courseShellData?.stage ?? (createPlanMutation.data ? 'questionnaire' : null)
+  const toolTitle =
+    courseShellData?.title ?? (topic ? `${topic} 学习计划` : '课程规划')
+  const toolUnits = courseShellData?.units ?? []
+  const toolProgress = courseShellData?.progress ?? 0
+  const toolFailed = courseShellData?.failed ?? false
+
   const turns = useMemo(
-    () => [
-      ...createConversationTurns(
-        'conversation-sandbox',
-        conversationSandboxMessages
-      ),
-      sandboxToolTurn,
-    ],
-    []
+    () =>
+      topic && sentAt
+        ? createConversationTurns('course-planner-sandbox', [
+            {
+              role: 'user',
+              message: topic,
+              date: sentAt,
+            },
+          ])
+        : [],
+    [sentAt, topic]
   )
   const messageList = useMemo(
-    () => <ConversationMessageList turns={turns} />,
+    () => (turns.length > 0 ? <ConversationMessageList turns={turns} /> : null),
     [turns]
   )
 
-  // [sandbox] 仅保留真实会话输入框的交互外壳，不请求、不流式、不持久化。
-  const handleSend = () => undefined
-  const handleStop = () => undefined
+  useEffect(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
+    })
+  }, [
+    createPlanMutation.isPending,
+    courseShellData?.stage,
+    toolProgress,
+    turns.length,
+  ])
+
+  const resetPlanner = () => {
+    if (courseId) {
+      queryClient.removeQueries({ queryKey: courseQueryKey(courseId) })
+    }
+    setTopic(null)
+    setSentAt(null)
+    setCourseId(undefined)
+    setAnswers({})
+    setDraft('')
+    createPlanMutation.reset()
+    submitIntakeMutation.reset()
+    startBuildMutation.reset()
+  }
+
+  const handleSend = (text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed || createPlanMutation.isPending) {
+      return
+    }
+
+    resetPlanner()
+    const nextSentAt = new Date().toISOString()
+    setTopic(trimmed)
+    setSentAt(nextSentAt)
+
+    createPlanMutation.mutate(
+      { topic: trimmed },
+      {
+        onSuccess: (plan) => {
+          setCourseId(plan.courseId)
+          setAnswers(createEmptyAnswers(plan.questionnaire.questions))
+        },
+      }
+    )
+  }
+
+  const handleAnswerChange = (questionId: string, option: string) => {
+    setAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [questionId]: currentAnswers[questionId] === option ? null : option,
+    }))
+  }
+
+  const handleSubmitAnswers = (selectedAnswers: CourseIntakeAnswer[]) => {
+    if (!courseId || selectedAnswers.length === 0) {
+      return
+    }
+
+    submitIntakeMutation.mutate({
+      courseId,
+      answers: selectedAnswers,
+    })
+  }
+
+  const handleApproveBuild = () => {
+    if (!courseId) {
+      return
+    }
+
+    startBuildMutation.mutate(courseId, {
+      onSuccess: () => {
+        void courseQuery.refetch()
+      },
+    })
+  }
+
+  const toolErrorMessage =
+    createPlanMutation.isError
+      ? '生成问卷失败，请重试'
+      : submitIntakeMutation.isError
+        ? '生成大纲失败，请重试'
+        : startBuildMutation.isError
+          ? '启动课程构建失败，请重试'
+          : buildStream.error
+            ? '构建进度连接中断，正在尝试恢复'
+            : null
 
   return (
     <div className="relative flex h-full flex-col rounded-md border border-zinc-200/80 bg-zinc-50">
@@ -133,13 +194,51 @@ export function ConversationSandboxPage() {
           className="scrollbar-fade min-h-0 flex-1 overflow-y-auto"
         >
           <div className="mx-auto flex min-h-full w-full max-w-[55rem] flex-col px-6 pb-40">
-            {messageList}
+            {messageList ?? (
+              <div className="flex flex-1 items-center justify-center py-10">
+                <p className="text-sm text-zinc-400">
+                  输入一个主题，开始真实课程编排流程。
+                </p>
+              </div>
+            )}
+
+            {createPlanMutation.isPending ? (
+              <div className="py-6">
+                <p className="text-sm text-zinc-500">正在生成问卷…</p>
+              </div>
+            ) : createPlanMutation.isError ? (
+              <div className="py-6">
+                <p className="text-sm text-destructive">
+                  {toolErrorMessage ?? '生成问卷失败，请重试'}
+                </p>
+              </div>
+            ) : toolStage ? (
+              <div className="py-6">
+                <ConversationToolShell
+                  title={toolTitle}
+                  stage={toolStage}
+                  questions={questions}
+                  answers={answers}
+                  units={toolUnits}
+                  progress={toolProgress}
+                  failed={toolFailed}
+                  errorMessage={toolErrorMessage}
+                  isSubmittingAnswers={submitIntakeMutation.isPending}
+                  isStartingBuild={startBuildMutation.isPending}
+                  onAnswerChange={handleAnswerChange}
+                  onSubmitAnswers={handleSubmitAnswers}
+                  onApproveBuild={handleApproveBuild}
+                  onCancel={resetPlanner}
+                />
+              </div>
+            ) : null}
+
             <ConversationStreamingTurn
               status="idle"
               text=""
               errorMessage={null}
               canRetry={false}
-              onRetry={handleSend}
+              onRetry={() => undefined}
             />
           </div>
         </div>
@@ -150,12 +249,11 @@ export function ConversationSandboxPage() {
               className="mx-auto w-full max-w-[52rem]"
               value={draft}
               onValueChange={setDraft}
-              isStreaming={false}
+              isStreaming={createPlanMutation.isPending}
               onSend={handleSend}
-              onStop={handleStop}
+              onStop={() => undefined}
             />
           </div>
-          {/* [sandbox] 与真实会话页一致的输入框底部遮罩，删除沙盒时一并移除。 */}
           <div aria-hidden className="relative z-0 -mt-6 px-6">
             <div className="mx-auto h-12 w-full max-w-[52rem] bg-zinc-50" />
           </div>

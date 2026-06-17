@@ -1,5 +1,6 @@
 import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ConversationThinkingIndicator } from './ConversationThinkingIndicator'
 import { AssistantMarkdown } from './markdown'
 import type { ConversationChatStatus } from './useConversationChat'
 
@@ -29,7 +30,7 @@ export function ConversationStreamingTurn({
   return (
     <section data-slot="conversation-streaming-turn" className="flex w-full flex-col gap-3 pb-6">
       {status === 'submitted' && (
-        <p className="animate-pulse text-sm text-zinc-400">思考中…</p>
+        <ConversationThinkingIndicator />
       )}
 
       {status === 'streaming' && text.length > 0 && (

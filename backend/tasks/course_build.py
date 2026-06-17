@@ -36,8 +36,8 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
 
     `research` is the single swap seam: a stub for protocol tests, the real
     coursegen.research_chapter in production. Its signature is fixed
-    (chapter_plan, profile, *, course_id, client) so this code never changes
-    between stub and real.
+    (chapter_plan, profile, *, course_id, client, on_progress) so this code never
+    changes between stub and real.
     """
     client = build_client()
     try:
@@ -56,9 +56,22 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
                     await course_build_service.mark_chapter_researching(
                         db, chapter_id=chapter_id
                     )
+
+                async def _report_progress(pct: int) -> None:
+                    # In-flight beat (搜索25/排序50/选片75) -> DB. Best-effort:
+                    # research()'s own guard swallows any failure raised here.
+                    async with AsyncSessionLocal() as db:
+                        await course_build_service.mark_chapter_progress(
+                            db, chapter_id=chapter_id, progress=pct
+                        )
+
                 try:
                     result = await research(
-                        plan, profile, course_id=course_id, client=client
+                        plan,
+                        profile,
+                        course_id=course_id,
+                        client=client,
+                        on_progress=_report_progress,
                     )
                 except Exception as exc:  # noqa: BLE001 — isolate this chapter
                     logger.warning("chapter %s research failed: %s", chapter_id, exc)
