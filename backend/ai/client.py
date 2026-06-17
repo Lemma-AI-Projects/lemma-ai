@@ -23,7 +23,7 @@ from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models import Model
 
-from ai.agents import LemmaDeps, agent_for
+from ai.agents import LemmaDeps, agent_for, structured_agent_for
 from ai.config import routes_for
 from ai.conversion import (
     gemini_usage_to_token_usage,
@@ -200,6 +200,52 @@ class AIClient:
                 )
                 with contextlib.suppress(asyncio.CancelledError):
                     await asyncio.shield(task)
+
+    async def generate[T](
+        self,
+        use_case: AIUseCase,
+        prompt: str,
+        output_type: type[T],
+        *,
+        user_id: str | None = None,
+        course_id: str | None = None,
+        prompt_vars: dict[str, str] | None = None,
+    ) -> T:
+        """Structured generation: one-shot prompt -> a validated pydantic model.
+
+        Same facade discipline as chat/ask_video — render prompt, resolve route,
+        run, map errors, account usage (ai_usage_logs) — but the framework's
+        structured output is handed back as our own model. Used by ai/coursegen.
+        """
+        agent = structured_agent_for(use_case)
+        routes = routes_for(use_case)
+        deps = LemmaDeps(
+            system_prompt=render_system_prompt(use_case, prompt_vars),
+            user_id=user_id,
+            course_id=course_id,
+        )
+        model = resolve(use_case)
+        tracker = start_tracking(use_case, routes, user_id=user_id)
+        try:
+            result = await agent.run(
+                prompt, output_type=output_type, model=model, deps=deps
+            )
+        except Exception as exc:
+            await ensure_failure_recorded(tracker, error=exc)
+            raise map_framework_error(exc) from exc
+
+        token_usage = to_token_usage(result.usage)
+        new_messages = result.new_messages()
+        actual_model, request_id = response_metadata(new_messages)
+        await record_success(
+            tracker,
+            usage=token_usage,
+            actual_model=actual_model,
+            request_id=request_id,
+            output_chars=len(str(result.output)),
+            cost_usd=response_cost_usd(new_messages),
+        )
+        return result.output
 
     async def ask_video(
         self,
