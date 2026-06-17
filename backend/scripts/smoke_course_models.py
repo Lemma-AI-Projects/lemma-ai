@@ -96,6 +96,7 @@ async def main() -> int:
                         author=f"作者 {k + 1}",
                         duration_s=600 + k,
                         view_count=1000 * (k + 1),
+                        like_count=100 * (k + 1),
                         thumbnail_url=f"https://example.com/thumb-{k}.jpg",
                         score=Decimal("0.90") - Decimal(k) / 100,
                         discovery_source="smoke",
@@ -157,6 +158,11 @@ async def main() -> int:
             check(
                 all(c.created_at is not None for c in cands),
                 "candidate.created_at 非空",
+            )
+            check(
+                {c.view_count for c in cands} == {1000, 2000, 3000}
+                and {c.like_count for c in cands} == {100, 200, 300},
+                "candidate.view_count / like_count 持久化",
             )
             check(
                 all(c.is_chosen is False for c in cands),

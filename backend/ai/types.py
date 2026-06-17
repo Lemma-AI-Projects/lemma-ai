@@ -18,6 +18,12 @@ class AIUseCase(StrEnum):
     VIDEO_QA = "video_qa"
     VIDEO_SUMMARY = "video_summary"
     VIDEO_LOCATE = "video_locate"
+    # Course generation (Phase 3). Each value doubles as its prompt template
+    # name (ai/prompts/templates/<value>.system.txt).
+    COURSE_INTAKE = "course_intake"
+    COURSE_OUTLINE = "course_outline"
+    CHAPTER_QUERY = "chapter_query"
+    VIDEO_SELECT = "video_select"
 
 
 class VideoInputKind(StrEnum):

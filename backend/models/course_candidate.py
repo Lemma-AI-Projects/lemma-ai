@@ -39,6 +39,7 @@ class ChapterVideoCandidate(Base):
     author: Mapped[str | None] = mapped_column(String, nullable=True)
     duration_s: Mapped[int | None] = mapped_column(Integer, nullable=True)
     view_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    like_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     thumbnail_url: Mapped[str | None] = mapped_column(String, nullable=True)
     score: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
     is_chosen: Mapped[bool] = mapped_column(
