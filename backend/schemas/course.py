@@ -43,6 +43,25 @@ class QuestionnaireOut(BaseModel):
     questions: list[QuestionnaireQuestionOut]
 
 
+class CoursePlanIn(BaseModel):
+    """POST /courses/plan body. conversationId records which chat the course was
+    born in (拍板) — optional, must be one of the caller's own conversations."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    topic: str = Field(min_length=1, max_length=500)
+    conversation_id: uuid.UUID | None = None
+
+
+class CoursePlanOut(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel, populate_by_name=True, from_attributes=True
+    )
+
+    course_id: uuid.UUID
+    questionnaire: QuestionnaireOut
+
+
 class IntakeAnswerIn(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
