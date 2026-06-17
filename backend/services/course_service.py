@@ -111,11 +111,12 @@ async def get_course_detail(
 
 
 def _apply_progress(detail: CourseDetailOut) -> None:
-    """Roll chapter progress up to unit and course (已完成章节占比).
+    """Roll chapter progress up to unit and course (章节进度的平均值).
 
-    Chapter progress is stored (0 until researched, 100 at terminal ready/
-    failed); unit/course progress are derived here for the snapshot. Build
-    progress therefore rises monotonically and hits 100 once every chapter is
+    Chapter progress moves through in-flight beats (搜索 25 / 排序 50 / 选片 75)
+    and reaches 100 only at a terminal write (ready/failed); unit and course
+    progress are the average of their chapters, derived here for the snapshot.
+    Build progress therefore rises smoothly and hits 100 once every chapter is
     terminal.
     """
     all_chapters = [chapter for unit in detail.units for chapter in unit.chapters]

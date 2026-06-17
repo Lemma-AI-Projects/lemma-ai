@@ -7,6 +7,10 @@ interface CircularProgressProps {
   trackColor?: string
   progressColor?: string
   className?: string
+  // Ease the arc toward `value` instead of snapping (used for live build
+  // progress, where backend beats arrive ~1s apart). Disabled under
+  // prefers-reduced-motion.
+  animated?: boolean
 }
 
 export function CircularProgress({
@@ -16,6 +20,7 @@ export function CircularProgress({
   trackColor = '#EDEDED',
   progressColor = '#10b981',
   className,
+  animated = false,
 }: CircularProgressProps) {
   const r = (size - strokeWidth) / 2
   const circumference = 2 * Math.PI * r
@@ -49,6 +54,10 @@ export function CircularProgress({
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           transform={`rotate(-90 ${center} ${center})`}
+          className={cn(
+            animated &&
+              'transition-[stroke-dashoffset] duration-500 ease-out motion-reduce:transition-none'
+          )}
         />
       )}
     </svg>
