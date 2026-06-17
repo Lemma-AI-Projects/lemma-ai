@@ -10,6 +10,9 @@ const PROJECT_PLUS_LEFT_OFFSET_CLASS = 'ml-[-5px]'
 // Project input plus button bottom offset. Negative margin moves it further down.
 const PROJECT_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-8px]'
 
+// Project add menu horizontal offset. Aligns the menu left edge with the input border.
+const PROJECT_ADD_MENU_ALIGN_OFFSET = -12
+
 export function ProjectInput({
   className,
   onSend,
@@ -64,6 +67,7 @@ export function ProjectInput({
         >
           <InputAddMenu
             contextLabel="Include project context"
+            menuAlignOffset={PROJECT_ADD_MENU_ALIGN_OFFSET}
             referenceLabel="Reference project files"
           />
         </div>

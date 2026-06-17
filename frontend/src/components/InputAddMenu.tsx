@@ -11,6 +11,7 @@ import {
   Lightbulb,
   ListChecks,
   Plus,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -24,7 +25,10 @@ import {
 
 interface InputAddMenuProps {
   className?: string
+  planningIcon?: LucideIcon
   contextLabel?: string
+  menuAlignOffset?: number
+  planningLabel?: string
   referenceLabel?: string
   toolsLabel?: string
 }
@@ -41,16 +45,19 @@ const ADD_ICON_SIZE_CLASS = 'size-[18px]'
 export function InputAddMenu({
   className,
   contextLabel = 'Include context',
+  menuAlignOffset = -10,
+  planningIcon: PlanningIcon = Brain,
+  planningLabel = 'Deep thinking',
   referenceLabel = 'Reference materials',
   toolsLabel = 'Tools',
 }: InputAddMenuProps) {
   const [includeContext, setIncludeContext] = useState(true)
-  const [deepThinking, setDeepThinking] = useState(false)
+  const [planningEnabled, setPlanningEnabled] = useState(false)
   const [webSearch, setWebSearch] = useState(false)
 
   return (
     <InputMenu
-      alignOffset={-10}
+      alignOffset={menuAlignOffset}
       trigger={
         <button
           type="button"
@@ -79,10 +86,10 @@ export function InputAddMenu({
         onCheckedChange={setIncludeContext}
       />
       <InputMenuSwitchItem
-        icon={Brain}
-        label="Deep thinking"
-        checked={deepThinking}
-        onCheckedChange={setDeepThinking}
+        icon={PlanningIcon}
+        label={planningLabel}
+        checked={planningEnabled}
+        onCheckedChange={setPlanningEnabled}
       />
       <InputMenuSwitchItem
         icon={Globe}

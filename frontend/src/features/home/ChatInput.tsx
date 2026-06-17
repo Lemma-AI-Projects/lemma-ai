@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, BookOpenCheck } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,9 @@ const HOME_PLUS_LEFT_OFFSET_CLASS = 'ml-[-3px]'
 
 // Home input plus button bottom offset. Negative margin moves it further down.
 const HOME_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-5px]'
+
+// Home add menu horizontal offset. Aligns the menu left edge with the input border.
+const HOME_ADD_MENU_ALIGN_OFFSET = -14
 
 export function ChatInput({
   className,
@@ -64,6 +67,9 @@ export function ChatInput({
         >
           <InputAddMenu
             contextLabel="Include page context"
+            menuAlignOffset={HOME_ADD_MENU_ALIGN_OFFSET}
+            planningIcon={BookOpenCheck}
+            planningLabel="Course Planning"
             referenceLabel="Reference materials"
           />
         </div>
