@@ -1,0 +1,92 @@
+"""阶段二 Celery task: build a course in the background.
+
+Celery 纪律 (仿 video_ingest): asyncio.run wraps the async body, args are
+JSON-safe (course_id as str). The orchestration fans chapters out under an
+asyncio.Semaphore (caps Apify/B站 burst) and isolates each chapter — one
+failure marks that chapter failed and the course keeps going. Progress truth is
+the DB; the SSE endpoint reads it (no Redis pub/sub).
+
+Client reuse: ONE Apify client is built per build and shared across every
+chapter's search (search_videos(..., client=...)), closed in finally — never
+one client per chapter.
+
+Idempotent: a rerun skips ready chapters; finalize sets course ready if any
+chapter succeeded, else failed.
+"""
+
+import asyncio
+import logging
+import uuid
+
+from ai.coursegen import research_chapter
+from ai.search import aclose_client, build_client
+from core.database import AsyncSessionLocal
+from services import course_build_service
+from tasks.celery_app import celery_app
+
+logger = logging.getLogger("lemma.tasks.course_build")
+
+# Parallel chapters per build. Small on purpose: caps simultaneous Apify runs so
+# B站 risk control / rate limits aren't tripped by a wide fan-out.
+_CONCURRENCY = 4
+
+
+async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
+    """Async build body — the smoke awaits this directly (bypassing the worker).
+
+    `research` is the single swap seam: a stub for protocol tests, the real
+    coursegen.research_chapter in production. Its signature is fixed
+    (chapter_plan, profile, *, course_id, client) so this code never changes
+    between stub and real.
+    """
+    client = build_client()
+    try:
+        async with AsyncSessionLocal() as db:
+            context = await course_build_service.load_build_context(
+                db, course_id=course_id
+            )
+        if context is None:
+            return
+        profile, pending = context
+        semaphore = asyncio.Semaphore(_CONCURRENCY)
+
+        async def _work(chapter_id: uuid.UUID, plan) -> None:
+            async with semaphore:
+                async with AsyncSessionLocal() as db:
+                    await course_build_service.mark_chapter_researching(
+                        db, chapter_id=chapter_id
+                    )
+                try:
+                    result = await research(
+                        plan, profile, course_id=course_id, client=client
+                    )
+                except Exception as exc:  # noqa: BLE001 — isolate this chapter
+                    logger.warning("chapter %s research failed: %s", chapter_id, exc)
+                    async with AsyncSessionLocal() as db:
+                        await course_build_service.mark_chapter_failed(
+                            db, chapter_id=chapter_id
+                        )
+                    return
+                async with AsyncSessionLocal() as db:
+                    await course_build_service.persist_chapter_result(
+                        db, chapter_id=chapter_id, result=result
+                    )
+
+        await asyncio.gather(*(_work(cid, plan) for cid, plan in pending))
+
+        async with AsyncSessionLocal() as db:
+            await course_build_service.finalize_course(db, course_id=course_id)
+    finally:
+        await aclose_client(client)
+
+
+@celery_app.task(
+    name="course.build", bind=True, max_retries=2, default_retry_delay=30
+)
+def build_course(self, course_id: str) -> None:  # noqa: ANN001 — celery bind
+    """Sync Celery entrypoint. The async body is idempotent, so a retry of a
+    partially-built course safely resumes (ready chapters are skipped)."""
+    try:
+        asyncio.run(run_build(uuid.UUID(course_id)))
+    except Exception as exc:  # noqa: BLE001 — let celery retry transient failures
+        raise self.retry(exc=exc)
