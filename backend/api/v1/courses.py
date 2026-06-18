@@ -12,6 +12,7 @@ from core.security import CurrentUser, get_current_user
 from models.course import Course
 from schemas.course import (
     BuildProgressEvent,
+    ChapterVideoOut,
     CourseBuildAcceptedOut,
     CourseDetailOut,
     CourseListItemOut,
@@ -23,6 +24,7 @@ from services import (
     course_build_service,
     course_planning_service,
     course_service,
+    video_asset_service,
 )
 from tasks.course_build import build_course
 
@@ -86,6 +88,28 @@ async def get_course(
     if detail is None:
         raise _NOT_FOUND
     return detail
+
+
+@router.get(
+    "/{course_id}/chapters/{chapter_id}/video", response_model=ChapterVideoOut
+)
+async def read_chapter_video(
+    course_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ChapterVideoOut:
+    # Opening a chapter's video is the "started this chapter" trigger: it lazily
+    # downloads this chapter's video if needed and pre-warms the next one. 404
+    # when not owned / chapter not in course / no chosen video (IDOR-safe — no
+    # probing which ids exist). Returns immediately with status downloading while
+    # a fetch is in flight; the client polls this same endpoint.
+    video = await video_asset_service.get_chapter_video(
+        db, current_user, course_id=course_id, chapter_id=chapter_id
+    )
+    if video is None:
+        raise _NOT_FOUND
+    return video
 
 
 @router.get("/{course_id}/questionnaire", response_model=QuestionnaireOut)

@@ -16,6 +16,7 @@ when the rows are read, the wire never exposes it.
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -143,3 +144,46 @@ class BuildProgressEvent(BaseModel):
     )
 
     course: CourseDetailOut
+
+
+# --- 章节视频交付（播放）---
+
+
+class VideoSourceOut(BaseModel):
+    """The original third-party video this chapter re-hosts (chin "来源" button)."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    platform: str  # 'youtube' | 'bilibili'
+    title: str
+    url: str
+
+
+class VideoAuthorOut(BaseModel):
+    """Original uploader (chin "作者" button). homepageUrl may be null when the
+    platform exposes no stable channel link (e.g. YouTube search results) — the
+    frontend hides the author affordance then."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    name: str | None = None
+    homepage_url: str | None = None
+
+
+class ChapterVideoOut(BaseModel):
+    """Playable chapter video + provenance.
+
+    status drives the player: `ready` carries a short-lived signed `playbackUrl`;
+    `downloading` means the asset is being fetched (the client polls); `failed`
+    means this attempt could not produce a playable file. source/author are known
+    from the chosen candidate in every state, so the chin renders immediately.
+    `expiresAt` is when `playbackUrl` stops working (re-fetch to re-mint).
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    status: Literal["ready", "downloading", "failed"]
+    playback_url: str | None = None
+    source: VideoSourceOut
+    author: VideoAuthorOut
+    expires_at: datetime | None = None

@@ -15,13 +15,17 @@ export function retryUnlessClientError(failureCount: number, error: unknown) {
   return failureCount < 1
 }
 
-/** token 失效时清掉本地会话，让 RequireAuth 守卫把用户带回登录页。 */
+/** token 失效时清掉本地会话，让 RequireAuth 守卫把用户带回登录页。
+ *
+ * scope: 'local' 只清本地会话，不调用服务端 global logout —— 后者会用已过期的
+ * token 去吊销全局会话，必然 403，反而让用户卡在 401 循环里出不去。本地清理才
+ * 是这里想要的（与上面的注释一致），SIGNED_OUT 事件会触发守卫跳回登录页。 */
 export async function signOutOn401<T>(request: Promise<T>): Promise<T> {
   try {
     return await request
   } catch (error) {
     if (isAxiosError(error) && error.response?.status === 401) {
-      void supabase.auth.signOut()
+      void supabase.auth.signOut({ scope: 'local' })
     }
     throw error
   }

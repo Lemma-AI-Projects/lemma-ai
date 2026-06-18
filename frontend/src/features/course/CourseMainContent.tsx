@@ -77,13 +77,15 @@ const courseContentViewMap: Record<
 }
 
 function getDefaultTargetId(course: CourseItem) {
+  // This step delivers chapter videos only, so a course opens on the first
+  // chapter's video (overview/quiz/assignment are out of scope and hidden).
   const firstChapter = course.units[0]?.chapters[0]
 
   if (firstChapter) {
-    return `${firstChapter.id}-overview`
+    return `${firstChapter.id}-video`
   }
 
-  return course.units[0] ? `${course.units[0].id}-overview` : ''
+  return ''
 }
 
 function resolveCourseContent(

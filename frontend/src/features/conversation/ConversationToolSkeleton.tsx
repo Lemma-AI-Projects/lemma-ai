@@ -53,7 +53,7 @@ export function ConversationToolCardSkeleton() {
     <div
       data-slot="conversation-tool-shell"
       aria-hidden
-      className="flex w-full max-w-[36rem] flex-col rounded-2xl border border-zinc-200/80 px-5 py-5"
+      className="flex w-full flex-col rounded-2xl border border-zinc-200/80 px-5 py-5"
     >
       <Skeleton className="h-6 w-3/5" />
       <ConversationQuestionnaireSkeleton />

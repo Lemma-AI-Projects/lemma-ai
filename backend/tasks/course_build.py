@@ -22,7 +22,7 @@ from ai import init_ai_runtime, shutdown_ai_runtime
 from ai.coursegen import research_chapter
 from ai.search import aclose_client, build_client
 from core.database import AsyncSessionLocal, engine
-from services import course_build_service
+from services import course_build_service, course_service
 from tasks.celery_app import celery_app
 
 logger = logging.getLogger("lemma.tasks.course_build")
@@ -97,7 +97,23 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
         await asyncio.gather(*(_work(cid, plan) for cid, plan in pending))
 
         async with AsyncSessionLocal() as db:
-            await course_build_service.finalize_course(db, course_id=course_id)
+            status = await course_build_service.finalize_course(
+                db, course_id=course_id
+            )
+            # 就近预热 (拍板): once the course is ready, fetch the FIRST chapter's
+            # video right away; later chapters warm on access (see
+            # video_asset_service prefetch). Best-effort — never fail the build.
+            first_chapter_id = (
+                await course_service.get_first_playable_chapter_id(
+                    db, course_id=course_id
+                )
+                if status == "ready"
+                else None
+            )
+        if first_chapter_id is not None:
+            from tasks.video_download import download_chapter_video
+
+            download_chapter_video.delay(str(first_chapter_id))
     finally:
         await aclose_client(client)
         await shutdown_ai_runtime()

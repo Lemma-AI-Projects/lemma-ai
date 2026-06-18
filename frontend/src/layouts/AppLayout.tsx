@@ -4,6 +4,7 @@ import {
   FlaskConical,
   FolderOpen,
   FolderPlus,
+  GraduationCap,
   Home,
   LibraryBig,
   ListTree,
@@ -20,9 +21,9 @@ import { SidebarMoreMenu } from '@/components/SidebarMoreMenu'
 import { SidebarSection } from '@/components/SidebarSection'
 import { useConversationsQuery } from '@/features/conversation/conversationApi'
 import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
+import { useCoursesListQuery } from '@/features/course/courseLearningApi'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
 import { useProjectsQuery } from '@/features/project/projectApi'
-import { courseItems } from '@/mock/course/courseItems'
 
 function SidebarHeader({ children }: { children?: ReactNode }) {
   return (
@@ -84,12 +85,15 @@ export function AppLayout() {
   const activeCourseId = courseMatch?.params.id
   const conversationsQuery = useConversationsQuery()
   const projectsQuery = useProjectsQuery()
+  const coursesQuery = useCoursesListQuery()
   const projects = projectsQuery.data ?? []
   // 图标统一 FolderOpen（后端不下发图标）
   const visibleProjects = projects.slice(0, 3)
   const moreProjects = projects.slice(3)
-  const visibleCourses = courseItems.slice(0, 4)
-  const moreCourses = courseItems.slice(4)
+  // 仅 ready 课程，图标统一 GraduationCap（后端不下发图标）
+  const courses = coursesQuery.data ?? []
+  const visibleCourses = courses.slice(0, 4)
+  const moreCourses = courses.slice(4)
 
   const handleScroll = useCallback(() => {
     const el = navRef.current
@@ -157,18 +161,33 @@ export function AppLayout() {
         </SidebarSection>
 
         <SidebarSection title="Courses">
-          {visibleCourses.map((item) => (
-            <SidebarItem
-              key={item.id}
-              icon={item.icon}
-              label={item.label}
-              to={`/course/${item.id}`}
-            />
-          ))}
-          <SidebarMoreMenu
-            items={moreCourses}
-            getHref={(item) => `/course/${item.id}`}
-          />
+          {coursesQuery.isPending ? (
+            <div className="flex flex-col gap-2 px-3 py-1.5">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-4/5" />
+            </div>
+          ) : coursesQuery.isError ? (
+            <p className="px-3 py-1.5 text-sm text-zinc-400">加载失败</p>
+          ) : (
+            <>
+              {visibleCourses.map((item) => (
+                <SidebarItem
+                  key={item.id}
+                  icon={GraduationCap}
+                  label={item.title}
+                  to={`/course/${item.id}`}
+                />
+              ))}
+              <SidebarMoreMenu
+                items={moreCourses.map((item) => ({
+                  id: item.id,
+                  icon: GraduationCap,
+                  label: item.title,
+                }))}
+                getHref={(item) => `/course/${item.id}`}
+              />
+            </>
+          )}
         </SidebarSection>
 
         <SidebarSection title="Chats" showLine={false}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Clock, Plus } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -7,8 +7,11 @@ import { ConversationMessageList } from '@/features/conversation/ConversationMes
 import { CourseAssistantInput } from '@/features/course/CourseAssistantInput'
 import { CourseConversationPills } from '@/features/course/CourseConversationPills'
 import { CourseMainContent } from '@/features/course/CourseMainContent'
+import {
+  mapLearningCourseToCourseItem,
+  useLearningCourseQuery,
+} from '@/features/course/courseLearningApi'
 import { courseConversationMessages } from '@/mock/course/courseConversationMessages'
-import { courseItems } from '@/mock/course/courseItems'
 
 const courseConversationListClassName = [
   'gap-5 py-4',
@@ -45,24 +48,47 @@ function getCourseConversationTurns(conversationId?: string) {
 
 export function CoursePage() {
   const { id } = useParams<{ id: string }>()
-  const course = useMemo(() => courseItems.find((item) => item.id === id), [id])
-  const defaultConversationId = course?.conversationIds[0]
+  const courseQuery = useLearningCourseQuery(id)
+  // Bridge the real course tree onto the existing course-page contract; only the
+  // chapter video is backend-backed this step (see courseLearningApi adapter).
+  const course = useMemo(
+    () =>
+      courseQuery.data
+        ? mapLearningCourseToCourseItem(courseQuery.data)
+        : undefined,
+    [courseQuery.data]
+  )
+  // The in-course AI assistant (right rail) is out of scope this step; it stays
+  // mounted but starts with no conversation until it's wired to the backend.
   const [activeConversationId, setActiveConversationId] = useState<
     string | undefined
-  >(defaultConversationId)
+  >(undefined)
+  // Reset the (out-of-scope) assistant selection when navigating to another
+  // course — render-time adjustment, no effect (avoids cascading renders).
+  const [seenCourseId, setSeenCourseId] = useState(id)
+  if (id !== seenCourseId) {
+    setSeenCourseId(id)
+    setActiveConversationId(undefined)
+  }
   const turns = useMemo(
     () => getCourseConversationTurns(activeConversationId),
     [activeConversationId]
   )
 
-  useEffect(() => {
-    setActiveConversationId(defaultConversationId)
-  }, [defaultConversationId])
-
   return (
     <div className="flex h-full gap-2">
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50">
-        <CourseMainContent course={course} />
+        {courseQuery.isPending ? (
+          <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-400">
+            正在加载课程…
+          </div>
+        ) : courseQuery.isError ? (
+          <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-400">
+            加载课程失败，请稍后重试
+          </div>
+        ) : (
+          <CourseMainContent course={course} />
+        )}
       </main>
       <aside className="flex w-82 shrink-0 flex-col rounded-md border border-zinc-200/80 bg-zinc-50 p-3">
         <div className="-mt-1 flex h-7 shrink-0 items-center gap-2">

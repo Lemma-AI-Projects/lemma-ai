@@ -183,6 +183,35 @@ def _apply_progress(detail: CourseDetailOut) -> None:
         )
 
 
+async def get_ordered_playable_chapter_ids(
+    db: AsyncSession, *, course_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """Chapter ids that have a chosen video, in learning order (unit→chapter).
+
+    The nearest-preheat order: 'first chapter' is the head and 'next chapter' is
+    the element after a given id. Chapters with no chosen candidate (failed
+    research) are skipped — they have nothing to download.
+    """
+    result = await db.execute(
+        select(CourseChapter.id)
+        .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
+        .where(
+            CourseUnit.course_id == course_id,
+            CourseChapter.chosen_candidate_id.isnot(None),
+        )
+        .order_by(CourseUnit.order_index, CourseChapter.order_index)
+    )
+    return list(result.scalars())
+
+
+async def get_first_playable_chapter_id(
+    db: AsyncSession, *, course_id: uuid.UUID
+) -> uuid.UUID | None:
+    """The chapter to pre-warm right after a build finishes (拍板: 先下第一章)."""
+    ids = await get_ordered_playable_chapter_ids(db, course_id=course_id)
+    return ids[0] if ids else None
+
+
 async def list_courses(
     db: AsyncSession, *, user_id: uuid.UUID, limit: int = 50, offset: int = 0
 ) -> list[Course]:

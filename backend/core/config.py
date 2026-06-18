@@ -96,6 +96,26 @@ class Settings(BaseSettings):
     apify_api_token: str = ""
     search_routes_json: str = _DEFAULT_SEARCH_ROUTES_JSON
 
+    # --- Course video assets (Supabase Storage) ---
+    # Two credentials by design (see core/storage.py): the service-role key
+    # signs short-lived playback URLs; the S3 access keys authorize boto3
+    # multipart uploads/deletes. All default empty so the app/smoke boot without
+    # storage configured — only the video pipeline needs them.
+    supabase_service_role_key: str = ""
+    supabase_s3_endpoint: str = ""
+    supabase_s3_region: str = "us-east-1"
+    supabase_s3_access_key_id: str = ""
+    supabase_s3_secret_access_key: str = ""
+    supabase_storage_bucket: str = "course-videos"
+    # Sliding expiry: assets untouched this long are swept (lazy re-download on
+    # next access). Signed URLs are short-lived and re-minted on every fetch.
+    video_asset_ttl_days: int = 30
+    # 6h: must comfortably exceed a full lecture so playback never outlives its
+    # URL mid-watch; the client re-fetches to re-mint anyway.
+    video_signed_url_ttl_seconds: int = 21600
+    # boto3 multipart parallelism (parts uploaded concurrently per file).
+    video_download_concurrency: int = 4
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
