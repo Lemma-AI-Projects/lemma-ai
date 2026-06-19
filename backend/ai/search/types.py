@@ -40,5 +40,12 @@ class VideoCandidate(BaseModel):
     published_at: datetime | None = None
     thumbnail_url: str | None = None
     description: str | None = None
+    # Rich engagement signals consumed by course composition (selection AI).
+    # Neutral across platforms — each provider maps what it has; platform-
+    # specific extras (B站 favorite/coin/danmaku) go in `metrics` so the boundary
+    # stays neutral and `raw` stays opaque.
+    comment_count: int | None = None
+    tags: list[str] = Field(default_factory=list)
+    metrics: dict[str, int] = Field(default_factory=dict)
     # Provider's untouched item, opaque outside the producing provider.
     raw: dict[str, Any] = Field(default_factory=dict)

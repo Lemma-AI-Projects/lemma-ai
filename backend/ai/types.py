@@ -18,9 +18,16 @@ class AIUseCase(StrEnum):
     VIDEO_QA = "video_qa"
     VIDEO_SUMMARY = "video_summary"
     VIDEO_LOCATE = "video_locate"
-    # Course generation (Phase 3). Each value doubles as its prompt template
-    # name (ai/prompts/templates/<value>.system.txt).
+    # Course generation. Each value doubles as its prompt template name
+    # (ai/prompts/templates/<value>.system.txt).
     COURSE_INTAKE = "course_intake"
+    # 搜索前置重构: TOPIC_SEARCH expands broad queries from the USER REQUEST
+    # (not a chapter title); COURSE_COMPOSE selects from the real candidate pool
+    # and organizes the chosen videos into units/chapters.
+    TOPIC_SEARCH = "topic_search"
+    COURSE_COMPOSE = "course_compose"
+    # Retired by the search-first flow (kept for historical rows / rollback;
+    # no longer on the active path): COURSE_OUTLINE / CHAPTER_QUERY / VIDEO_SELECT.
     COURSE_OUTLINE = "course_outline"
     CHAPTER_QUERY = "chapter_query"
     VIDEO_SELECT = "video_select"

@@ -88,3 +88,58 @@ class VideoSelection(BaseModel):
 
     chosen_index: int | None = None
     reason: str
+
+
+# --- 搜索前置: compose (选片 + 组织) ---
+
+
+class ComposedChapter(BaseModel):
+    """One LLM-chosen chapter: a title + a candidate_ref into the presented pool.
+
+    candidate_ref MUST be the stable ref we printed for the candidate
+    (f"{platform}:{platform_video_id}"), never a positional index — it is
+    validated against the real pool before persistence (零信任 LLM).
+    """
+
+    title: str
+    candidate_ref: str
+
+
+class ComposedUnit(BaseModel):
+    title: str
+    chapters: list[ComposedChapter] = Field(default_factory=list)
+
+
+class ComposedCourse(BaseModel):
+    """Raw LLM output of course_compose: course title + units→chapters, each
+    chapter bound to a candidate_ref. Number of units/chapters is decided by the
+    model from real supply (诚实交付，宁少勿凑); validated/resolved into a
+    ComposedCourseResult before anything is persisted."""
+
+    title: str
+    units: list[ComposedUnit] = Field(default_factory=list)
+
+
+class ResolvedChapter(BaseModel):
+    """A validated chapter: title bound to a REAL candidate from the pool."""
+
+    title: str
+    candidate: VideoCandidate
+
+
+class ResolvedUnit(BaseModel):
+    title: str
+    chapters: list[ResolvedChapter]
+
+
+class ComposedCourseResult(BaseModel):
+    """Validated compose output — every chapter resolved to a real candidate
+    (fabricated/duplicate/out-of-range refs already dropped). Phase 5 persists
+    this directly. Empty units means nothing valid survived -> course failed."""
+
+    title: str
+    units: list[ResolvedUnit] = Field(default_factory=list)
+
+    @property
+    def chapter_count(self) -> int:
+        return sum(len(unit.chapters) for unit in self.units)

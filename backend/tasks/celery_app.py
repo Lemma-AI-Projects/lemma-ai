@@ -19,7 +19,8 @@ celery_app = Celery(
     backend=settings.redis_url,
     include=[
         "tasks.video_ingest",
-        "tasks.course_build",
+        "tasks.course_search",
+        "tasks.course_organize",
         "tasks.video_download",
         "tasks.video_cleanup",
     ],

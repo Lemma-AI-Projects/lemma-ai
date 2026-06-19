@@ -6,27 +6,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai.errors import AIError
 from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from models.course import Course
 from schemas.course import (
     BuildProgressEvent,
     ChapterVideoOut,
-    CourseBuildAcceptedOut,
     CourseDetailOut,
     CourseListItemOut,
-    CourseOutlineOut,
     IntakeAnswersIn,
     QuestionnaireOut,
 )
 from services import (
-    course_build_service,
     course_planning_service,
     course_service,
     video_asset_service,
 )
-from tasks.course_build import build_course
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -34,31 +29,30 @@ _NOT_FOUND = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="course_not_found"
 )
 
-# SSE build progress: poll the DB snapshot this often; stop at a terminal state.
+# SSE organize/build progress: poll the DB snapshot this often; stop at terminal.
 _BUILD_POLL_INTERVAL_S = 1.0
 _TERMINAL_STATUSES = frozenset({"ready", "failed"})
 
 
-def _ai_unavailable(exc: AIError) -> HTTPException:
-    # Interactive generation failed (provider down / rate limited / timed out).
-    # Surface a stable business code the frontend can act on; raw stays in logs.
-    return HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=exc.code)
-
-
-@router.post("/{course_id}/intake", response_model=CourseOutlineOut)
+@router.post(
+    "/{course_id}/intake",
+    response_model=CourseDetailOut,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def submit_intake(
     course_id: uuid.UUID,
     payload: IntakeAnswersIn,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CourseDetailOut:
+    # 搜索前置: record answers, flip the course to `organizing`, and enqueue the
+    # organize task (compose over the pre-searched candidate pool, gated on the
+    # broad search finishing). Returns the `organizing` snapshot (empty units);
+    # the card then streams progress via /build/stream until ready/failed.
     answers = {answer.question_id: answer.answer for answer in payload.answers}
-    try:
-        detail = await course_planning_service.submit_answers(
-            db, current_user, course_id=course_id, answers=answers
-        )
-    except AIError as exc:
-        raise _ai_unavailable(exc) from exc
+    detail = await course_planning_service.submit_answers(
+        db, current_user, course_id=course_id, answers=answers
+    )
     if detail is None:
         raise _NOT_FOUND
     return detail
@@ -126,27 +120,6 @@ async def get_questionnaire(
     if questionnaire is None:
         raise _NOT_FOUND
     return questionnaire
-
-
-@router.post(
-    "/{course_id}/build",
-    response_model=CourseBuildAcceptedOut,
-    status_code=status.HTTP_202_ACCEPTED,
-)
-async def start_build(
-    course_id: uuid.UUID,
-    current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> CourseBuildAcceptedOut:
-    # Flip to building synchronously (SSE shows it immediately), then hand the
-    # long search/select work to Celery (rules 第九章) and return 202.
-    course = await course_build_service.mark_building(
-        db, user_id=current_user.id, course_id=course_id
-    )
-    if course is None:
-        raise _NOT_FOUND
-    build_course.delay(str(course_id))
-    return CourseBuildAcceptedOut(course_id=course_id)
 
 
 @router.get("/{course_id}/build/stream")

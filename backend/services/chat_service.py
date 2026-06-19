@@ -230,6 +230,13 @@ async def stream_course_planning_turn(
             course_id, topic=context.user_content
         )
     )
+    # 搜索前置: kick off the request-level broad search CONCURRENTLY with the
+    # questionnaire (Celery). It caches course_search_candidates and flips
+    # course.search_status; organize (after answers) gates on that. Lazy import:
+    # tasks import services.
+    from tasks.course_search import search_course
+
+    search_course.delay(str(course_id), context.user_content)
 
     def ensure_persist_scheduled() -> None:
         nonlocal persist_task

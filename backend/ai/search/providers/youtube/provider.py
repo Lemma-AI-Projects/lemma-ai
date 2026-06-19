@@ -51,7 +51,8 @@ def to_candidate(entry: dict[str, Any]) -> VideoCandidate | None:
         author_id=entry.get("channel_id"),
         duration_s=parse_duration(entry.get("duration")),
         view_count=parse_int(entry.get("view_count")),
-        # like_count / upload_date are present only with full_extract; flat omits.
+        # like_count / comment_count / tags / upload_date are present only with
+        # full_extract; flat search omits them.
         like_count=parse_int(entry.get("like_count")),
         published_at=parse_published_at(
             entry.get("timestamp") or entry.get("upload_date")
@@ -59,6 +60,8 @@ def to_candidate(entry: dict[str, Any]) -> VideoCandidate | None:
         thumbnail_url=pick_thumbnail(entry.get("thumbnails"))
         or normalize_url(entry.get("thumbnail")),
         description=entry.get("description"),
+        comment_count=parse_int(entry.get("comment_count")),
+        tags=[tag for tag in (entry.get("tags") or []) if isinstance(tag, str)],
         raw=entry,
     )
 

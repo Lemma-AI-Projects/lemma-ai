@@ -1,174 +1,126 @@
-"""阶段二 build persistence + state machine. coursegen never touches the ORM;
-it produces ChapterResearchResult and this module lands it in the DB.
+"""搜索前置 build = organize：把已选定的真实视频组织落库，并接既有视频交付链。
 
-Progress truth lives here (DB): the worker updates chapter status/progress as it
-goes; the SSE endpoint only reads course_service snapshots. No Redis pub/sub.
+不再按章现搜（搜索已前移到诉求阶段，候选缓存在 course_search_candidates）。这里只做：
+读 compose 输入(topic/answers)；把 compose 产出的 ComposedCourseResult **幂等**落成
+units/chapters；把每章选中的候选 materialize 成 chapter_video_candidates(is_chosen) 并
+回填 chosen_candidate_id —— 交付链(video_asset_service / GET chapter video)零改动。
+进度真相仍在 DB；SSE 端读快照。
 """
 
 import uuid
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from ai.coursegen.types import ChapterPlan, ChapterResearchResult
+from ai.coursegen.types import ComposedCourseResult
 from models.course import Course, CourseChapter, CourseUnit
 from models.course_candidate import ChapterVideoCandidate
-from services import course_service
 
 _READY = "ready"
 _FAILED = "failed"
-_BUILDING = "building"
-_RESEARCHING = "researching"
+_CHAPTER_READY = "ready"
 _CHAPTER_DONE = 100
-# Cap for in-flight beats: only a terminal write (persist/failed) may reach 100.
-_CHAPTER_IN_FLIGHT_MAX = 99
+# chapter_video_candidates.view_count/like_count are int32; a chosen video can
+# exceed that (popular YouTube). Clamp on materialize so a hot pick never crashes
+# the insert (the pool keeps the true BigInteger value).
+_INT32_MAX = 2_147_483_647
 
 
-async def mark_building(
-    db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID
-) -> Course | None:
-    """API gate: owned course -> status=building before enqueue. None -> 404."""
-    course = await course_service.get_owned_course(
-        db, user_id=user_id, course_id=course_id
-    )
-    if course is None:
+def _fit_int32(value: int | None) -> int | None:
+    if value is None:
         return None
-    course.status = _BUILDING
-    await db.commit()
-    await db.refresh(course)
-    return course
+    return min(value, _INT32_MAX)
 
 
-async def load_build_context(
+async def load_compose_inputs(
     db: AsyncSession, *, course_id: uuid.UUID
-) -> tuple[dict[str, str], list[tuple[uuid.UUID, ChapterPlan]]] | None:
-    """Begin a build: flip to building, return (profile, pending chapters).
+) -> tuple[str, dict[str, str]] | None:
+    """(topic, answers) for the organize/compose step. None -> course gone.
 
-    Worker-side — course_id was authorized when the API enqueued, so no user
-    filter. Pending excludes already-ready chapters (idempotent rerun). None ->
-    course gone.
+    Worker-side: course_id was authorized when the API enqueued, so no user
+    filter (same convention the old build path used).
     """
-    result = await db.execute(
-        select(Course)
-        .where(Course.id == course_id)
-        .options(selectinload(Course.units).selectinload(CourseUnit.chapters))
-    )
-    course = result.scalar_one_or_none()
+    course = await db.get(Course, course_id)
     if course is None:
         return None
-    course.status = _BUILDING
-    profile: dict[str, str] = {}
+    answers: dict[str, str] = {}
     if course.intake_json:
-        profile = course.intake_json.get("answers") or {}
-    pending = [
-        (chapter.id, ChapterPlan(title=chapter.title, summary=chapter.summary or ""))
-        for unit in course.units
-        for chapter in unit.chapters
-        if chapter.status != _READY
-    ]
-    await db.commit()
-    return profile, pending
+        answers = course.intake_json.get("answers") or {}
+    return course.topic, answers
 
 
-async def mark_chapter_researching(
-    db: AsyncSession, *, chapter_id: uuid.UUID
-) -> None:
-    """Pick a chapter up for (re)research: status=researching, progress reset to 0
-    so the 25/50/75 beats climb from a clean slate (a re-built failed chapter sits
-    at 100, which would otherwise block its monotonic in-flight beats)."""
-    chapter = await db.get(CourseChapter, chapter_id)
-    if chapter is not None:
-        chapter.status = _RESEARCHING
-        chapter.progress = 0
+async def mark_failed(db: AsyncSession, *, course_id: uuid.UUID) -> None:
+    """Terminal failure for organize (no candidates / search failed / compose
+    produced nothing valid). Reuses the existing `failed` state."""
+    course = await db.get(Course, course_id)
+    if course is not None:
+        course.status = _FAILED
         await db.commit()
 
 
-async def mark_chapter_progress(
-    db: AsyncSession, *, chapter_id: uuid.UUID, progress: int
-) -> None:
-    """Land an in-flight progress beat fired by the research pipeline.
+async def persist_composed_course(
+    db: AsyncSession, *, course_id: uuid.UUID, result: ComposedCourseResult
+) -> str:
+    """Land the validated composed course and materialize chosen videos.
 
-    Clamped to [0, 99] (terminal writes own 100) and monotonic — a later beat
-    never drags the bar backwards, so concurrent/out-of-order updates are safe.
-    Skips the write entirely when it wouldn't advance the value.
+    Idempotent: clears any existing units first (DB ON DELETE CASCADE wipes
+    chapters -> candidates/assets) so a re-run never doubles the tree. Each
+    chapter is created `ready` (it already has a chosen video) and its chosen
+    candidate is written as the single chapter_video_candidate (is_chosen) with
+    chosen_candidate_id back-filled — exactly the shape video_asset_service reads.
+    Returns the final course status (`ready` if any chapter, else `failed`).
     """
-    chapter = await db.get(CourseChapter, chapter_id)
-    if chapter is None:
-        return
-    capped = max(0, min(progress, _CHAPTER_IN_FLIGHT_MAX))
-    if capped > chapter.progress:
-        chapter.progress = capped
-        await db.commit()
-
-
-async def persist_chapter_result(
-    db: AsyncSession, *, chapter_id: uuid.UUID, result: ChapterResearchResult
-) -> None:
-    """Land every candidate, flag the chosen one, set the chapter's terminal state.
-
-    Clean slate first (delete prior candidates) so a re-research never doubles
-    the pool. chosen set -> ready + chosen_candidate_id; chosen None -> failed.
-    """
-    await db.execute(
-        delete(ChapterVideoCandidate).where(
-            ChapterVideoCandidate.chapter_id == chapter_id
-        )
-    )
-    chosen_row: ChapterVideoCandidate | None = None
-    for candidate in result.candidates:
-        row = ChapterVideoCandidate(
-            chapter_id=chapter_id,
-            platform=candidate.platform.value,
-            platform_video_id=candidate.platform_video_id,
-            url=candidate.url,
-            title=candidate.title,
-            author=candidate.author,
-            author_id=candidate.author_id,
-            duration_s=candidate.duration_s,
-            view_count=candidate.view_count,
-            like_count=candidate.like_count,
-            thumbnail_url=candidate.thumbnail_url,
-            is_chosen=candidate is result.chosen,
-            # Where it came from (platform); the full provider item is in raw_json.
-            discovery_source=candidate.platform.value,
-            raw_json=candidate.raw,
-        )
-        db.add(row)
-        if candidate is result.chosen:
-            chosen_row = row
-
-    chapter = await db.get(CourseChapter, chapter_id)
-    if chapter is not None:
-        if chosen_row is not None:
-            await db.flush()  # need chosen_row.id to back-reference
-            chapter.chosen_candidate_id = chosen_row.id
-            chapter.status = _READY
-        else:
-            chapter.status = _FAILED
-        chapter.progress = _CHAPTER_DONE
-    await db.commit()
-
-
-async def mark_chapter_failed(db: AsyncSession, *, chapter_id: uuid.UUID) -> None:
-    chapter = await db.get(CourseChapter, chapter_id)
-    if chapter is not None:
-        chapter.status = _FAILED
-        chapter.progress = _CHAPTER_DONE
-        await db.commit()
-
-
-async def finalize_course(db: AsyncSession, *, course_id: uuid.UUID) -> str:
-    """Terminal course state: ready if any chapter is ready, else failed."""
-    result = await db.execute(
-        select(CourseChapter.status)
-        .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
-        .where(CourseUnit.course_id == course_id)
-    )
-    statuses = result.scalars().all()
     course = await db.get(Course, course_id)
     if course is None:
         return _FAILED
-    course.status = _READY if any(s == _READY for s in statuses) else _FAILED
+
+    # Clean slate: deleting units cascades (DB FK) to chapters -> candidates/assets.
+    await db.execute(delete(CourseUnit).where(CourseUnit.course_id == course_id))
+    await db.flush()
+
+    chapter_total = 0
+    for unit_index, unit in enumerate(result.units):
+        unit_row = CourseUnit(
+            course_id=course_id,
+            order_index=unit_index,
+            title=unit.title,
+            status=_READY,
+        )
+        db.add(unit_row)
+        await db.flush()  # need unit_row.id for its chapters
+        for chapter_index, chapter in enumerate(unit.chapters):
+            chapter_row = CourseChapter(
+                unit_id=unit_row.id,
+                order_index=chapter_index,
+                title=chapter.title,
+                status=_CHAPTER_READY,
+                progress=_CHAPTER_DONE,
+            )
+            db.add(chapter_row)
+            await db.flush()  # need chapter_row.id for the candidate
+            candidate = chapter.candidate
+            candidate_row = ChapterVideoCandidate(
+                chapter_id=chapter_row.id,
+                platform=candidate.platform.value,
+                platform_video_id=candidate.platform_video_id,
+                url=candidate.url,
+                title=candidate.title,
+                author=candidate.author,
+                author_id=candidate.author_id,
+                duration_s=candidate.duration_s,
+                view_count=_fit_int32(candidate.view_count),
+                like_count=_fit_int32(candidate.like_count),
+                thumbnail_url=candidate.thumbnail_url,
+                is_chosen=True,
+                discovery_source=candidate.platform.value,
+                raw_json=candidate.raw,
+            )
+            db.add(candidate_row)
+            await db.flush()  # need candidate_row.id to back-reference
+            chapter_row.chosen_candidate_id = candidate_row.id
+            chapter_total += 1
+
+    course.title = result.title
+    course.status = _READY if chapter_total > 0 else _FAILED
     await db.commit()
     return course.status

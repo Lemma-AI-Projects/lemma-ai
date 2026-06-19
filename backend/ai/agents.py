@@ -17,6 +17,7 @@ from pydantic_ai import Agent, RunContext
 
 from ai.coursegen.types import (
     ChapterQueries,
+    ComposedCourse,
     CourseOutline,
     Questionnaire,
     VideoSelection,
@@ -69,12 +70,18 @@ _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
 }
 
 course_intake_agent = _build_structured_agent(Questionnaire)
+# 搜索前置: broad query expansion (reuses the ChapterQueries shape) + compose.
+topic_search_agent = _build_structured_agent(ChapterQueries)
+course_compose_agent = _build_structured_agent(ComposedCourse)
+# Retired by the search-first flow (kept registered for rollback/historical use).
 course_outline_agent = _build_structured_agent(CourseOutline)
 chapter_query_agent = _build_structured_agent(ChapterQueries)
 video_select_agent = _build_structured_agent(VideoSelection)
 
 _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_INTAKE: course_intake_agent,
+    AIUseCase.TOPIC_SEARCH: topic_search_agent,
+    AIUseCase.COURSE_COMPOSE: course_compose_agent,
     AIUseCase.COURSE_OUTLINE: course_outline_agent,
     AIUseCase.CHAPTER_QUERY: chapter_query_agent,
     AIUseCase.VIDEO_SELECT: video_select_agent,

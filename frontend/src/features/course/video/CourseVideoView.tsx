@@ -13,7 +13,6 @@ import {
   Clock3,
   Loader2,
   NotebookPen,
-  Youtube,
 } from 'lucide-react'
 import '@vidstack/react/player/styles/base.css'
 import '@vidstack/react/player/styles/default/theme.css'
@@ -39,12 +38,17 @@ function getDisplayVideoTitle(title: string) {
 }
 
 function PlatformIcon({ platform }: { platform: string }) {
-  if (platform === 'bilibili') {
+  const normalizedPlatform = platform.trim().toLowerCase()
+
+  if (normalizedPlatform === 'bilibili') {
     return (
       <img src="/icons/bilibili.svg" alt="bilibili" className="size-6 shrink-0" />
     )
   }
-  return <Youtube className="size-5 shrink-0 text-[#ff0000]" />
+  if (normalizedPlatform === 'youtube') {
+    return <img src="/icons/youtube.svg" alt="youtube" className="size-6 shrink-0" />
+  }
+  return null
 }
 
 export function CourseVideoView({ content }: CourseVideoViewProps) {

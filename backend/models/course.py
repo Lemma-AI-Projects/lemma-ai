@@ -18,8 +18,13 @@ from core.database import Base
 
 
 class Course(Base):
-    """A generated course and its lifecycle (拍板状态机:
-    intake -> outline_ready -> building -> ready, with failed on error).
+    """A generated course and its lifecycle.
+
+    搜索前置状态机 (终稿重构): intake -> organizing -> ready, with failed on error.
+    A parallel `search_status` (searching -> searched | failed) tracks the broad
+    search that runs concurrently with the questionnaire; organize gates on its
+    terminal value (握手协议 C2). `outline_ready`/`building` are retired by the
+    new flow but kept in the constraint for historical rows / backward compat.
 
     A course is optionally born inside a conversation (conversation_id, SET NULL
     so deleting the chat never deletes the course). Courses below `ready` are
@@ -29,8 +34,13 @@ class Course(Base):
     __tablename__ = "courses"
     __table_args__ = (
         CheckConstraint(
-            "status in ('intake', 'outline_ready', 'building', 'ready', 'failed')",
+            "status in ('intake', 'outline_ready', 'organizing', 'building', "
+            "'ready', 'failed')",
             name="ck_courses_status",
+        ),
+        CheckConstraint(
+            "search_status in ('searching', 'searched', 'failed')",
+            name="ck_courses_search_status",
         ),
         # Course list is WHERE user_id ORDER BY updated_at DESC; the composite
         # serves filter + order in one pass and (leftmost column) covers plain
@@ -56,6 +66,13 @@ class Course(Base):
     topic: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
+    # Broad-search sub-state, independent of `status` and only meaningful during
+    # intake/organizing: searching -> searched | failed. organize gates on its
+    # terminal value (握手协议 C2). Defaults to searching: a course is born with
+    # its broad search already kicked off.
+    search_status: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="searching"
+    )
     # Questionnaire + answers + derived profile, kept together as one JSON blob
     # (阶段一 product data, never queried by column).
     intake_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)

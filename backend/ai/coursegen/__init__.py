@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any
 from ai.coursegen.types import (
     ChapterPlan,
     ChapterResearchResult,
+    ComposedCourse,
+    ComposedCourseResult,
     CourseOutline,
     OutlineChapter,
     OutlineUnit,
@@ -23,30 +25,40 @@ from ai.coursegen.types import (
 )
 
 if TYPE_CHECKING:  # import-time names for type checkers, no runtime cycle
+    from ai.coursegen.compose import compose_course
     from ai.coursegen.intake import generate_questionnaire
     from ai.coursegen.outline import generate_outline
     from ai.coursegen.ranking import rank
     from ai.coursegen.research import research_chapter
+    from ai.coursegen.topic_search import search_topic
 
 _LAZY_EXPORTS = {
+    # 搜索前置: the active pipeline.
+    "search_topic": "ai.coursegen.topic_search",
+    "compose_course": "ai.coursegen.compose",
     "generate_questionnaire": "ai.coursegen.intake",
-    "generate_outline": "ai.coursegen.outline",
     "rank": "ai.coursegen.ranking",
+    # Retired by the search-first flow (kept for rollback; no active import).
+    "generate_outline": "ai.coursegen.outline",
     "research_chapter": "ai.coursegen.research",
 }
 
 __all__ = [
     "ChapterPlan",
     "ChapterResearchResult",
+    "ComposedCourse",
+    "ComposedCourseResult",
     "CourseOutline",
     "OutlineChapter",
     "OutlineUnit",
     "Questionnaire",
     "QuestionnaireQuestion",
+    "compose_course",
     "generate_outline",
     "generate_questionnaire",
     "rank",
     "research_chapter",
+    "search_topic",
 ]
 
 

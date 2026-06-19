@@ -44,6 +44,16 @@ _DEFAULT_AI_ROUTES_JSON = (
     ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
     ' {"platform": "openrouter", "adapter": "openrouter",'
     ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 60}'
+    '], "topic_search": ['
+    '{"platform": "aihubmix", "adapter": "openai_compatible",'
+    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
+    ' {"platform": "openrouter", "adapter": "openrouter",'
+    ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 60}'
+    '], "course_compose": ['
+    '{"platform": "aihubmix", "adapter": "openai_compatible",'
+    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 90},'
+    ' {"platform": "openrouter", "adapter": "openrouter",'
+    ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 90}'
     "]}"
 )
 

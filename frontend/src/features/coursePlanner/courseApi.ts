@@ -119,10 +119,14 @@ export function mapCourseStatusToStage(status: string): CoursePlannerStage {
   switch (status) {
     case 'intake':
       return 'questionnaire'
-    case 'outline_ready':
-      return 'pending'
+    // 搜索前置: after answers, the course goes straight to `organizing`
+    // (compose: select + organize), streamed like a build. `outline_ready`/
+    // `building` are retired by the new flow but kept mapped for old rows.
+    case 'organizing':
     case 'building':
       return 'in-progress'
+    case 'outline_ready':
+      return 'pending'
     case 'ready':
     case 'failed':
       return 'ready'

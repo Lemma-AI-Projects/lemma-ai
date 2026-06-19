@@ -32,13 +32,30 @@ from ai.search.types import SearchPlatform, VideoCandidate, VideoSearchQuery
 _SEARCH_URL = "https://api.bilibili.com/x/web-interface/wbi/search/type"
 
 
+def _split_tags(value: Any) -> list[str]:
+    """Bilibili `tag` is a comma-joined string ("线性代数,课程,数学")."""
+    if not isinstance(value, str):
+        return []
+    return [tag.strip() for tag in value.split(",") if tag.strip()]
+
+
+def _metrics(item: dict[str, Any]) -> dict[str, int]:
+    """Platform-specific engagement signals (no neutral VideoCandidate column)."""
+    out: dict[str, int] = {}
+    for name, key in (("danmaku", "danmaku"), ("favorites", "favorites")):
+        value = parse_int(item.get(key))
+        if value is not None:
+            out[name] = value
+    return out
+
+
 def to_candidate(item: dict[str, Any]) -> VideoCandidate | None:
     """Map one Bilibili search result item to a VideoCandidate (None to skip).
 
-    danmaku / favorites / review / coin / share have no VideoCandidate column;
-    they stay in ``raw`` (-> raw_json). view / like / duration / pubdate — all
-    the ranking needs — are mapped. Titles carry <em> search-highlight tags,
-    stripped here; thumbnails are protocol-relative, normalized to https.
+    Rich signals for compose: review -> comment_count, tag -> tags,
+    danmaku/favorites -> metrics. coin/share aren't in search results; they (and
+    anything unmapped) stay in ``raw`` (-> raw_json). Titles carry <em> search-
+    highlight tags, stripped here; thumbnails are protocol-relative -> https.
     """
     bvid = item.get("bvid")
     if not bvid:
@@ -58,6 +75,9 @@ def to_candidate(item: dict[str, Any]) -> VideoCandidate | None:
         published_at=parse_published_at(item.get("pubdate")),
         thumbnail_url=normalize_url(item.get("pic")),
         description=item.get("description"),
+        comment_count=parse_int(item.get("review")),
+        tags=_split_tags(item.get("tag")),
+        metrics=_metrics(item),
         raw=item,
     )
 

@@ -25,13 +25,14 @@ _DECAY_DAYS = 3650.0  # recency fades to 0 over ~10 years
 
 def rank(
     candidates: list[VideoCandidate],
-    chapter_plan: ChapterPlan,
+    chapter_plan: ChapterPlan | None = None,
     *,
     now: datetime | None = None,
 ) -> list[VideoCandidate]:
     """Return candidates sorted best-first. Stable (preserves input order on
-    ties). chapter_plan is accepted for interface stability / future relevance
-    signals; the current score is metric-only and deterministic."""
+    ties). chapter_plan is optional/reserved (future relevance signals); the
+    current score is metric-only and deterministic, so the search-first compose
+    step calls rank(pool) with no plan to pre-rank the whole candidate pool."""
     del chapter_plan  # reserved; current scoring is purely metric-based
     moment = now or datetime.now(UTC)
     # enumerate index is the stable tiebreaker (Python sort is stable, but the
