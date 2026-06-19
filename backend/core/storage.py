@@ -113,3 +113,25 @@ def _create_signed_url_sync(key: str, expires_in: int) -> str:
 async def create_signed_url(key: str, *, expires_in: int) -> str:
     """Mint a short-lived signed playback URL (runs the sync SDK off the loop)."""
     return await anyio.to_thread.run_sync(_create_signed_url_sync, key, expires_in)
+
+
+def _ensure_bucket_sync() -> None:
+    client = _get_signing_client()
+    bucket = settings.supabase_storage_bucket
+    try:
+        client.storage.get_bucket(bucket)
+        return
+    except Exception:  # noqa: BLE001 — not found / transient: fall through to create
+        pass
+    try:
+        client.storage.create_bucket(bucket, options={"public": False})
+    except Exception as exc:  # noqa: BLE001
+        if "exist" in str(exc).lower():
+            return  # created concurrently — fine
+        raise StorageError(f"could not ensure bucket '{bucket}': {exc}") from exc
+
+
+async def ensure_bucket() -> None:
+    """Create the PRIVATE bucket if missing (idempotent). Provisioning helper for
+    setup scripts / smoke only — never call this from the request path."""
+    await anyio.to_thread.run_sync(_ensure_bucket_sync)

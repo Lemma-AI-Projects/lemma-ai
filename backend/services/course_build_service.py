@@ -124,6 +124,7 @@ async def persist_chapter_result(
             url=candidate.url,
             title=candidate.title,
             author=candidate.author,
+            author_id=candidate.author_id,
             duration_s=candidate.duration_s,
             view_count=candidate.view_count,
             like_count=candidate.like_count,

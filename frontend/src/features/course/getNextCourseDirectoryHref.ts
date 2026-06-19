@@ -4,13 +4,22 @@ interface CourseDirectoryShape {
   units: Array<{ id: string; chapters: Array<{ id: string }> }>
 }
 
-// This step only delivers chapter VIDEOS, so the directory order is the chapters'
-// videos in unit→chapter order. overview/quiz/assignment slots are out of scope
-// and intentionally excluded, so "下一章" / skip move video → next video.
+// Full directory order: unit overview, then each chapter's
+// overview/video/quiz/assignment, then unit quiz/assignment. Only the video is
+// backend-backed this step; the rest render as placeholders, but they stay in
+// the order so the directory + "下一章"/skip navigation are complete.
 function getCourseDirectoryOrder(course: CourseDirectoryShape): string[] {
-  return course.units.flatMap((unit) =>
-    unit.chapters.map((chapter) => `${chapter.id}-video`)
-  )
+  return course.units.flatMap((unit) => [
+    `${unit.id}-overview`,
+    ...unit.chapters.flatMap((chapter) => [
+      `${chapter.id}-overview`,
+      `${chapter.id}-video`,
+      `${chapter.id}-quiz`,
+      `${chapter.id}-assignment`,
+    ]),
+    `${unit.id}-quiz`,
+    `${unit.id}-assignment`,
+  ])
 }
 
 export function getNextCourseDirectoryHref(
@@ -24,9 +33,5 @@ export function getNextCourseDirectoryHref(
     return null
   }
 
-  if (currentIndex + 1 >= order.length) {
-    return null
-  }
-
-  return `#${order[currentIndex + 1]}`
+  return `#${order[(currentIndex + 1) % order.length]}`
 }

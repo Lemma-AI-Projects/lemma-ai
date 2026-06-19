@@ -37,6 +37,9 @@ class ChapterVideoCandidate(Base):
     url: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     author: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Platform-native uploader id (e.g. Bilibili mid) for the author homepage
+    # link; None when the platform exposes no stable id (YouTube search items).
+    author_id: Mapped[str | None] = mapped_column(String, nullable=True)
     duration_s: Mapped[int | None] = mapped_column(Integer, nullable=True)
     view_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     like_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

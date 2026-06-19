@@ -97,21 +97,28 @@ export function CourseVideoView({ content }: CourseVideoViewProps) {
             </Button>
           </div>
 
-          {isReady ? (
-            <MediaPlayer
-              ref={playerRef}
-              data-slot="course-video-player"
-              title={title}
-              src={video?.playbackUrl ?? ''}
-              viewType="video"
-              streamType="on-demand"
-              hideControlsOnMouseLeave
-              onMouseEnter={handlePlayerMouseEnter}
-              onMouseLeave={handlePlayerMouseLeave}
-              playsInline
-              className="relative z-10 mt-5 aspect-video w-full overflow-hidden rounded-xl bg-black text-white"
-            >
-              <MediaProvider />
+          {/*
+            播放器外框在所有状态下都由同一个 MediaPlayer 渲染：vidstack 的
+            aspect-ratio 容器比裸 aspect-video div 实际高约 6px，而下巴(.course-
+            video-chin)的负 margin/overlap 正是按这个真实高度调过的。若未就绪时换成
+            普通 div，外框会矮 ~6px，下巴上移、"时间戳/记笔记"上间距变小。故始终挂
+            MediaPlayer，仅在内部切换布局(就绪)与遮罩(准备中/失败)。
+          */}
+          <MediaPlayer
+            ref={playerRef}
+            data-slot="course-video-player"
+            title={title}
+            src={isReady ? (video?.playbackUrl ?? undefined) : undefined}
+            viewType="video"
+            streamType="on-demand"
+            hideControlsOnMouseLeave
+            onMouseEnter={handlePlayerMouseEnter}
+            onMouseLeave={handlePlayerMouseLeave}
+            playsInline
+            className="relative z-10 mt-5 aspect-video w-full overflow-hidden rounded-xl bg-black text-white"
+          >
+            <MediaProvider />
+            {isReady ? (
               <DefaultVideoLayout
                 sliderChaptersMinWidth={0}
                 icons={defaultLayoutIcons}
@@ -144,31 +151,31 @@ export function CourseVideoView({ content }: CourseVideoViewProps) {
                   pipButton: null,
                 }}
               />
-            </MediaPlayer>
-          ) : (
-            <div className="relative z-10 mt-5 flex aspect-video w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl bg-black text-center text-white/90">
-              {isFailed ? (
-                <>
-                  <p className="text-sm">视频准备失败</p>
-                  {video?.source.url ? (
-                    <a
-                      href={video.source.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm text-white/70 underline underline-offset-4 hover:text-white"
-                    >
-                      前往原视频观看
-                    </a>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <Loader2 className="size-6 animate-spin" />
-                  <p className="text-sm">视频准备中，请稍候…</p>
-                </>
-              )}
-            </div>
-          )}
+            ) : (
+              <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black text-center text-white/90">
+                {isFailed ? (
+                  <>
+                    <p className="text-sm">视频准备失败</p>
+                    {video?.source.url ? (
+                      <a
+                        href={video.source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="pointer-events-auto text-sm text-white/70 underline underline-offset-4 hover:text-white"
+                      >
+                        前往原视频观看
+                      </a>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="size-6 animate-spin" />
+                    <p className="text-sm">视频准备中，请稍候…</p>
+                  </>
+                )}
+              </div>
+            )}
+          </MediaPlayer>
 
           <div className="course-video-chin bg-zinc-200">
             {showAuthor && author?.homepageUrl ? (
