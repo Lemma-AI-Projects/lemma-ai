@@ -20,7 +20,13 @@ import uuid
 
 from ai import init_ai_runtime, shutdown_ai_runtime
 from ai.coursegen import research_chapter
-from ai.search import aclose_client, build_client
+from ai.search import (
+    SearchPlatform,
+    aclose_client,
+    aclose_search_clients,
+    build_client,
+    platform_uses_apify,
+)
 from core.database import AsyncSessionLocal, engine
 from services import course_build_service, course_service
 from tasks.celery_app import celery_app
@@ -48,7 +54,15 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
     every chapter fails at the search/select step.
     """
     init_ai_runtime()
-    client = build_client()
+    # Build the (paid, token-gated) Apify client ONCE per build and reuse it
+    # across chapters — but only when a route actually uses Apify. Under the
+    # default self-built-only table this stays None (no APIFY token needed); the
+    # self-built providers (ytdlp/bili) manage their own per-loop clients.
+    client = (
+        build_client()
+        if any(platform_uses_apify(platform) for platform in SearchPlatform)
+        else None
+    )
     try:
         async with AsyncSessionLocal() as db:
             context = await course_build_service.load_build_context(
@@ -115,7 +129,10 @@ async def run_build(course_id: uuid.UUID, *, research=research_chapter) -> None:
 
             download_chapter_video.delay(str(first_chapter_id))
     finally:
-        await aclose_client(client)
+        if client is not None:
+            await aclose_client(client)
+        # Close this loop's self-built search client(s) (per-task discipline).
+        await aclose_search_clients()
         await shutdown_ai_runtime()
         # Each Celery task runs in its OWN asyncio.run() loop, but the
         # module-level engine pools connections bound to whatever loop first

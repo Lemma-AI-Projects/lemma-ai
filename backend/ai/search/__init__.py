@@ -14,9 +14,10 @@ provider_usage_logs.
 
 import uuid
 
-from ai.search.config import validate_search_routes
+from ai.search.config import platform_uses_apify, validate_search_routes
 from ai.search.errors import SearchProviderError
 from ai.search.providers.apify.client import ApifyClient, aclose_client, build_client
+from ai.search.providers.bilibili import aclose_search_clients
 from ai.search.routing import SearchContext, run_search_chain
 from ai.search.types import SearchPlatform, VideoCandidate, VideoSearchQuery
 
@@ -27,7 +28,9 @@ __all__ = [
     "VideoCandidate",
     "VideoSearchQuery",
     "aclose_client",
+    "aclose_search_clients",
     "build_client",
+    "platform_uses_apify",
     "search_videos",
     "validate_search_routes",
 ]
@@ -42,9 +45,16 @@ async def search_videos(
     course_id: uuid.UUID | None = None,
     client: ApifyClient | None = None,
 ) -> list[VideoCandidate]:
+    # The Apify client is built (and token-required) ONLY when a route for this
+    # platform actually uses Apify. Self-built providers (ytdlp/bili) ignore the
+    # `client` arg and manage their own per-loop clients, so under the default
+    # self-built-only table no Apify client is created. A caller-supplied client
+    # is always reused as-is (course_build's one-per-build apify client).
     owns_client = client is None
-    if client is None:
+    if client is None and platform_uses_apify(platform):
         client = build_client()
+    else:
+        owns_client = False
     ctx = SearchContext(
         trace_id=uuid.uuid4().hex, use_case=use_case, course_id=course_id
     )
@@ -53,5 +63,5 @@ async def search_videos(
             platform, query, limit=limit, client=client, ctx=ctx
         )
     finally:
-        if owns_client:
+        if owns_client and client is not None:
             await aclose_client(client)

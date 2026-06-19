@@ -29,7 +29,9 @@ class ProviderUsageLog(Base):
     )
 
     provider: Mapped[str] = mapped_column(String, nullable=False)  # e.g. "apify"
-    actor_id: Mapped[str] = mapped_column(String, nullable=False)
+    # Nullable: Apify carries a real actor id; free self-built providers
+    # (ytdlp/bili) have no actor and record NULL.
+    actor_id: Mapped[str | None] = mapped_column(String, nullable=True)
     platform: Mapped[str] = mapped_column(String, nullable=False)
     use_case: Mapped[str] = mapped_column(String, nullable=False)
     run_id: Mapped[str | None] = mapped_column(String, nullable=True)

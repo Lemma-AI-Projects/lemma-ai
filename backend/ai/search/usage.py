@@ -25,7 +25,7 @@ async def record_provider_call(
     *,
     trace_id: str,
     provider: str,
-    actor_id: str,
+    actor_id: str | None = None,
     platform: str,
     use_case: str,
     success: bool,

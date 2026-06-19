@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ai import init_ai_runtime, shutdown_ai_runtime
+from ai.search import aclose_search_clients
 from api.v1.router import api_router
 from core.aio import drain_protected_writes
 from core.config import settings
@@ -21,6 +22,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # In-flight protected writes (chat persistence, ledger rows spawned by
         # disconnected requests) land before pools close.
         await drain_protected_writes()
+        # Close the web loop's self-built search client(s) (bilibili httpx + WBI
+        # cache); mirrors the worker's per-task aclose in tasks/course_build.py.
+        await aclose_search_clients()
         await shutdown_ai_runtime()
 
 

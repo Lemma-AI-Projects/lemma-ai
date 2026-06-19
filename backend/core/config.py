@@ -47,16 +47,17 @@ _DEFAULT_AI_ROUTES_JSON = (
     "]}"
 )
 
-# Default video-search routing table: one Apify provider per platform (lower
-# priority wins, multiple entries form a fallback chain). Schema and startup
-# validation live in ai/search/config.py. Actor IDs live here (config = truth),
-# never hardcoded in provider code. max_total_charge_usd caps pay-per-event
-# cost, max_items caps per-result cost.
+# Default video-search routing table: self-built, FREE providers only (no Apify,
+# no APIFY token needed). youtube -> yt-dlp ytsearch, bilibili -> official Web
+# search. Lower priority wins; add an apify_* route at a higher priority number
+# to opt into a paid fallback (see backend/.env.example). Schema + startup
+# validation live in ai/search/config.py. Per-provider knobs go in `extra`
+# (full_extract for yt-dlp, wbi signing for bilibili — both off by default).
 _DEFAULT_SEARCH_ROUTES_JSON = (
-    '{"youtube": [{"provider": "apify_youtube", "actor_id": "h7sDV53CddomktSi5",'
-    ' "max_items": 20, "max_total_charge_usd": 0.3, "timeout_s": 120, "priority": 0}],'
-    ' "bilibili": [{"provider": "apify_bilibili", "actor_id": "hQpkxbmfApbahVZ2B",'
-    ' "max_items": 20, "max_total_charge_usd": 0.3, "timeout_s": 120, "priority": 0}]}'
+    '{"youtube": [{"provider": "ytdlp_youtube", "max_items": 20,'
+    ' "timeout_s": 60, "priority": 0, "extra": {"full_extract": false}}],'
+    ' "bilibili": [{"provider": "bili_search", "max_items": 20,'
+    ' "timeout_s": 30, "priority": 0, "extra": {"wbi": false}}]}'
 )
 
 

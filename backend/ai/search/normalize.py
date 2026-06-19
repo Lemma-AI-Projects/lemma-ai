@@ -34,6 +34,29 @@ def normalize_url(value: str | None) -> str | None:
     return value
 
 
+def pick_thumbnail(thumbnails: Any) -> str | None:
+    """Best (highest-resolution) thumbnail URL from yt-dlp's ``thumbnails`` list.
+
+    Entries are ``{"url", "width"?, "height"?, "preference"?}``; pick by pixel
+    area then preference (yt-dlp's own quality hint), and pass the URL through
+    normalize_url. Returns None for missing/odd input — never raises.
+    """
+    if not isinstance(thumbnails, list) or not thumbnails:
+        return None
+
+    def _rank(thumb: Any) -> tuple[int, int]:
+        if not isinstance(thumb, dict):
+            return (-1, -1)
+        width = thumb.get("width") or 0
+        height = thumb.get("height") or 0
+        preference = thumb.get("preference") or 0
+        return (int(width) * int(height), int(preference))
+
+    best = max(thumbnails, key=_rank, default=None)
+    url = best.get("url") if isinstance(best, dict) else None
+    return normalize_url(url)
+
+
 def parse_int(value: Any) -> int | None:
     """viewCount / play / likes -> int, tolerating "1,710,167,563" and blanks."""
     if value is None or isinstance(value, bool):

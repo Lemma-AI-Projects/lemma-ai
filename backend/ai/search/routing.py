@@ -21,6 +21,8 @@ from ai.search.providers.apify.bilibili import ApifyBilibiliProvider
 from ai.search.providers.apify.client import ApifyClient
 from ai.search.providers.apify.youtube import ApifyYouTubeProvider
 from ai.search.providers.base import VideoSearchProvider
+from ai.search.providers.bilibili import BiliSearchProvider
+from ai.search.providers.youtube import YtDlpYouTubeProvider
 from ai.search.types import SearchPlatform, VideoCandidate, VideoSearchQuery
 from ai.search.usage import record_provider_call
 
@@ -29,6 +31,8 @@ logger = logging.getLogger("lemma.ai.search")
 _PROVIDERS = {
     "apify_youtube": ApifyYouTubeProvider,
     "apify_bilibili": ApifyBilibiliProvider,
+    "ytdlp_youtube": YtDlpYouTubeProvider,
+    "bili_search": BiliSearchProvider,
 }
 
 
@@ -50,7 +54,7 @@ def _is_retryable(exc: Exception) -> bool:
 
 
 def _build_provider(
-    route: SearchRoute, client: ApifyClient, ctx: SearchContext
+    route: SearchRoute, client: ApifyClient | None, ctx: SearchContext
 ) -> VideoSearchProvider:
     provider_cls = _PROVIDERS.get(route.provider)
     if provider_cls is None:
@@ -65,7 +69,7 @@ async def run_search_chain(
     query: VideoSearchQuery,
     *,
     limit: int,
-    client: ApifyClient,
+    client: ApifyClient | None,
     ctx: SearchContext,
 ) -> list[VideoCandidate]:
     routes = routes_for(platform)
