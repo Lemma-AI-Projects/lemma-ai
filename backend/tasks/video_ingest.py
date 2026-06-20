@@ -10,7 +10,7 @@ Celery 纪律 (终稿 9.3):
   never reused from the web process
 - arguments and results are plain JSON-serializable values
 
-System dependency: yt-dlp needs ffmpeg on PATH for remuxing (brew install
+System dependency: download backends need ffmpeg for remuxing (brew install
 ffmpeg locally; add it to the Render worker image on deploy).
 
 TODO(complex-transcode): segmented transcode / frame extraction + ASR fallback

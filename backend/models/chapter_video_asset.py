@@ -67,6 +67,8 @@ class ChapterVideoAsset(Base):
     storage_bucket: Mapped[str | None] = mapped_column(String, nullable=True)
     # Object key within the bucket; set on a successful upload (ready).
     storage_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Final backend that produced the local mp4, e.g. bbdown or ytdlp-fallback.
+    download_backend: Mapped[str | None] = mapped_column(String, nullable=True)
     mime_type: Mapped[str | None] = mapped_column(String, nullable=True)
     # BigInteger: a single lecture can exceed the ~2 GB Integer ceiling.
     size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

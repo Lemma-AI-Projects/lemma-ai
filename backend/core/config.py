@@ -70,6 +70,14 @@ _DEFAULT_SEARCH_ROUTES_JSON = (
     ' "timeout_s": 30, "priority": 0, "extra": {"wbi": false}}]}'
 )
 
+# Default worker-side video-download routing. YouTube remains yt-dlp. Bilibili
+# prefers BBDown TV API and keeps yt-dlp (with Bili headers) as the 480P fallback.
+_DEFAULT_VIDEO_DOWNLOAD_ROUTES_JSON = (
+    '{"youtube": ["ytdlp"],'
+    ' "bilibili": ["bbdown", "ytdlp-fallback"],'
+    ' "default": ["ytdlp"]}'
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -97,9 +105,23 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
     # Netscape-format cookie file for yt-dlp. B站 risk control (HTTP 412)
-    # requires real browser cookies; without this only direct file URLs and
-    # cookie-free sites can be ingested.
+    # can still affect the yt-dlp fallback path. Primary anonymous B站 chapter
+    # downloads use BBDown TV API instead.
     ytdlp_cookie_file: str | None = None
+    ytdlp_socket_timeout_seconds: int = 30
+
+    # --- Worker video download backends ---
+    # URL -> local mp4 routing for Celery tasks. Schema is intentionally simple:
+    # platform -> ordered backend names. Parsing/execution lives in tasks/.
+    video_download_routes_json: str = _DEFAULT_VIDEO_DOWNLOAD_ROUTES_JSON
+    video_download_timeout_seconds: int = 1800
+    ffmpeg_path: str = "ffmpeg"
+    bbdown_binary_path: str = ""
+    bbdown_use_tv_api: bool = True
+    bbdown_quality_priority: str = "720P 高清,480P 清晰"
+    bbdown_encoding_priority: str = "avc,hevc,av1"
+    # Reserved for a future logged-in 1080P path. Keep empty for anonymous mode.
+    bbdown_cookie: str = ""
 
     # --- Video search (Apify) ---
     # Default empty so the app boots and the offline smoke runs without a key;

@@ -6,11 +6,11 @@ and the module-level engine is disposed at the end so the next task in the same
 worker process starts with a clean connection pool.
 
 Flow: resolve the chapter's chosen candidate -> atomically claim the asset row
-(skip if another worker is already downloading, or it's already ready) -> yt-dlp
-download to a temp file -> boto3 multipart upload to the PRIVATE bucket (never
-the SDK's single-PUT .upload()) -> mark ready. Any failure marks the asset
-failed and re-raises so Celery retries; a retry re-claims (failed -> downloading)
-and tries again.
+(skip if another worker is already downloading, or it's already ready) -> route
+through the platform download backend to a temp mp4 -> boto3 multipart upload to
+the PRIVATE bucket (never the SDK's single-PUT .upload()) -> mark ready. Any
+failure marks the asset failed and re-raises so Celery retries; a retry re-claims
+(failed -> downloading) and tries again.
 """
 
 import asyncio
@@ -24,7 +24,7 @@ from core.config import settings
 from core.database import AsyncSessionLocal, engine
 from services import video_asset_service
 from tasks.celery_app import celery_app
-from tasks.ytdlp import download_to_mp4
+from tasks.video_source_download import download_video_to_mp4
 
 logger = logging.getLogger("lemma.tasks.video_download")
 
@@ -33,7 +33,7 @@ _CONTENT_TYPE = "video/mp4"
 
 def _storage_key(chapter_id: uuid.UUID) -> str:
     # One stable key per chapter: a re-pick re-downloads and overwrites in place,
-    # so no orphaned objects accumulate. Always .mp4 (yt-dlp remuxes).
+    # so no orphaned objects accumulate. Always .mp4 (download backends remux).
     return f"chapters/{chapter_id}.mp4"
 
 
@@ -59,7 +59,13 @@ async def run_download(chapter_id: uuid.UUID) -> None:
         key = _storage_key(chapter_id)
         try:
             with tempfile.TemporaryDirectory(prefix="lemma_video_") as tmp_dir:
-                video_path = download_to_mp4(target.url, Path(tmp_dir))
+                download = download_video_to_mp4(
+                    target.url,
+                    Path(tmp_dir),
+                    platform=target.platform,
+                    chapter_id=chapter_id,
+                )
+                video_path = download.path
                 size_bytes = video_path.stat().st_size
                 client = storage.build_s3_client()
                 storage.upload_file(
@@ -88,6 +94,7 @@ async def run_download(chapter_id: uuid.UUID) -> None:
                 size_bytes=size_bytes,
                 mime_type=_CONTENT_TYPE,
                 duration_s=target.duration_s,
+                download_backend=download.backend,
             )
     finally:
         # Per-task loop owns the pool; dispose so the next task starts clean.

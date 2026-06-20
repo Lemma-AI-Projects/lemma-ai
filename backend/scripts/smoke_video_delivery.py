@@ -198,6 +198,10 @@ async def section_chapter_pipeline(user: CurrentUser) -> list[uuid.UUID]:
         asset is not None and asset.candidate_id is not None,
         "pipeline: asset.candidate_id 记录所选候选",
     )
+    check(
+        asset is not None and bool(asset.download_backend),
+        "pipeline: asset.download_backend 记录最终下载后端",
+    )
 
     # ready 路径：签发可播 URL + 预热下一章。
     ENQUEUED.clear()

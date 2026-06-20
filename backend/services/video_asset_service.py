@@ -271,6 +271,7 @@ _CLAIM_SQL = text(
         SET status = 'downloading',
             candidate_id = :candidate_id,
             error_type = NULL,
+            download_backend = NULL,
             updated_at = now()
         WHERE chapter_video_assets.status NOT IN ('downloading', 'ready')
     RETURNING id
@@ -288,6 +289,7 @@ _ENSURE_PENDING_SQL = text(
         SET status = 'pending',
             candidate_id = :candidate_id,
             error_type = NULL,
+            download_backend = NULL,
             updated_at = now()
         WHERE chapter_video_assets.status NOT IN ('pending', 'downloading')
     """
@@ -326,6 +328,7 @@ async def mark_ready(
     size_bytes: int | None,
     mime_type: str | None,
     duration_s: int | None,
+    download_backend: str | None,
 ) -> None:
     asset = await _get_asset(db, chapter_id)
     if asset is None:
@@ -335,6 +338,7 @@ async def mark_ready(
     asset.candidate_id = candidate_id
     asset.storage_bucket = storage_bucket
     asset.storage_path = storage_path
+    asset.download_backend = download_backend
     asset.size_bytes = size_bytes
     asset.mime_type = mime_type
     asset.duration_s = duration_s
@@ -353,6 +357,7 @@ async def mark_failed(
         return
     asset.status = "failed"
     asset.error_type = (error_type or "")[:200] or None
+    asset.download_backend = None
     await db.commit()
 
 
