@@ -60,6 +60,10 @@ course_plan_intro_agent = _build_agent()
 video_qa_agent = _build_agent()
 video_summary_agent = _build_agent()
 video_locate_agent = _build_agent()
+# AI 伴学: grounded video Q&A. The native engine streams it (gemini_video); this
+# framework agent only serves the pydantic_ai engine path, like the other video
+# agents.
+course_companion_agent = _build_agent()
 
 _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.TEXT_CHAT: text_chat_agent,
@@ -67,6 +71,7 @@ _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.VIDEO_QA: video_qa_agent,
     AIUseCase.VIDEO_SUMMARY: video_summary_agent,
     AIUseCase.VIDEO_LOCATE: video_locate_agent,
+    AIUseCase.COURSE_COMPANION: course_companion_agent,
 }
 
 course_intake_agent = _build_structured_agent(Questionnaire)

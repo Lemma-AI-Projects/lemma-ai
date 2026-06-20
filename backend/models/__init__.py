@@ -2,6 +2,7 @@
 
 from models.ai_conversation import AiConversation, AiMessage
 from models.ai_usage_log import AiUsageLog
+from models.chapter_gemini_file import ChapterGeminiFile
 from models.chapter_video_asset import ChapterVideoAsset
 from models.course import Course, CourseChapter, CourseUnit
 from models.course_candidate import ChapterVideoCandidate
@@ -14,6 +15,7 @@ __all__ = [
     "AiConversation",
     "AiMessage",
     "AiUsageLog",
+    "ChapterGeminiFile",
     "ChapterVideoAsset",
     "ChapterVideoCandidate",
     "Course",

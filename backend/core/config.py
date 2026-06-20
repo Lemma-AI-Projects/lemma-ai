@@ -54,6 +54,13 @@ _DEFAULT_AI_ROUTES_JSON = (
     ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 90},'
     ' {"platform": "openrouter", "adapter": "openrouter",'
     ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 90}'
+    # 视频伴学 (AI 伴学): native gemini_video channel; media_resolution=medium
+    # (决策⑨ clarity/cost balance) + thinking on. Single route — video Q&A has
+    # no OpenRouter fallback (the file reference is Gemini Files API specific).
+    '], "course_companion": ['
+    '{"platform": "aihubmix", "adapter": "gemini_video",'
+    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 90,'
+    ' "extra": {"media_resolution": "medium", "include_thoughts": true}}'
     "]}"
 )
 

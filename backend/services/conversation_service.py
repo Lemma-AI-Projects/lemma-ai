@@ -49,15 +49,35 @@ async def list_conversations(
 ) -> list[AiConversation]:
     """Main sidebar list: unfiled conversations only (拍板 2026-06-13).
 
-    Conversations moved into a project live in the project page instead —
-    ChatGPT-style information architecture, no double listing.
+    Conversations moved into a project live in the project page instead, and
+    course companion conversations live in their course's right rail — neither
+    leaks into the main sidebar (ChatGPT-style IA, no double listing).
     """
     result = await db.execute(
         select(AiConversation)
         .where(
             AiConversation.user_id == user_id,
             AiConversation.project_id.is_(None),
+            AiConversation.course_id.is_(None),
         )
+        .order_by(AiConversation.updated_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list(result.scalars())
+
+
+async def list_course_conversations(
+    db: AsyncSession, *, course_id: uuid.UUID, limit: int = 50, offset: int = 0
+) -> list[AiConversation]:
+    """Companion conversations for a course (right-rail pills), newest first.
+
+    Ownership of the course is checked by the caller; the companion home is
+    scoped purely by course_id (a companion conversation never has a project).
+    """
+    result = await db.execute(
+        select(AiConversation)
+        .where(AiConversation.course_id == course_id)
         .order_by(AiConversation.updated_at.desc())
         .limit(limit)
         .offset(offset)
@@ -161,8 +181,9 @@ _PERSIST_TURN_NEW_CONVERSATION = text(
     """
     WITH conv AS (
         INSERT INTO ai_conversations
-            (id, user_id, title, project_id, created_at, updated_at)
-        VALUES (:conversation_id, :user_id, :title, :project_id, now(), now())
+            (id, user_id, title, project_id, course_id, created_at, updated_at)
+        VALUES (:conversation_id, :user_id, :title, :project_id, :course_id,
+                now(), now())
     )
     INSERT INTO ai_messages
         (id, conversation_id, role, content_text, reasoning_text,
@@ -201,6 +222,7 @@ async def persist_turn(
     user_id: uuid.UUID,
     new_conversation_title: str | None,
     new_conversation_project_id: uuid.UUID | None = None,
+    new_conversation_course_id: uuid.UUID | None = None,
     user_content: str,
     user_sent_at: datetime,
     assistant_content: str,
@@ -242,6 +264,7 @@ async def persist_turn(
             "user_id": user_id,
             "title": new_conversation_title,
             "project_id": new_conversation_project_id,
+            "course_id": new_conversation_course_id,
         }
     else:
         statement = _PERSIST_TURN_EXISTING_CONVERSATION

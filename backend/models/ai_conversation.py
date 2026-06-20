@@ -21,6 +21,16 @@ class AiConversation(Base):
         Index(
             "ix_ai_conversations_project_id_updated_at", "project_id", "updated_at"
         ),
+        # Course companion list is WHERE course_id ORDER BY updated_at DESC.
+        Index(
+            "ix_ai_conversations_course_id_updated_at", "course_id", "updated_at"
+        ),
+        # Single home (拍板 2026-06-21): a conversation is in at most one of
+        # project / course / main list — never both a project and a course.
+        CheckConstraint(
+            "project_id IS NULL OR course_id IS NULL",
+            name="ck_ai_conversations_single_home",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -37,6 +47,16 @@ class AiConversation(Base):
     project_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # Single-home course link (AI 伴学, 拍板 2026-06-21): a companion conversation
+    # belongs to one course. CASCADE on course delete — deliberately unlike
+    # project_id's SET NULL: a companion is meaningless without the course's
+    # chapter videos (which also cascade), so it goes with the course rather than
+    # orphaning into the main list.
+    course_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("courses.id", ondelete="CASCADE"),
         nullable=True,
     )
     title: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -81,6 +81,22 @@ def upload_file(client: Any, *, local_path: str, key: str, content_type: str) ->
     )
 
 
+def download_file(client: Any, *, key: str, local_path: str) -> None:
+    """Download a private-bucket object to a local path (multipart, parallel).
+
+    The inverse of upload_file — used by the companion ingest task to pull a
+    chapter's re-hosted video body out of Storage before handing it to the Gemini
+    Files API. Celery builds its OWN client (build_s3_client), per-task, never
+    reusing one across loops.
+    """
+    client.download_file(
+        settings.supabase_storage_bucket,
+        key,
+        local_path,
+        Config=_TRANSFER_CONFIG,
+    )
+
+
 def delete_objects(client: Any, *, keys: list[str]) -> set[str]:
     """Best-effort delete by key; return keys the backend accepted as deleted."""
     deleted: set[str] = set()

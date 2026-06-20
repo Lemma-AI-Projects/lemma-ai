@@ -62,7 +62,12 @@ from ai.usage import (
 from core.config import settings
 
 _VIDEO_USE_CASES = frozenset(
-    {AIUseCase.VIDEO_QA, AIUseCase.VIDEO_SUMMARY, AIUseCase.VIDEO_LOCATE}
+    {
+        AIUseCase.VIDEO_QA,
+        AIUseCase.VIDEO_SUMMARY,
+        AIUseCase.VIDEO_LOCATE,
+        AIUseCase.COURSE_COMPANION,
+    }
 )
 
 
@@ -524,6 +529,118 @@ class AIClient:
             model=actual_model or route.model,
             usage=token_usage,
         )
+
+    async def stream_ask_video(
+        self,
+        use_case: AIUseCase,
+        video: VideoInput,
+        question: str,
+        *,
+        history: list[ChatMessage] | None = None,
+        user_id: str | None = None,
+        course_id: str | None = None,
+        conversation_id: str | None = None,
+        prompt_vars: dict[str, str] | None = None,
+    ) -> AsyncIterator[AIChunk]:
+        """Streaming grounded video Q&A (AI 伴学): yield typed AIChunk events
+        (reasoning/delta/usage/done/error), the SAME contract as stream_chat so
+        the API layer encodes them to SSE identically.
+
+        Native engine only for now (the default); other engines raise — streaming
+        on the pydantic_ai path is a later phase. The chapter video reference
+        (provider file) is validated for expiry/platform before use; history is
+        prior turns (text), the current chapter video is always re-attached by
+        gemini_video so the model sees what the user is watching.
+        """
+        if use_case not in _VIDEO_USE_CASES:
+            raise UnsupportedCapabilityError(
+                f"'{use_case}' is not a video use case"
+            )
+        if settings.ai_video_engine != "native":
+            raise UnsupportedCapabilityError(
+                "streaming video Q&A requires the native video engine"
+            )
+        ensure_ready(video)
+        routes = routes_for(use_case)
+        route = routes[0]
+        system_prompt = render_system_prompt(use_case, prompt_vars)
+        turns: list[tuple[str, str]] = []
+        for message in history or []:
+            if message.role not in ("user", "assistant"):
+                continue
+            text = message.content if isinstance(message.content, str) else ""
+            if text:
+                turns.append((message.role, text))
+        tracker = start_tracking(
+            use_case, routes, user_id=user_id, conversation_id=conversation_id
+        )
+        emitted_chars = 0
+        usage_metadata = None
+        try:
+            try:
+                async for (
+                    text_delta,
+                    reasoning_delta,
+                    usage,
+                ) in gemini_video.stream_companion_answer(
+                    model=route.model,
+                    system_prompt=system_prompt,
+                    question=question,
+                    file_uri=video.url or "",
+                    mime_type=video.mime_type,
+                    history=turns,
+                    timeout_s=route.timeout_s,
+                    route_extra=route.extra,
+                ):
+                    if usage is not None:
+                        usage_metadata = usage
+                    if reasoning_delta:
+                        yield AIChunk(
+                            kind="reasoning", reasoning_text=reasoning_delta
+                        )
+                    if text_delta:
+                        emitted_chars += len(text_delta)
+                        yield AIChunk(kind="delta", text=text_delta)
+            except (GeneratorExit, asyncio.CancelledError):
+                raise
+            token_usage = gemini_usage_to_token_usage(usage_metadata)
+            # Internal accounting off the user's critical path (flips tracker
+            # state synchronously so finalize_stream below stays a no-op).
+            aio.spawn_protected(
+                record_success(
+                    tracker,
+                    usage=token_usage,
+                    actual_model=route.model,
+                    request_id=None,
+                    output_chars=emitted_chars,
+                    cost_usd=None,
+                )
+            )
+            if emitted_chars == 0:
+                yield AIChunk(
+                    kind="error",
+                    error_code="ai_provider_error",
+                    error_message="model returned an empty response",
+                )
+                return
+            yield AIChunk(kind="usage", usage=token_usage)
+            yield AIChunk(kind="done")
+        except (GeneratorExit, asyncio.CancelledError):
+            raise
+        except Exception as exc:
+            error = map_framework_error(exc)
+            await ensure_failure_recorded(tracker, error=exc)
+            yield AIChunk(
+                kind="error", error_code=error.code, error_message=error.message
+            )
+        finally:
+            # Client disconnect lands here without record_success: book the
+            # interrupted attempt (no-op if success/failure already recorded).
+            task = aio.spawn_protected(
+                finalize_stream(tracker, emitted_chars=emitted_chars)
+            )
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.shield(task)
 
     def _prepare(
         self,

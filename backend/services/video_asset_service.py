@@ -234,6 +234,68 @@ async def get_chapter_video(
     )
 
 
+# --- companion-facing helpers (AI 伴学: feed the chapter video to Gemini) ---
+
+
+@dataclass
+class StoredVideo:
+    """A chapter's READY re-hosted video object in Storage (for companion ingest)."""
+
+    candidate_id: uuid.UUID
+    storage_bucket: str
+    storage_path: str
+    mime_type: str | None
+
+
+async def get_chapter_chosen_candidate_id(
+    db: AsyncSession, *, course_id: uuid.UUID, chapter_id: uuid.UUID
+) -> uuid.UUID | None:
+    """The chapter's chosen candidate id, ONLY if the chapter is in course_id.
+
+    IDOR red line (mirrors get_chapter_video): foreign / unknown / no-chosen-video
+    all collapse to None. The companion keys its Gemini-file cache on this id.
+    """
+    resolved = await _resolve_chapter_candidate(
+        db, course_id=course_id, chapter_id=chapter_id
+    )
+    return resolved[1].id if resolved is not None else None
+
+
+async def get_chapter_asset_status(
+    db: AsyncSession, *, chapter_id: uuid.UUID
+) -> str | None:
+    """The chapter video's download status (pending/downloading/ready/failed),
+    or None when no asset row exists yet. The companion gates Gemini ingest on
+    `ready` (only a fully downloaded asset has a body to upload)."""
+    asset = await _get_asset(db, chapter_id)
+    return asset.status if asset is not None else None
+
+
+async def get_ready_stored_video(
+    db: AsyncSession, *, chapter_id: uuid.UUID
+) -> StoredVideo | None:
+    """The chapter's READY re-hosted video (object key + candidate), else None.
+
+    Worker-side (companion ingest): only a fully downloaded asset has a
+    storage_path to pull the body from. No course/user filter — the API already
+    enforced ownership before enqueuing (same convention as load_download_target).
+    """
+    asset = await _get_asset(db, chapter_id)
+    if (
+        asset is None
+        or asset.status != "ready"
+        or not asset.storage_path
+        or asset.candidate_id is None
+    ):
+        return None
+    return StoredVideo(
+        candidate_id=asset.candidate_id,
+        storage_bucket=asset.storage_bucket or settings.supabase_storage_bucket,
+        storage_path=asset.storage_path,
+        mime_type=asset.mime_type,
+    )
+
+
 # --- worker-facing helpers (download task) ---
 
 

@@ -38,6 +38,10 @@ class AIUseCase(StrEnum):
     # plain text agent like TEXT_CHAT, but with its own prompt so it stays a
     # tight intro instead of answering the topic itself.
     COURSE_PLAN_INTRO = "course_plan_intro"
+    # AI 伴学: grounded video Q&A while watching a chapter — the model sees the
+    # chapter's re-hosted video via the Gemini Files API and explains it. A video
+    # use case (gemini_video channel), streamed with reasoning.
+    COURSE_COMPANION = "course_companion"
 
 
 class VideoInputKind(StrEnum):

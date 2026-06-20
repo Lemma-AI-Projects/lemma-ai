@@ -219,3 +219,113 @@ async def stream_answer(
     )
     async for chunk in stream:
         yield chunk.text or "", chunk.usage_metadata
+
+
+async def stream_companion_answer(
+    *,
+    model: str,
+    system_prompt: str,
+    question: str,
+    file_uri: str,
+    mime_type: str | None,
+    history: list[tuple[str, str]],
+    timeout_s: float,
+    route_extra: dict[str, Any] | None = None,
+    client: genai.Client | None = None,
+) -> AsyncIterator[
+    tuple[str, str, genai_types.GenerateContentResponseUsageMetadata | None]
+]:
+    """Streaming grounded video Q&A for the AI 伴学 companion.
+
+    Yields (text_delta, reasoning_delta, usage_metadata). The chapter video is
+    the FIRST part of the FIRST user turn so the stable prefix maximizes implicit
+    context-cache hits on the heavy video tokens across a chapter's multi-turn
+    thread (见 plan 2.5); media_resolution (默认 MEDIUM) caps per-frame token cost.
+    """
+    client = client or shared_client()
+    route_extra = route_extra or {}
+    contents = _build_companion_contents(
+        file_uri=file_uri, mime_type=mime_type, history=history, question=question
+    )
+    stream = await client.aio.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            thinking_config=_thinking_config_from_route_extra(route_extra),
+            media_resolution=_media_resolution_from_route_extra(route_extra),
+            http_options=genai_types.HttpOptions(timeout=int(timeout_s * 1000)),
+        ),
+    )
+    async for chunk in stream:
+        text_delta, reasoning_delta = _split_stream_chunk(chunk)
+        yield text_delta, reasoning_delta, chunk.usage_metadata
+
+
+def _build_companion_contents(
+    *,
+    file_uri: str,
+    mime_type: str | None,
+    history: list[tuple[str, str]],
+    question: str,
+) -> list[genai_types.Content]:
+    """[video] + history + question as role-tagged turns. The video is the first
+    PART of the first user turn (not a separate leading turn) so roles alternate
+    validly AND the stable prefix maximizes implicit cache hits."""
+    turns: list[tuple[str, str]] = [*history, ("user", question)]
+    contents: list[genai_types.Content] = []
+    for index, (role, text) in enumerate(turns):
+        parts: list[genai_types.Part] = []
+        if index == 0:
+            parts.append(
+                genai_types.Part.from_uri(
+                    file_uri=file_uri, mime_type=mime_type or "video/mp4"
+                )
+            )
+        parts.append(genai_types.Part.from_text(text=text))
+        contents.append(
+            genai_types.Content(
+                role="model" if role == "assistant" else "user", parts=parts
+            )
+        )
+    return contents
+
+
+def _split_stream_chunk(chunk: Any) -> tuple[str, str]:
+    """(text_delta, reasoning_delta) from one stream chunk; thinking parts
+    (part.thought) are the reasoning track, the rest is the visible answer."""
+    text_parts: list[str] = []
+    reasoning_parts: list[str] = []
+    for candidate in getattr(chunk, "candidates", None) or []:
+        content = getattr(candidate, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            text = getattr(part, "text", None)
+            if not isinstance(text, str) or not text:
+                continue
+            if getattr(part, "thought", False):
+                reasoning_parts.append(text)
+            else:
+                text_parts.append(text)
+    return "".join(text_parts), "".join(reasoning_parts)
+
+
+def _media_resolution_from_route_extra(
+    route_extra: dict[str, Any],
+) -> "genai_types.MediaResolution":
+    """Map a route's media_resolution knob (low/medium/high) to the enum.
+
+    Default MEDIUM (决策⑨): the clarity/cost balance for full lectures. MUST stay
+    constant across a chapter's turns or implicit caching misses (见 plan 2.5).
+    """
+    mapping = {
+        "low": genai_types.MediaResolution.MEDIA_RESOLUTION_LOW,
+        "medium": genai_types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+        "high": genai_types.MediaResolution.MEDIA_RESOLUTION_HIGH,
+    }
+    raw = route_extra.get("media_resolution")
+    if isinstance(raw, str):
+        return mapping.get(
+            raw.strip().lower(),
+            genai_types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+        )
+    return genai_types.MediaResolution.MEDIA_RESOLUTION_MEDIUM
