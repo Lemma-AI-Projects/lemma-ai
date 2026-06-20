@@ -200,7 +200,6 @@ export function ConversationSandboxPage() {
               failed={preview.failed}
               onAnswerChange={handleAnswerChange}
               onSubmitAnswers={() => undefined}
-              onApproveBuild={() => undefined}
               onCancel={() => undefined}
               onEnterCourse={() => undefined}
             />

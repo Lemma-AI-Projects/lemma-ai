@@ -5,7 +5,6 @@ import {
   useCourseBuildStream,
   useCourseQuery,
   useCourseQuestionnaireQuery,
-  useStartCourseBuildMutation,
   useSubmitCourseIntakeMutation,
   type CourseIntakeAnswer,
   type CoursePlannerStage,
@@ -28,10 +27,8 @@ export interface CoursePlannerView {
   errorMessage: string | null
   isLoading: boolean
   isSubmittingAnswers: boolean
-  isStartingBuild: boolean
   onAnswerChange: (questionId: string, option: string) => void
   onSubmitAnswers: (answers: CourseIntakeAnswer[]) => void
-  onApproveBuild: () => void
 }
 
 /**
@@ -41,8 +38,8 @@ export interface CoursePlannerView {
  *
  *   GET /courses/{id}          -> stage / title / progress / outline tree
  *   GET /courses/{id}/questionnaire (only at the questionnaire stage)
- *   POST /intake               -> outline (pending)
- *   POST /build + SSE stream   -> live build progress (in-progress -> ready)
+ *   POST /intake               -> organize starts in the worker
+ *   GET /build/stream          -> live organize progress (in-progress -> ready)
  *
  * The DB snapshot is the truth; this hook only orchestrates the calls and holds
  * the transient answer selections.
@@ -71,8 +68,7 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({})
 
   const submitIntake = useSubmitCourseIntakeMutation()
-  const startBuild = useStartCourseBuildMutation()
-  // Streams the live build snapshot into the course query cache while building.
+  // Streams the live organize snapshot into the course query cache while building.
   const buildStream = useCourseBuildStream(courseId, {
     enabled: stage === 'in-progress',
   })
@@ -90,19 +86,9 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
     }
   }
 
-  const onApproveBuild = () => {
-    if (courseId) {
-      startBuild.mutate(courseId, {
-        onSuccess: () => void courseQuery.refetch(),
-      })
-    }
-  }
-
   const errorMessage = submitIntake.isError
-    ? '生成大纲失败，请重试'
-    : startBuild.isError
-      ? '启动课程构建失败，请重试'
-      : buildStream.error
+    ? '提交问卷失败，请重试'
+    : buildStream.error
         ? '构建进度连接中断，正在尝试恢复'
         : courseQuery.isError
           ? '加载课程失败，请重试'
@@ -119,9 +105,7 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
     errorMessage,
     isLoading: courseQuery.isPending,
     isSubmittingAnswers: submitIntake.isPending,
-    isStartingBuild: startBuild.isPending,
     onAnswerChange,
     onSubmitAnswers,
-    onApproveBuild,
   }
 }

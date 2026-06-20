@@ -30,15 +30,27 @@ async def run_cleanup() -> int:
         if not expired:
             return 0
         paths = [asset.storage_path for asset in expired if asset.storage_path]
+        deleted_paths: set[str] = set()
         if paths:
             client = storage.build_s3_client()
-            storage.delete_objects(client, keys=paths)
+            deleted_paths = storage.delete_objects(client, keys=paths)
+        row_ids_to_delete = [
+            asset.id
+            for asset in expired
+            if asset.storage_path is None or asset.storage_path in deleted_paths
+        ]
+        skipped = len(expired) - len(row_ids_to_delete)
         async with AsyncSessionLocal() as db:
             await video_asset_service.delete_assets(
-                db, ids=[asset.id for asset in expired]
+                db, ids=row_ids_to_delete
             )
-        logger.info("cleaned %d expired chapter video assets", len(expired))
-        return len(expired)
+        if skipped:
+            logger.warning(
+                "kept %d expired chapter video asset rows after storage delete failure",
+                skipped,
+            )
+        logger.info("cleaned %d expired chapter video assets", len(row_ids_to_delete))
+        return len(row_ids_to_delete)
     finally:
         await engine.dispose()
 

@@ -286,10 +286,8 @@ export function ConversationToolShell({
   failed = false,
   errorMessage,
   isSubmittingAnswers = false,
-  isStartingBuild = false,
   onAnswerChange,
   onSubmitAnswers,
-  onApproveBuild,
   onCancel,
   onEnterCourse,
 }: {
@@ -304,10 +302,8 @@ export function ConversationToolShell({
   failed?: boolean
   errorMessage?: string | null
   isSubmittingAnswers?: boolean
-  isStartingBuild?: boolean
   onAnswerChange?: (questionId: string, option: string) => void
   onSubmitAnswers?: (answers: ConversationToolAnswer[]) => void
-  onApproveBuild?: () => void
   onCancel?: () => void
   onEnterCourse?: () => void
 }) {
@@ -315,7 +311,6 @@ export function ConversationToolShell({
   const selectedAnswers = getSelectedAnswers(questions, answers)
   const canSubmitAnswers =
     selectedAnswers.length > 0 && Boolean(onSubmitAnswers) && !isSubmittingAnswers
-  const canStartBuild = Boolean(onApproveBuild) && !isStartingBuild
 
   return (
     <div
@@ -430,11 +425,10 @@ export function ConversationToolShell({
                 </Button>
                 <Button
                   type="button"
-                  disabled={!canStartBuild}
+                  disabled
                   className={primaryActionButtonClassName}
-                  onClick={onApproveBuild}
                 >
-                  {isStartingBuild ? '启动中…' : '开始'}
+                  开始
                 </Button>
               </div>
             </div>

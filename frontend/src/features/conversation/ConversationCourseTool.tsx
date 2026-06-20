@@ -30,10 +30,8 @@ export function ConversationCourseTool({ courseId }: { courseId: string }) {
       failed={view.failed}
       errorMessage={view.errorMessage}
       isSubmittingAnswers={view.isSubmittingAnswers}
-      isStartingBuild={view.isStartingBuild}
       onAnswerChange={view.onAnswerChange}
       onSubmitAnswers={view.onSubmitAnswers}
-      onApproveBuild={view.onApproveBuild}
       onEnterCourse={() => navigate(`/course/${courseId}`)}
     />
   )

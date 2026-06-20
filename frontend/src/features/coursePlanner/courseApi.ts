@@ -52,10 +52,6 @@ export interface CourseDetail {
   questionnaireReady: boolean
 }
 
-export interface CourseBuildAccepted {
-  courseId: string
-}
-
 export interface CourseToolChapter {
   id: string
   title: string
@@ -233,13 +229,6 @@ export async function getCourseQuestionnaire(
   return data
 }
 
-export async function startBuild(courseId: string): Promise<CourseBuildAccepted> {
-  const { data } = await signOutOn401(
-    apiClient.post<CourseBuildAccepted>(`/api/v1/courses/${courseId}/build`)
-  )
-  return data
-}
-
 export function useSubmitCourseIntakeMutation() {
   const queryClient = useQueryClient()
 
@@ -286,17 +275,6 @@ export function useCourseQuestionnaireQuery(
     // The questionnaire is immutable once generated — never refetch it.
     staleTime: Infinity,
     retry: retryUnlessClientError,
-  })
-}
-
-export function useStartCourseBuildMutation() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: startBuild,
-    onSuccess: (_data, courseId) => {
-      void queryClient.invalidateQueries({ queryKey: courseQueryKey(courseId) })
-    },
   })
 }
 

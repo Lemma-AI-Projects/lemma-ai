@@ -122,16 +122,6 @@ class CourseListItemOut(BaseModel):
     updated_at: datetime
 
 
-class CourseBuildAcceptedOut(BaseModel):
-    """202 response for POST /courses/{id}/build: build enqueued, poll the stream."""
-
-    model_config = ConfigDict(
-        alias_generator=to_camel, populate_by_name=True, from_attributes=True
-    )
-
-    course_id: uuid.UUID
-
-
 class BuildProgressEvent(BaseModel):
     """SSE payload for 阶段二 build progress.
 

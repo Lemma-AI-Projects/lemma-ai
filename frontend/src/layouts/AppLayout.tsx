@@ -125,7 +125,7 @@ export function AppLayout() {
       </div>
 
       <div className="mt-2 flex flex-col gap-1">
-        <SidebarSection title="Projects">
+        <SidebarSection title="Projects" forceClosed={projectsQuery.isPending}>
           <SidebarItem
             icon={FolderPlus}
             label="New Project"
@@ -160,7 +160,7 @@ export function AppLayout() {
           )}
         </SidebarSection>
 
-        <SidebarSection title="Courses">
+        <SidebarSection title="Courses" forceClosed={coursesQuery.isPending}>
           {coursesQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">
               <Skeleton className="h-5 w-full" />
@@ -190,7 +190,11 @@ export function AppLayout() {
           )}
         </SidebarSection>
 
-        <SidebarSection title="Chats" showLine={false}>
+        <SidebarSection
+          title="Chats"
+          forceClosed={conversationsQuery.isPending}
+          showLine={false}
+        >
           {/* [sandbox] 临时调试入口，开发完成后可连同路由和沙盒页面整体移除。 */}
           <SidebarItem
             icon={FlaskConical}

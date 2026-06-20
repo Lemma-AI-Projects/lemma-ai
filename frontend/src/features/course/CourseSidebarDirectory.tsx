@@ -46,11 +46,19 @@ function findCurrentUnitId(course: CourseItem, hash: string): string | null {
     return course.units[0]?.id ?? null
   }
 
-  return (
-    course.units.find(
-      (unit) => targetId === unit.id || targetId.startsWith(`${unit.id}-`)
-    )?.id ?? null
-  )
+  for (const unit of course.units) {
+    if (targetId === unit.id || targetId.startsWith(`${unit.id}-`)) {
+      return unit.id
+    }
+
+    for (const chapter of unit.chapters) {
+      if (targetId === chapter.id || targetId.startsWith(`${chapter.id}-`)) {
+        return unit.id
+      }
+    }
+  }
+
+  return null
 }
 
 function getChapterTaskStatuses(chapter: CourseChapter): CourseProgressStatus[] {

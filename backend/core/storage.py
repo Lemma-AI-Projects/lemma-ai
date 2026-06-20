@@ -81,13 +81,17 @@ def upload_file(client: Any, *, local_path: str, key: str, content_type: str) ->
     )
 
 
-def delete_objects(client: Any, *, keys: list[str]) -> None:
-    """Best-effort delete by key — one missing/odd key never blocks the rest."""
+def delete_objects(client: Any, *, keys: list[str]) -> set[str]:
+    """Best-effort delete by key; return keys the backend accepted as deleted."""
+    deleted: set[str] = set()
     for key in keys:
         try:
             client.delete_object(Bucket=settings.supabase_storage_bucket, Key=key)
         except Exception:  # noqa: BLE001 — cleanup must tolerate a bad/gone key
             logger.exception("failed to delete storage object %s", key)
+        else:
+            deleted.add(key)
+    return deleted
 
 
 def _get_signing_client() -> Client:
