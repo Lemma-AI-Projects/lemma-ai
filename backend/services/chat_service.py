@@ -124,12 +124,15 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
       and this generator's frame is torn down.
     """
     parts: list[str] = []
+    reasoning_parts: list[str] = []
+    reasoning_text: str | None = None
     raw_parts: dict[str, Any] | None = None
     persist_task: asyncio.Task[Any] | None = None
 
     def ensure_persist_scheduled() -> asyncio.Task[Any] | None:
         nonlocal persist_task
         assistant_text = "".join(parts)
+        assistant_reasoning_text = reasoning_text or "".join(reasoning_parts) or None
         if persist_task is None and assistant_text:
             persist_task = aio.spawn_protected(
                 conversation_service.persist_turn(
@@ -140,6 +143,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                     user_content=context.user_content,
                     user_sent_at=context.user_sent_at,
                     assistant_content=assistant_text,
+                    assistant_reasoning_text=assistant_reasoning_text,
                     raw_parts=raw_parts,
                 )
             )
@@ -155,8 +159,13 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         async for chunk in chunk_stream:
             if chunk.kind == "delta" and chunk.text:
                 parts.append(chunk.text)
+            elif chunk.kind == "reasoning":
+                if chunk.reasoning_text:
+                    reasoning_parts.append(chunk.reasoning_text)
+                continue
             elif chunk.kind == "done":
                 raw_parts = chunk.raw_parts
+                reasoning_text = chunk.reasoning_text
                 # Scheduled, NOT awaited: a DB roundtrip before `done` would
                 # hold the user's send button hostage (~1s on dev topology).
                 # Durability is guaranteed by the protected task; the
@@ -209,6 +218,8 @@ async def stream_course_planning_turn(
     the FK pre-persist).
     """
     intro_parts: list[str] = []
+    reasoning_parts: list[str] = []
+    reasoning_text: str | None = None
     raw_parts: dict[str, Any] | None = None
     persist_task: asyncio.Task[Any] | None = None
 
@@ -241,6 +252,7 @@ async def stream_course_planning_turn(
     def ensure_persist_scheduled() -> None:
         nonlocal persist_task
         intro_text = "".join(intro_parts)
+        assistant_reasoning_text = reasoning_text or "".join(reasoning_parts) or None
         # course_id always exists here (created above); persist once the intro
         # has produced output, mirroring the plain chat turn.
         if persist_task is None and intro_text:
@@ -253,6 +265,7 @@ async def stream_course_planning_turn(
                     user_content=context.user_content,
                     user_sent_at=context.user_sent_at,
                     assistant_content=intro_text,
+                    assistant_reasoning_text=assistant_reasoning_text,
                     raw_parts=raw_parts,
                     tool_ref={
                         "type": "course_planning",
@@ -273,12 +286,16 @@ async def stream_course_planning_turn(
                 if chunk.text:
                     intro_parts.append(chunk.text)
                 yield chunk
+            elif chunk.kind == "reasoning":
+                if chunk.reasoning_text:
+                    reasoning_parts.append(chunk.reasoning_text)
             elif chunk.kind == "usage":
                 yield chunk
             elif chunk.kind == "done":
                 # Capture for history rebuild; do NOT forward — the TURN isn't
                 # done until the card is attached below.
                 raw_parts = chunk.raw_parts
+                reasoning_text = chunk.reasoning_text
             elif chunk.kind == "error":
                 # Intro failed before producing output: surface and stop. The
                 # orphan course shell is swept later; nothing is persisted.

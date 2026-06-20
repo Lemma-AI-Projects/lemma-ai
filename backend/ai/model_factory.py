@@ -6,6 +6,8 @@ to 60s, which would stall cross-platform fallback (pydantic-ai issue #3267).
 Never stack tenacity or custom transports on top — retries would multiply.
 """
 
+from typing import Any
+
 import httpx
 from openai import AsyncOpenAI
 from pydantic_ai.models import Model
@@ -93,16 +95,18 @@ def _build_aihubmix_openai(route: ModelRoute) -> Model:
         max_retries=_HTTP_MAX_RETRIES,
         http_client=_require_http_client(),
     )
+    settings_kwargs: dict[str, Any] = {
+        "timeout": route.timeout_s,
+        # AiHubMix repeats cumulative usage across stream chunks (verified
+        # against /v1 on 2026-06-10); without this flag the framework sums
+        # them and doubles the billed token counts.
+        "openai_continuous_usage_stats": True,
+    }
+    _apply_openai_thinking_settings(settings_kwargs, route)
     return OpenAIChatModel(
         route.model,
         provider=OpenAIProvider(openai_client=client),
-        settings=OpenAIChatModelSettings(
-            timeout=route.timeout_s,
-            # AiHubMix repeats cumulative usage across stream chunks (verified
-            # against /v1 on 2026-06-10); without this flag the framework sums
-            # them and doubles the billed token counts.
-            openai_continuous_usage_stats=True,
-        ),
+        settings=OpenAIChatModelSettings(**settings_kwargs),
     )
 
 
@@ -118,6 +122,7 @@ def _build_openrouter(route: ModelRoute) -> Model:
         # Required so streamed responses report usage (终稿 5.2 流式 usage).
         openrouter_usage={"include": True},
     )
+    _apply_openrouter_thinking_settings(model_settings, route)
     # Platform-internal fallback / provider routing stay in the routing table's
     # `extra` and are pushed down here; Lemma only manages cross-platform order.
     if openrouter_models := route.extra.get("openrouter_models"):
@@ -137,5 +142,55 @@ def _build_gemini_framework(route: ModelRoute) -> Model:
     return GoogleModel(
         route.model,
         provider=GoogleProvider(client=gemini_video.build_client()),
-        settings=GoogleModelSettings(timeout=route.timeout_s),
+        settings=GoogleModelSettings(
+            **_google_settings_kwargs(route),
+        ),
     )
+
+
+def _apply_common_thinking_settings(
+    settings_kwargs: dict[str, Any], route: ModelRoute
+) -> None:
+    if "thinking" in route.extra:
+        settings_kwargs["thinking"] = route.extra["thinking"]
+
+
+def _apply_openai_thinking_settings(
+    settings_kwargs: dict[str, Any], route: ModelRoute
+) -> None:
+    _apply_common_thinking_settings(settings_kwargs, route)
+    if "openai_reasoning_effort" in route.extra:
+        settings_kwargs["openai_reasoning_effort"] = route.extra[
+            "openai_reasoning_effort"
+        ]
+    elif "reasoning_effort" in route.extra:
+        settings_kwargs["openai_reasoning_effort"] = route.extra["reasoning_effort"]
+    if "reasoning" in route.extra:
+        extra_body = dict(route.extra.get("extra_body") or {})
+        extra_body["reasoning"] = route.extra["reasoning"]
+        settings_kwargs["extra_body"] = extra_body
+    elif "extra_body" in route.extra:
+        settings_kwargs["extra_body"] = route.extra["extra_body"]
+
+
+def _apply_openrouter_thinking_settings(
+    settings: OpenRouterModelSettings, route: ModelRoute
+) -> None:
+    if "thinking" in route.extra:
+        settings["thinking"] = route.extra["thinking"]
+    if "openrouter_reasoning" in route.extra:
+        settings["openrouter_reasoning"] = route.extra["openrouter_reasoning"]
+    elif "reasoning" in route.extra:
+        settings["openrouter_reasoning"] = route.extra["reasoning"]
+
+
+def _google_settings_kwargs(route: ModelRoute) -> dict[str, Any]:
+    settings_kwargs: dict[str, Any] = {"timeout": route.timeout_s}
+    _apply_common_thinking_settings(settings_kwargs, route)
+    if "google_thinking_config" in route.extra:
+        settings_kwargs["google_thinking_config"] = route.extra[
+            "google_thinking_config"
+        ]
+    elif "thinking_config" in route.extra:
+        settings_kwargs["google_thinking_config"] = route.extra["thinking_config"]
+    return settings_kwargs

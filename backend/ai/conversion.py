@@ -12,6 +12,7 @@ from pydantic_ai.messages import (
     ModelMessagesTypeAdapter,
     ModelRequest,
     ModelResponse,
+    ThinkingPart,
     TextPart,
     UserPromptPart,
     VideoUrl,
@@ -56,15 +57,17 @@ def _text_content(message: ChatMessage) -> str:
 
 
 def to_token_usage(run_usage: RunUsage) -> TokenUsage:
-    raw: dict[str, int] = dict(run_usage.details)
+    raw: dict[str, Any] = dict(run_usage.details)
     if run_usage.cache_read_tokens:
         raw["cache_read_tokens"] = run_usage.cache_read_tokens
     if run_usage.cache_write_tokens:
         raw["cache_write_tokens"] = run_usage.cache_write_tokens
+    reasoning_tokens = _extract_reasoning_tokens(raw)
     return TokenUsage(
         input_tokens=run_usage.input_tokens,
         output_tokens=run_usage.output_tokens,
         total_tokens=run_usage.total_tokens,
+        reasoning_tokens=reasoning_tokens,
         raw=raw,
     )
 
@@ -81,6 +84,83 @@ def response_metadata(
         if isinstance(message, ModelResponse):
             return message.model_name, message.provider_response_id
     return None, None
+
+
+def extract_reasoning_text(messages: list[ModelMessage]) -> str | None:
+    """ThinkingPart text from the last framework model response.
+
+    pydantic-ai 1.106.0 does not expose `ModelResponse.thinking`; provider
+    reasoning is normalized into ThinkingPart entries inside `parts`.
+    """
+    for message in reversed(messages):
+        if isinstance(message, ModelResponse):
+            _, reasoning_text = response_text_and_reasoning(message)
+            return reasoning_text or None
+    return None
+
+
+def response_text_and_reasoning(response: ModelResponse) -> tuple[str, str]:
+    """Visible text and thinking text from a ModelResponse snapshot.
+
+    Stream snapshots are cumulative. Callers can diff the returned strings
+    without depending on part ordering or provider-specific raw fields.
+    """
+    text_parts: list[str] = []
+    reasoning_parts: list[str] = []
+    for part in response.parts:
+        content = getattr(part, "content", None)
+        if not isinstance(content, str):
+            continue
+        if isinstance(part, TextPart):
+            text_parts.append(content)
+        elif isinstance(part, ThinkingPart):
+            reasoning_parts.append(content)
+    return "".join(text_parts), "".join(reasoning_parts)
+
+
+def stream_response_deltas(
+    response: ModelResponse,
+    *,
+    previous_text: str,
+    previous_reasoning_text: str,
+) -> tuple[str, str, str, str]:
+    """Return (text_delta, reasoning_delta, full_text, full_reasoning_text)."""
+    full_text, full_reasoning_text = response_text_and_reasoning(response)
+    return (
+        _append_only_delta(previous_text, full_text),
+        _append_only_delta(previous_reasoning_text, full_reasoning_text),
+        full_text,
+        full_reasoning_text,
+    )
+
+
+def _append_only_delta(previous: str, current: str) -> str:
+    if current == previous:
+        return ""
+    if current.startswith(previous):
+        return current[len(previous) :]
+    # Providers should stream append-only snapshots. If a provider rewrites a
+    # snapshot, prefer surfacing the current content over silently dropping it.
+    return current
+
+
+def _extract_reasoning_tokens(raw: dict[str, Any]) -> int | None:
+    keys = (
+        "reasoning_tokens",
+        "thoughts_tokens",
+        "thoughts_token_count",
+        "completion_tokens_details.reasoning_tokens",
+    )
+    for key in keys:
+        value = raw.get(key)
+        if isinstance(value, int) and value > 0:
+            return value
+    completion_details = raw.get("completion_tokens_details")
+    if isinstance(completion_details, dict):
+        value = completion_details.get("reasoning_tokens")
+        if isinstance(value, int) and value > 0:
+            return value
+    return None
 
 
 def serialize_turn(messages: list[ModelMessage]) -> dict[str, Any]:
@@ -151,5 +231,6 @@ def gemini_usage_to_token_usage(
         input_tokens=metadata.prompt_token_count,
         output_tokens=output_tokens or None,
         total_tokens=metadata.total_token_count,
+        reasoning_tokens=metadata.thoughts_token_count or None,
         raw=raw,
     )

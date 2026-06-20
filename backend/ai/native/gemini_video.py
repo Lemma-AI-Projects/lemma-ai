@@ -19,6 +19,7 @@ import asyncio
 import time
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Any
 
 from google import genai
 from google.genai import types as genai_types
@@ -113,10 +114,20 @@ async def answer(
     file_uri: str,
     mime_type: str | None,
     timeout_s: float,
+    route_extra: dict[str, Any] | None = None,
     client: genai.Client | None = None,
-) -> tuple[str, genai_types.GenerateContentResponseUsageMetadata | None, str | None]:
-    """Non-streaming video Q&A. Returns (text, usage_metadata, response_model)."""
+) -> tuple[
+    str,
+    str | None,
+    genai_types.GenerateContentResponseUsageMetadata | None,
+    str | None,
+]:
+    """Non-streaming video Q&A.
+
+    Returns (text, thinking_text, usage_metadata, response_model).
+    """
     client = client or shared_client()
+    thinking_config = _thinking_config_from_route_extra(route_extra or {})
     response = await client.aio.models.generate_content(
         model=model,
         contents=[
@@ -127,14 +138,56 @@ async def answer(
         ],
         config=genai_types.GenerateContentConfig(
             system_instruction=system_prompt,
+            thinking_config=thinking_config,
             http_options=genai_types.HttpOptions(timeout=int(timeout_s * 1000)),
         ),
     )
     return (
         response.text or "",
+        _extract_thought_text(response),
         response.usage_metadata,
         getattr(response, "model_version", None),
     )
+
+
+def _thinking_config_from_route_extra(
+    route_extra: dict[str, Any],
+) -> genai_types.ThinkingConfig | None:
+    raw = route_extra.get("google_thinking_config") or route_extra.get(
+        "thinking_config"
+    )
+    if isinstance(raw, genai_types.ThinkingConfig):
+        return raw
+    if isinstance(raw, dict):
+        return genai_types.ThinkingConfig(**raw)
+    if "include_thoughts" in route_extra or "thinking_budget" in route_extra:
+        return genai_types.ThinkingConfig(
+            include_thoughts=route_extra.get("include_thoughts"),
+            thinking_budget=route_extra.get("thinking_budget"),
+        )
+    thinking = route_extra.get("thinking")
+    if isinstance(thinking, bool):
+        return genai_types.ThinkingConfig(include_thoughts=thinking)
+    if isinstance(thinking, int):
+        return genai_types.ThinkingConfig(
+            include_thoughts=True, thinking_budget=thinking
+        )
+    if isinstance(thinking, str):
+        return genai_types.ThinkingConfig(
+            include_thoughts=True, thinking_level=thinking
+        )
+    return None
+
+
+def _extract_thought_text(response: Any) -> str | None:
+    parts: list[str] = []
+    for candidate in getattr(response, "candidates", None) or []:
+        content = getattr(candidate, "content", None)
+        for part in getattr(content, "parts", None) or []:
+            text = getattr(part, "text", None)
+            if getattr(part, "thought", False) and isinstance(text, str):
+                parts.append(text)
+    return "".join(parts) or None
 
 
 async def stream_answer(

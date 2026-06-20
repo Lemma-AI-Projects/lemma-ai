@@ -26,11 +26,13 @@ from pydantic_ai.models import Model
 from ai.agents import LemmaDeps, agent_for, structured_agent_for
 from ai.config import routes_for
 from ai.conversion import (
+    extract_reasoning_text,
     gemini_usage_to_token_usage,
     response_cost_usd,
     response_metadata,
     serialize_turn,
     split_history_and_prompt,
+    stream_response_deltas,
     to_token_usage,
     to_video_part,
 )
@@ -40,7 +42,15 @@ from ai.model_factory import build_model
 from ai.native import gemini_video
 from ai.prompts.registry import render_system_prompt
 from ai.routing import resolve
-from ai.types import AIChunk, AIResponse, AIUseCase, ChatMessage, ModelRoute, VideoInput
+from ai.types import (
+    AIChunk,
+    AIResponse,
+    AIStructuredResponse,
+    AIUseCase,
+    ChatMessage,
+    ModelRoute,
+    VideoInput,
+)
 from core import aio
 from ai.usage import (
     ensure_failure_recorded,
@@ -83,6 +93,7 @@ class AIClient:
         token_usage = to_token_usage(result.usage)
         new_messages = result.new_messages()
         actual_model, request_id = response_metadata(new_messages)
+        reasoning_text = extract_reasoning_text(new_messages)
         route = tracker.current_route
         await record_success(
             tracker,
@@ -94,6 +105,7 @@ class AIClient:
         )
         return AIResponse(
             text=result.output,
+            reasoning_text=reasoning_text,
             platform=route.platform,
             model=actual_model or route.model,
             usage=token_usage,
@@ -114,6 +126,7 @@ class AIClient:
         (终稿 5.3), the caller decides whether to retry."""
         tracker = None
         emitted_chars = 0
+        full_reasoning_text = ""
         try:
             agent, deps, history, prompt, model, routes = self._prepare(
                 use_case, messages, user_id, course_id, prompt_vars
@@ -133,14 +146,37 @@ class AIClient:
             stream = await stream_cm.__aenter__()
             interrupted: BaseException | None = None
             empty_response = False
+            raw_parts = None
+            previous_text = ""
+            previous_reasoning_text = ""
             try:
                 try:
-                    async for delta in stream.stream_text(delta=True):
-                        emitted_chars += len(delta)
-                        yield AIChunk(kind="delta", text=delta)
+                    async for response in stream.stream_response():
+                        (
+                            text_delta,
+                            reasoning_delta,
+                            previous_text,
+                            previous_reasoning_text,
+                        ) = stream_response_deltas(
+                            response,
+                            previous_text=previous_text,
+                            previous_reasoning_text=previous_reasoning_text,
+                        )
+                        if reasoning_delta:
+                            yield AIChunk(
+                                kind="reasoning",
+                                reasoning_text=reasoning_delta,
+                            )
+                        if text_delta:
+                            emitted_chars += len(text_delta)
+                            yield AIChunk(kind="delta", text=text_delta)
                     token_usage = to_token_usage(stream.usage)
                     all_messages = stream.all_messages()
                     actual_model, request_id = response_metadata(all_messages)
+                    full_reasoning_text = (
+                        extract_reasoning_text(stream.new_messages())
+                        or previous_reasoning_text
+                    )
                     # Ledger row regardless of output: the provider call
                     # happened and is billed even if it produced no text.
                     # Internal accounting — off the user's critical path
@@ -181,7 +217,11 @@ class AIClient:
                     error_message="model returned an empty response",
                 )
                 return
-            yield AIChunk(kind="done", raw_parts=raw_parts)
+            yield AIChunk(
+                kind="done",
+                raw_parts=raw_parts,
+                reasoning_text=full_reasoning_text or None,
+            )
         except Exception as exc:
             error = map_framework_error(exc)
             if tracker is not None:
@@ -217,6 +257,27 @@ class AIClient:
         run, map errors, account usage (ai_usage_logs) — but the framework's
         structured output is handed back as our own model. Used by ai/coursegen.
         """
+        response = await self.generate_with_response(
+            use_case,
+            prompt,
+            output_type,
+            user_id=user_id,
+            course_id=course_id,
+            prompt_vars=prompt_vars,
+        )
+        return response.output
+
+    async def generate_with_response[T](
+        self,
+        use_case: AIUseCase,
+        prompt: str,
+        output_type: type[T],
+        *,
+        user_id: str | None = None,
+        course_id: str | None = None,
+        prompt_vars: dict[str, str] | None = None,
+    ) -> AIStructuredResponse[T]:
+        """Structured generation with boundary metadata for opt-in callers."""
         agent = structured_agent_for(use_case)
         routes = routes_for(use_case)
         deps = LemmaDeps(
@@ -237,6 +298,8 @@ class AIClient:
         token_usage = to_token_usage(result.usage)
         new_messages = result.new_messages()
         actual_model, request_id = response_metadata(new_messages)
+        reasoning_text = extract_reasoning_text(new_messages)
+        route = tracker.current_route
         await record_success(
             tracker,
             usage=token_usage,
@@ -245,7 +308,13 @@ class AIClient:
             output_chars=len(str(result.output)),
             cost_usd=response_cost_usd(new_messages),
         )
-        return result.output
+        return AIStructuredResponse(
+            output=result.output,
+            reasoning_text=reasoning_text,
+            platform=route.platform,
+            model=actual_model or route.model,
+            usage=token_usage,
+        )
 
     async def ask_video(
         self,
@@ -289,16 +358,23 @@ class AIClient:
                 token_usage = to_token_usage(result.usage)
                 new_messages = result.new_messages()
                 actual_model, request_id = response_metadata(new_messages)
+                reasoning_text = extract_reasoning_text(new_messages)
                 cost_usd = response_cost_usd(new_messages)
             else:
                 # Native channel: AiHubMix reports no per-call cost -> NULL.
-                text, usage_metadata, actual_model = await gemini_video.answer(
+                (
+                    text,
+                    reasoning_text,
+                    usage_metadata,
+                    actual_model,
+                ) = await gemini_video.answer(
                     model=route.model,
                     system_prompt=system_prompt,
                     question=question,
                     file_uri=video.url or "",
                     mime_type=video.mime_type,
                     timeout_s=route.timeout_s,
+                    route_extra=route.extra,
                 )
                 token_usage = gemini_usage_to_token_usage(usage_metadata)
                 request_id = None
@@ -316,6 +392,7 @@ class AIClient:
         )
         return AIResponse(
             text=text,
+            reasoning_text=reasoning_text,
             platform=route.platform,
             model=actual_model or route.model,
             usage=token_usage,

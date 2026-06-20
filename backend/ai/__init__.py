@@ -27,6 +27,7 @@ from ai.streaming import encode_chunk
 from ai.types import (
     AIChunk,
     AIResponse,
+    AIStructuredResponse,
     AIUseCase,
     ChatMessage,
     ModelRoute,
@@ -57,6 +58,7 @@ __all__ = [
     "AIProviderError",
     "AIRateLimitError",
     "AIResponse",
+    "AIStructuredResponse",
     "AITimeoutError",
     "AIUseCase",
     "ChatMessage",

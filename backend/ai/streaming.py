@@ -2,6 +2,7 @@
 and never follow the framework — the frontend codes against this contract:
 
     event: delta   data: {"text": "..."}
+    event: reasoning data: {"text": "..."}  # reserved, not emitted yet
     event: usage   data: {"inputTokens": n, "outputTokens": n, "totalTokens": n}
     event: tool    data: {"type": "course_planning", "courseId": "<uuid>"}
     event: done    data: {}
@@ -25,6 +26,10 @@ def _encode(event: str, data: dict[str, Any]) -> str:
 
 def delta_event(text: str) -> str:
     return _encode("delta", {"text": text})
+
+
+def reasoning_event(text: str) -> str:
+    return _encode("reasoning", {"text": text})
 
 
 def usage_event(usage: TokenUsage) -> str:
@@ -61,6 +66,8 @@ def encode_chunk(chunk: AIChunk) -> str:
     """
     if chunk.kind == "delta":
         return delta_event(chunk.text or "")
+    if chunk.kind == "reasoning":
+        return reasoning_event(chunk.reasoning_text or "")
     if chunk.kind == "usage":
         return usage_event(chunk.usage or TokenUsage())
     if chunk.kind == "tool":

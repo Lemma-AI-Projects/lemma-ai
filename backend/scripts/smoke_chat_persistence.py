@@ -140,6 +140,12 @@ async def main() -> int:
             "raw_parts_json 附件轨带 schema 标记",
         )
         check(rows[0].raw_parts_json is None, "user 消息无附件轨")
+        check(rows[0].reasoning_text is None, "user 消息无 reasoning 轨")
+        check(
+            rows[1].reasoning_text is None
+            or isinstance(rows[1].reasoning_text, str),
+            "assistant reasoning_text 独立列可为空或为文本",
+        )
 
         async with AsyncSessionLocal() as s:
             conv = await conversation_service.get_owned_conversation(
@@ -164,6 +170,11 @@ async def main() -> int:
             "部分回答保存的恰为已吐出的文本",
         )
         check(rows[-1].raw_parts_json is None, "中断轮无附件轨（无完整框架消息）")
+        check(
+            rows[-1].reasoning_text is None
+            or isinstance(rows[-1].reasoning_text, str),
+            "中断轮 reasoning_text 不影响部分正文落库",
+        )
 
         # 台账成功行现在走受保护后台任务，先排空再认账
         await drain_protected_writes()

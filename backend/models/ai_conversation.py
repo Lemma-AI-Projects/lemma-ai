@@ -81,6 +81,9 @@ class AiMessage(Base):
     )
     role: Mapped[str] = mapped_column(String, nullable=False)
     content_text: Mapped[str] = mapped_column(Text, nullable=False)
+    # Provider-returned thinking/reasoning text, stored separately from the
+    # visible answer so content_text remains the display/history truth.
+    reasoning_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_parts_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB, nullable=True
     )

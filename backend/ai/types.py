@@ -7,9 +7,11 @@ leak out of ai/ — conversion.py translates at the boundary.
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
+
+T = TypeVar("T")
 
 
 class AIUseCase(StrEnum):
@@ -70,14 +72,24 @@ class TokenUsage(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
     total_tokens: int | None = None
+    reasoning_tokens: int | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
 
 
 class AIResponse(BaseModel):
     text: str
+    reasoning_text: str | None = None
     platform: str
     # Actual model that answered. After a fallback this can differ from the
     # primary route; response metadata wins over the routing table.
+    model: str
+    usage: TokenUsage | None = None
+
+
+class AIStructuredResponse(BaseModel, Generic[T]):
+    output: T
+    reasoning_text: str | None = None
+    platform: str
     model: str
     usage: TokenUsage | None = None
 
@@ -90,9 +102,11 @@ class AIChunk(BaseModel):
     done (success) or error (failure — possibly after some deltas).
     """
 
-    kind: Literal["delta", "usage", "done", "error", "tool"]
+    kind: Literal["delta", "reasoning", "usage", "done", "error", "tool"]
     # delta
     text: str | None = None
+    # reasoning: internal-only thinking delta/full text, not exposed over SSE yet
+    reasoning_text: str | None = None
     # usage
     usage: TokenUsage | None = None
     # done: framework-serialized turn (schema-tagged) for ai_messages.raw_parts_json
