@@ -69,6 +69,7 @@ export interface CourseToolUnit {
 
 export type CoursePlannerStage =
   | 'questionnaire'
+  | 'searching'
   | 'pending'
   | 'in-progress'
   | 'ready'
@@ -115,6 +116,8 @@ export function mapCourseStatusToStage(status: string): CoursePlannerStage {
   switch (status) {
     case 'intake':
       return 'questionnaire'
+    case 'searching':
+      return 'searching'
     // 搜索前置: after answers, the course goes straight to `organizing`
     // (compose: select + organize), streamed like a build. `outline_ready`/
     // `building` are retired by the new flow but kept mapped for old rows.

@@ -1,15 +1,29 @@
+import { useEffect, useState } from 'react'
+
 /*
  * Adapted from SamHerbert/SVG-Loaders grid.svg.
  * Copyright (c) 2014 Sam Herbert. Licensed under the MIT License.
  */
 export function ConversationThinkingIndicator() {
+  const [dotCount, setDotCount] = useState(1)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setDotCount((current) => (current >= 3 ? 1 : current + 1))
+    }, 420)
+
+    return () => {
+      window.clearInterval(timer)
+    }
+  }, [])
+
   return (
     <div
       role="status"
       aria-live="polite"
       aria-label="AI 正在思考"
       data-slot="conversation-thinking-indicator"
-      className="flex h-7 w-fit items-center text-zinc-400"
+      className="flex h-7 w-fit items-center gap-2 text-zinc-600"
     >
       <svg
         width="18"
@@ -111,6 +125,15 @@ export function ConversationThinkingIndicator() {
           />
         </circle>
       </svg>
+      <span
+        aria-hidden="true"
+        className="text-[15px] font-medium leading-[18px] tracking-normal"
+      >
+        Thinking
+        <span className="inline-block w-[1.5ch]">
+          {'.'.repeat(dotCount)}
+        </span>
+      </span>
       <span className="sr-only">思考中…</span>
     </div>
   )

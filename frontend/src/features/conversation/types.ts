@@ -23,6 +23,7 @@ export interface ConversationToolChapter {
 
 export type ConversationToolStage =
   | 'questionnaire'
+  | 'searching'
   | 'pending'
   | 'in-progress'
   | 'ready'

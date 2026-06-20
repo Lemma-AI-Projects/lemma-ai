@@ -276,6 +276,24 @@ function OutlineContent({
   )
 }
 
+function getOutlineTitlePrefix({
+  failed,
+  stage,
+}: {
+  failed: boolean
+  stage: ConversationToolStage
+}) {
+  if (stage === 'searching') {
+    return '正在搜索相关资料：'
+  }
+
+  if (stage === 'ready') {
+    return failed ? '课程生成未完成：' : '您的课程已就绪：'
+  }
+
+  return ''
+}
+
 export function ConversationToolShell({
   title,
   stage,
@@ -311,6 +329,7 @@ export function ConversationToolShell({
   const selectedAnswers = getSelectedAnswers(questions, answers)
   const canSubmitAnswers =
     selectedAnswers.length > 0 && Boolean(onSubmitAnswers) && !isSubmittingAnswers
+  const titlePrefix = getOutlineTitlePrefix({ failed, stage })
 
   return (
     <div
@@ -360,8 +379,7 @@ export function ConversationToolShell({
               <ProgressStatusIcon status={failed ? 'failed' : 'completed'} />
             </span>
             <span>
-              {stage === 'ready' &&
-                (failed ? '课程生成未完成：' : '您的课程已就绪：')}
+              {titlePrefix}
               {title}
             </span>
           </h3>
@@ -372,7 +390,28 @@ export function ConversationToolShell({
             <p className="mt-3 text-sm text-destructive">{errorMessage}</p>
           ) : null}
 
-          {stage === 'in-progress' ? (
+          {stage === 'searching' ? (
+            <div className="-mx-1 -mb-1 mt-auto flex items-center gap-4 pt-4">
+              <Progress
+                value={normalizedProgress}
+                aria-label={`搜索进度 ${normalizedProgress}%`}
+                className="min-w-0 flex-1 bg-zinc-200 [&_[data-slot=progress-indicator]]:bg-black [&_[data-slot=progress-indicator]]:duration-500 [&_[data-slot=progress-indicator]]:ease-out [&_[data-slot=progress-indicator]]:motion-reduce:transition-none"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled
+                aria-label="搜索由后端任务执行，暂不支持暂停"
+                className="size-9 rounded-full bg-zinc-100 p-0 hover:bg-zinc-100"
+              >
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-[1px] bg-zinc-950"
+                />
+              </Button>
+            </div>
+          ) : stage === 'in-progress' ? (
             <div className="-mx-1 -mb-1 mt-auto flex items-center gap-4 pt-4">
               <Progress
                 value={normalizedProgress}
