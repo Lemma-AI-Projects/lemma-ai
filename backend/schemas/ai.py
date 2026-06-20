@@ -9,6 +9,7 @@ The response body of POST /api/v1/chat is an SSE stream, not JSON. The wire
 protocol is owned by ai/streaming.py; for reference the events are:
 
     event: delta   data: {"text": "..."}
+    event: reasoning data: {"text": "..."}
     event: usage   data: {"inputTokens": n, "outputTokens": n, "totalTokens": n}
     event: tool    data: {"type": "course_planning", "courseId": "<uuid>"}
     event: done    data: {}

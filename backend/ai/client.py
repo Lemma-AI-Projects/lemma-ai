@@ -177,6 +177,18 @@ class AIClient:
                         extract_reasoning_text(stream.new_messages())
                         or previous_reasoning_text
                     )
+                    reasoning_tail = ""
+                    if full_reasoning_text.startswith(previous_reasoning_text):
+                        reasoning_tail = full_reasoning_text[
+                            len(previous_reasoning_text) :
+                        ]
+                    elif full_reasoning_text != previous_reasoning_text:
+                        reasoning_tail = full_reasoning_text
+                    if reasoning_tail:
+                        yield AIChunk(
+                            kind="reasoning",
+                            reasoning_text=reasoning_tail,
+                        )
                     # Ledger row regardless of output: the provider call
                     # happened and is billed even if it produced no text.
                     # Internal accounting — off the user's critical path

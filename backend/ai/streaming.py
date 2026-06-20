@@ -2,7 +2,7 @@
 and never follow the framework — the frontend codes against this contract:
 
     event: delta   data: {"text": "..."}
-    event: reasoning data: {"text": "..."}  # reserved, not emitted yet
+    event: reasoning data: {"text": "..."}
     event: usage   data: {"inputTokens": n, "outputTokens": n, "totalTokens": n}
     event: tool    data: {"type": "course_planning", "courseId": "<uuid>"}
     event: done    data: {}
@@ -10,7 +10,7 @@ and never follow the framework — the frontend codes against this contract:
 
 The `tool` event attaches an interactive tool card to the current turn (a
 deterministic, client-triggered tool — distinct from the LLM tool_call /
-tool_result / reasoning events still reserved for later phases, 裁决 10). Its
+tool_result events still reserved for later phases, 裁决 10). Its
 payload is already wire-shaped (camelCase) and passed through verbatim.
 """
 

@@ -8,7 +8,7 @@ import {
 
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { ConversationThinkingIndicator } from '@/features/conversation/ConversationThinkingIndicator'
+import { ConversationReasoning } from '@/features/conversation/ConversationReasoning'
 import {
   ConversationToolShell,
   type QuestionnaireAnswers,
@@ -545,7 +545,10 @@ export function ConversationSandboxPage() {
             data-slot="conversation-thinking-preview"
             className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5"
           >
-            <ConversationThinkingIndicator />
+            <ConversationReasoning
+              content="I should first identify the learner's current gap, then explain the concept using the smallest useful example before adding edge cases."
+              isStreaming
+            />
           </div>
         </section>
 

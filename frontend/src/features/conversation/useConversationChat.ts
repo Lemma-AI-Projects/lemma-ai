@@ -14,6 +14,7 @@ export type ConversationChatStatus = 'idle' | 'submitted' | 'streaming' | 'error
 export interface LiveChatMessage {
   role: 'user' | 'assistant'
   content: string
+  reasoningText?: string
   createdAt: string
   /** Tool card attached to an assistant turn (course planning, etc.). */
   tool?: ConversationToolRef
@@ -23,6 +24,7 @@ interface ConversationChatState {
   status: ConversationChatStatus
   liveMessages: LiveChatMessage[]
   streamingText: string
+  streamingReasoningText: string
   /** Tool card collected mid-stream; attached to the assistant turn on finalize. */
   streamingTool: ConversationToolRef | null
   errorMessage: string | null
@@ -33,6 +35,7 @@ interface ConversationChatState {
 type ConversationChatAction =
   | { type: 'send'; content: string; createdAt: string }
   | { type: 'delta'; text: string }
+  | { type: 'reasoning'; text: string }
   | { type: 'tool'; tool: ConversationToolRef }
   /** done 与首字后停止共用：已生成内容就是这条消息的最终内容（后端已落库）。 */
   | { type: 'finalize'; createdAt: string }
@@ -46,6 +49,7 @@ const initialState: ConversationChatState = {
   status: 'idle',
   liveMessages: [],
   streamingText: '',
+  streamingReasoningText: '',
   streamingTool: null,
   errorMessage: null,
   canRetry: false,
@@ -64,11 +68,13 @@ function finalizeStreamingText(
   if (state.streamingText.length === 0 && state.streamingTool === null) {
     return state.liveMessages
   }
+  const reasoningText = state.streamingReasoningText.trim()
   return [
     ...state.liveMessages,
     {
       role: 'assistant',
       content: state.streamingText,
+      ...(reasoningText ? { reasoningText: state.streamingReasoningText } : {}),
       createdAt,
       ...(state.streamingTool ? { tool: state.streamingTool } : {}),
     },
@@ -88,6 +94,7 @@ function reduce(
           { role: 'user', content: action.content, createdAt: action.createdAt },
         ],
         streamingText: '',
+        streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
         canRetry: false,
@@ -97,6 +104,12 @@ function reduce(
         ...state,
         status: 'streaming',
         streamingText: state.streamingText + action.text,
+      }
+    case 'reasoning':
+      return {
+        ...state,
+        status: 'streaming',
+        streamingReasoningText: state.streamingReasoningText + action.text,
       }
     case 'tool':
       return {
@@ -109,6 +122,7 @@ function reduce(
         status: 'idle',
         liveMessages: finalizeStreamingText(state, action.createdAt),
         streamingText: '',
+        streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
         canRetry: false,
@@ -118,6 +132,7 @@ function reduce(
         status: 'idle',
         liveMessages: withoutTrailingUserMessage(state.liveMessages),
         streamingText: '',
+        streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
         canRetry: false,
@@ -127,6 +142,7 @@ function reduce(
         status: 'error',
         liveMessages: withoutTrailingUserMessage(state.liveMessages),
         streamingText: '',
+        streamingReasoningText: '',
         streamingTool: null,
         errorMessage: action.message,
         canRetry: false,
@@ -136,6 +152,7 @@ function reduce(
         status: 'error',
         liveMessages: finalizeStreamingText(state, action.createdAt),
         streamingText: '',
+        streamingReasoningText: '',
         streamingTool: null,
         errorMessage: action.message,
         canRetry: true,
@@ -309,6 +326,10 @@ export function useConversationChat({
             }
             apply({ type: 'delta', text })
           },
+          onReasoning: (text) => {
+            if (requestIdRef.current !== requestId) return
+            apply({ type: 'reasoning', text })
+          },
           onTool: (tool) => {
             if (requestIdRef.current !== requestId) return
             // A tool event means the turn produced output (the card persists).
@@ -320,9 +341,14 @@ export function useConversationChat({
           },
         })
         if (requestIdRef.current !== requestId) return
-        // done 必然意味着本轮已产出内容（后端不变式），保险起见此处也采纳
-        adoptPendingId()
-        apply({ type: 'finalize', createdAt: new Date().toISOString() })
+        if (hasOutputRef.current) {
+          adoptPendingId()
+          apply({ type: 'finalize', createdAt: new Date().toISOString() })
+        } else {
+          pendingIdRef.current = null
+          apply({ type: 'rollback' })
+          callbacksRef.current.onRestoreDraft(lastUserTextRef.current ?? content)
+        }
         invalidateConversations()
       } catch (error) {
         if (requestIdRef.current !== requestId || isAbortError(error)) return
@@ -423,6 +449,7 @@ export function useConversationChat({
     status: state.status,
     liveMessages: state.liveMessages,
     streamingText: state.streamingText,
+    streamingReasoningText: state.streamingReasoningText,
     errorMessage: state.errorMessage,
     canRetry: state.canRetry,
     selfCreatedId,

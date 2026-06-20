@@ -10,6 +10,8 @@ export interface ConversationSourceMessage {
   message: string
   date: string
   attachments?: ConversationTurn['attachments']
+  /** Provider-returned thinking/reasoning track, shown separately from body text. */
+  reasoningText?: string | null
   /** Tool card attached to an assistant turn (renders after its text). */
   tool?: ConversationToolRef
 }
@@ -25,9 +27,15 @@ function createTurnBlocks(
     return [{ id: `${baseId}-block-0`, type: 'text', content: message.message }]
   }
 
-  // Assistant turn: its text first, then any tool card (the "reply, then tool"
-  // order the conversation flow requires).
+  // Assistant turn: reasoning first, then text, then any tool card.
   const blocks: ConversationTurnBlock[] = []
+  if (message.reasoningText?.trim()) {
+    blocks.push({
+      id: `${baseId}-reasoning`,
+      type: 'reasoning',
+      content: message.reasoningText,
+    })
+  }
   if (message.message.length > 0) {
     blocks.push({ id: `${baseId}-block-0`, type: 'markdown', content: message.message })
   }

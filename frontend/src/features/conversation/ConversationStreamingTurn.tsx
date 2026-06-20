@@ -1,6 +1,6 @@
 import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { ConversationThinkingIndicator } from './ConversationThinkingIndicator'
+import { ConversationReasoning } from './ConversationReasoning'
 import { AssistantMarkdown } from './markdown'
 import type { ConversationChatStatus } from './useConversationChat'
 
@@ -13,12 +13,14 @@ import type { ConversationChatStatus } from './useConversationChat'
 export function ConversationStreamingTurn({
   status,
   text,
+  reasoningText,
   errorMessage,
   canRetry,
   onRetry,
 }: {
   status: ConversationChatStatus
   text: string
+  reasoningText: string
   errorMessage: string | null
   canRetry: boolean
   onRetry: () => void
@@ -30,7 +32,11 @@ export function ConversationStreamingTurn({
   return (
     <section data-slot="conversation-streaming-turn" className="flex w-full flex-col gap-3 pb-6">
       {status === 'submitted' && (
-        <ConversationThinkingIndicator />
+        <ConversationReasoning content="" isStreaming />
+      )}
+
+      {status === 'streaming' && reasoningText.length > 0 && (
+        <ConversationReasoning content={reasoningText} isStreaming />
       )}
 
       {status === 'streaming' && text.length > 0 && (

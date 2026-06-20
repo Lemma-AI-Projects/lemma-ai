@@ -25,6 +25,7 @@ export interface ConversationMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  reasoningText?: string | null
   createdAt: string
   /** Tool card attached to this turn (present only on tool turns). */
   tool?: ConversationToolRef

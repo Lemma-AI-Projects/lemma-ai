@@ -34,6 +34,7 @@ export interface StreamChatOptions {
    */
   onConversationId?: (id: string) => void
   onDelta: (text: string) => void
+  onReasoning?: (text: string) => void
   onUsage?: (usage: ChatStreamUsage) => void
   /** 工具回合：引导语流式输出后，后端发来一个 tool 事件挂载工具卡片。 */
   onTool?: (tool: ConversationToolRef) => void
@@ -58,6 +59,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     signal,
     onConversationId,
     onDelta,
+    onReasoning,
     onUsage,
     onTool,
   } = options
@@ -103,7 +105,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     throw new ChatStreamError('stream_interrupted', 'Response has no readable body')
   }
 
-  await consumeSseStream(response.body, { onDelta, onUsage, onTool })
+  await consumeSseStream(response.body, { onDelta, onReasoning, onUsage, onTool })
 }
 
 /**
@@ -158,7 +160,10 @@ function parseSseFrame(frame: string): SseFrame | null {
 
 async function consumeSseStream(
   body: ReadableStream<Uint8Array>,
-  handlers: Pick<StreamChatOptions, 'onDelta' | 'onUsage' | 'onTool'>
+  handlers: Pick<
+    StreamChatOptions,
+    'onDelta' | 'onReasoning' | 'onUsage' | 'onTool'
+  >
 ): Promise<void> {
   const reader = body.getReader()
   // 中文等多字节字符可能被网络分块从中间切断，必须用 stream 模式增量解码。
@@ -175,6 +180,13 @@ async function consumeSseStream(
         const payload = JSON.parse(parsed.data) as { text?: string }
         if (typeof payload.text === 'string' && payload.text.length > 0) {
           handlers.onDelta(payload.text)
+        }
+        return
+      }
+      case 'reasoning': {
+        const payload = JSON.parse(parsed.data) as { text?: string }
+        if (typeof payload.text === 'string' && payload.text.length > 0) {
+          handlers.onReasoning?.(payload.text)
         }
         return
       }
@@ -201,7 +213,7 @@ async function consumeSseStream(
         )
       }
       default:
-        // 未知事件（如未来的 tool_call / reasoning）直接忽略
+        // 未知事件（如未来的 tool_call）直接忽略
         return
     }
   }

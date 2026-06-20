@@ -46,6 +46,9 @@ class ConversationMessageOut(BaseModel):
     # DB column is content_text (dual-track storage); the wire keeps the same
     # `content` name the chat request uses.
     content: str = Field(validation_alias="content_text")
+    # Provider-returned thinking/reasoning track. Separate from content so the
+    # visible answer remains the content_text source of truth.
+    reasoning_text: str | None = None
     # Optional tool card attached to this turn (wire-shaped, e.g.
     # {"type": "course_planning", "courseId": "..."}); lets reload re-render the
     # card in place. Sourced from the ai_messages.tool_json column.

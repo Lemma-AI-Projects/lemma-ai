@@ -79,6 +79,7 @@ export function ConversationPage() {
         role: message.role,
         message: message.content,
         date: message.createdAt,
+        reasoningText: message.reasoningText,
         tool: message.tool,
       }))
     )
@@ -88,6 +89,7 @@ export function ConversationPage() {
         role: message.role,
         message: message.content,
         date: message.createdAt,
+        reasoningText: message.reasoningText,
         tool: message.tool,
       }))
     )
@@ -171,6 +173,7 @@ export function ConversationPage() {
         <ConversationStreamingTurn
           status={chat.status}
           text={chat.streamingText}
+          reasoningText={chat.streamingReasoningText}
           errorMessage={chat.errorMessage}
           canRetry={chat.canRetry}
           onRetry={chat.retry}

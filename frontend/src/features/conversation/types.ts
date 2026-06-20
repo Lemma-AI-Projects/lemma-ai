@@ -14,6 +14,12 @@ export interface ConversationMarkdownBlock {
   content: string
 }
 
+export interface ConversationReasoningBlock {
+  id: string
+  type: 'reasoning'
+  content: string
+}
+
 export interface ConversationToolChapter {
   id: string
   title: string
@@ -68,6 +74,7 @@ export interface ConversationToolBlock {
 export type ConversationTurnBlock =
   | ConversationTextBlock
   | ConversationMarkdownBlock
+  | ConversationReasoningBlock
   | ConversationToolBlock
 
 export interface ConversationTurnMetaData {

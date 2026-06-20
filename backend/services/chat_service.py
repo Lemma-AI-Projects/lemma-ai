@@ -162,7 +162,6 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
             elif chunk.kind == "reasoning":
                 if chunk.reasoning_text:
                     reasoning_parts.append(chunk.reasoning_text)
-                continue
             elif chunk.kind == "done":
                 raw_parts = chunk.raw_parts
                 reasoning_text = chunk.reasoning_text
@@ -289,6 +288,7 @@ async def stream_course_planning_turn(
             elif chunk.kind == "reasoning":
                 if chunk.reasoning_text:
                     reasoning_parts.append(chunk.reasoning_text)
+                yield chunk
             elif chunk.kind == "usage":
                 yield chunk
             elif chunk.kind == "done":

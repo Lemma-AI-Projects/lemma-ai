@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
 import { ConversationCourseTool } from './ConversationCourseTool'
+import { ConversationReasoning } from './ConversationReasoning'
 import type { ConversationTurn as ConversationTurnData, ConversationTurnBlock } from './types'
 
 function renderBlock(block: ConversationTurnBlock) {
@@ -14,6 +15,10 @@ function renderBlock(block: ConversationTurnBlock) {
         {block.content}
       </div>
     )
+  }
+
+  if (block.type === 'reasoning') {
+    return <ConversationReasoning key={block.id} content={block.content} />
   }
 
   if (block.type === 'markdown') {
