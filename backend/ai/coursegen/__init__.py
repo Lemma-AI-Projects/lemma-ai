@@ -25,7 +25,7 @@ from ai.coursegen.types import (
 )
 
 if TYPE_CHECKING:  # import-time names for type checkers, no runtime cycle
-    from ai.coursegen.compose import compose_course
+    from ai.coursegen.compose import compose_course, stream_compose_course
     from ai.coursegen.intake import generate_questionnaire
     from ai.coursegen.outline import generate_outline
     from ai.coursegen.ranking import rank
@@ -36,6 +36,7 @@ _LAZY_EXPORTS = {
     # 搜索前置: the active pipeline.
     "search_topic": "ai.coursegen.topic_search",
     "compose_course": "ai.coursegen.compose",
+    "stream_compose_course": "ai.coursegen.compose",
     "generate_questionnaire": "ai.coursegen.intake",
     "rank": "ai.coursegen.ranking",
     # Retired by the search-first flow (kept for rollback; no active import).
@@ -59,6 +60,7 @@ __all__ = [
     "rank",
     "research_chapter",
     "search_topic",
+    "stream_compose_course",
 ]
 
 

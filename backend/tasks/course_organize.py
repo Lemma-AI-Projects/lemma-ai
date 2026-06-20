@@ -14,10 +14,13 @@ import logging
 import uuid
 
 from ai import init_ai_runtime, shutdown_ai_runtime
-from ai.coursegen import compose_course
-from ai.errors import AIError
+from ai.coursegen import stream_compose_course
 from core.database import AsyncSessionLocal, engine
 from services import course_build_service, course_search_service, course_service
+from services.course_organize_events import (
+    OrganizeEventPublisher,
+    build_search_payload,
+)
 from tasks.celery_app import celery_app
 
 logger = logging.getLogger("lemma.tasks.course_organize")
@@ -26,9 +29,21 @@ logger = logging.getLogger("lemma.tasks.course_organize")
 _RETRY = "retry"  # broad search not finished yet — re-check later
 _DONE = "done"  # terminal (ready or failed) — nothing more to do
 
+# Business codes published on the organize channel (frontend maps to copy).
+_COMPOSE_FAILED = "course_compose_failed"
+
 
 async def run_organize(course_id: uuid.UUID) -> str:
-    """One organize attempt. Returns _RETRY (search still running) or _DONE."""
+    """One organize attempt. Returns _RETRY (search still running) or _DONE.
+
+    搜索前置 + 实时 SSE (方案二): gates on search_status, then composes over the
+    cached pool while PUBLISHING live events to `course:organize:{id}` — the real
+    search hits, the model's reasoning as it selects+organizes, and a terminal
+    done/error. The API /organize/stream relays these to the browser. Publishing
+    is best-effort (never blocks compose/persist); the course completes and lands
+    in the DB regardless of whether anyone is listening (acks_late + 幂等 persist).
+    """
+    publisher: OrganizeEventPublisher | None = None
     try:
         async with AsyncSessionLocal() as db:
             search_status = await course_search_service.read_search_status(
@@ -37,10 +52,16 @@ async def run_organize(course_id: uuid.UUID) -> str:
         if search_status is None:
             return _DONE  # course gone
         if search_status == course_search_service.SEARCHING:
-            return _RETRY  # gate: broad search not terminal yet
+            # Gate: broad search not terminal yet. No publisher opened — the API
+            # endpoint emits the `searching` heartbeat on its own until events flow.
+            return _RETRY
+
+        publisher = OrganizeEventPublisher(course_id)
+
         if search_status == course_search_service.SEARCH_FAILED:
             async with AsyncSessionLocal() as db:
                 await course_build_service.mark_failed(db, course_id=course_id)
+            await publisher.error("course_search_failed", "未找到可用的学习视频")
             return _DONE
 
         # search_status == SEARCHED -> compose (needs the AI runtime).
@@ -56,19 +77,36 @@ async def run_organize(course_id: uuid.UUID) -> str:
             if inputs is None:
                 return _DONE  # course gone mid-flight
             topic, answers = inputs
-            try:
-                result = (
-                    await compose_course(topic, answers, candidates)
-                    if candidates
-                    else None
-                )
-            except AIError as exc:
-                logger.warning("compose failed for course %s: %s", course_id, exc)
-                result = None
+            if not candidates:
+                async with AsyncSessionLocal() as db:
+                    await course_build_service.mark_failed(db, course_id=course_id)
+                await publisher.error(_COMPOSE_FAILED, "课程编排未产出有效内容")
+                return _DONE
+
+            # Real search results first, then stream the compose reasoning live.
+            await publisher.search(build_search_payload(candidates))
+            result = None
+            async for event in stream_compose_course(topic, answers, candidates):
+                if event.kind == "reasoning":
+                    if event.reasoning_text:
+                        await publisher.reasoning(event.reasoning_text)
+                elif event.kind == "result":
+                    result = event.result
+                    break
+                elif event.kind == "error":
+                    logger.warning(
+                        "compose failed for course %s: %s",
+                        course_id,
+                        event.error_message,
+                    )
+                    break
+
             if result is None:
                 async with AsyncSessionLocal() as db:
                     await course_build_service.mark_failed(db, course_id=course_id)
+                await publisher.error(_COMPOSE_FAILED, "课程编排未产出有效内容")
                 return _DONE
+
             async with AsyncSessionLocal() as db:
                 final_status = await course_build_service.persist_composed_course(
                     db, course_id=course_id, result=result
@@ -86,10 +124,16 @@ async def run_organize(course_id: uuid.UUID) -> str:
                 from tasks.video_download import download_chapter_video
 
                 download_chapter_video.delay(str(first_chapter_id))
+            if final_status == "ready":
+                await publisher.done()
+            else:
+                await publisher.error(_COMPOSE_FAILED, "课程编排未产出有效内容")
             return _DONE
         finally:
             await shutdown_ai_runtime()
     finally:
+        if publisher is not None:
+            await publisher.aclose()
         # Each task runs in its own asyncio.run loop; dispose the module engine so
         # the next task starts with a clean pool (same discipline as other tasks).
         await engine.dispose()

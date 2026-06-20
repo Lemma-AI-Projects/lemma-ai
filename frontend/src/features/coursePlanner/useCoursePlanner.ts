@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import {
   mapCourseToToolShellData,
-  useCourseBuildStream,
+  useCourseOrganizeStream,
   useCourseQuery,
   useCourseQuestionnaireQuery,
   useSubmitCourseIntakeMutation,
@@ -12,6 +12,7 @@ import {
   type QuestionnaireAnswers,
   type QuestionnaireQuestion,
 } from './courseApi'
+import type { CourseSearchProgress } from './streamCourseOrganize'
 
 // The presentational props the course tool card needs. The connected views
 // (in-conversation card, sandbox) spread this and add context-specific handlers
@@ -24,6 +25,11 @@ export interface CoursePlannerView {
   units: CourseToolUnit[]
   progress: number
   failed: boolean
+  // The searching window (decision ②/⑤): real search hits + live compose
+  // reasoning, streamed over /organize/stream. Only meaningful at stage
+  // 'searching'.
+  search: CourseSearchProgress | null
+  reasoningText: string
   errorMessage: string | null
   isLoading: boolean
   isSubmittingAnswers: boolean
@@ -39,7 +45,8 @@ export interface CoursePlannerView {
  *   GET /courses/{id}          -> stage / title / progress / outline tree
  *   GET /courses/{id}/questionnaire (only at the questionnaire stage)
  *   POST /intake               -> organize starts in the worker
- *   GET /build/stream          -> live organize progress (in-progress -> ready)
+ *   GET /organize/stream       -> live organize SSE (searching: real search
+ *                                 hits + compose reasoning -> ready)
  *
  * The DB snapshot is the truth; this hook only orchestrates the calls and holds
  * the transient answer selections.
@@ -68,9 +75,10 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({})
 
   const submitIntake = useSubmitCourseIntakeMutation()
-  // Streams the live organize snapshot into the course query cache while building.
-  const buildStream = useCourseBuildStream(courseId, {
-    enabled: stage === 'in-progress',
+  // Live organize SSE: real search hits + compose reasoning; writes the
+  // ready/failed snapshot into the course cache on done (无轮询, 决策⑩).
+  const organize = useCourseOrganizeStream(courseId, {
+    enabled: stage === 'searching',
   })
 
   const onAnswerChange = (questionId: string, option: string) => {
@@ -88,8 +96,8 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
 
   const errorMessage = submitIntake.isError
     ? '提交问卷失败，请重试'
-    : buildStream.error
-        ? '构建进度连接中断，正在尝试恢复'
+    : organize.error
+        ? '编排进度连接中断，正在尝试恢复'
         : courseQuery.isError
           ? '加载课程失败，请重试'
           : null
@@ -102,6 +110,8 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
     units: shellData?.units ?? [],
     progress: shellData?.progress ?? 0,
     failed: shellData?.failed ?? false,
+    search: organize.search,
+    reasoningText: organize.reasoningText,
     errorMessage,
     isLoading: courseQuery.isPending,
     isSubmittingAnswers: submitIntake.isPending,

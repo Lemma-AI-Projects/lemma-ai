@@ -4,8 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ProgressStatus } from '@/components/ProgressStatusIcon'
 import { apiClient } from '@/lib/apiClient'
 import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
-import { env } from '@/lib/env'
-import { supabase } from '@/lib/supabaseClient'
+import {
+  CourseOrganizeStreamError,
+  streamCourseOrganize,
+  type CourseSearchProgress,
+} from './streamCourseOrganize'
 
 export interface QuestionnaireQuestion {
   id: string
@@ -84,15 +87,6 @@ export interface CourseToolShellData {
   failed: boolean
 }
 
-interface BuildProgressEvent {
-  course: CourseDetail
-}
-
-interface SseFrame {
-  event: string
-  data: string
-}
-
 // While the intake questionnaire is still generating, poll the course snapshot
 // this often. The interval self-stops (returns false) once it's ready or the
 // course advances/fails, so there is no polling while the user answers.
@@ -116,12 +110,14 @@ export function mapCourseStatusToStage(status: string): CoursePlannerStage {
   switch (status) {
     case 'intake':
       return 'questionnaire'
+    // 搜索前置 + 实时 SSE: after answers the course is `organizing` — the
+    // /organize/stream window (real search hits + compose reasoning). It maps to
+    // the `searching` stage (no chapter tree exists yet; it lands atomically with
+    // `ready`). `searching` is also accepted as a main status for forward compat.
     case 'searching':
-      return 'searching'
-    // 搜索前置: after answers, the course goes straight to `organizing`
-    // (compose: select + organize), streamed like a build. `outline_ready`/
-    // `building` are retired by the new flow but kept mapped for old rows.
     case 'organizing':
+      return 'searching'
+    // `building` is retired by the new flow but kept mapped for old rows.
     case 'building':
       return 'in-progress'
     case 'outline_ready':
@@ -281,178 +277,6 @@ export function useCourseQuestionnaireQuery(
   })
 }
 
-export class CourseBuildStreamError extends Error {
-  readonly code: string
-
-  constructor(code: string, message: string) {
-    super(message)
-    this.name = 'CourseBuildStreamError'
-    this.code = code
-  }
-}
-
-export interface StreamCourseBuildProgressOptions {
-  courseId: string
-  signal: AbortSignal
-  onProgress: (course: CourseDetail) => void
-}
-
-export async function streamCourseBuildProgress({
-  courseId,
-  signal,
-  onProgress,
-}: StreamCourseBuildProgressOptions): Promise<void> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session?.access_token) {
-    throw new CourseBuildStreamError(
-      'invalid_token',
-      'No active Supabase session'
-    )
-  }
-
-  const response = await fetch(
-    `${env.apiBaseUrl.replace(/\/+$/, '')}/api/v1/courses/${courseId}/build/stream`,
-    {
-      method: 'GET',
-      headers: {
-        Accept: 'text/event-stream',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      signal,
-    }
-  )
-
-  if (!response.ok) {
-    throw await toStreamError(response)
-  }
-
-  if (!response.body) {
-    throw new CourseBuildStreamError(
-      'stream_interrupted',
-      'Response has no readable body'
-    )
-  }
-
-  await consumeBuildStream(response.body, { onProgress })
-}
-
-function parseSseFrame(frame: string): SseFrame | null {
-  let event = 'message'
-  const dataLines: string[] = []
-
-  for (const line of frame.split(/\r?\n/)) {
-    if (line.startsWith(':')) continue
-    if (line.startsWith('event:')) {
-      event = line.slice('event:'.length).trim()
-    } else if (line.startsWith('data:')) {
-      dataLines.push(line.slice('data:'.length).trimStart())
-    }
-  }
-
-  if (dataLines.length === 0) {
-    return null
-  }
-
-  return { event, data: dataLines.join('\n') }
-}
-
-async function toStreamError(response: Response): Promise<CourseBuildStreamError> {
-  let detail: unknown
-
-  try {
-    const body: unknown = await response.json()
-    if (body !== null && typeof body === 'object' && 'detail' in body) {
-      detail = (body as { detail: unknown }).detail
-    }
-  } catch {
-    // Non-JSON responses fall back to the HTTP status.
-  }
-
-  if (typeof detail === 'string' && detail.length > 0) {
-    return new CourseBuildStreamError(detail, detail)
-  }
-
-  return new CourseBuildStreamError(
-    `http_${response.status}`,
-    detail !== undefined ? JSON.stringify(detail) : `HTTP ${response.status}`
-  )
-}
-
-async function consumeBuildStream(
-  body: ReadableStream<Uint8Array>,
-  handlers: Pick<StreamCourseBuildProgressOptions, 'onProgress'>
-): Promise<void> {
-  const reader = body.getReader()
-  const decoder = new TextDecoder('utf-8')
-  let buffer = ''
-  let finished = false
-
-  const handleFrame = (frame: string) => {
-    const parsed = parseSseFrame(frame)
-    if (!parsed) return
-
-    switch (parsed.event) {
-      case 'progress': {
-        const payload = JSON.parse(parsed.data) as BuildProgressEvent
-        handlers.onProgress(payload.course)
-        return
-      }
-      case 'done': {
-        finished = true
-        return
-      }
-      case 'error': {
-        const payload = JSON.parse(parsed.data) as {
-          code?: string
-          message?: string
-        }
-        throw new CourseBuildStreamError(
-          payload.code ?? 'course_build_error',
-          payload.message ?? 'Course build stream failed'
-        )
-      }
-      default:
-        return
-    }
-  }
-
-  try {
-    while (!finished) {
-      const { done, value } = await reader.read()
-
-      if (done) {
-        buffer += decoder.decode()
-        break
-      }
-
-      buffer += decoder.decode(value, { stream: true })
-      const frames = buffer.split(/\r?\n\r?\n/)
-      buffer = frames.pop() ?? ''
-
-      for (const frame of frames) {
-        handleFrame(frame)
-        if (finished) break
-      }
-    }
-
-    if (!finished && buffer.trim().length > 0) {
-      handleFrame(buffer)
-    }
-
-    if (!finished) {
-      throw new CourseBuildStreamError(
-        'stream_interrupted',
-        'Stream ended before done event'
-      )
-    }
-  } finally {
-    void reader.cancel().catch(() => undefined)
-  }
-}
-
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
 }
@@ -482,11 +306,37 @@ function waitForReconnect(signal: AbortSignal, delayMs: number): Promise<void> {
   })
 }
 
-export function useCourseBuildStream(
+// Terminal business failures the worker publishes on the organize channel: the
+// course is already failed in the DB, so refetch the snapshot (-> failed stage)
+// instead of reconnecting.
+const ORGANIZE_TERMINAL_CODES = new Set([
+  'course_compose_failed',
+  'course_search_failed',
+  'course_not_found',
+])
+
+export interface CourseOrganizeStreamState {
+  /** Accumulated compose reasoning (live thinking); '' before any arrives. */
+  reasoningText: string
+  /** Real search hits once they land; null while still searching. */
+  search: CourseSearchProgress | null
+  error: Error | null
+}
+
+/**
+ * Live organize SSE (方案二): drives the organizing window from /organize/stream
+ * — real search hits + compose reasoning, NO polling. Writes the ready/failed
+ * snapshot into the course query cache on `done` (-> stage flips to the real
+ * outline / failed). A terminal business error refetches the snapshot; a
+ * transport drop reconnects (losing earlier reasoning is accepted, 决策④).
+ */
+export function useCourseOrganizeStream(
   courseId: string | undefined,
   options: { enabled: boolean; reconnectDelayMs?: number }
-) {
+): CourseOrganizeStreamState {
   const queryClient = useQueryClient()
+  const [reasoningText, setReasoningText] = useState('')
+  const [search, setSearch] = useState<CourseSearchProgress | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const reconnectDelayMs = options.reconnectDelayMs ?? 1_500
 
@@ -498,40 +348,70 @@ export function useCourseBuildStream(
     let active = true
     const controller = new AbortController()
     const activeCourseId = courseId
+    setReasoningText('')
+    setSearch(null)
+    setError(null)
+
+    const refetchSnapshot = async () => {
+      const snapshot = await queryClient.fetchQuery({
+        queryKey: courseQueryKey(activeCourseId),
+        queryFn: () => getCourse(activeCourseId),
+        staleTime: 0,
+      })
+      if (active && !controller.signal.aborted) {
+        queryClient.setQueryData(courseQueryKey(activeCourseId), snapshot)
+      }
+      return snapshot
+    }
 
     const run = async () => {
       while (active && !controller.signal.aborted) {
         try {
-          await streamCourseBuildProgress({
+          const snapshot = await streamCourseOrganize({
             courseId: activeCourseId,
             signal: controller.signal,
-            onProgress: (course) => {
+            onSearching: () => setError(null),
+            onSearch: (next) => {
               setError(null)
-              queryClient.setQueryData(courseQueryKey(activeCourseId), course)
+              setSearch(next)
+            },
+            onReasoning: (text) => {
+              setError(null)
+              setReasoningText((current) => current + text)
             },
           })
+          // `done` carried the ready snapshot — flip straight to the outline.
+          if (active && !controller.signal.aborted) {
+            queryClient.setQueryData(courseQueryKey(activeCourseId), snapshot)
+          }
           return
         } catch (streamError) {
           if (!active || isAbortError(streamError)) {
             return
           }
-
+          // Terminal business failure: the course is failed in the DB. Refetch
+          // the snapshot so the card shows the failed state (no reconnect).
+          if (
+            streamError instanceof CourseOrganizeStreamError &&
+            ORGANIZE_TERMINAL_CODES.has(streamError.code)
+          ) {
+            try {
+              await refetchSnapshot()
+            } catch (snapshotError) {
+              if (active && !isAbortError(snapshotError)) {
+                setError(toError(snapshotError))
+              }
+            }
+            return
+          }
+          // Transport drop: surface it, then reconnect (unless already terminal).
+          // If this keeps failing, verify the Celery worker + Redis are running.
           setError(toError(streamError))
-
           try {
-            // If this keeps returning `building`, verify the Celery worker is
-            // running; the frontend only reflects the DB snapshot stream.
-            const snapshot = await queryClient.fetchQuery({
-              queryKey: courseQueryKey(activeCourseId),
-              queryFn: () => getCourse(activeCourseId),
-              staleTime: 0,
-            })
-
+            const snapshot = await refetchSnapshot()
             if (!active || controller.signal.aborted) {
               return
             }
-
-            queryClient.setQueryData(courseQueryKey(activeCourseId), snapshot)
             if (isTerminalCourseStatus(snapshot.status)) {
               return
             }
@@ -562,5 +442,9 @@ export function useCourseBuildStream(
     }
   }, [courseId, options.enabled, queryClient, reconnectDelayMs])
 
-  return { error: options.enabled ? error : null }
+  return {
+    reasoningText: options.enabled ? reasoningText : '',
+    search: options.enabled ? search : null,
+    error: options.enabled ? error : null,
+  }
 }

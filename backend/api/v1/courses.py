@@ -1,16 +1,17 @@
 import asyncio
+import logging
 import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from models.course import Course
 from schemas.course import (
-    BuildProgressEvent,
     ChapterVideoOut,
     CourseDetailOut,
     CourseListItemOut,
@@ -18,10 +19,14 @@ from schemas.course import (
     QuestionnaireOut,
 )
 from services import (
+    course_organize_events,
     course_planning_service,
+    course_search_service,
     course_service,
     video_asset_service,
 )
+
+logger = logging.getLogger("lemma.api.courses")
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -29,9 +34,11 @@ _NOT_FOUND = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="course_not_found"
 )
 
-# SSE organize/build progress: poll the DB snapshot this often; stop at terminal.
-_BUILD_POLL_INTERVAL_S = 1.0
+# organize SSE heartbeat / DB-watchdog cadence (also the degrade poll interval).
+_HEARTBEAT_S = 1.0
 _TERMINAL_STATUSES = frozenset({"ready", "failed"})
+_COMPOSE_FAILED = "course_compose_failed"
+_COMPOSE_FAILED_MESSAGE = "课程编排未产出有效内容"
 
 
 @router.post(
@@ -48,7 +55,7 @@ async def submit_intake(
     # 搜索前置: record answers, flip the course to `organizing`, and enqueue the
     # organize task (compose over the pre-searched candidate pool, gated on the
     # broad search finishing). Returns the `organizing` snapshot (empty units);
-    # the card then streams progress via /build/stream until ready/failed.
+    # the card then streams progress via /organize/stream until ready/failed.
     answers = {answer.question_id: answer.answer for answer in payload.answers}
     detail = await course_planning_service.submit_answers(
         db, current_user, course_id=course_id, answers=answers
@@ -122,21 +129,25 @@ async def get_questionnaire(
     return questionnaire
 
 
-@router.get("/{course_id}/build/stream")
-async def stream_build(
+@router.get("/{course_id}/organize/stream")
+async def stream_organize(
     course_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    # Ownership checked once up front (consistent 404); the stream then polls the
-    # DB snapshot — it never talks to the worker directly (DB is the truth).
+    # Ownership checked once up front (consistent 404). The stream relays the
+    # worker's live organize events (real search hits + compose reasoning) from
+    # Redis; an already-terminal course gets one terminal frame (reconnect safe),
+    # and a Redis outage degrades to a DB snapshot stream (决策⑦).
     detail = await course_service.get_course_detail(
         db, user_id=current_user.id, course_id=course_id
     )
     if detail is None:
         raise _NOT_FOUND
     return StreamingResponse(
-        _build_event_stream(user_id=current_user.id, course_id=course_id),
+        _organize_event_stream(
+            user_id=current_user.id, course_id=course_id, initial=detail
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -145,29 +156,136 @@ async def stream_build(
     )
 
 
-def _progress_frame(detail: CourseDetailOut) -> str:
-    payload = BuildProgressEvent(course=detail).model_dump_json(by_alias=True)
-    return f"event: progress\ndata: {payload}\n\n"
-
-
-async def _build_event_stream(
+async def _course_snapshot(
     *, user_id: uuid.UUID, course_id: uuid.UUID
-) -> AsyncIterator[str]:
-    """Emit a full snapshot each tick (no diff) until the build is terminal.
+) -> CourseDetailOut | None:
+    async with AsyncSessionLocal() as db:
+        return await course_service.get_course_detail(
+            db, user_id=user_id, course_id=course_id
+        )
 
-    Each poll uses its own short-lived session (never holds the request's db for
-    the stream's lifetime). Reconnect is naturally correct: the first frame is a
-    fresh full snapshot.
+
+def _terminal_frame(detail: CourseDetailOut) -> str:
+    """SSE frame for a terminal course: done(snapshot) on ready, error on failed.
+    done carries the CourseDetailOut snapshot so the card flips straight to the
+    real outline without a refetch (决策②); mode=json keeps it wire-safe."""
+    if detail.status == "failed":
+        return course_organize_events.to_sse(
+            "error", {"code": _COMPOSE_FAILED, "message": _COMPOSE_FAILED_MESSAGE}
+        )
+    return course_organize_events.to_sse(
+        "done", detail.model_dump(by_alias=True, mode="json")
+    )
+
+
+async def _terminal_frame_if_done(
+    *, user_id: uuid.UUID, course_id: uuid.UUID
+) -> str | None:
+    """DB watchdog: the terminal SSE frame if the course has finished, else None.
+    Course gone mid-stream -> an error frame (ends the stream cleanly)."""
+    detail = await _course_snapshot(user_id=user_id, course_id=course_id)
+    if detail is None:
+        return course_organize_events.to_sse(
+            "error", {"code": "course_not_found", "message": "课程不存在或已删除"}
+        )
+    if detail.status not in _TERMINAL_STATUSES:
+        return None
+    return _terminal_frame(detail)
+
+
+async def _organize_event_stream(
+    *, user_id: uuid.UUID, course_id: uuid.UUID, initial: CourseDetailOut
+) -> AsyncIterator[str]:
+    """Relay the worker's organize events to the browser.
+
+    Reconnect safe: an already-terminal course gets only its terminal frame.
+    Otherwise subscribe to Redis and forward search/reasoning; idle ticks drive
+    the `searching` heartbeat and a DB watchdog (so a terminal published before
+    we subscribed — pub/sub has no replay — still ends the stream). Any Redis
+    failure degrades to the DB snapshot stream (决策⑦), invisible to the client.
     """
+    if initial.status in _TERMINAL_STATUSES:
+        yield _terminal_frame(initial)
+        return
+
+    seen_event = False
+    try:
+        async for envelope in course_organize_events.subscribe(
+            course_id, poll_timeout=_HEARTBEAT_S
+        ):
+            if envelope is None:
+                if not seen_event:
+                    yield course_organize_events.to_sse("searching", {})
+                terminal = await _terminal_frame_if_done(
+                    user_id=user_id, course_id=course_id
+                )
+                if terminal is not None:
+                    yield terminal
+                    return
+                continue
+            event = envelope.get("event")
+            data = envelope.get("data") or {}
+            if event in ("search", "reasoning"):
+                seen_event = True
+                yield course_organize_events.to_sse(event, data)
+            elif event == "done":
+                # Worker signals done; build the snapshot from our own context.
+                terminal = await _terminal_frame_if_done(
+                    user_id=user_id, course_id=course_id
+                )
+                yield (
+                    terminal
+                    if terminal is not None
+                    else course_organize_events.to_sse(
+                        "error",
+                        {"code": _COMPOSE_FAILED, "message": _COMPOSE_FAILED_MESSAGE},
+                    )
+                )
+                return
+            elif event == "error":
+                yield course_organize_events.to_sse(
+                    "error",
+                    {
+                        "code": data.get("code") or _COMPOSE_FAILED,
+                        "message": data.get("message") or _COMPOSE_FAILED_MESSAGE,
+                    },
+                )
+                return
+    except (RedisError, OSError) as exc:
+        logger.warning("organize stream degraded to DB snapshot: %s", exc)
+        async for frame in _degrade_snapshot_stream(
+            user_id=user_id, course_id=course_id, search_emitted=seen_event
+        ):
+            yield frame
+
+
+async def _degrade_snapshot_stream(
+    *, user_id: uuid.UUID, course_id: uuid.UUID, search_emitted: bool
+) -> AsyncIterator[str]:
+    """Redis-down fallback: poll the DB ~1s, emit searching/search/done/error
+    (no live reasoning). Mirrors the retired /build/stream snapshot loop."""
     while True:
-        async with AsyncSessionLocal() as db:
-            detail = await course_service.get_course_detail(
-                db, user_id=user_id, course_id=course_id
-            )
+        detail = await _course_snapshot(user_id=user_id, course_id=course_id)
         if detail is None:
-            return  # course deleted mid-stream — just end
-        yield _progress_frame(detail)
-        if detail.status in _TERMINAL_STATUSES:
-            yield "event: done\ndata: {}\n\n"
+            yield course_organize_events.to_sse(
+                "error", {"code": "course_not_found", "message": "课程不存在或已删除"}
+            )
             return
-        await asyncio.sleep(_BUILD_POLL_INTERVAL_S)
+        if detail.status in _TERMINAL_STATUSES:
+            yield _terminal_frame(detail)
+            return
+        if not search_emitted:
+            async with AsyncSessionLocal() as db:
+                pool = await course_search_service.load_search_candidates(
+                    db, course_id=course_id
+                )
+            if pool:
+                yield course_organize_events.to_sse(
+                    "search", course_organize_events.build_search_payload(pool)
+                )
+                search_emitted = True
+            else:
+                yield course_organize_events.to_sse("searching", {})
+        else:
+            yield course_organize_events.to_sse("searching", {})
+        await asyncio.sleep(_HEARTBEAT_S)

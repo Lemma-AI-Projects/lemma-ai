@@ -94,6 +94,28 @@ class AIStructuredResponse(BaseModel, Generic[T]):
     usage: TokenUsage | None = None
 
 
+class StructuredStreamEvent(BaseModel, Generic[T]):
+    """One typed event from AIClient.stream_generate (streamed structured gen).
+
+    Counterpart to AIChunk for the structured path: instead of text deltas it
+    streams the THINKING track, then hands back the validated output.
+
+    - reasoning -> an incremental thinking delta (the visible "thinking" track);
+    - result    -> the final validated structured output (terminal, success);
+    - error     -> a mapped business error code/message (terminal, failure).
+
+    Exactly one terminal event (result or error) ends the stream. `usage` is
+    carried on the result event for callers that want it.
+    """
+
+    kind: Literal["reasoning", "result", "error"]
+    reasoning_text: str | None = None
+    result: T | None = None
+    usage: TokenUsage | None = None
+    error_code: str | None = None
+    error_message: str | None = None
+
+
 class AIChunk(BaseModel):
     """One typed streaming event from the AIClient facade.
 

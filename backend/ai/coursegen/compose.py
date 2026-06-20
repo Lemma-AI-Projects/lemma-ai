@@ -7,6 +7,7 @@ LLM 的规模与 token。返回前做**零信任校验**：每个 candidate_ref 
 """
 
 import logging
+from collections.abc import AsyncIterator
 
 from ai.client import ai_client
 from ai.coursegen.ranking import rank
@@ -16,8 +17,9 @@ from ai.coursegen.types import (
     ResolvedChapter,
     ResolvedUnit,
 )
+from ai.errors import AIError
 from ai.search import VideoCandidate
-from ai.types import AIUseCase
+from ai.types import AIUseCase, StructuredStreamEvent
 
 logger = logging.getLogger("lemma.ai.coursegen")
 
@@ -37,33 +39,95 @@ def candidate_ref(candidate: VideoCandidate) -> str:
     return f"{candidate.platform.value}:{candidate.platform_video_id}"
 
 
-async def compose_course(
-    topic: str,
-    answers: dict[str, str] | None,
-    candidates: list[VideoCandidate],
-) -> ComposedCourseResult | None:
-    """Select + organize real candidates into a validated course. None when the
-    pool is empty or nothing valid survives validation (-> caller marks failed)."""
-    if not candidates:
-        return None
-    ranked = rank(candidates)[:_COMPOSE_TOP_K]
-    by_ref = {candidate_ref(candidate): candidate for candidate in ranked}
+def _compose_prompt(
+    topic: str, answers: dict[str, str] | None, ranked: list[VideoCandidate]
+) -> str:
     listing = "\n".join(_format_candidate(candidate) for candidate in ranked)
-    prompt = (
+    return (
         f"学习主题：{topic}\n"
         f"问卷画像：{_format_profile(answers)}\n\n"
         f"候选视频清单（每条以 ref=<标识> 开头，绑定章节时 candidate_ref 必须用该 ref）：\n"
         f"{listing}"
     )
-    composed = await ai_client.generate(
-        AIUseCase.COURSE_COMPOSE, prompt, ComposedCourse
-    )
-    units = _resolve_units(composed, by_ref)
+
+
+def _validate_composed(
+    composed: ComposedCourse | None,
+    by_ref: dict[str, VideoCandidate],
+    *,
+    topic: str,
+) -> ComposedCourseResult | None:
+    """零信任校验 on the FINAL compose output -> ComposedCourseResult, or None
+    when nothing valid survives (caller marks the course failed)."""
+    units = _resolve_units(composed, by_ref) if composed is not None else []
     if not units:
         logger.warning("compose produced no valid chapter for topic %r", topic)
         return None
-    title = (composed.title or "").strip() or topic
+    title = (composed.title or "").strip() or topic if composed else topic
     return ComposedCourseResult(title=title, units=units)
+
+
+async def stream_compose_course(
+    topic: str,
+    answers: dict[str, str] | None,
+    candidates: list[VideoCandidate],
+) -> AsyncIterator[StructuredStreamEvent[ComposedCourseResult]]:
+    """Streamed select + organize: forward the model's reasoning live as it
+    selects+organizes, then yield exactly one terminal event:
+
+    - result(ComposedCourseResult) — validated course (every chapter a real
+      candidate); result is None when the pool is empty or nothing survives the
+      zero-trust validation (-> caller marks the course failed);
+    - error(code, message) — the compose model call failed.
+
+    The candidate_ref validation (零信任 LLM) is unchanged — it runs on the
+    FINAL ComposedCourse, exactly as the non-streaming path did.
+    """
+    if not candidates:
+        yield StructuredStreamEvent(kind="result", result=None)
+        return
+    ranked = rank(candidates)[:_COMPOSE_TOP_K]
+    by_ref = {candidate_ref(candidate): candidate for candidate in ranked}
+    prompt = _compose_prompt(topic, answers, ranked)
+    async for event in ai_client.stream_generate(
+        AIUseCase.COURSE_COMPOSE, prompt, ComposedCourse
+    ):
+        if event.kind == "reasoning":
+            yield StructuredStreamEvent(
+                kind="reasoning", reasoning_text=event.reasoning_text
+            )
+            continue
+        if event.kind == "error":
+            yield StructuredStreamEvent(
+                kind="error",
+                error_code=event.error_code,
+                error_message=event.error_message,
+            )
+            return
+        # event.kind == "result": validate the final structured output.
+        yield StructuredStreamEvent(
+            kind="result",
+            result=_validate_composed(event.result, by_ref, topic=topic),
+        )
+        return
+
+
+async def compose_course(
+    topic: str,
+    answers: dict[str, str] | None,
+    candidates: list[VideoCandidate],
+) -> ComposedCourseResult | None:
+    """Non-streaming convenience over stream_compose_course (drains it).
+
+    Kept for callers/smokes that only need the validated result. None when the
+    pool is empty or nothing valid survives; raises AIError on a model failure
+    (same contract as before the streaming refactor)."""
+    async for event in stream_compose_course(topic, answers, candidates):
+        if event.kind == "error":
+            raise AIError(event.error_message or "course compose failed")
+        if event.kind == "result":
+            return event.result
+    return None
 
 
 def _resolve_units(

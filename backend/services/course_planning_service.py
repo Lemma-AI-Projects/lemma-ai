@@ -95,13 +95,20 @@ async def submit_answers(
     )
     if course is None:
         return None
+    # 单发布者守卫 (决策⑥): only the intake->organizing transition enqueues the
+    # organize task, so a re-submit (already organizing) never spawns a second
+    # publisher racing the first on the same Redis channel. Combined with the
+    # idempotent persist (clean-slate) + acks_late retry, one course = one
+    # publishing task.
+    already_organizing = course.status == _ORGANIZING
     course.intake_json = {**(course.intake_json or {}), "answers": answers}
     course.status = _ORGANIZING
     await db.commit()
-    # Lazy import: tasks import services, so importing at module top would cycle.
-    from tasks.course_organize import organize_course
+    if not already_organizing:
+        # Lazy import: tasks import services, so importing at module top would cycle.
+        from tasks.course_organize import organize_course
 
-    organize_course.delay(str(course_id))
+        organize_course.delay(str(course_id))
     return await course_service.get_course_detail(
         db, user_id=user.id, course_id=course_id
     )
