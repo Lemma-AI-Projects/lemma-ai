@@ -4,59 +4,23 @@ import { CourseAssignmentView } from '@/features/course/assignment/CourseAssignm
 import { CourseOverviewView } from '@/features/course/overview/CourseOverviewView'
 import { CourseQuizView } from '@/features/course/quiz/CourseQuizView'
 import { CourseVideoView } from '@/features/course/video/CourseVideoView'
-import type {
-  CourseAssignment,
-  CourseChapter,
-  CourseItem,
-  CourseOverview,
-  CourseProgressStatus,
-  CourseQuiz,
-  CourseUnit,
-  CourseVideoLesson,
-} from '@/mock/course/courseItems'
+import {
+  resolveCourseContent,
+  type CourseContent,
+  type CourseContentType,
+} from '@/features/course/resolveCourseContent'
+import type { CourseItem } from '@/mock/course/courseItems'
 
-export type CourseContentType = 'overview' | 'video' | 'quiz' | 'assignment'
-export type CourseContentScope = 'unit' | 'chapter'
-
-interface CourseContentBase {
-  course: CourseItem
-  unit: CourseUnit
-  chapter?: CourseChapter
-  scope: CourseContentScope
-  status: CourseProgressStatus
-  title: string
-}
-
-export interface CourseOverviewContent extends CourseContentBase {
-  type: 'overview'
-  data: CourseOverview
-}
-
-export interface CourseVideoContent extends CourseContentBase {
-  type: 'video'
-  chapter: CourseChapter
-  data: CourseVideoLesson
-}
-
-export interface CourseQuizContent extends CourseContentBase {
-  type: 'quiz'
-  data: CourseQuiz
-}
-
-export interface CourseAssignmentContent extends CourseContentBase {
-  type: 'assignment'
-  data: CourseAssignment
-}
-
-export type CourseQuestionFlowContent = CourseQuizContent | CourseAssignmentContent
-
-export type CourseContent =
-  | CourseOverviewContent
-  | CourseVideoContent
-  | CourseQuizContent
-  | CourseAssignmentContent
+export type {
+  CourseAssignmentContent,
+  CourseOverviewContent,
+  CourseQuestionFlowContent,
+  CourseQuizContent,
+  CourseVideoContent,
+} from '@/features/course/resolveCourseContent'
 
 interface CourseMainContentProps {
+  content?: CourseContent | null
   course?: CourseItem
 }
 
@@ -76,137 +40,21 @@ const courseContentViewMap: Record<
     ) : null,
 }
 
-function getDefaultTargetId(course: CourseItem) {
-  // This step delivers chapter videos only, so a course opens on the first
-  // chapter's video (overview/quiz/assignment are out of scope and hidden).
-  const firstChapter = course.units[0]?.chapters[0]
-
-  if (firstChapter) {
-    return `${firstChapter.id}-video`
-  }
-
-  return ''
-}
-
-function resolveCourseContent(
-  course: CourseItem | undefined,
-  hash: string
-): CourseContent | null {
-  if (!course) {
-    return null
-  }
-
-  const targetId = decodeURIComponent(hash.replace(/^#/, '')) || getDefaultTargetId(course)
-
-  for (const unit of course.units) {
-    if (targetId === `${unit.id}-overview` || targetId === unit.id) {
-      return {
-        course,
-        unit,
-        scope: 'unit',
-        type: 'overview',
-        title: `${unit.title} overview`,
-        status: unit.overview.status,
-        data: unit.overview,
-      }
-    }
-
-    if (targetId === `${unit.id}-quiz`) {
-      return {
-        course,
-        unit,
-        scope: 'unit',
-        type: 'quiz',
-        title: `${unit.title} quiz`,
-        status: unit.quiz.status,
-        data: unit.quiz,
-      }
-    }
-
-    if (targetId === `${unit.id}-assignment`) {
-      return {
-        course,
-        unit,
-        scope: 'unit',
-        type: 'assignment',
-        title: `${unit.title} assignment`,
-        status: unit.assignment.status,
-        data: unit.assignment,
-      }
-    }
-
-    for (const chapter of unit.chapters) {
-      if (targetId === `${chapter.id}-overview` || targetId === chapter.id) {
-        return {
-          course,
-          unit,
-          chapter,
-          scope: 'chapter',
-          type: 'overview',
-          title: `${chapter.title} overview`,
-          status: chapter.overview.status,
-          data: chapter.overview,
-        }
-      }
-
-      if (targetId === `${chapter.id}-video`) {
-        return {
-          course,
-          unit,
-          chapter,
-          scope: 'chapter',
-          type: 'video',
-          title: chapter.video.title,
-          status: chapter.video.status,
-          data: chapter.video,
-        }
-      }
-
-      if (targetId === `${chapter.id}-quiz`) {
-        return {
-          course,
-          unit,
-          chapter,
-          scope: 'chapter',
-          type: 'quiz',
-          title: `${chapter.title} quiz`,
-          status: chapter.quiz.status,
-          data: chapter.quiz,
-        }
-      }
-
-      if (targetId === `${chapter.id}-assignment`) {
-        return {
-          course,
-          unit,
-          chapter,
-          scope: 'chapter',
-          type: 'assignment',
-          title: `${chapter.title} assignment`,
-          status: chapter.assignment.status,
-          data: chapter.assignment,
-        }
-      }
-    }
-  }
-
-  return null
-}
-
-export function CourseMainContent({ course }: CourseMainContentProps) {
+export function CourseMainContent({ content, course }: CourseMainContentProps) {
   const location = useLocation()
-  const content = useMemo(
+  const resolvedContent = useMemo(
     () => resolveCourseContent(course, location.hash),
     [course, location.hash]
   )
+  const currentContent = content !== undefined ? content : resolvedContent
 
   if (!course) {
     return null
   }
 
-  if (!content) {
+  if (!currentContent) {
     return null
   }
 
-  return courseContentViewMap[content.type](content)
+  return courseContentViewMap[currentContent.type](currentContent)
 }

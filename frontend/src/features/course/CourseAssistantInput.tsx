@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties, type KeyboardEvent } from 'react'
 import {
   ArrowUp,
   BookOpen,
@@ -12,6 +12,7 @@ import {
   Lightbulb,
   ListChecks,
   Plus,
+  Square,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -24,12 +25,46 @@ import {
 } from '@/components/InputMenu'
 import { CourseAssistantIconButton } from './CourseAssistantIconButton'
 
-export function CourseAssistantInput({ className }: { className?: string }) {
-  const [value, setValue] = useState('')
+export function CourseAssistantInput({
+  className,
+  disabled = false,
+  isStreaming,
+  onSend,
+  onStop,
+  onValueChange,
+  placeholder = 'Ask about this course...',
+  value,
+}: {
+  className?: string
+  disabled?: boolean
+  isStreaming: boolean
+  onSend: (text: string) => void
+  onStop: () => void
+  onValueChange: (value: string) => void
+  placeholder?: string
+  value: string
+}) {
   const [includeContext, setIncludeContext] = useState(true)
   const [deepThinking, setDeepThinking] = useState(false)
   const [webSearch, setWebSearch] = useState(false)
   const hasContent = value.trim().length > 0
+  const canSend = hasContent && !disabled && !isStreaming
+
+  const submit = () => {
+    const text = value.trim()
+    if (!text || disabled || isStreaming) {
+      return
+    }
+    onSend(text)
+    onValueChange('')
+  }
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault()
+      submit()
+    }
+  }
 
   return (
     <div
@@ -39,11 +74,13 @@ export function CourseAssistantInput({ className }: { className?: string }) {
       )}
     >
       <textarea
-        placeholder="Ask about this course..."
         rows={1}
+        disabled={disabled}
         value={value}
-        onChange={(event) => setValue(event.target.value)}
-        className="scrollbar-hidden max-h-24 min-h-16 w-full resize-none overflow-y-auto border-0 bg-transparent px-3.5 pt-3.5 pb-1.5 text-sm leading-6 text-zinc-900 outline-none placeholder:text-zinc-400"
+        placeholder={placeholder}
+        onChange={(event) => onValueChange(event.target.value)}
+        onKeyDown={handleKeyDown}
+        className="scrollbar-hidden max-h-24 min-h-16 w-full resize-none overflow-y-auto border-0 bg-transparent px-3.5 pt-3.5 pb-1.5 text-sm leading-6 text-zinc-900 outline-none placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:text-zinc-400"
         style={{ fieldSizing: 'content' } as CSSProperties}
       />
 
@@ -99,16 +136,21 @@ export function CourseAssistantInput({ className }: { className?: string }) {
         <CourseAssistantIconButton
           type="button"
           tone="send"
-          disabled={!hasContent}
+          disabled={!isStreaming && !canSend}
           className={cn(
             'ml-auto',
-            hasContent
+            isStreaming || canSend
               ? 'bg-zinc-900 hover:bg-zinc-800'
               : 'cursor-default bg-zinc-200 text-zinc-400'
           )}
-          aria-label="Send message"
+          aria-label={isStreaming ? 'Stop generating' : 'Send message'}
+          onClick={isStreaming ? onStop : submit}
         >
-          <ArrowUp className="size-4" />
+          {isStreaming ? (
+            <Square className="size-3.5 fill-current" />
+          ) : (
+            <ArrowUp className="size-4" />
+          )}
         </CourseAssistantIconButton>
       </div>
     </div>

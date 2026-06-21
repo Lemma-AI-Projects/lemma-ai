@@ -1,23 +1,34 @@
-import { courseConversationItems } from '@/mock/course/courseConversationItems'
-import { courseItems } from '@/mock/course/courseItems'
 import { cn } from '@/lib/utils'
+import type { CourseCompanionConversation } from './courseCompanionApi'
 
 export function CourseConversationPills({
   activeConversationId,
-  courseId,
+  conversations,
+  isError = false,
+  isLoading = false,
   onSelectConversation,
 }: {
   activeConversationId?: string
-  courseId?: string
+  conversations: CourseCompanionConversation[]
+  isError?: boolean
+  isLoading?: boolean
   onSelectConversation?: (conversationId: string) => void
 }) {
-  const course = courseItems.find((item) => item.id === courseId)
-  const conversations =
-    course?.conversationIds
-      .map((conversationId) =>
-        courseConversationItems.find((item) => item.id === conversationId)
-      )
-      .filter((item) => item !== undefined) ?? []
+  if (isLoading) {
+    return (
+      <span className="shrink-0 rounded-full bg-zinc-200/70 px-2.5 py-1 text-xs font-medium text-zinc-400">
+        加载中…
+      </span>
+    )
+  }
+
+  if (isError) {
+    return (
+      <span className="shrink-0 rounded-full bg-zinc-200/70 px-2.5 py-1 text-xs font-medium text-zinc-500">
+        加载失败
+      </span>
+    )
+  }
 
   if (conversations.length === 0) {
     return (
@@ -41,9 +52,9 @@ export function CourseConversationPills({
               : 'bg-zinc-200/70 text-zinc-600 hover:bg-zinc-300/70 hover:text-zinc-800'
           )}
           onClick={() => onSelectConversation?.(conversation.id)}
-          title={conversation.title}
+          title={conversation.title ?? '新对话'}
         >
-          {conversation.title}
+          {conversation.title ?? '新对话'}
         </button>
       ))}
     </div>

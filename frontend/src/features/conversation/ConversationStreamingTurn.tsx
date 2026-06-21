@@ -2,7 +2,13 @@ import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ConversationReasoning } from './ConversationReasoning'
 import { AssistantMarkdown } from './markdown'
-import type { ConversationChatStatus } from './useConversationChat'
+
+export type ConversationStreamingTurnStatus =
+  | 'idle'
+  | 'submitted'
+  | 'preparing'
+  | 'streaming'
+  | 'error'
 
 /**
  * 进行中的 AI 回答区域：等首字时显示"思考中"，流式输出时渲染增量
@@ -16,13 +22,15 @@ export function ConversationStreamingTurn({
   reasoningText,
   errorMessage,
   canRetry,
+  waitingMessage = 'Thinking...',
   onRetry,
 }: {
-  status: ConversationChatStatus
+  status: ConversationStreamingTurnStatus
   text: string
   reasoningText: string
   errorMessage: string | null
   canRetry: boolean
+  waitingMessage?: string
   onRetry: () => void
 }) {
   if (status === 'idle') {
@@ -33,6 +41,10 @@ export function ConversationStreamingTurn({
     <section data-slot="conversation-streaming-turn" className="flex w-full flex-col gap-3 pb-6">
       {status === 'submitted' && (
         <ConversationReasoning content="" isStreaming />
+      )}
+
+      {status === 'preparing' && (
+        <p className="animate-pulse text-sm text-zinc-400">{waitingMessage}</p>
       )}
 
       {status === 'streaming' && reasoningText.length > 0 && (
