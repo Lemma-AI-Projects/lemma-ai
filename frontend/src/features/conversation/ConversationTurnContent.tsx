@@ -47,7 +47,9 @@ export function ConversationTurnContent({
         // gap separates stacked blocks (e.g. the intro text and the tool card)
         // so the card reads as part of the assistant message, not pasted on.
         'flex min-w-0 flex-col gap-4',
-        turn.role === 'assistant' ? 'w-full' : 'max-w-[70%]'
+        turn.role === 'assistant'
+          ? "w-full [&>[data-slot='conversation-reasoning']+*]:-mt-1.5"
+          : 'max-w-[70%]'
       )}
     >
       {turn.blocks.map(renderBlock)}
