@@ -42,6 +42,10 @@ class AIUseCase(StrEnum):
     # chapter's re-hosted video via the Gemini Files API and explains it. A video
     # use case (gemini_video channel), streamed with reasoning.
     COURSE_COMPANION = "course_companion"
+    # Chapter overview: the model watches the chapter's video and writes a
+    # learning-oriented Markdown summary, streamed (gemini_video + reasoning) and
+    # cached. Distinct prompt from VIDEO_SUMMARY (study notes, not a recap).
+    COURSE_OVERVIEW = "course_overview"
 
 
 class VideoInputKind(StrEnum):
@@ -128,7 +132,9 @@ class AIChunk(BaseModel):
     done (success) or error (failure — possibly after some deltas).
     """
 
-    kind: Literal["delta", "reasoning", "usage", "done", "error", "tool"]
+    kind: Literal[
+        "delta", "reasoning", "usage", "done", "error", "tool", "preparing"
+    ]
     # delta
     text: str | None = None
     # reasoning: internal-only thinking delta/full text, not exposed over SSE yet

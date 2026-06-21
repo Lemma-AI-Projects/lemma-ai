@@ -89,7 +89,11 @@ export function CoursePage() {
     () => resolveCourseContent(course, location.hash),
     [course, location.hash]
   )
-  const activeChapterId = content?.type === 'video' ? content.chapter.id : null
+  // Companion is text-first + always on; it carries the CURRENT content node's
+  // chapter (any chapter-scoped node: video/overview/quiz/assignment) so the
+  // video tool can load that chapter on demand. Unit-scoped nodes -> null (the
+  // companion answers text-only). Every turn re-reads it (非粘性).
+  const activeChapterId = content?.chapter?.id ?? null
   const [activeConversationId, setActiveConversationId] = useState<
     string | undefined
   >(undefined)
@@ -213,10 +217,12 @@ export function CoursePage() {
   const isConversationNotFound =
     messagesQuery.isError && isNotFoundError(messagesQuery.error)
   const isHistoryLoadFailed = messagesQuery.isError && !isConversationNotFound
-  const canUseCompanion = Boolean(id && activeChapterId)
-  const inputPlaceholder = canUseCompanion
-    ? 'Ask about this video...'
-    : 'Open a video chapter to ask...'
+  // Always available on a course page (text-first); the video is pulled in by
+  // the model on demand only when the question needs it.
+  const canUseCompanion = Boolean(id)
+  const inputPlaceholder = activeChapterId
+    ? '问问关于本章的任何问题…'
+    : '问问关于本课程的任何问题…'
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

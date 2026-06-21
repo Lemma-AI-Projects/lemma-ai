@@ -42,6 +42,7 @@ from ai.model_factory import build_model
 from ai.native import gemini_video
 from ai.prompts.registry import render_system_prompt
 from ai.routing import resolve
+from ai.tools.types import ToolBinding, ToolCall, ToolProgress, ToolResult
 from ai.types import (
     AIChunk,
     AIResponse,
@@ -50,6 +51,7 @@ from ai.types import (
     ChatMessage,
     ModelRoute,
     StructuredStreamEvent,
+    TokenUsage,
     VideoInput,
 )
 from core import aio
@@ -67,6 +69,7 @@ _VIDEO_USE_CASES = frozenset(
         AIUseCase.VIDEO_SUMMARY,
         AIUseCase.VIDEO_LOCATE,
         AIUseCase.COURSE_COMPANION,
+        AIUseCase.COURSE_OVERVIEW,
     }
 )
 
@@ -636,6 +639,117 @@ class AIClient:
         finally:
             # Client disconnect lands here without record_success: book the
             # interrupted attempt (no-op if success/failure already recorded).
+            task = aio.spawn_protected(
+                finalize_stream(tracker, emitted_chars=emitted_chars)
+            )
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.shield(task)
+
+    async def stream_tool_chat(
+        self,
+        use_case: AIUseCase,
+        *,
+        question: str,
+        history: list[ChatMessage] | None = None,
+        tools: list[ToolBinding] | None = None,
+        user_id: str | None = None,
+        course_id: str | None = None,
+        conversation_id: str | None = None,
+        prompt_vars: dict[str, str] | None = None,
+    ) -> AsyncIterator[AIChunk]:
+        """Text-first streaming chat with optional function-calling tools (决策⑩-a).
+
+        The model answers in text by default and may call a bound tool (e.g. load
+        the chapter video) when it decides it needs it; the manual FC loop runs
+        on the native channel inside gemini_video and yields AIChunk events
+        identical to stream_chat (so the API encodes them via encode_chunk). Tool
+        HANDLERS are injected by the caller (services) — ai/ never imports
+        services; new tools are added by binding a ToolSpec + handler, the loop
+        is untouched. Native engine only (tools + media + text on one channel).
+        """
+        if settings.ai_video_engine != "native":
+            raise UnsupportedCapabilityError(
+                "tool-calling chat requires the native gemini channel"
+            )
+        routes = routes_for(use_case)
+        route = routes[0]
+        system_prompt = render_system_prompt(use_case, prompt_vars)
+        turns: list[tuple[str, str]] = []
+        for message in history or []:
+            if message.role not in ("user", "assistant"):
+                continue
+            text = message.content if isinstance(message.content, str) else ""
+            if text:
+                turns.append((message.role, text))
+        handlers = {binding.spec.name: binding.handler for binding in tools or []}
+        specs = [binding.spec for binding in tools or []]
+
+        async def dispatch(
+            call: ToolCall,
+        ) -> AsyncIterator[ToolProgress | ToolResult]:
+            handler = handlers.get(call.name)
+            if handler is None:
+                # Unknown tool — hand the model a graceful error so it recovers.
+                yield ToolResult(response={"status": "unknown_tool"})
+                return
+            async for event in handler(call):
+                yield event
+
+        tracker = start_tracking(
+            use_case, routes, user_id=user_id, conversation_id=conversation_id
+        )
+        emitted_chars = 0
+        final_usage = TokenUsage()
+        try:
+            try:
+                async for chunk in gemini_video.stream_tool_chat(
+                    model=route.model,
+                    system_prompt=system_prompt,
+                    question=question,
+                    history=turns,
+                    tool_specs=specs,
+                    dispatch=dispatch,
+                    timeout_s=route.timeout_s,
+                    route_extra=route.extra,
+                ):
+                    if chunk.kind == "usage":
+                        # Internal: the turn's summed usage. Recorded once below;
+                        # not relayed here to avoid a duplicate SSE usage frame.
+                        final_usage = chunk.usage or TokenUsage()
+                        continue
+                    if chunk.kind == "delta" and chunk.text:
+                        emitted_chars += len(chunk.text)
+                    yield chunk  # reasoning / delta / preparing
+            except (GeneratorExit, asyncio.CancelledError):
+                raise
+            aio.spawn_protected(
+                record_success(
+                    tracker,
+                    usage=final_usage,
+                    actual_model=route.model,
+                    request_id=None,
+                    output_chars=emitted_chars,
+                    cost_usd=None,
+                )
+            )
+            if emitted_chars == 0:
+                yield AIChunk(
+                    kind="error",
+                    error_code="ai_provider_error",
+                    error_message="model returned an empty response",
+                )
+                return
+            yield AIChunk(kind="usage", usage=final_usage)
+            yield AIChunk(kind="done")
+        except (GeneratorExit, asyncio.CancelledError):
+            raise
+        except Exception as exc:
+            error = map_framework_error(exc)
+            await ensure_failure_recorded(tracker, error=exc)
+            yield AIChunk(
+                kind="error", error_code=error.code, error_message=error.message
+            )
+        finally:
             task = aio.spawn_protected(
                 finalize_stream(tracker, emitted_chars=emitted_chars)
             )

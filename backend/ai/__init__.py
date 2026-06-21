@@ -24,6 +24,15 @@ from ai.media.provider_files import delete_video, upload_video
 from ai.model_factory import init_http_client, shutdown_http_client
 from ai.native.gemini_video import close_shared_client
 from ai.streaming import encode_chunk
+from ai.tools import (
+    LOAD_CHAPTER_VIDEO,
+    ToolBinding,
+    ToolCall,
+    ToolProgress,
+    ToolResult,
+    ToolSpec,
+    tool_spec,
+)
 from ai.types import (
     AIChunk,
     AIResponse,
@@ -50,6 +59,7 @@ async def shutdown_ai_runtime() -> None:
 
 
 __all__ = [
+    "LOAD_CHAPTER_VIDEO",
     "AIChunk",
     "AIClient",
     "AIConfigError",
@@ -63,6 +73,11 @@ __all__ = [
     "AIUseCase",
     "ChatMessage",
     "ModelRoute",
+    "ToolBinding",
+    "ToolCall",
+    "ToolProgress",
+    "ToolResult",
+    "ToolSpec",
     "TokenUsage",
     "UnsupportedCapabilityError",
     "VideoInput",
@@ -74,5 +89,6 @@ __all__ = [
     "from_url",
     "init_ai_runtime",
     "shutdown_ai_runtime",
+    "tool_spec",
     "upload_video",
 ]

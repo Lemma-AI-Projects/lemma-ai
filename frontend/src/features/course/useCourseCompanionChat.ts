@@ -369,10 +369,10 @@ export function useCourseCompanionChat({
   const send = (content: string) => {
     const trimmed = content.trim()
     const { status } = stateRef.current
+    // chapterId may be null (text-only nodes) — the companion is always usable.
     if (
       !trimmed ||
       !courseId ||
-      !chapterId ||
       status === 'submitted' ||
       status === 'preparing' ||
       status === 'streaming'

@@ -64,6 +64,9 @@ video_locate_agent = _build_agent()
 # framework agent only serves the pydantic_ai engine path, like the other video
 # agents.
 course_companion_agent = _build_agent()
+# Chapter overview: native gemini_video streams it; this framework agent only
+# serves the pydantic_ai engine path, like the other video agents.
+course_overview_agent = _build_agent()
 
 _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.TEXT_CHAT: text_chat_agent,
@@ -72,6 +75,7 @@ _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.VIDEO_SUMMARY: video_summary_agent,
     AIUseCase.VIDEO_LOCATE: video_locate_agent,
     AIUseCase.COURSE_COMPANION: course_companion_agent,
+    AIUseCase.COURSE_OVERVIEW: course_overview_agent,
 }
 
 course_intake_agent = _build_structured_agent(Questionnaire)

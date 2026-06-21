@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 interface CourseOverviewMarkdownProps {
   children: string
   className?: string
+  /** Live generation: parse incomplete Markdown so partial deltas render cleanly. */
+  isStreaming?: boolean
 }
 
 const courseOverviewMarkdownComponents: Components = {
@@ -62,10 +64,11 @@ const courseOverviewMarkdownComponents: Components = {
 export function CourseOverviewMarkdown({
   children,
   className,
+  isStreaming = false,
 }: CourseOverviewMarkdownProps) {
   return (
     <Streamdown
-      mode="static"
+      mode={isStreaming ? 'streaming' : 'static'}
       dir="auto"
       shikiTheme={['github-light', 'github-dark']}
       mermaid={{ config: { theme: 'neutral', fontFamily: 'inherit' } }}

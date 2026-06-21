@@ -66,6 +66,15 @@ export interface ChapterVideo {
   expiresAt: string | null
 }
 
+// Chapter overview fast-read (backend schemas/overview.py). `ready` -> markdown
+// is the finished note; anything else -> open the SSE stream to (re)generate.
+export type ChapterOverviewStatus = 'ready' | 'pending' | 'generating' | 'failed'
+
+export interface ChapterOverview {
+  status: ChapterOverviewStatus
+  markdown: string | null
+}
+
 // --- query keys (local to the course-learning feature, like coursePlanner) ---
 
 export const courseLearningRootKey = ['course-learning'] as const
@@ -77,6 +86,10 @@ export function learningCourseQueryKey(courseId: string) {
 
 export function chapterVideoQueryKey(courseId: string, chapterId: string) {
   return [...courseLearningRootKey, 'video', courseId, chapterId] as const
+}
+
+export function chapterOverviewQueryKey(courseId: string, chapterId: string) {
+  return [...courseLearningRootKey, 'overview', courseId, chapterId] as const
 }
 
 // Poll the chapter-video endpoint this often while the asset is downloading; it
@@ -143,6 +156,18 @@ export async function getChapterVideo(
   const { data } = await signOutOn401(
     apiClient.get<ChapterVideo>(
       `/api/v1/courses/${courseId}/chapters/${chapterId}/video`
+    )
+  )
+  return data
+}
+
+export async function getChapterOverview(
+  courseId: string,
+  chapterId: string
+): Promise<ChapterOverview> {
+  const { data } = await signOutOn401(
+    apiClient.get<ChapterOverview>(
+      `/api/v1/courses/${courseId}/chapters/${chapterId}/overview`
     )
   )
   return data

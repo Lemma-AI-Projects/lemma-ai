@@ -271,6 +271,34 @@ async def get_chapter_asset_status(
     return asset.status if asset is not None else None
 
 
+async def ensure_download(
+    db: AsyncSession, *, chapter_id: uuid.UUID, candidate_id: uuid.UUID
+) -> str:
+    """Drive the chapter's chosen-candidate download, enqueuing it when missing /
+    stale / failed-past-cooldown. Returns the resulting asset status
+    (ready / downloading / failed). Ownership is enforced upstream (same
+    convention as get_ready_stored_video / load_download_target — no user/course
+    filter here), so the overview SSE + companion video tool can self-drive the
+    「无资产→下载」 step (决策④) without re-checking IDOR every poll tick.
+    """
+    asset = await _get_asset(db, chapter_id)
+    if asset is not None and asset.candidate_id == candidate_id:
+        if asset.status == "ready" and asset.storage_path:
+            return "ready"
+        if asset.status in ("pending", "downloading"):
+            return "downloading"
+        if (
+            asset.status == "failed"
+            and datetime.now(UTC) - asset.updated_at < _FAILED_RETRY_COOLDOWN
+        ):
+            return "failed"
+    # Missing / expired / stale (re-pick) / failed-past-cooldown: (re)create a
+    # pending row and enqueue the download (lazy, mirrors get_chapter_video).
+    await _ensure_pending(db, chapter_id=chapter_id, candidate_id=candidate_id)
+    _enqueue_download(chapter_id)
+    return "downloading"
+
+
 async def get_ready_stored_video(
     db: AsyncSession, *, chapter_id: uuid.UUID
 ) -> StoredVideo | None:

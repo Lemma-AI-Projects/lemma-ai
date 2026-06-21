@@ -20,6 +20,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.usage import RunUsage
 
 from ai.errors import UnsupportedCapabilityError
+from ai.tools.types import ToolCall, ToolSpec
 from ai.types import ChatMessage, TokenUsage, VideoInput
 
 
@@ -206,6 +207,50 @@ def to_video_part(video: VideoInput, engine: str) -> Any:
     if engine == "pydantic_ai":
         return VideoUrl(url=video.url or "", media_type=mime_type)
     return genai_types.Part.from_uri(file_uri=video.url or "", mime_type=mime_type)
+
+
+# --- function calling (决策⑩-a): the ONLY place that touches genai tool types ---
+
+
+def to_genai_tool(specs: list[ToolSpec]) -> genai_types.Tool:
+    """Boundary ToolSpecs -> one genai Tool with their function declarations."""
+    return genai_types.Tool(
+        function_declarations=[
+            genai_types.FunctionDeclaration(
+                name=spec.name,
+                description=spec.description,
+                parameters=spec.parameters or None,
+            )
+            for spec in specs
+        ]
+    )
+
+
+def function_calls_from_parts(parts: Any) -> list[ToolCall]:
+    """Extract boundary ToolCalls from a streamed chunk's content parts."""
+    calls: list[ToolCall] = []
+    for part in parts or []:
+        function_call = getattr(part, "function_call", None)
+        if function_call is not None and getattr(function_call, "name", None):
+            calls.append(
+                ToolCall(name=function_call.name, args=dict(function_call.args or {}))
+            )
+    return calls
+
+
+def to_function_call_part(call: ToolCall) -> genai_types.Part:
+    """Rebuild the model's function_call as a Part (to replay its turn)."""
+    return genai_types.Part.from_function_call(name=call.name, args=call.args)
+
+
+def to_function_response_part(name: str, response: dict[str, Any]) -> genai_types.Part:
+    """A tool's JSON result -> the function_response Part fed back to the model."""
+    return genai_types.Part.from_function_response(name=name, response=response)
+
+
+def to_media_part(video: VideoInput) -> genai_types.Part:
+    """A media tool's VideoInput -> a native media Part (user-turn injection)."""
+    return to_video_part(video, "native")
 
 
 def gemini_usage_to_token_usage(

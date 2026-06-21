@@ -53,7 +53,10 @@ def check(condition: bool, label: str) -> None:
 def offline_checks() -> None:
     validate_routes()
     template = render_system_prompt(AIUseCase.COURSE_COMPANION)
-    check(bool(template.strip()) and "视频" in template, "companion 模板非空且面向视频")
+    check(
+        bool(template.strip()) and "load_chapter_video" in template,
+        "companion 模板非空且说明可调 load_chapter_video 工具",
+    )
 
     routes = routes_for(AIUseCase.COURSE_COMPANION)
     check(routes[0].adapter == "gemini_video", "companion 路由走 gemini_video")
@@ -74,6 +77,11 @@ def offline_checks() -> None:
     check(
         isinstance(request.chapter_id, uuid.UUID) and request.conversation_id is None,
         "CompanionChatRequest camelCase 解析",
+    )
+    no_chapter = CompanionChatRequest.model_validate({"message": "纯文本提问"})
+    check(
+        no_chapter.chapter_id is None,
+        "CompanionChatRequest chapterId 可选(可为 null)",
     )
 
 
@@ -193,6 +201,8 @@ async def db_checks() -> None:
         )
     check(foreign_course is None, "prepare_turn: 陌生课程 -> None")
 
+    # 契约变更: 课程内无该章节(或无视频) 不再 404 —— 返回 context 但 candidate 为 None
+    # (视频工具届时退化为 unavailable，纯文本作答)。
     async with AsyncSessionLocal() as db:
         bad_chapter = await companion_service.prepare_turn(
             db,
@@ -200,7 +210,25 @@ async def db_checks() -> None:
             user,
             course_id=course_id,
         )
-    check(bad_chapter is None, "prepare_turn: 课程内无该章节 -> None")
+    check(
+        bad_chapter is not None and bad_chapter.candidate_id is None,
+        "prepare_turn: 课程内无该章节 -> context(candidate=None, 不再 404)",
+    )
+
+    # 契约变更: chapterId 省略(纯文本节点) 也合法 —— context.chapter_id/candidate 均 None。
+    async with AsyncSessionLocal() as db:
+        no_chapter_ctx = await companion_service.prepare_turn(
+            db,
+            CompanionChatRequest(message="hi"),
+            user,
+            course_id=course_id,
+        )
+    check(
+        no_chapter_ctx is not None
+        and no_chapter_ctx.chapter_id is None
+        and no_chapter_ctx.candidate_id is None,
+        "prepare_turn: 无 chapterId -> context(纯文本)",
+    )
 
     async with AsyncSessionLocal() as db:
         context = await companion_service.prepare_turn(

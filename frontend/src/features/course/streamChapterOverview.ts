@@ -1,78 +1,62 @@
 import { env } from '@/lib/env'
 import { supabase } from '@/lib/supabaseClient'
 
-export interface CourseCompanionStreamUsage {
-  inputTokens: number | null
-  outputTokens: number | null
-  totalTokens: number | null
-}
-
-export class CourseCompanionStreamError extends Error {
+export class ChapterOverviewStreamError extends Error {
   readonly code: string
 
   constructor(code: string, message: string) {
     super(message)
-    this.name = 'CourseCompanionStreamError'
+    this.name = 'ChapterOverviewStreamError'
     this.code = code
   }
 }
 
-export interface StreamCourseCompanionChatOptions {
+export interface StreamChapterOverviewOptions {
   courseId: string
-  /** Current content node's chapter, or null on a text-only node (unit/no chapter).
-   *  Sent every turn (非粘性); the model loads the video on demand when needed. */
-  chapterId: string | null
-  message: string
-  conversationId?: string
+  chapterId: string
   signal: AbortSignal
-  onConversationId?: (id: string) => void
+  /** The chapter video is uploading to Gemini before generation can start. */
   onPreparing?: () => void
-  onDelta: (text: string) => void
+  /** A reasoning delta (live thinking) ahead of the Markdown. */
   onReasoning?: (text: string) => void
-  onUsage?: (usage: CourseCompanionStreamUsage) => void
+  /** A Markdown delta (accumulate into the overview body). */
+  onDelta: (text: string) => void
 }
 
-export async function streamCourseCompanionChat(
-  options: StreamCourseCompanionChatOptions
+/**
+ * SSE client for GET /api/v1/courses/{id}/chapters/{chapterId}/overview/stream.
+ *
+ * Mirrors streamCourseOrganize: fetch + getReader (EventSource can't send
+ * Authorization), Supabase token attached manually. Resolves on `done`; throws
+ * ChapterOverviewStreamError on an `error` event (terminal business failure).
+ * The same chat SSE protocol as the companion (preparing/reasoning/delta/usage/
+ * done/error) so a ready overview arrives as one delta + done (cache fast path).
+ */
+export async function streamChapterOverview(
+  options: StreamChapterOverviewOptions
 ): Promise<void> {
-  const {
-    courseId,
-    chapterId,
-    message,
-    conversationId,
-    signal,
-    onConversationId,
-    onPreparing,
-    onDelta,
-    onReasoning,
-    onUsage,
-  } = options
+  const { courseId, chapterId, signal, onPreparing, onReasoning, onDelta } =
+    options
 
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
   if (!session?.access_token) {
-    throw new CourseCompanionStreamError(
+    throw new ChapterOverviewStreamError(
       'invalid_token',
       'No active Supabase session'
     )
   }
 
   const response = await fetch(
-    `${env.apiBaseUrl.replace(/\/+$/, '')}/api/v1/courses/${courseId}/companion/chat`,
+    `${env.apiBaseUrl.replace(/\/+$/, '')}/api/v1/courses/${courseId}/chapters/${chapterId}/overview/stream`,
     {
-      method: 'POST',
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
         Accept: 'text/event-stream',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({
-        ...(conversationId ? { conversationId } : {}),
-        chapterId,
-        message,
-      }),
       signal,
     }
   )
@@ -81,29 +65,19 @@ export async function streamCourseCompanionChat(
     throw await toStreamError(response)
   }
 
-  const headerConversationId = response.headers.get('X-Conversation-Id')
-  if (headerConversationId) {
-    onConversationId?.(headerConversationId)
-  }
-
   if (!response.body) {
-    throw new CourseCompanionStreamError(
+    throw new ChapterOverviewStreamError(
       'stream_interrupted',
       'Response has no readable body'
     )
   }
 
-  await consumeSseStream(response.body, {
-    onPreparing,
-    onDelta,
-    onReasoning,
-    onUsage,
-  })
+  await consumeSseStream(response.body, { onPreparing, onReasoning, onDelta })
 }
 
 async function toStreamError(
   response: Response
-): Promise<CourseCompanionStreamError> {
+): Promise<ChapterOverviewStreamError> {
   let detail: unknown
   try {
     const body: unknown = await response.json()
@@ -115,10 +89,10 @@ async function toStreamError(
   }
 
   if (typeof detail === 'string' && detail.length > 0) {
-    return new CourseCompanionStreamError(detail, detail)
+    return new ChapterOverviewStreamError(detail, detail)
   }
 
-  return new CourseCompanionStreamError(
+  return new ChapterOverviewStreamError(
     `http_${response.status}`,
     detail !== undefined ? JSON.stringify(detail) : `HTTP ${response.status}`
   )
@@ -152,8 +126,8 @@ function parseSseFrame(frame: string): SseFrame | null {
 async function consumeSseStream(
   body: ReadableStream<Uint8Array>,
   handlers: Pick<
-    StreamCourseCompanionChatOptions,
-    'onPreparing' | 'onDelta' | 'onReasoning' | 'onUsage'
+    StreamChapterOverviewOptions,
+    'onPreparing' | 'onReasoning' | 'onDelta'
   >
 ): Promise<void> {
   const reader = body.getReader()
@@ -184,7 +158,6 @@ async function consumeSseStream(
         return
       }
       case 'usage':
-        handlers.onUsage?.(JSON.parse(parsed.data) as CourseCompanionStreamUsage)
         return
       case 'done':
         finished = true
@@ -194,9 +167,9 @@ async function consumeSseStream(
           code?: string
           message?: string
         }
-        throw new CourseCompanionStreamError(
+        throw new ChapterOverviewStreamError(
           payload.code ?? 'ai_error',
-          payload.message ?? 'AI companion stream failed'
+          payload.message ?? 'Chapter overview stream failed'
         )
       }
       default:
@@ -228,7 +201,7 @@ async function consumeSseStream(
     }
 
     if (!finished) {
-      throw new CourseCompanionStreamError(
+      throw new ChapterOverviewStreamError(
         'stream_interrupted',
         'Stream ended before done event'
       )

@@ -17,14 +17,24 @@ Two SDK facts verified 2026-06-10:
 
 import asyncio
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from typing import Any
 
 from google import genai
 from google.genai import types as genai_types
 
+from ai.conversion import (
+    function_calls_from_parts,
+    gemini_usage_to_token_usage,
+    to_function_call_part,
+    to_function_response_part,
+    to_genai_tool,
+    to_media_part,
+)
 from ai.errors import AIProviderError, AITimeoutError
+from ai.tools.types import ToolCall, ToolProgress, ToolResult, ToolSpec
+from ai.types import AIChunk, TokenUsage
 from core.config import settings
 
 # Total attempts including the original request: original + 1 retry.
@@ -329,3 +339,163 @@ def _media_resolution_from_route_extra(
             genai_types.MediaResolution.MEDIA_RESOLUTION_MEDIUM,
         )
     return genai_types.MediaResolution.MEDIA_RESOLUTION_MEDIUM
+
+
+# --- function-calling tool loop (决策⑩-a): genai types stay inside this module ---
+
+# Bound the model->tool->continue loop so a misbehaving model can't spin forever.
+_MAX_TOOL_ROUNDS = 3
+
+# A dispatcher runs one tool call and yields its progress/result (boundary types).
+ToolDispatch = Callable[[ToolCall], AsyncIterator[ToolProgress | ToolResult]]
+
+
+def _build_text_contents(
+    history: list[tuple[str, str]], question: str
+) -> list[genai_types.Content]:
+    """Role-tagged text turns (history + current question); no media."""
+    turns: list[tuple[str, str]] = [*history, ("user", question)]
+    return [
+        genai_types.Content(
+            role="model" if role == "assistant" else "user",
+            parts=[genai_types.Part.from_text(text=text)],
+        )
+        for role, text in turns
+    ]
+
+
+def _chunk_parts(chunk: Any) -> list[Any]:
+    parts: list[Any] = []
+    for candidate in getattr(chunk, "candidates", None) or []:
+        content = getattr(candidate, "content", None)
+        parts.extend(getattr(content, "parts", None) or [])
+    return parts
+
+
+def _tool_config(tool_specs: list[ToolSpec]) -> dict[str, Any]:
+    """Manual function calling: declare tools, AUTO mode, DISABLE the SDK's
+    auto-execution so we own the loop (and can inject media on the video tool)."""
+    if not tool_specs:
+        return {}
+    return {
+        "tools": [to_genai_tool(tool_specs)],
+        "tool_config": genai_types.ToolConfig(
+            function_calling_config=genai_types.FunctionCallingConfig(
+                mode=genai_types.FunctionCallingConfigMode.AUTO
+            )
+        ),
+        "automatic_function_calling": genai_types.AutomaticFunctionCallingConfig(
+            disable=True
+        ),
+    }
+
+
+def _add_usage(acc: TokenUsage, more: TokenUsage) -> TokenUsage:
+    def _sum(a: int | None, b: int | None) -> int | None:
+        if a is None and b is None:
+            return None
+        return (a or 0) + (b or 0)
+
+    return TokenUsage(
+        input_tokens=_sum(acc.input_tokens, more.input_tokens),
+        output_tokens=_sum(acc.output_tokens, more.output_tokens),
+        total_tokens=_sum(acc.total_tokens, more.total_tokens),
+        reasoning_tokens=_sum(acc.reasoning_tokens, more.reasoning_tokens),
+    )
+
+
+async def stream_tool_chat(
+    *,
+    model: str,
+    system_prompt: str,
+    question: str,
+    history: list[tuple[str, str]],
+    tool_specs: list[ToolSpec],
+    dispatch: ToolDispatch,
+    timeout_s: float,
+    route_extra: dict[str, Any] | None = None,
+    client: genai.Client | None = None,
+) -> AsyncIterator[AIChunk]:
+    """Native manual function-calling streaming loop (text-first, tools optional).
+
+    Yields AIChunk(reasoning|delta) as the model speaks and AIChunk(preparing)
+    while a tool prepares a long resource; ends with a single AIChunk(usage)
+    carrying the turn's summed usage. The model -> tool -> feed-back -> continue
+    loop and ALL genai types live here; the AIClient facade only maps these
+    AIChunks + accounting. A standard tool's result is a function_response; the
+    video (media) tool additionally injects the video as a user-turn media Part
+    (never inside the function_response).
+    """
+    client = client or shared_client()
+    route_extra = route_extra or {}
+    config = genai_types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        thinking_config=_thinking_config_from_route_extra(route_extra),
+        media_resolution=_media_resolution_from_route_extra(route_extra),
+        http_options=genai_types.HttpOptions(timeout=int(timeout_s * 1000)),
+        **_tool_config(tool_specs),
+    )
+    contents = _build_text_contents(history, question)
+    summed = TokenUsage()
+
+    for _round in range(_MAX_TOOL_ROUNDS + 1):
+        calls: list[ToolCall] = []
+        last_metadata = None
+        stream = await client.aio.models.generate_content_stream(
+            model=model, contents=contents, config=config
+        )
+        async for chunk in stream:
+            text_delta, reasoning_delta = _split_stream_chunk(chunk)
+            if reasoning_delta:
+                yield AIChunk(kind="reasoning", reasoning_text=reasoning_delta)
+            if text_delta:
+                yield AIChunk(kind="delta", text=text_delta)
+            calls.extend(function_calls_from_parts(_chunk_parts(chunk)))
+            if chunk.usage_metadata is not None:
+                last_metadata = chunk.usage_metadata
+        summed = _add_usage(summed, gemini_usage_to_token_usage(last_metadata))
+
+        if not calls:
+            yield AIChunk(kind="usage", usage=summed)
+            return
+
+        # Replay the model's function_call turn, then run each tool and feed the
+        # results back (text -> function_response; media -> + a user media turn).
+        contents.append(
+            genai_types.Content(
+                role="model",
+                parts=[to_function_call_part(call) for call in calls],
+            )
+        )
+        response_parts: list[genai_types.Part] = []
+        media_parts: list[genai_types.Part] = []
+        for call in calls:
+            result: ToolResult | None = None
+            async for event in dispatch(call):
+                if isinstance(event, ToolProgress):
+                    yield AIChunk(kind="preparing")
+                else:
+                    result = event
+            if result is None:
+                result = ToolResult(response={"status": "error"})
+            response_parts.append(
+                to_function_response_part(call.name, result.response)
+            )
+            if result.media is not None:
+                media_parts.append(to_media_part(result.media))
+        contents.append(genai_types.Content(role="user", parts=response_parts))
+        if media_parts:
+            contents.append(
+                genai_types.Content(
+                    role="user",
+                    parts=[
+                        *media_parts,
+                        genai_types.Part.from_text(
+                            text="（以上是用户当前正在观看的本章节视频，请据此作答。）"
+                        ),
+                    ],
+                )
+            )
+
+    # Tool rounds exhausted without a final text answer — end with usage anyway.
+    yield AIChunk(kind="usage", usage=summed)
