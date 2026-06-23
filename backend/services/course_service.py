@@ -7,6 +7,7 @@ build service orchestrate and delegate persistence here.
 """
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import delete, select
@@ -210,6 +211,74 @@ async def get_first_playable_chapter_id(
     """The chapter to pre-warm right after a build finishes (拍板: 先下第一章)."""
     ids = await get_ordered_playable_chapter_ids(db, course_id=course_id)
     return ids[0] if ids else None
+
+
+# --- materialization (物料化门禁) helpers ---
+
+
+@dataclass
+class ChapterMaterializeContext:
+    """The course/user/candidate a chapter.materialize task needs (one join)."""
+
+    course_id: uuid.UUID
+    user_id: uuid.UUID
+    candidate_id: uuid.UUID | None
+
+
+async def load_chapter_materialize_context(
+    db: AsyncSession, *, chapter_id: uuid.UUID
+) -> ChapterMaterializeContext | None:
+    """Resolve a chapter's course id, owner, and chosen candidate in one query.
+
+    Worker-side (the chord already runs on an authorized course), so no user
+    filter — None only when the chapter is gone.
+    """
+    row = (
+        await db.execute(
+            select(
+                Course.id, Course.user_id, CourseChapter.chosen_candidate_id
+            )
+            .join(CourseUnit, CourseUnit.course_id == Course.id)
+            .join(CourseChapter, CourseChapter.unit_id == CourseUnit.id)
+            .where(CourseChapter.id == chapter_id)
+        )
+    ).first()
+    if row is None:
+        return None
+    return ChapterMaterializeContext(
+        course_id=row[0], user_id=row[1], candidate_id=row[2]
+    )
+
+
+async def set_chapter_status(
+    db: AsyncSession, *, chapter_id: uuid.UUID, status: str
+) -> None:
+    """Land a chapter's terminal materialization status (ready -> progress 100)."""
+    chapter = await db.get(CourseChapter, chapter_id)
+    if chapter is None:
+        return
+    chapter.status = status
+    if status == "ready":
+        chapter.progress = 100
+    await db.commit()
+
+
+async def get_materialization_progress(
+    db: AsyncSession, *, course_id: uuid.UUID
+) -> tuple[int, int, int]:
+    """(done, total, failed) counted over the course's chapters by status — the
+    DB-truth progress for the materializing SSE + the strict finalize gate."""
+    rows = (
+        await db.execute(
+            select(CourseChapter.status)
+            .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
+            .where(CourseUnit.course_id == course_id)
+        )
+    ).scalars().all()
+    total = len(rows)
+    done = sum(1 for s in rows if s == "ready")
+    failed = sum(1 for s in rows if s == "failed")
+    return done, total, failed
 
 
 async def list_courses(

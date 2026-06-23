@@ -343,6 +343,14 @@ export function CoursePage() {
           <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-400">
             加载课程失败，请稍后重试
           </div>
+        ) : courseQuery.data && courseQuery.data.status !== 'ready' ? (
+          // 物料化门禁: a course is only enterable once fully materialized. Non-ready
+          // courses are hidden from the sidebar, so this guards direct-URL access.
+          <div className="flex h-full items-center justify-center px-4 text-center text-sm text-zinc-400">
+            {courseQuery.data.status === 'failed'
+              ? '课程准备失败，请重新生成'
+              : '课程正在准备中，请稍候…'}
+          </div>
         ) : (
           <CourseMainContent course={course} content={content} />
         )}

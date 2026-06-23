@@ -23,6 +23,7 @@ celery_app = Celery(
         "tasks.course_organize",
         "tasks.video_download",
         "tasks.chapter_gemini_ingest",
+        "tasks.course_materialize",
         "tasks.video_cleanup",
     ],
 )

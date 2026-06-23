@@ -7,6 +7,7 @@ import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
 import {
   CourseOrganizeStreamError,
   streamCourseOrganize,
+  type CourseMaterializeProgress,
   type CourseSearchProgress,
 } from './streamCourseOrganize'
 
@@ -73,6 +74,7 @@ export interface CourseToolUnit {
 export type CoursePlannerStage =
   | 'questionnaire'
   | 'searching'
+  | 'materializing'
   | 'pending'
   | 'in-progress'
   | 'ready'
@@ -117,6 +119,10 @@ export function mapCourseStatusToStage(status: string): CoursePlannerStage {
     case 'searching':
     case 'organizing':
       return 'searching'
+    // 物料化门禁: after compose the course pre-generates every chapter's video +
+    // overview before it's enterable; the card shows x/total and stays open.
+    case 'materializing':
+      return 'materializing'
     // `building` is retired by the new flow but kept mapped for old rows.
     case 'building':
       return 'in-progress'
@@ -312,6 +318,7 @@ function waitForReconnect(signal: AbortSignal, delayMs: number): Promise<void> {
 const ORGANIZE_TERMINAL_CODES = new Set([
   'course_compose_failed',
   'course_search_failed',
+  'course_materialize_failed',
   'course_not_found',
 ])
 
@@ -320,6 +327,8 @@ export interface CourseOrganizeStreamState {
   reasoningText: string
   /** Real search hits once they land; null while still searching. */
   search: CourseSearchProgress | null
+  /** Materialization x/total/failed once the phase starts; null before. */
+  materialize: CourseMaterializeProgress | null
   error: Error | null
 }
 
@@ -337,6 +346,8 @@ export function useCourseOrganizeStream(
   const queryClient = useQueryClient()
   const [reasoningText, setReasoningText] = useState('')
   const [search, setSearch] = useState<CourseSearchProgress | null>(null)
+  const [materialize, setMaterialize] =
+    useState<CourseMaterializeProgress | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const reconnectDelayMs = options.reconnectDelayMs ?? 1_500
 
@@ -348,9 +359,6 @@ export function useCourseOrganizeStream(
     let active = true
     const controller = new AbortController()
     const activeCourseId = courseId
-    setReasoningText('')
-    setSearch(null)
-    setError(null)
 
     const refetchSnapshot = async () => {
       const snapshot = await queryClient.fetchQuery({
@@ -365,6 +373,12 @@ export function useCourseOrganizeStream(
     }
 
     const run = async () => {
+      // Reset transient stream state for this course (in the async body, not the
+      // effect body — same tick, but avoids the set-state-in-effect rule).
+      setReasoningText('')
+      setSearch(null)
+      setMaterialize(null)
+      setError(null)
       while (active && !controller.signal.aborted) {
         try {
           const snapshot = await streamCourseOrganize({
@@ -378,6 +392,10 @@ export function useCourseOrganizeStream(
             onReasoning: (text) => {
               setError(null)
               setReasoningText((current) => current + text)
+            },
+            onMaterializing: (progress) => {
+              setError(null)
+              setMaterialize(progress)
             },
           })
           // `done` carried the ready snapshot — flip straight to the outline.
@@ -445,6 +463,7 @@ export function useCourseOrganizeStream(
   return {
     reasoningText: options.enabled ? reasoningText : '',
     search: options.enabled ? search : null,
+    materialize: options.enabled ? materialize : null,
     error: options.enabled ? error : null,
   }
 }

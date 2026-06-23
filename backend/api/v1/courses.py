@@ -193,6 +193,17 @@ async def _terminal_frame_if_done(
     return _terminal_frame(detail)
 
 
+def _materializing_payload(detail: CourseDetailOut) -> dict:
+    """x/total/failed for the `materializing` event, counted from the snapshot's
+    chapter statuses (DB truth — drives the card even without pub/sub replay)."""
+    chapters = [chapter for unit in detail.units for chapter in unit.chapters]
+    done = sum(1 for chapter in chapters if chapter.status == "ready")
+    failed = sum(1 for chapter in chapters if chapter.status == "failed")
+    return course_organize_events.build_materializing_payload(
+        done, len(chapters), failed
+    )
+
+
 async def _organize_event_stream(
     *, user_id: uuid.UUID, course_id: uuid.UUID, initial: CourseDetailOut
 ) -> AsyncIterator[str]:
@@ -214,20 +225,32 @@ async def _organize_event_stream(
             course_id, poll_timeout=_HEARTBEAT_S
         ):
             if envelope is None:
-                if not seen_event:
-                    yield course_organize_events.to_sse("searching", {})
-                terminal = await _terminal_frame_if_done(
-                    user_id=user_id, course_id=course_id
-                )
-                if terminal is not None:
-                    yield terminal
+                # Idle tick: DB watchdog + phase heartbeat. One snapshot, branch on
+                # status (DB is truth — no pub/sub replay needed for progress).
+                detail = await _course_snapshot(user_id=user_id, course_id=course_id)
+                if detail is None:
+                    yield course_organize_events.to_sse(
+                        "error",
+                        {"code": "course_not_found", "message": "课程不存在或已删除"},
+                    )
                     return
+                if detail.status in _TERMINAL_STATUSES:
+                    yield _terminal_frame(detail)
+                    return
+                if detail.status == "materializing":
+                    yield course_organize_events.to_sse(
+                        "materializing", _materializing_payload(detail)
+                    )
+                elif not seen_event:
+                    yield course_organize_events.to_sse("searching", {})
                 continue
             event = envelope.get("event")
             data = envelope.get("data") or {}
             if event in ("search", "reasoning"):
                 seen_event = True
                 yield course_organize_events.to_sse(event, data)
+            elif event == "materializing":
+                yield course_organize_events.to_sse("materializing", data)
             elif event == "done":
                 # Worker signals done; build the snapshot from our own context.
                 terminal = await _terminal_frame_if_done(
@@ -274,7 +297,11 @@ async def _degrade_snapshot_stream(
         if detail.status in _TERMINAL_STATUSES:
             yield _terminal_frame(detail)
             return
-        if not search_emitted:
+        if detail.status == "materializing":
+            yield course_organize_events.to_sse(
+                "materializing", _materializing_payload(detail)
+            )
+        elif not search_emitted:
             async with AsyncSessionLocal() as db:
                 pool = await course_search_service.load_search_candidates(
                     db, course_id=course_id

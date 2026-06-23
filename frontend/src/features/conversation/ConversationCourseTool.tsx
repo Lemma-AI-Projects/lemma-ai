@@ -30,6 +30,7 @@ export function ConversationCourseTool({ courseId }: { courseId: string }) {
       failed={view.failed}
       search={view.search}
       reasoningText={view.reasoningText}
+      materialize={view.materialize}
       errorMessage={view.errorMessage}
       isSubmittingAnswers={view.isSubmittingAnswers}
       onAnswerChange={view.onAnswerChange}

@@ -20,11 +20,14 @@ from core.database import Base
 class Course(Base):
     """A generated course and its lifecycle.
 
-    搜索前置状态机 (终稿重构): intake -> organizing -> ready, with failed on error.
-    A parallel `search_status` (searching -> searched | failed) tracks the broad
-    search that runs concurrently with the questionnaire; organize gates on its
-    terminal value (握手协议 C2). `outline_ready`/`building` are retired by the
-    new flow but kept in the constraint for historical rows / backward compat.
+    状态机 (物料化门禁): intake -> organizing -> materializing -> ready, failed
+    on error. compose lands the outline as `materializing` (not enterable); a
+    chord then pre-generates every chapter's video + overview and only flips
+    `ready` once ALL chapters are ready (strict gate). A parallel `search_status`
+    (searching -> searched | failed) tracks the broad search that runs
+    concurrently with the questionnaire; organize gates on its terminal value
+    (握手协议 C2). `outline_ready`/`building` are retired but kept in the
+    constraint for historical rows / backward compat.
 
     A course is optionally born inside a conversation (conversation_id, SET NULL
     so deleting the chat never deletes the course). Courses below `ready` are
@@ -35,7 +38,7 @@ class Course(Base):
     __table_args__ = (
         CheckConstraint(
             "status in ('intake', 'outline_ready', 'organizing', 'building', "
-            "'ready', 'failed')",
+            "'materializing', 'ready', 'failed')",
             name="ck_courses_status",
         ),
         CheckConstraint(

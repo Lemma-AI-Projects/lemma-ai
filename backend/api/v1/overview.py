@@ -17,7 +17,6 @@ is already cached, so it's one model call, no re-upload).
 """
 
 import asyncio
-import contextlib
 import uuid
 from collections.abc import AsyncIterator
 
@@ -25,8 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai import AIChunk, AIUseCase, ai_client, encode_chunk
-from core import aio
+from ai import AIChunk, encode_chunk
 from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from schemas.overview import ChapterOverviewOut
@@ -36,27 +34,15 @@ from services import (
     course_service,
     video_asset_service,
 )
+from services.materialization import overview_core
 
 router = APIRouter(prefix="/courses", tags=["overview"])
 
 _NOT_FOUND = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found")
 
-# The user-turn instruction; the structure/style lives in the COURSE_OVERVIEW
-# system prompt (rules 第八章: prompts in templates, not business code).
-_OVERVIEW_INSTRUCTION = "请基于本章节视频，为正在学习这一章的学生写一份学习向的章节概述。"
-
 # While another tab is already generating, wait for its result this often.
 _LOST_POLL_S = 2.0
 _LOST_MAX_TICKS = 90  # ~3 min ceiling, then surface a retryable error
-
-
-async def _persist_ready(
-    chapter_id: uuid.UUID, candidate_id: uuid.UUID, markdown: str
-) -> None:
-    async with AsyncSessionLocal() as db:
-        await course_overview_service.mark_ready(
-            db, chapter_id=chapter_id, candidate_id=candidate_id, markdown=markdown
-        )
 
 
 async def _persist_failed(chapter_id: uuid.UUID, error_type: str | None) -> None:
@@ -82,8 +68,9 @@ async def _generate(
     candidate_id: uuid.UUID,
 ) -> AsyncIterator[str]:
     """Ensure the chapter's Gemini file (preparing), then stream the overview
-    Markdown and persist it on a clean done. A disconnect before `done` leaves the
-    row `generating` (no half note stored) so a later visit regenerates."""
+    Markdown via the shared core (which persists on a clean done). A disconnect
+    before `done` leaves the row `generating` (no half note) so a later visit
+    regenerates."""
     video = None
     async for event in chapter_gemini_prep.stream_until_usable(
         chapter_id=chapter_id, candidate_id=candidate_id
@@ -114,48 +101,14 @@ async def _generate(
         )
         return
 
-    parts: list[str] = []
-    persist_task: asyncio.Task | None = None
-    done_seen = False
-    failed_code: str | None = None
-
-    def ensure_persist_scheduled() -> None:
-        nonlocal persist_task
-        markdown = "".join(parts)
-        if persist_task is None and markdown:
-            persist_task = aio.spawn_protected(
-                _persist_ready(chapter_id, candidate_id, markdown)
-            )
-
-    chunk_stream = ai_client.stream_ask_video(
-        AIUseCase.COURSE_OVERVIEW,
-        video,
-        _OVERVIEW_INSTRUCTION,
-        history=[],
-        user_id=str(user_id),
-        course_id=str(course_id),
-    )
-    try:
-        async for chunk in chunk_stream:
-            if chunk.kind == "delta" and chunk.text:
-                parts.append(chunk.text)
-            elif chunk.kind == "done":
-                done_seen = True
-                ensure_persist_scheduled()
-            elif chunk.kind == "error":
-                failed_code = chunk.error_code
-            yield encode_chunk(chunk)
-    finally:
-        if done_seen:
-            ensure_persist_scheduled()
-        elif failed_code is not None:
-            aio.spawn_protected(_persist_failed(chapter_id, failed_code))
-        # else: disconnected mid-stream -> leave `generating` for reclaim.
-        with contextlib.suppress(Exception):
-            await chunk_stream.aclose()
-        if persist_task is not None and not persist_task.done():
-            with contextlib.suppress(asyncio.CancelledError):
-                await asyncio.shield(persist_task)
+    async for chunk in overview_core.generate_overview_chunks(
+        course_id=course_id,
+        user_id=user_id,
+        chapter_id=chapter_id,
+        candidate_id=candidate_id,
+        video=video,
+    ):
+        yield encode_chunk(chunk)
 
 
 async def _overview_event_stream(

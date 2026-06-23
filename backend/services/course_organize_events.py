@@ -44,6 +44,11 @@ def to_sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def build_materializing_payload(done: int, total: int, failed: int) -> dict[str, Any]:
+    """The `materializing` event body: chapters ready / total / failed (x/total)."""
+    return {"done": done, "total": total, "failed": failed}
+
+
 def build_search_payload(candidates: list[VideoCandidate]) -> dict[str, Any]:
     """The `search` event body: per-platform hit counts + top-K real videos.
 
@@ -51,10 +56,19 @@ def build_search_payload(candidates: list[VideoCandidate]) -> dict[str, Any]:
     directly). camelCase for the wire; ranking reuses ai.coursegen.ranking.
     """
     counts: dict[str, int] = {}
+    grouped: dict[str, list[VideoCandidate]] = {}
     for candidate in candidates:
         platform = candidate.platform.value
         counts[platform] = counts.get(platform, 0) + 1
-    top = rank(candidates)[:_SEARCH_TOP_K]
+        grouped.setdefault(platform, []).append(candidate)
+    # Top-K PER PLATFORM, not a global top-K. rank() is view-count dominated, and
+    # YouTube flat search (full_extract=false) usually has no view_count (score 0
+    # on views), so a global rank()[:K] gets swamped by Bilibili play counts and
+    # starves YouTube out of the card entirely. Ranking within each platform keeps
+    # both represented (the card renders one section per platform).
+    top: list[VideoCandidate] = []
+    for platform_candidates in grouped.values():
+        top.extend(rank(platform_candidates)[:_SEARCH_TOP_K])
     return {
         "platforms": [
             {"platform": platform, "count": count}
@@ -98,6 +112,14 @@ class OrganizeEventPublisher:
 
     async def reasoning(self, text: str) -> None:
         await self._publish("reasoning", {"text": text})
+
+    async def materializing(self, done: int, total: int, failed: int) -> None:
+        # Low-latency progress nudge during the materialization phase; the API
+        # endpoint also recomputes {done,total,failed} from the DB on idle ticks /
+        # reconnect, so this is best-effort (no pub/sub replay dependency).
+        await self._publish(
+            "materializing", build_materializing_payload(done, total, failed)
+        )
 
     async def done(self) -> None:
         # Terminal success SIGNAL only — the API builds the CourseDetailOut

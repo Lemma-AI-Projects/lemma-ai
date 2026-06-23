@@ -10,7 +10,11 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import type { QuestionnaireAnswers } from '@/features/coursePlanner/courseApi'
-import type { CourseSearchProgress } from '@/features/coursePlanner/streamCourseOrganize'
+import type {
+  CourseMaterializeProgress,
+  CourseSearchProgress,
+} from '@/features/coursePlanner/streamCourseOrganize'
+import { ConversationToolMaterializing } from './ConversationToolMaterializing'
 import { ConversationToolSearching } from './ConversationToolSearching'
 import {
   ConversationOutlineSkeleton,
@@ -302,6 +306,7 @@ export function ConversationToolShell({
   failed = false,
   search = null,
   reasoningText = '',
+  materialize = null,
   errorMessage,
   isSubmittingAnswers = false,
   onAnswerChange,
@@ -322,6 +327,9 @@ export function ConversationToolShell({
   // reasoning. Only meaningful when stage === 'searching'.
   search?: CourseSearchProgress | null
   reasoningText?: string
+  // Materialization x/total (物料化门禁). Only meaningful when stage ===
+  // 'materializing'.
+  materialize?: CourseMaterializeProgress | null
   errorMessage?: string | null
   isSubmittingAnswers?: boolean
   onAnswerChange?: (questionId: string, option: string) => void
@@ -375,6 +383,12 @@ export function ConversationToolShell({
           title={title}
           search={search}
           reasoningText={reasoningText}
+          errorMessage={errorMessage}
+        />
+      ) : stage === 'materializing' ? (
+        <ConversationToolMaterializing
+          title={title}
+          materialize={materialize}
           errorMessage={errorMessage}
         />
       ) : (

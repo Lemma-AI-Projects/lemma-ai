@@ -9,17 +9,21 @@ units/chapters；把每章选中的候选 materialize 成 chapter_video_candidat
 
 import uuid
 
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.coursegen.types import ComposedCourseResult
 from models.course import Course, CourseChapter, CourseUnit
 from models.course_candidate import ChapterVideoCandidate
 
+_MATERIALIZING = "materializing"
 _READY = "ready"
 _FAILED = "failed"
-_CHAPTER_READY = "ready"
-_CHAPTER_DONE = 100
+# Units are structural containers; the readiness gate is strictly per-chapter.
+_UNIT_READY = "ready"
+# Chapters are born in-flight: the materialize chord flips each to ready/failed as
+# it pre-generates that chapter's video + overview (材料化门禁).
+_CHAPTER_RESEARCHING = "researching"
 # chapter_video_candidates.view_count/like_count are int32; a chosen video can
 # exceed that (popular YouTube). Clamp on materialize so a hot pick never crashes
 # the insert (the pool keeps the true BigInteger value).
@@ -61,14 +65,16 @@ async def mark_failed(db: AsyncSession, *, course_id: uuid.UUID) -> None:
 async def persist_composed_course(
     db: AsyncSession, *, course_id: uuid.UUID, result: ComposedCourseResult
 ) -> str:
-    """Land the validated composed course and materialize chosen videos.
+    """Land the validated composed course and enter the materialization phase.
 
     Idempotent: clears any existing units first (DB ON DELETE CASCADE wipes
     chapters -> candidates/assets) so a re-run never doubles the tree. Each
-    chapter is created `ready` (it already has a chosen video) and its chosen
-    candidate is written as the single chapter_video_candidate (is_chosen) with
-    chosen_candidate_id back-filled — exactly the shape video_asset_service reads.
-    Returns the final course status (`ready` if any chapter, else `failed`).
+    chapter is created `researching` (in-flight) with its chosen candidate written
+    as the single chapter_video_candidate (is_chosen) + chosen_candidate_id
+    back-filled — exactly the shape video_asset_service reads. The course lands in
+    `materializing` (NOT enterable); the chord then pre-generates each chapter's
+    video + overview and flips `ready` only when ALL chapters are ready.
+    Returns the course status (`materializing` if any chapter, else `failed`).
     """
     course = await db.get(Course, course_id)
     if course is None:
@@ -84,7 +90,7 @@ async def persist_composed_course(
             course_id=course_id,
             order_index=unit_index,
             title=unit.title,
-            status=_READY,
+            status=_UNIT_READY,
         )
         db.add(unit_row)
         await db.flush()  # need unit_row.id for its chapters
@@ -93,8 +99,8 @@ async def persist_composed_course(
                 unit_id=unit_row.id,
                 order_index=chapter_index,
                 title=chapter.title,
-                status=_CHAPTER_READY,
-                progress=_CHAPTER_DONE,
+                status=_CHAPTER_RESEARCHING,
+                progress=0,
             )
             db.add(chapter_row)
             await db.flush()  # need chapter_row.id for the candidate
@@ -121,6 +127,56 @@ async def persist_composed_course(
             chapter_total += 1
 
     course.title = result.title
-    course.status = _READY if chapter_total > 0 else _FAILED
+    course.status = _MATERIALIZING if chapter_total > 0 else _FAILED
     await db.commit()
     return course.status
+
+
+# Strict-gate finalize (chord callback). Single conditional UPDATE so concurrent
+# finalizes never double-flip and only the winner publishes the terminal event.
+_FINALIZE_READY_SQL = text(
+    """
+    UPDATE courses SET status = 'ready', updated_at = now()
+    WHERE id = :course_id AND status = 'materializing'
+      AND EXISTS (
+        SELECT 1 FROM course_chapters c
+        JOIN course_units u ON c.unit_id = u.id
+        WHERE u.course_id = :course_id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM course_chapters c
+        JOIN course_units u ON c.unit_id = u.id
+        WHERE u.course_id = :course_id AND c.status <> 'ready'
+      )
+    RETURNING id
+    """
+)
+
+_FINALIZE_FAILED_SQL = text(
+    """
+    UPDATE courses SET status = 'failed', updated_at = now()
+    WHERE id = :course_id AND status = 'materializing'
+      AND EXISTS (
+        SELECT 1 FROM course_chapters c
+        JOIN course_units u ON c.unit_id = u.id
+        WHERE u.course_id = :course_id AND c.status = 'failed'
+      )
+    RETURNING id
+    """
+)
+
+
+async def finalize_ready(db: AsyncSession, *, course_id: uuid.UUID) -> bool:
+    """Strict gate: flip materializing -> ready ONLY when every chapter is ready
+    (and >=1 chapter exists). RETURNING -> True for the single winner."""
+    result = await db.execute(_FINALIZE_READY_SQL, {"course_id": course_id})
+    await db.commit()
+    return result.first() is not None
+
+
+async def finalize_failed(db: AsyncSession, *, course_id: uuid.UUID) -> bool:
+    """Flip materializing -> failed when at least one chapter failed (the strict
+    gate's negative side). RETURNING -> True for the single winner."""
+    result = await db.execute(_FINALIZE_FAILED_SQL, {"course_id": course_id})
+    await db.commit()
+    return result.first() is not None

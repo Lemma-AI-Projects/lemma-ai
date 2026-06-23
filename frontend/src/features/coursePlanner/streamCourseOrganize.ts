@@ -20,6 +20,14 @@ export interface CourseSearchProgress {
   items: CourseSearchItem[]
 }
 
+// Materialization progress (物料化门禁): chapters whose video + overview are ready
+// out of the total, plus how many terminally failed. x/total drives the card.
+export interface CourseMaterializeProgress {
+  done: number
+  total: number
+  failed: number
+}
+
 export class CourseOrganizeStreamError extends Error {
   readonly code: string
 
@@ -39,6 +47,8 @@ export interface StreamCourseOrganizeOptions {
   onSearch?: (search: CourseSearchProgress) => void
   /** A compose reasoning delta (live thinking). */
   onReasoning?: (text: string) => void
+  /** Materialization progress nudge (chapters ready/total/failed). */
+  onMaterializing?: (progress: CourseMaterializeProgress) => void
 }
 
 interface SseFrame {
@@ -58,7 +68,8 @@ interface SseFrame {
 export async function streamCourseOrganize(
   options: StreamCourseOrganizeOptions
 ): Promise<CourseDetail> {
-  const { courseId, signal, onSearching, onSearch, onReasoning } = options
+  const { courseId, signal, onSearching, onSearch, onReasoning, onMaterializing } =
+    options
 
   const {
     data: { session },
@@ -98,6 +109,7 @@ export async function streamCourseOrganize(
     onSearching,
     onSearch,
     onReasoning,
+    onMaterializing,
   })
 }
 
@@ -148,7 +160,7 @@ async function consumeOrganizeStream(
   body: ReadableStream<Uint8Array>,
   handlers: Pick<
     StreamCourseOrganizeOptions,
-    'onSearching' | 'onSearch' | 'onReasoning'
+    'onSearching' | 'onSearch' | 'onReasoning' | 'onMaterializing'
   >
 ): Promise<CourseDetail> {
   const reader = body.getReader()
@@ -174,6 +186,11 @@ async function consumeOrganizeStream(
         }
         return
       }
+      case 'materializing':
+        handlers.onMaterializing?.(
+          JSON.parse(parsed.data) as CourseMaterializeProgress
+        )
+        return
       case 'done':
         snapshot = JSON.parse(parsed.data) as CourseDetail
         return

@@ -33,6 +33,26 @@ _DONE = "done"  # terminal (ready or failed) — nothing more to do
 _COMPOSE_FAILED = "course_compose_failed"
 
 
+def _enqueue_materialize_chord(
+    course_id: uuid.UUID, chapter_ids: list[uuid.UUID]
+) -> None:
+    """Fan out per-chapter materialization with a strict finalize callback.
+
+    Lazy import (tasks import services, so a top-level import would cycle). header
+    runs each chapter independently (no task waits on another -> no worker-pool
+    deadlock even at concurrency=1); callback aggregates from the DB.
+    """
+    from celery import chord, group
+
+    from tasks.course_materialize import (
+        chapter_materialize,
+        course_materialize_finalize,
+    )
+
+    header = group(chapter_materialize.s(str(cid)) for cid in chapter_ids)
+    chord(header)(course_materialize_finalize.s(str(course_id)))
+
+
 async def run_organize(course_id: uuid.UUID) -> str:
     """One organize attempt. Returns _RETRY (search still running) or _DONE.
 
@@ -111,22 +131,24 @@ async def run_organize(course_id: uuid.UUID) -> str:
                 final_status = await course_build_service.persist_composed_course(
                     db, course_id=course_id, result=result
                 )
-                # 就近预热 (拍板): once ready, fetch the FIRST chapter's video now;
-                # later chapters warm on access (video_asset_service prefetch).
-                first_chapter_id = (
-                    await course_service.get_first_playable_chapter_id(
+                chapter_ids = (
+                    await course_service.get_ordered_playable_chapter_ids(
                         db, course_id=course_id
                     )
-                    if final_status == "ready"
-                    else None
+                    if final_status == "materializing"
+                    else []
                 )
-            if first_chapter_id is not None:
-                from tasks.video_download import download_chapter_video
-
-                download_chapter_video.delay(str(first_chapter_id))
-            if final_status == "ready":
-                await publisher.done()
+            if final_status == "materializing" and chapter_ids:
+                # 物料化门禁: fan out a chord — each chapter materializes its video +
+                # overview inline; the callback strictly flips ready/failed. The
+                # organize SSE stays open (materializing is non-terminal) and the
+                # chord tasks publish progress + the terminal done/error. NOTE: no
+                # publisher.done() here — finalize owns the terminal frame.
+                _enqueue_materialize_chord(course_id, chapter_ids)
             else:
+                # compose produced nothing playable -> terminal failure.
+                async with AsyncSessionLocal() as db:
+                    await course_build_service.mark_failed(db, course_id=course_id)
                 await publisher.error(_COMPOSE_FAILED, "课程编排未产出有效内容")
             return _DONE
         finally:
