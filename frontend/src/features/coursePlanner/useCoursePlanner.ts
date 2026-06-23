@@ -12,10 +12,7 @@ import {
   type QuestionnaireAnswers,
   type QuestionnaireQuestion,
 } from './courseApi'
-import type {
-  CourseMaterializeProgress,
-  CourseSearchProgress,
-} from './streamCourseOrganize'
+import type { CourseSearchProgress } from './streamCourseOrganize'
 
 // The presentational props the course tool card needs. The connected views
 // (in-conversation card, sandbox) spread this and add context-specific handlers
@@ -33,9 +30,6 @@ export interface CoursePlannerView {
   // 'searching'.
   search: CourseSearchProgress | null
   reasoningText: string
-  // Materialization x/total/failed (物料化门禁). Only meaningful at stage
-  // 'materializing'.
-  materialize: CourseMaterializeProgress | null
   errorMessage: string | null
   isLoading: boolean
   isSubmittingAnswers: boolean
@@ -82,18 +76,12 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
 
   const submitIntake = useSubmitCourseIntakeMutation()
   // Live organize SSE: real search hits + compose reasoning, then materialization
-  // x/total — one continuous stream from organizing through materializing, which
-  // writes the ready/failed snapshot into the course cache on done (无轮询).
+  // — one continuous stream from organizing through materializing. It writes each
+  // live snapshot into the course cache (materializing -> the per-chapter tree;
+  // done -> ready/failed), so the stage flips with no polling (无轮询).
   const organize = useCourseOrganizeStream(courseId, {
     enabled: stage === 'searching' || stage === 'materializing',
   })
-
-  // The materialization phase may begin while the cached snapshot still reads
-  // `organizing` (no poll); the SSE `materializing` events flip the card without
-  // waiting for a refetch.
-  const viewStage: CoursePlannerStage | undefined = organize.materialize
-    ? 'materializing'
-    : stage
 
   const onAnswerChange = (questionId: string, option: string) => {
     setAnswers((current) => ({
@@ -117,7 +105,7 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
           : null
 
   return {
-    stage: viewStage,
+    stage,
     title: shellData?.title ?? '课程规划',
     questions,
     answers,
@@ -126,7 +114,6 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
     failed: shellData?.failed ?? false,
     search: organize.search,
     reasoningText: organize.reasoningText,
-    materialize: organize.materialize,
     errorMessage,
     isLoading: courseQuery.isPending,
     isSubmittingAnswers: submitIntake.isPending,

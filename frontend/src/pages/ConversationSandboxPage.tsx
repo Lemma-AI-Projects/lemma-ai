@@ -5,7 +5,9 @@ import {
   useRef,
   useState,
 } from 'react'
+import { CircleCheckBig } from 'lucide-react'
 
+import { BacklogStatusIcon } from '@/components/BacklogStatusIcon'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { ConversationReasoning } from '@/features/conversation/ConversationReasoning'
@@ -222,6 +224,11 @@ const SEARCHING_SOURCES: SearchSourcePreview[] = [
 ]
 
 const SEARCH_ANIMATION_STEPS = 14
+const sandboxActionButtonClassName =
+  'h-[33px] rounded-full px-[12.5px] text-[14px] font-normal'
+const sandboxSecondaryActionButtonClassName = `${sandboxActionButtonClassName} border-zinc-300 bg-transparent text-zinc-800 hover:bg-zinc-100 hover:text-zinc-950`
+const sandboxPrimaryActionButtonClassName = `${sandboxActionButtonClassName} bg-zinc-950 text-white hover:bg-zinc-800`
+const MATERIALIZATION_PREVIEW_LOAD_MS = 1800
 
 interface StagePreview {
   key: string
@@ -255,6 +262,12 @@ const STAGE_PREVIEWS: StagePreview[] = [
   {
     key: 'pending',
     label: 'pending · 大纲待构建',
+    stage: 'pending',
+    units: PENDING_UNITS,
+  },
+  {
+    key: 'materialization',
+    label: 'materialization · 物料化',
     stage: 'pending',
     units: PENDING_UNITS,
   },
@@ -512,6 +525,181 @@ function SearchPreviewShell() {
   )
 }
 
+function MaterializationSandboxShell({
+  title,
+  units,
+}: {
+  title: string
+  units: ConversationToolUnit[]
+}) {
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setLoaded(true)
+    }, MATERIALIZATION_PREVIEW_LOAD_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  return (
+    <div
+      data-slot="conversation-tool-shell"
+      translate="no"
+      className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5"
+    >
+      <div data-stage="materialization" className="flex flex-col">
+        <h3 className="flex items-center gap-2 text-[19.5px] font-semibold leading-7 tracking-tight text-zinc-900">
+          <span className="flex size-5 translate-y-[1px] shrink-0 items-center justify-center">
+            {loaded ? (
+              <CircleCheckBig className="size-5 text-zinc-950" />
+            ) : (
+              <Spinner className="size-[17px] text-zinc-900" />
+            )}
+          </span>
+          <span>{title}</span>
+        </h3>
+
+        <div className="mt-4 flex flex-col gap-1">
+          {units.map((unit) => (
+            <section key={unit.id}>
+              <div className="flex min-h-9 items-start gap-2 py-2 text-[16.5px] font-medium text-zinc-800">
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                  {loaded ? (
+                    <CircleCheckBig className="size-4 text-zinc-950" />
+                  ) : (
+                    <Spinner className="size-[15px] text-zinc-900" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+                  {unit.title}
+                </span>
+              </div>
+
+              <div className="relative ml-1 flex flex-col gap-0.5 pl-7">
+                <div
+                  aria-hidden
+                  className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200"
+                />
+                {unit.chapters.map((chapter) => (
+                  <div
+                    key={chapter.id}
+                    className="flex min-h-9 items-start gap-2 py-2 text-[15.5px] text-zinc-600"
+                  >
+                    <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                      {loaded ? (
+                        <CircleCheckBig className="size-4 text-zinc-950" />
+                      ) : (
+                        <Spinner className="size-[15px] text-zinc-900" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+                      {chapter.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <div className="-mx-1 -mb-1 mt-auto flex items-center justify-between gap-4 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            disabled
+            className={sandboxSecondaryActionButtonClassName}
+          >
+            编辑
+          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className={sandboxSecondaryActionButtonClassName}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              disabled
+              className={sandboxPrimaryActionButtonClassName}
+            >
+              开始
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReadySandboxShell({
+  title,
+  units,
+}: {
+  title: string
+  units: ConversationToolUnit[]
+}) {
+  return (
+    <div
+      data-slot="conversation-tool-shell"
+      translate="no"
+      className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5"
+    >
+      <div data-stage="ready" className="flex flex-col">
+        <h3 className="text-[19.5px] font-semibold leading-7 tracking-tight text-zinc-900">
+          <span>您的课程已就绪：{title}</span>
+        </h3>
+
+        <div className="mt-4 flex flex-col gap-1">
+          {units.map((unit) => (
+            <section key={unit.id}>
+              <div className="flex min-h-9 items-start gap-2 py-2 text-[16.5px] font-medium text-zinc-800">
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                  <BacklogStatusIcon />
+                </span>
+                <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+                  {unit.title}
+                </span>
+              </div>
+
+              <div className="relative ml-1 flex flex-col gap-0.5 pl-7">
+                <div
+                  aria-hidden
+                  className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200"
+                />
+                {unit.chapters.map((chapter) => (
+                  <div
+                    key={chapter.id}
+                    className="flex min-h-9 items-start gap-2 py-2 text-[15.5px] text-zinc-600"
+                  >
+                    <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                      <BacklogStatusIcon />
+                    </span>
+                    <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
+                      {chapter.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <div className="-mx-1 -mb-1 mt-auto flex justify-end pt-4">
+          <Button
+            type="button"
+            className={sandboxPrimaryActionButtonClassName}
+          >
+            进入课程
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function ConversationSandboxPage() {
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({})
   const [searchReplayKey, setSearchReplayKey] = useState(0)
@@ -571,6 +759,16 @@ export function ConversationSandboxPage() {
             </div>
             {preview.key === 'searching' ? (
               <SearchPreviewShell key={searchReplayKey} />
+            ) : preview.key === 'materialization' ? (
+              <MaterializationSandboxShell
+                title="微积分速成：核心概念与应用基础"
+                units={preview.units ?? []}
+              />
+            ) : preview.key === 'ready' ? (
+              <ReadySandboxShell
+                title="微积分速成：核心概念与应用基础"
+                units={preview.units ?? []}
+              />
             ) : (
               <ConversationToolShell
                 title="微积分速成：核心概念与应用基础"

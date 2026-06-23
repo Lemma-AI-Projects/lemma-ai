@@ -224,11 +224,14 @@ async def stream_chapter_overview(
     course_id: uuid.UUID,
     chapter_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    candidate_id = await _resolve_candidate(
-        db, user_id=current_user.id, course_id=course_id, chapter_id=chapter_id
-    )
+    # Short-lived session for the IDOR check (NOT Depends(get_db)): a streaming
+    # response holds its dependency's DB for the whole stream and errors on
+    # cleanup when the client disconnects. The stream uses its own sessions.
+    async with AsyncSessionLocal() as db:
+        candidate_id = await _resolve_candidate(
+            db, user_id=current_user.id, course_id=course_id, chapter_id=chapter_id
+        )
     return StreamingResponse(
         _overview_event_stream(
             course_id=course_id,

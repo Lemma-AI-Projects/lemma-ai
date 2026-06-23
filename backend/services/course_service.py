@@ -263,6 +263,24 @@ async def set_chapter_status(
     await db.commit()
 
 
+async def get_unfinished_chapter_ids(
+    db: AsyncSession, *, course_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """Playable chapters not yet `ready` (failed or still researching), in order —
+    the set a materialization retry pass re-runs (ready chapters are skipped)."""
+    result = await db.execute(
+        select(CourseChapter.id)
+        .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
+        .where(
+            CourseUnit.course_id == course_id,
+            CourseChapter.chosen_candidate_id.isnot(None),
+            CourseChapter.status != "ready",
+        )
+        .order_by(CourseUnit.order_index, CourseChapter.order_index)
+    )
+    return list(result.scalars())
+
+
 async def get_materialization_progress(
     db: AsyncSession, *, course_id: uuid.UUID
 ) -> tuple[int, int, int]:

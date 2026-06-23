@@ -20,13 +20,6 @@ export interface CourseSearchProgress {
   items: CourseSearchItem[]
 }
 
-// Materialization progress (物料化门禁): chapters whose video + overview are ready
-// out of the total, plus how many terminally failed. x/total drives the card.
-export interface CourseMaterializeProgress {
-  done: number
-  total: number
-  failed: number
-}
 
 export class CourseOrganizeStreamError extends Error {
   readonly code: string
@@ -47,8 +40,8 @@ export interface StreamCourseOrganizeOptions {
   onSearch?: (search: CourseSearchProgress) => void
   /** A compose reasoning delta (live thinking). */
   onReasoning?: (text: string) => void
-  /** Materialization progress nudge (chapters ready/total/failed). */
-  onMaterializing?: (progress: CourseMaterializeProgress) => void
+  /** A live course snapshot during materialization (per-chapter tree state). */
+  onMaterializing?: (snapshot: CourseDetail) => void
 }
 
 interface SseFrame {
@@ -187,9 +180,7 @@ async function consumeOrganizeStream(
         return
       }
       case 'materializing':
-        handlers.onMaterializing?.(
-          JSON.parse(parsed.data) as CourseMaterializeProgress
-        )
+        handlers.onMaterializing?.(JSON.parse(parsed.data) as CourseDetail)
         return
       case 'done':
         snapshot = JSON.parse(parsed.data) as CourseDetail

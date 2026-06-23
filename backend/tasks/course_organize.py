@@ -36,21 +36,12 @@ _COMPOSE_FAILED = "course_compose_failed"
 def _enqueue_materialize_chord(
     course_id: uuid.UUID, chapter_ids: list[uuid.UUID]
 ) -> None:
-    """Fan out per-chapter materialization with a strict finalize callback.
+    """Fan out the initial per-chapter materialization chord (attempt 0). The
+    finalize callback bounded-retries the unfinished chapters before failing.
+    Lazy import: tasks import services, so a top-level import would cycle."""
+    from tasks.course_materialize import enqueue_materialize_chord
 
-    Lazy import (tasks import services, so a top-level import would cycle). header
-    runs each chapter independently (no task waits on another -> no worker-pool
-    deadlock even at concurrency=1); callback aggregates from the DB.
-    """
-    from celery import chord, group
-
-    from tasks.course_materialize import (
-        chapter_materialize,
-        course_materialize_finalize,
-    )
-
-    header = group(chapter_materialize.s(str(cid)) for cid in chapter_ids)
-    chord(header)(course_materialize_finalize.s(str(course_id)))
+    enqueue_materialize_chord(course_id, chapter_ids)
 
 
 async def run_organize(course_id: uuid.UUID) -> str:

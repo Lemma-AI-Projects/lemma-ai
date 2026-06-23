@@ -2,7 +2,6 @@
 
 离线段（无网络/AI/Storage）：
   - 注册位 CONTENT_STEPS 含 OverviewStep(name='overview')；
-  - course_organize_events.build_materializing_payload 形状正确；
   - 物料化相关模块可导入。
 DB 段（需 DB + 一个 Profile，--offline 跳过）：临时建一门 materializing 课程（2 章
   researching），验证 strict-gate 原子翻转 + 进度计数 + 章状态写入 + chapter 上下文：
@@ -30,7 +29,6 @@ from core.database import AsyncSessionLocal, engine
 from models.course import Course, CourseChapter, CourseUnit
 from models.profile import Profile
 from services import course_build_service, course_service
-from services.course_organize_events import build_materializing_payload
 from services.materialization import CONTENT_STEPS
 
 FAILURES: list[str] = []
@@ -45,11 +43,6 @@ def check(condition: bool, label: str) -> None:
 def offline_checks() -> None:
     names = [step.name for step in CONTENT_STEPS]
     check(names == ["overview"], f"CONTENT_STEPS 注册 [overview]（实际 {names}）")
-    payload = build_materializing_payload(2, 5, 1)
-    check(
-        payload == {"done": 2, "total": 5, "failed": 1},
-        "build_materializing_payload 形状",
-    )
     # Import surface (chord tasks + step core) loads without error.
     import tasks.course_materialize as cm  # noqa: F401
     from services.materialization import overview_core  # noqa: F401
@@ -144,6 +137,15 @@ async def db_checks() -> None:
                 db, course_id=course_id
             )
         check((done, total, failed) == (1, 2, 0), "set ready 后进度 1/2/0")
+        # 自动重试只重入未就绪章节（已 ready 的跳过）。
+        async with AsyncSessionLocal() as db:
+            pending = await course_service.get_unfinished_chapter_ids(
+                db, course_id=course_id
+            )
+        check(
+            pending == [chapter_b_id],
+            "get_unfinished_chapter_ids 仅返回未就绪章节",
+        )
         async with AsyncSessionLocal() as db:
             check(
                 not await course_build_service.finalize_ready(db, course_id=course_id),

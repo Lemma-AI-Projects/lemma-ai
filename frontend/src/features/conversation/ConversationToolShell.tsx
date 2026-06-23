@@ -1,4 +1,5 @@
-import { Check } from 'lucide-react'
+import { Check, CircleCheckBig } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 import { BacklogStatusIcon } from '@/components/BacklogStatusIcon'
 import { CircularProgress } from '@/components/CircularProgress'
@@ -8,13 +9,10 @@ import {
 } from '@/components/ProgressStatusIcon'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import type { QuestionnaireAnswers } from '@/features/coursePlanner/courseApi'
-import type {
-  CourseMaterializeProgress,
-  CourseSearchProgress,
-} from '@/features/coursePlanner/streamCourseOrganize'
-import { ConversationToolMaterializing } from './ConversationToolMaterializing'
+import type { CourseSearchProgress } from '@/features/coursePlanner/streamCourseOrganize'
 import { ConversationToolSearching } from './ConversationToolSearching'
 import {
   ConversationOutlineSkeleton,
@@ -188,52 +186,57 @@ function QuestionnaireContent({
   )
 }
 
-function StatusIcon({
-  stage,
-  status,
-  progress,
-}: {
-  stage: ConversationToolStage
-  status?: ProgressStatus
-  progress: number
-}) {
-  // A terminal item (completed / failed) wins over the stage: a chapter that
-  // finished or failed shows its check / red-X even while siblings are still
-  // building, instead of a full-but-meaningless ring.
-  const renderIcon = () => {
-    if (status === 'completed' || status === 'failed') {
-      return <ProgressStatusIcon status={status} />
-    }
-    if (stage === 'in-progress') {
-      return (
-        <CircularProgress
-          value={progress}
-          size={15}
-          strokeWidth={2.25}
-          progressColor="#18181b"
-          animated
-        />
-      )
-    }
-    if (stage === 'ready') {
-      return <ProgressStatusIcon status={status ?? 'not-started'} value={progress} />
-    }
-    return <BacklogStatusIcon />
-  }
+type OutlineItem = { status?: ProgressStatus; progress?: number }
 
-  return (
-    <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
-      {renderIcon()}
-    </span>
-  )
+// The default per-item icon for the outline stages (pending / in-progress /
+// ready-failed): a terminal item (completed / failed) wins over the stage so a
+// chapter shows its check / red-X even while siblings are still building.
+function renderOutlineStatusIcon(
+  stage: ConversationToolStage,
+  { status, progress }: OutlineItem
+): ReactNode {
+  if (status === 'completed' || status === 'failed') {
+    return <ProgressStatusIcon status={status} />
+  }
+  if (stage === 'in-progress') {
+    return (
+      <CircularProgress
+        value={normalizeProgress(progress)}
+        size={15}
+        strokeWidth={2.25}
+        progressColor="#18181b"
+        animated
+      />
+    )
+  }
+  if (stage === 'ready') {
+    return (
+      <ProgressStatusIcon
+        status={status ?? 'not-started'}
+        value={normalizeProgress(progress)}
+      />
+    )
+  }
+  return <BacklogStatusIcon />
 }
 
-function OutlineContent({
-  stage,
+// 物料化: a spinner while a chapter is still researching, a black check once its
+// video + overview are ready (与 sandbox 一致).
+function renderMaterializingIcon({ status }: OutlineItem): ReactNode {
+  if (status === 'completed') {
+    return <CircleCheckBig className="size-4 text-zinc-950" />
+  }
+  return <Spinner className="size-[15px] text-zinc-900" />
+}
+
+// The unit/chapter tree shared by every outline-shaped stage; `renderIcon`
+// supplies the leading icon (status / spinner / backlog) per item.
+function OutlineTree({
   units,
+  renderIcon,
 }: {
-  stage: ConversationToolStage
   units: ConversationToolUnit[]
+  renderIcon: (item: OutlineItem) => ReactNode
 }) {
   if (units.length === 0) {
     // Outline arrives with the intake response, so this only flashes briefly.
@@ -245,11 +248,9 @@ function OutlineContent({
       {units.map((unit) => (
         <section key={unit.id}>
           <div className="flex min-h-9 items-start gap-2 py-2 text-[16.5px] font-medium text-zinc-800">
-            <StatusIcon
-              stage={stage}
-              status={unit.status}
-              progress={normalizeProgress(unit.progress)}
-            />
+            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+              {renderIcon(unit)}
+            </span>
             <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
               {unit.title}
             </span>
@@ -265,11 +266,9 @@ function OutlineContent({
                 key={chapter.id}
                 className="flex min-h-9 items-start gap-2 py-2 text-[15.5px] text-zinc-600"
               >
-                <StatusIcon
-                  stage={stage}
-                  status={chapter.status}
-                  progress={normalizeProgress(chapter.progress)}
-                />
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                  {renderIcon(chapter)}
+                </span>
                 <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
                   {chapter.title}
                 </span>
@@ -279,6 +278,21 @@ function OutlineContent({
         </section>
       ))}
     </div>
+  )
+}
+
+function OutlineContent({
+  stage,
+  units,
+}: {
+  stage: ConversationToolStage
+  units: ConversationToolUnit[]
+}) {
+  return (
+    <OutlineTree
+      units={units}
+      renderIcon={(item) => renderOutlineStatusIcon(stage, item)}
+    />
   )
 }
 
@@ -306,7 +320,6 @@ export function ConversationToolShell({
   failed = false,
   search = null,
   reasoningText = '',
-  materialize = null,
   errorMessage,
   isSubmittingAnswers = false,
   onAnswerChange,
@@ -327,9 +340,6 @@ export function ConversationToolShell({
   // reasoning. Only meaningful when stage === 'searching'.
   search?: CourseSearchProgress | null
   reasoningText?: string
-  // Materialization x/total (物料化门禁). Only meaningful when stage ===
-  // 'materializing'.
-  materialize?: CourseMaterializeProgress | null
   errorMessage?: string | null
   isSubmittingAnswers?: boolean
   onAnswerChange?: (questionId: string, option: string) => void
@@ -386,11 +396,74 @@ export function ConversationToolShell({
           errorMessage={errorMessage}
         />
       ) : stage === 'materializing' ? (
-        <ConversationToolMaterializing
-          title={title}
-          materialize={materialize}
-          errorMessage={errorMessage}
-        />
+        <div key="materializing" data-stage="materializing" className="flex flex-col">
+          <h3 className="flex items-center gap-2 text-[19.5px] font-semibold leading-7 tracking-tight text-zinc-900">
+            <span className="flex size-5 translate-y-[1px] shrink-0 items-center justify-center">
+              <Spinner
+                aria-label="正在准备课程内容"
+                className="size-[17px] text-zinc-900"
+              />
+            </span>
+            <span>{title}</span>
+          </h3>
+
+          <OutlineTree units={units} renderIcon={renderMaterializingIcon} />
+
+          {errorMessage ? (
+            <p className="mt-3 text-sm text-destructive">{errorMessage}</p>
+          ) : null}
+
+          <div className="-mx-1 -mb-1 mt-auto flex items-center justify-between gap-4 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled
+              className={secondaryActionButtonClassName}
+            >
+              编辑
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className={secondaryActionButtonClassName}
+                onClick={onCancel}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                disabled
+                className={primaryActionButtonClassName}
+              >
+                开始
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : stage === 'ready' && !failed ? (
+        <div key="ready" data-stage="ready" className="flex flex-col">
+          <h3 className="text-[19.5px] font-semibold leading-7 tracking-tight text-zinc-900">
+            <span>您的课程已就绪：{title}</span>
+          </h3>
+
+          <OutlineTree units={units} renderIcon={() => <BacklogStatusIcon />} />
+
+          {errorMessage ? (
+            <p className="mt-3 text-sm text-destructive">{errorMessage}</p>
+          ) : null}
+
+          <div className="-mx-1 -mb-1 mt-auto flex justify-end pt-4">
+            <Button
+              type="button"
+              disabled={!onEnterCourse}
+              className={primaryActionButtonClassName}
+              onClick={onEnterCourse}
+            >
+              进入课程
+            </Button>
+          </div>
+        </div>
       ) : (
         <div key={stage} data-stage={stage} className="flex flex-col">
           <h3 className="flex items-center gap-2 text-[19.5px] font-semibold leading-7 tracking-tight text-zinc-900">

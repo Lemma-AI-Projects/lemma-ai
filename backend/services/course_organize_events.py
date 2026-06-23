@@ -44,11 +44,6 @@ def to_sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def build_materializing_payload(done: int, total: int, failed: int) -> dict[str, Any]:
-    """The `materializing` event body: chapters ready / total / failed (x/total)."""
-    return {"done": done, "total": total, "failed": failed}
-
-
 def build_search_payload(candidates: list[VideoCandidate]) -> dict[str, Any]:
     """The `search` event body: per-platform hit counts + top-K real videos.
 
@@ -112,14 +107,6 @@ class OrganizeEventPublisher:
 
     async def reasoning(self, text: str) -> None:
         await self._publish("reasoning", {"text": text})
-
-    async def materializing(self, done: int, total: int, failed: int) -> None:
-        # Low-latency progress nudge during the materialization phase; the API
-        # endpoint also recomputes {done,total,failed} from the DB on idle ticks /
-        # reconnect, so this is best-effort (no pub/sub replay dependency).
-        await self._publish(
-            "materializing", build_materializing_payload(done, total, failed)
-        )
 
     async def done(self) -> None:
         # Terminal success SIGNAL only — the API builds the CourseDetailOut

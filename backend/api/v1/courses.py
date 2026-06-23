@@ -133,15 +133,18 @@ async def get_questionnaire(
 async def stream_organize(
     course_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    # Ownership checked once up front (consistent 404). The stream relays the
-    # worker's live organize events (real search hits + compose reasoning) from
-    # Redis; an already-terminal course gets one terminal frame (reconnect safe),
-    # and a Redis outage degrades to a DB snapshot stream (决策⑦).
-    detail = await course_service.get_course_detail(
-        db, user_id=current_user.id, course_id=course_id
-    )
+    # Ownership checked once up front (consistent 404). NOT Depends(get_db): a
+    # StreamingResponse holds its dependency's DB session for the WHOLE stream
+    # (minutes), and on client disconnect that idle/closed connection errors on
+    # cleanup. Use a short-lived session for the check; the stream then uses its
+    # own AsyncSessionLocal per snapshot. The stream relays the worker's live
+    # events from Redis; a terminal course gets one terminal frame (reconnect
+    # safe); a Redis outage degrades to a DB snapshot stream (决策⑦).
+    async with AsyncSessionLocal() as db:
+        detail = await course_service.get_course_detail(
+            db, user_id=current_user.id, course_id=course_id
+        )
     if detail is None:
         raise _NOT_FOUND
     return StreamingResponse(
@@ -193,14 +196,13 @@ async def _terminal_frame_if_done(
     return _terminal_frame(detail)
 
 
-def _materializing_payload(detail: CourseDetailOut) -> dict:
-    """x/total/failed for the `materializing` event, counted from the snapshot's
-    chapter statuses (DB truth — drives the card even without pub/sub replay)."""
-    chapters = [chapter for unit in detail.units for chapter in unit.chapters]
-    done = sum(1 for chapter in chapters if chapter.status == "ready")
-    failed = sum(1 for chapter in chapters if chapter.status == "failed")
-    return course_organize_events.build_materializing_payload(
-        done, len(chapters), failed
+def _materializing_frame(detail: CourseDetailOut) -> str:
+    """SSE frame pushing the live course snapshot during materialization, so the
+    card renders the per-chapter tree (spinner -> check) and flips each item as it
+    finishes — same payload shape as the `done` frame, but non-terminal. DB-truth
+    (built from the snapshot), so reconnect / Redis-down degrade work unchanged."""
+    return course_organize_events.to_sse(
+        "materializing", detail.model_dump(by_alias=True, mode="json")
     )
 
 
@@ -238,9 +240,7 @@ async def _organize_event_stream(
                     yield _terminal_frame(detail)
                     return
                 if detail.status == "materializing":
-                    yield course_organize_events.to_sse(
-                        "materializing", _materializing_payload(detail)
-                    )
+                    yield _materializing_frame(detail)
                 elif not seen_event:
                     yield course_organize_events.to_sse("searching", {})
                 continue
@@ -249,8 +249,6 @@ async def _organize_event_stream(
             if event in ("search", "reasoning"):
                 seen_event = True
                 yield course_organize_events.to_sse(event, data)
-            elif event == "materializing":
-                yield course_organize_events.to_sse("materializing", data)
             elif event == "done":
                 # Worker signals done; build the snapshot from our own context.
                 terminal = await _terminal_frame_if_done(
@@ -298,9 +296,7 @@ async def _degrade_snapshot_stream(
             yield _terminal_frame(detail)
             return
         if detail.status == "materializing":
-            yield course_organize_events.to_sse(
-                "materializing", _materializing_payload(detail)
-            )
+            yield _materializing_frame(detail)
         elif not search_emitted:
             async with AsyncSessionLocal() as db:
                 pool = await course_search_service.load_search_candidates(

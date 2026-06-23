@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai import encode_chunk
-from core.database import get_db
+from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from models.ai_conversation import AiConversation
 from schemas.companion import CompanionChatRequest, CompanionConversationOut
@@ -55,13 +55,15 @@ async def companion_chat(
     course_id: uuid.UUID,
     payload: CompanionChatRequest,
     current_user: CurrentUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     # Conversation is resolved (or its id generated) before streaming so the
     # response can announce it in the header from the first byte (same as /chat).
-    context = await companion_service.prepare_turn(
-        db, payload, current_user, course_id=course_id
-    )
+    # Short-lived session (NOT Depends(get_db)): a streaming response holds its
+    # dependency's DB for the whole stream and errors on cleanup on disconnect.
+    async with AsyncSessionLocal() as db:
+        context = await companion_service.prepare_turn(
+            db, payload, current_user, course_id=course_id
+        )
     if context is None:
         # Foreign/unknown course, chapter, or conversation are indistinguishable
         # on purpose (IDOR red line).
