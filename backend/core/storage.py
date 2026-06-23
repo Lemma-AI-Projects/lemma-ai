@@ -39,8 +39,20 @@ class StorageError(Exception):
     """A storage operation could not complete (config missing or API failure)."""
 
 
-# Multipart so no single part rides a giant request; parts upload in parallel.
-_TRANSFER_CONFIG = TransferConfig(
+# Multipart so no single part rides a giant request. UPLOAD parts go SEQUENTIALLY
+# (use_threads=False): Supabase's CompleteMultipartUpload rejects parts that
+# aren't in ascending PartNumber order ("The list of parts was not in ascending
+# order"), which concurrent multipart can trigger. One part at a time keeps the
+# completion list ordered — correctness over a little upload speed.
+_UPLOAD_TRANSFER_CONFIG = TransferConfig(
+    multipart_threshold=8 * 1024 * 1024,
+    multipart_chunksize=8 * 1024 * 1024,
+    max_concurrency=1,
+    use_threads=False,
+)
+
+# DOWNLOAD has no complete-parts-order constraint, so it stays parallel for speed.
+_DOWNLOAD_TRANSFER_CONFIG = TransferConfig(
     multipart_threshold=8 * 1024 * 1024,
     multipart_chunksize=8 * 1024 * 1024,
     max_concurrency=max(1, settings.video_download_concurrency),
@@ -77,7 +89,7 @@ def upload_file(client: Any, *, local_path: str, key: str, content_type: str) ->
         settings.supabase_storage_bucket,
         key,
         ExtraArgs={"ContentType": content_type},
-        Config=_TRANSFER_CONFIG,
+        Config=_UPLOAD_TRANSFER_CONFIG,
     )
 
 
@@ -93,7 +105,7 @@ def download_file(client: Any, *, key: str, local_path: str) -> None:
         settings.supabase_storage_bucket,
         key,
         local_path,
-        Config=_TRANSFER_CONFIG,
+        Config=_DOWNLOAD_TRANSFER_CONFIG,
     )
 
 

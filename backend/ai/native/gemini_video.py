@@ -21,6 +21,7 @@ from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from typing import Any
 
+import httpx
 from google import genai
 from google.genai import types as genai_types
 
@@ -43,6 +44,11 @@ _HTTP_ATTEMPTS = 2
 _UPLOAD_TIMEOUT_S = 600
 _POLL_INTERVAL_S = 2
 _POLL_TIMEOUT_S = 600
+# A whole-video upload over a flaky link can drop mid-transfer (httpx ReadError /
+# ReadTimeout / RemoteProtocolError — all httpx.TransportError); the SDK's
+# status-code retries don't cover that resumable-upload path, so retry it here.
+_UPLOAD_ATTEMPTS = 3
+_UPLOAD_RETRY_BACKOFF_S = 3.0
 
 _shared_client: genai.Client | None = None
 
@@ -82,13 +88,26 @@ async def upload_file(
 ) -> genai_types.File:
     """Upload a video and wait until the provider finishes processing it."""
     client = client or shared_client()
-    file = await client.aio.files.upload(
-        file=str(path),
-        config=genai_types.UploadFileConfig(
-            mime_type=mime_type,
-            http_options=genai_types.HttpOptions(timeout=_UPLOAD_TIMEOUT_S * 1000),
-        ),
+    upload_config = genai_types.UploadFileConfig(
+        mime_type=mime_type,
+        http_options=genai_types.HttpOptions(timeout=_UPLOAD_TIMEOUT_S * 1000),
     )
+    file: genai_types.File | None = None
+    last_exc: httpx.TransportError | None = None
+    for attempt in range(_UPLOAD_ATTEMPTS):
+        try:
+            file = await client.aio.files.upload(file=str(path), config=upload_config)
+            break
+        except httpx.TransportError as exc:  # transient mid-transfer drop/timeout
+            last_exc = exc
+            if attempt + 1 >= _UPLOAD_ATTEMPTS:
+                raise AIProviderError(
+                    "gemini file upload failed after retries (transport error)",
+                    raw=exc,
+                ) from exc
+            await asyncio.sleep(_UPLOAD_RETRY_BACKOFF_S * (attempt + 1))
+    if file is None:  # defensive — the loop either sets `file` or raises
+        raise AIProviderError("gemini file upload produced no file", raw=last_exc)
     deadline = time.monotonic() + _POLL_TIMEOUT_S
     while file.state in (
         genai_types.FileState.PROCESSING,

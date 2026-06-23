@@ -96,13 +96,16 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
     }
   }
 
+  // A transient organize-stream drop (organize.error) is deliberately NOT shown:
+  // useCourseOrganizeStream auto-reconnects silently, and a genuine course
+  // failure still flips the card to the failed stage via the terminal-code path
+  // (a scary red banner for a self-healing blip just hurts the experience). Only
+  // real, actionable errors surface here.
   const errorMessage = submitIntake.isError
     ? '提交问卷失败，请重试'
-    : organize.error
-        ? '编排进度连接中断，正在尝试恢复'
-        : courseQuery.isError
-          ? '加载课程失败，请重试'
-          : null
+    : courseQuery.isError
+      ? '加载课程失败，请重试'
+      : null
 
   return {
     stage,
