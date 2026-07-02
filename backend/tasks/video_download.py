@@ -30,6 +30,45 @@ logger = logging.getLogger("lemma.tasks.video_download")
 
 _CONTENT_TYPE = "video/mp4"
 
+# In-place retry for the Storage upload: Supabase's S3 gateway sits behind
+# Cloudflare, which 524s a part that stalls >~100s on a slow/contended uplink —
+# and botocore never retries a 524 (not in its retryable status list). Retrying
+# HERE reuses the already-downloaded temp file, so a transient stall doesn't
+# cost a re-download or burn a whole materialize-chord attempt (7-2 事故).
+_UPLOAD_ATTEMPTS = 3
+_UPLOAD_RETRY_BACKOFF_S = (20, 60)
+
+
+async def _upload_with_retry(video_path: Path, key: str) -> None:
+    """Upload the temp file, retrying transient failures with backoff. A fresh
+    boto3 client per attempt (a connection that just 524'd may be poisoned)."""
+    for attempt in range(_UPLOAD_ATTEMPTS):
+        try:
+            client = storage.build_s3_client()
+            storage.upload_file(
+                client,
+                local_path=str(video_path),
+                key=key,
+                content_type=_CONTENT_TYPE,
+            )
+            return
+        except Exception as exc:  # noqa: BLE001 — retry any upload failure
+            remaining = _UPLOAD_ATTEMPTS - attempt - 1
+            if remaining == 0:
+                raise
+            backoff = _UPLOAD_RETRY_BACKOFF_S[
+                min(attempt, len(_UPLOAD_RETRY_BACKOFF_S) - 1)
+            ]
+            logger.warning(
+                "storage upload attempt %d/%d failed for %s (%s); retrying in %ds",
+                attempt + 1,
+                _UPLOAD_ATTEMPTS,
+                key,
+                exc,
+                backoff,
+            )
+            await asyncio.sleep(backoff)
+
 
 def _storage_key(chapter_id: uuid.UUID) -> str:
     # One stable key per chapter: a re-pick re-downloads and overwrites in place,
@@ -67,13 +106,7 @@ async def run_download(chapter_id: uuid.UUID) -> None:
                 )
                 video_path = download.path
                 size_bytes = video_path.stat().st_size
-                client = storage.build_s3_client()
-                storage.upload_file(
-                    client,
-                    local_path=str(video_path),
-                    key=key,
-                    content_type=_CONTENT_TYPE,
-                )
+                await _upload_with_retry(video_path, key)
         except Exception as exc:
             logger.warning(
                 "chapter %s video download/upload failed: %s", chapter_id, exc

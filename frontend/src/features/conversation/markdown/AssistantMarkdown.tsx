@@ -57,7 +57,13 @@ export function AssistantMarkdown({
       }}
       allowedTags={toolHtmlTags.allowedTags}
       literalTagContent={toolHtmlTags.literalTagContent}
-      className={cn('min-w-0', className)}
+      className={cn(
+        'min-w-0 w-full max-w-3xl font-[-apple-system-body,ui-sans-serif,-apple-system,BlinkMacSystemFont,Segoe_UI,Helvetica,Arial,sans-serif] leading-[26px] tracking-normal',
+        "[&_[data-streamdown='inline-code']]:font-medium",
+        "[&_[data-streamdown='inline-code']]:leading-[26px]",
+        "[&_[data-streamdown='link']]:font-normal",
+        className
+      )}
     >
       {children}
     </Streamdown>

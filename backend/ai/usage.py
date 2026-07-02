@@ -220,7 +220,11 @@ async def _persist(
         )
         # Hard cap: generate()-style callers await this inline, so a dead
         # connection must cost seconds, not a TCP timeout (6-30 事故: 53s 阻塞).
-        async with asyncio.timeout(5):
+        # 15s, NOT lower: per-task engine.dispose() means a task's first ledger
+        # write pays the full cold path (TCP+TLS+auth + dialect init, ~8-10
+        # round trips — several seconds over a high-RTT link); 5s killed every
+        # cold write (7-2-2 事故).
+        async with asyncio.timeout(15):
             async with AsyncSessionLocal() as session:
                 session.add(row)
                 await session.commit()

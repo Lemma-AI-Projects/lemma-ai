@@ -58,8 +58,9 @@ async def _persist(record: dict, *, course_id: uuid.UUID | None) -> None:
     try:
         row = ProviderUsageLog(**record, course_id=course_id)
         # Hard cap: awaited inline on the search path, so a dead connection must
-        # cost seconds, not a TCP timeout (mirrors ai/usage.py).
-        async with asyncio.timeout(5):
+        # cost seconds, not a TCP timeout (mirrors ai/usage.py — 15s because a
+        # task's first write pays the cold-connect path; see that comment).
+        async with asyncio.timeout(15):
             async with AsyncSessionLocal() as session:
                 session.add(row)
                 await session.commit()

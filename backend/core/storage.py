@@ -44,9 +44,13 @@ class StorageError(Exception):
 # aren't in ascending PartNumber order ("The list of parts was not in ascending
 # order"), which concurrent multipart can trigger. One part at a time keeps the
 # completion list ordered — correctness over a little upload speed.
+# Chunk = 5MB (the S3 minimum): Supabase's gateway sits behind Cloudflare, which
+# kills any part that takes >~100s with a 524. On a slow/contended uplink the
+# smaller part shrinks that exposure window (7-2 事故: 8MB parts stalled >100s);
+# on a healthy link the extra round trips are negligible.
 _UPLOAD_TRANSFER_CONFIG = TransferConfig(
-    multipart_threshold=8 * 1024 * 1024,
-    multipart_chunksize=8 * 1024 * 1024,
+    multipart_threshold=5 * 1024 * 1024,
+    multipart_chunksize=5 * 1024 * 1024,
     max_concurrency=1,
     use_threads=False,
 )
