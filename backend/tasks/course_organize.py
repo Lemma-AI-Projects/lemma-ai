@@ -31,6 +31,19 @@ _DONE = "done"  # terminal (ready or failed) — nothing more to do
 
 # Business codes published on the organize channel (frontend maps to copy).
 _COMPOSE_FAILED = "course_compose_failed"
+_SEARCH_FAILED = "course_search_failed"
+
+# Two SEPARATE retry budgets (6-30 事故: 等搜索与 DB 抖动共用 12 次预算, 差点烧穿):
+# - gate: broad search not terminal yet. Generous wall-clock budget (~5 min of
+#   10s polls; degraded-network searches have taken 161s).
+# - infra: unexpected exceptions (DB/Redis blips). Small budget — the engine's
+#   connect/command timeouts make each attempt fail fast.
+# Exhausting either budget lands the course in `failed` explicitly; it must
+# never hang in `organizing` (Celery's MaxRetriesExceeded path did exactly that).
+_GATE_MAX_ATTEMPTS = 30
+_GATE_RETRY_DELAY_S = 10
+_INFRA_MAX_ATTEMPTS = 5
+_INFRA_RETRY_DELAY_S = 10
 
 
 def _enqueue_materialize_chord(
@@ -152,17 +165,76 @@ async def run_organize(course_id: uuid.UUID) -> str:
         await engine.dispose()
 
 
-@celery_app.task(
-    name="course.organize", bind=True, max_retries=12, default_retry_delay=5
-)
-def organize_course(self, course_id: str) -> None:  # noqa: ANN001 — celery bind
-    """Sync Celery entrypoint. Idempotent (persist clean-slates first). Retries
-    while the broad search is still running (gate), or on unexpected infra error."""
+async def _give_up(course_id: uuid.UUID, code: str, message: str) -> None:
+    """Terminal fallback when a retry budget is exhausted: land `failed` so the
+    course never hangs in `organizing`, and publish the error frame. Never
+    raises — this is the last line of defence, failures are only logged."""
+    publisher = OrganizeEventPublisher(course_id)
+    try:
+        async with AsyncSessionLocal() as db:
+            await course_build_service.mark_failed(db, course_id=course_id)
+        await publisher.error(code, message)
+    except Exception:  # noqa: BLE001 — best effort; log and move on
+        logger.exception(
+            "failed to mark course %s failed after budget exhaustion", course_id
+        )
+    finally:
+        await publisher.aclose()
+        await engine.dispose()
+
+
+@celery_app.task(name="course.organize", bind=True, max_retries=None)
+def organize_course(
+    self,  # noqa: ANN001 — celery bind
+    course_id: str,
+    gate_attempts: int = 0,
+    infra_attempts: int = 0,
+) -> None:
+    """Sync Celery entrypoint. Idempotent (persist clean-slates first).
+
+    max_retries=None because Celery's single shared counter cannot tell "still
+    waiting for the search" from "infra error"; the two budgets are threaded
+    explicitly through kwargs and enforced here, and exhausting either one
+    fails the course explicitly instead of leaving it hanging."""
     try:
         outcome = asyncio.run(run_organize(uuid.UUID(course_id)))
-    except Exception as exc:  # noqa: BLE001 — unexpected infra error: let celery retry
-        raise self.retry(exc=exc)
+    except Exception as exc:  # noqa: BLE001 — unexpected infra error
+        if infra_attempts + 1 >= _INFRA_MAX_ATTEMPTS:
+            logger.error(
+                "organize infra retries exhausted for course %s", course_id
+            )
+            asyncio.run(
+                _give_up(
+                    uuid.UUID(course_id), _COMPOSE_FAILED, "课程编排失败，请重试"
+                )
+            )
+            raise
+        raise self.retry(
+            exc=exc,
+            countdown=_INFRA_RETRY_DELAY_S,
+            args=[course_id],
+            kwargs={
+                "gate_attempts": gate_attempts,
+                "infra_attempts": infra_attempts + 1,
+            },
+        )
     if outcome == _RETRY:
         # Broad search not terminal yet — re-check shortly (frees the worker
-        # instead of busy-waiting). max_retries * countdown bounds the wait.
-        raise self.retry(countdown=5)
+        # instead of busy-waiting).
+        if gate_attempts + 1 >= _GATE_MAX_ATTEMPTS:
+            logger.error(
+                "broad search never reached a terminal state for course %s",
+                course_id,
+            )
+            asyncio.run(
+                _give_up(uuid.UUID(course_id), _SEARCH_FAILED, "视频搜索超时，请重试")
+            )
+            return
+        raise self.retry(
+            countdown=_GATE_RETRY_DELAY_S,
+            args=[course_id],
+            kwargs={
+                "gate_attempts": gate_attempts + 1,
+                "infra_attempts": infra_attempts,
+            },
+        )

@@ -180,3 +180,25 @@ async def finalize_failed(db: AsyncSession, *, course_id: uuid.UUID) -> bool:
     result = await db.execute(_FINALIZE_FAILED_SQL, {"course_id": course_id})
     await db.commit()
     return result.first() is not None
+
+
+_FAIL_UNFINISHED_SQL = text(
+    """
+    UPDATE course_chapters SET status = 'failed'
+    WHERE unit_id IN (SELECT id FROM course_units WHERE course_id = :course_id)
+      AND status <> 'ready'
+    """
+)
+
+
+async def fail_unfinished_chapters(db: AsyncSession, *, course_id: uuid.UUID) -> int:
+    """Budget-exhausted finalize: force every non-ready chapter terminal.
+
+    Infra crashes deliberately leave chapters non-terminal (`researching`) so
+    the retry chord re-runs them; once retries are exhausted those leftovers
+    must be forced to `failed`, otherwise `finalize_failed` (which requires a
+    failed chapter to exist) would no-op and the course would hang in
+    `materializing` forever. Returns the number of chapters flipped."""
+    result = await db.execute(_FAIL_UNFINISHED_SQL, {"course_id": course_id})
+    await db.commit()
+    return result.rowcount or 0

@@ -1,6 +1,7 @@
 """Celery application (rules 第九章: anything >2s runs here, not in the API).
 
-Worker startup (backend/ directory):
+Worker startup (backend/ directory) — concurrency defaults to 4 via
+`worker_concurrency` below (no --concurrency flag needed):
     uv run celery -A tasks.celery_app worker --loglevel=info
 
 Beat (periodic video-asset cleanup) — run alongside the worker:
@@ -36,6 +37,10 @@ celery_app.conf.update(
     # A lost worker must not silently drop an ingest job.
     task_acks_late=True,
     worker_prefetch_multiplier=1,
+    # 4 slots, not the CPU-count default (8): tasks are I/O-bound (downloads /
+    # LLM waits) so throughput is unchanged for a single user, while the DB
+    # connection demand against the Supabase pooler quota is halved (7-2 事故).
+    worker_concurrency=4,
     result_expires=60 * 60 * 24,
     # Sliding-expiry cleanup of re-hosted chapter videos (Supabase Storage),
     # daily off-peak. The task itself computes the cutoff from VIDEO_ASSET_TTL_DAYS.

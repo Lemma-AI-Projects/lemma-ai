@@ -10,6 +10,7 @@ cost_usd is filled only when the run reports it (Run.usage_total_usd); it is
 never estimated — NULL means "the platform sent no figure".
 """
 
+import asyncio
 import json
 import logging
 import uuid
@@ -56,9 +57,12 @@ async def record_provider_call(
 async def _persist(record: dict, *, course_id: uuid.UUID | None) -> None:
     try:
         row = ProviderUsageLog(**record, course_id=course_id)
-        async with AsyncSessionLocal() as session:
-            session.add(row)
-            await session.commit()
+        # Hard cap: awaited inline on the search path, so a dead connection must
+        # cost seconds, not a TCP timeout (mirrors ai/usage.py).
+        async with asyncio.timeout(5):
+            async with AsyncSessionLocal() as session:
+                session.add(row)
+                await session.commit()
     except Exception:  # noqa: BLE001 — the ledger must never break the search
         logger.exception(
             "failed to persist provider_usage_log row (trace_id=%s)",

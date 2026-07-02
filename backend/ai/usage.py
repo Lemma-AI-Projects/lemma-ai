@@ -14,6 +14,7 @@ the framework, with no request arguments) can still attribute failures to the
 right request and route.
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -217,8 +218,11 @@ async def _persist(
             user_id=uuid.UUID(user_id) if user_id else None,
             conversation_id=uuid.UUID(conversation_id) if conversation_id else None,
         )
-        async with AsyncSessionLocal() as session:
-            session.add(row)
-            await session.commit()
+        # Hard cap: generate()-style callers await this inline, so a dead
+        # connection must cost seconds, not a TCP timeout (6-30 事故: 53s 阻塞).
+        async with asyncio.timeout(5):
+            async with AsyncSessionLocal() as session:
+                session.add(row)
+                await session.commit()
     except Exception:  # noqa: BLE001 — the ledger must never break the AI call
         logger.exception("failed to persist ai_usage_log row (trace_id=%s)", record["trace_id"])
