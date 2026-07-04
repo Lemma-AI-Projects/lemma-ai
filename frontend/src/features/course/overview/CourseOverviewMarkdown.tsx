@@ -4,6 +4,7 @@ import { math } from '@streamdown/math'
 import { mermaid } from '@streamdown/mermaid'
 import { Streamdown, type Components } from 'streamdown'
 import 'katex/dist/katex.min.css'
+import { createCalloutRenderers } from '@/components/calloutRenderers'
 import { cn } from '@/lib/utils'
 
 interface CourseOverviewMarkdownProps {
@@ -12,6 +13,17 @@ interface CourseOverviewMarkdownProps {
   /** Live generation: parse incomplete Markdown so partial deltas render cleanly. */
   isStreaming?: boolean
 }
+
+// Callout 卡片（```concept 等 fence）：正文用本组件递归渲染一层，保持
+// 章节笔记自己的排版；卡片内部沿用与会话域一致的 15px 内文尺寸。
+const calloutRenderers = createCalloutRenderers(({ code, isIncomplete }) => (
+  <CourseOverviewMarkdown
+    isStreaming={isIncomplete}
+    className="text-[15px] leading-7 text-zinc-800"
+  >
+    {code}
+  </CourseOverviewMarkdown>
+))
 
 const courseOverviewMarkdownComponents: Components = {
   h2: ({ className, ...props }) => (
@@ -77,7 +89,7 @@ export function CourseOverviewMarkdown({
         code: { copy: true, download: true },
         mermaid: { copy: true, download: true, fullscreen: true, panZoom: true },
       }}
-      plugins={{ code, math, mermaid, cjk }}
+      plugins={{ code, math, mermaid, cjk, renderers: calloutRenderers }}
       components={courseOverviewMarkdownComponents}
       className={cn('min-w-0 text-[16px] text-zinc-700', className)}
     >
