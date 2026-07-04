@@ -6,7 +6,8 @@
 - searched: load 候选池 → compose（零信任校验在 compose 内）→ persist → 预热第一章。
 
 Celery 纪律: asyncio.run 包裹 async body；AI runtime 仅在真正 compose 时初始化；DB engine
-finally dispose。compose 失败(AIError)按 failed 处理，不无限重试；意外基础设施错误才走重试。
+finally dispose。compose 的终态失败(空结果/4xx 判定)按 failed 处理；瞬时失败
+(ai_timeout/ai_rate_limited, 例如网关 ~60s 掐断流) 与基础设施错误共用有界 infra 重试预算。
 """
 
 import asyncio
@@ -15,6 +16,7 @@ import uuid
 
 from ai import init_ai_runtime, shutdown_ai_runtime
 from ai.coursegen import stream_compose_course
+from ai.errors import is_retryable_error_code
 from core.database import AsyncSessionLocal, engine
 from services import course_build_service, course_search_service, course_service
 from services.course_organize_events import (
@@ -44,6 +46,14 @@ _GATE_MAX_ATTEMPTS = 30
 _GATE_RETRY_DELAY_S = 10
 _INFRA_MAX_ATTEMPTS = 5
 _INFRA_RETRY_DELAY_S = 10
+
+
+class _TransientComposeError(Exception):
+    """Compose died on a TRANSIENT provider failure (gateway ~60s stream cutoff
+    -> ai_timeout, rate limit). Raised so the task-level infra budget retries
+    the whole organize instead of terminally failing the course (7-2 事故:
+    one RemoteProtocolError bricked the course). Idempotent to re-run: the
+    search gate is already terminal, so a retry goes straight back to compose."""
 
 
 def _enqueue_materialize_chord(
@@ -110,6 +120,7 @@ async def run_organize(course_id: uuid.UUID) -> str:
             # Real search results first, then stream the compose reasoning live.
             await publisher.search(build_search_payload(candidates))
             result = None
+            error_code: str | None = None
             async for event in stream_compose_course(topic, answers, candidates):
                 if event.kind == "reasoning":
                     if event.reasoning_text:
@@ -118,12 +129,20 @@ async def run_organize(course_id: uuid.UUID) -> str:
                     result = event.result
                     break
                 elif event.kind == "error":
+                    error_code = event.error_code
                     logger.warning(
-                        "compose failed for course %s: %s",
+                        "compose failed for course %s: %s (%s)",
                         course_id,
                         event.error_message,
+                        event.error_code,
                     )
                     break
+
+            if result is None and is_retryable_error_code(error_code):
+                # Transient model failure: retry via the infra budget instead
+                # of terminally failing the course. No mark_failed, no error
+                # frame — the course stays `organizing` and the SSE stays open.
+                raise _TransientComposeError(error_code)
 
             if result is None:
                 async with AsyncSessionLocal() as db:

@@ -182,6 +182,40 @@ async def finalize_failed(db: AsyncSession, *, course_id: uuid.UUID) -> bool:
     return result.first() is not None
 
 
+# Partial delivery (7-3 拍板): after the retry budget is exhausted, a course
+# with AT LEAST ONE ready chapter ships as `ready` instead of burning the whole
+# build over a few bad chapters. Requires every chapter terminal (the caller
+# force-fails leftovers first) so the flip is race-safe and final; the failed
+# chapters keep their per-chapter `failed` status (rendered in-course, and the
+# in-course self-heal paths can still revive them lazily).
+_FINALIZE_PARTIAL_SQL = text(
+    """
+    UPDATE courses SET status = 'ready', updated_at = now()
+    WHERE id = :course_id AND status = 'materializing'
+      AND EXISTS (
+        SELECT 1 FROM course_chapters c
+        JOIN course_units u ON c.unit_id = u.id
+        WHERE u.course_id = :course_id AND c.status = 'ready'
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM course_chapters c
+        JOIN course_units u ON c.unit_id = u.id
+        WHERE u.course_id = :course_id
+          AND c.status NOT IN ('ready', 'failed')
+      )
+    RETURNING id
+    """
+)
+
+
+async def finalize_partial(db: AsyncSession, *, course_id: uuid.UUID) -> bool:
+    """Budget-exhausted gate: flip materializing -> ready when >=1 chapter is
+    ready and the rest are terminal. RETURNING -> True for the single winner."""
+    result = await db.execute(_FINALIZE_PARTIAL_SQL, {"course_id": course_id})
+    await db.commit()
+    return result.first() is not None
+
+
 _FAIL_UNFINISHED_SQL = text(
     """
     UPDATE course_chapters SET status = 'failed'

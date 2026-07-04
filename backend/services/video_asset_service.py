@@ -245,6 +245,9 @@ class StoredVideo:
     storage_bucket: str
     storage_path: str
     mime_type: str | None
+    # Long-video policy input (ai/video_limits): >50min chapters are sent to the
+    # model at LOW media resolution to stay under the provider token cap.
+    duration_s: int | None
 
 
 async def get_chapter_chosen_candidate_id(
@@ -259,6 +262,23 @@ async def get_chapter_chosen_candidate_id(
         db, course_id=course_id, chapter_id=chapter_id
     )
     return resolved[1].id if resolved is not None else None
+
+
+async def get_chapter_chosen_candidate_ref(
+    db: AsyncSession, *, course_id: uuid.UUID, chapter_id: uuid.UUID
+) -> tuple[uuid.UUID, int | None] | None:
+    """(candidate_id, duration_s) with the same IDOR rules as above.
+
+    The duration feeds the long-video media-resolution downgrade (ai/video_limits)
+    so the companion sends >50min chapters at LOW — matching the overview's
+    choice keeps implicit context caching hitting AND stays under the token cap.
+    """
+    resolved = await _resolve_chapter_candidate(
+        db, course_id=course_id, chapter_id=chapter_id
+    )
+    if resolved is None:
+        return None
+    return resolved[1].id, resolved[1].duration_s
 
 
 async def get_chapter_asset_status(
@@ -321,6 +341,7 @@ async def get_ready_stored_video(
         storage_bucket=asset.storage_bucket or settings.supabase_storage_bucket,
         storage_path=asset.storage_path,
         mime_type=asset.mime_type,
+        duration_s=asset.duration_s,
     )
 
 

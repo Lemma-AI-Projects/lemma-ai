@@ -544,6 +544,7 @@ class AIClient:
         course_id: str | None = None,
         conversation_id: str | None = None,
         prompt_vars: dict[str, str] | None = None,
+        media_resolution: str | None = None,
     ) -> AsyncIterator[AIChunk]:
         """Streaming grounded video Q&A (AI 伴学): yield typed AIChunk events
         (reasoning/delta/usage/done/error), the SAME contract as stream_chat so
@@ -567,6 +568,13 @@ class AIClient:
         routes = routes_for(use_case)
         route = routes[0]
         system_prompt = render_system_prompt(use_case, prompt_vars)
+        # Long-video downgrade (7-3 工单): the caller may force a lower media
+        # resolution so the request stays under the provider's 1M-token cap.
+        route_extra = (
+            {**(route.extra or {}), "media_resolution": media_resolution}
+            if media_resolution
+            else route.extra
+        )
         turns: list[tuple[str, str]] = []
         for message in history or []:
             if message.role not in ("user", "assistant"):
@@ -593,7 +601,7 @@ class AIClient:
                     mime_type=video.mime_type,
                     history=turns,
                     timeout_s=route.timeout_s,
-                    route_extra=route.extra,
+                    route_extra=route_extra,
                 ):
                     if usage is not None:
                         usage_metadata = usage
@@ -656,6 +664,7 @@ class AIClient:
         course_id: str | None = None,
         conversation_id: str | None = None,
         prompt_vars: dict[str, str] | None = None,
+        media_resolution: str | None = None,
     ) -> AsyncIterator[AIChunk]:
         """Text-first streaming chat with optional function-calling tools (决策⑩-a).
 
@@ -674,6 +683,13 @@ class AIClient:
         routes = routes_for(use_case)
         route = routes[0]
         system_prompt = render_system_prompt(use_case, prompt_vars)
+        # Long-video downgrade (7-3 工单): must match the overview's choice for
+        # the chapter so implicit context caching keeps hitting (见 plan 2.5).
+        route_extra = (
+            {**(route.extra or {}), "media_resolution": media_resolution}
+            if media_resolution
+            else route.extra
+        )
         turns: list[tuple[str, str]] = []
         for message in history or []:
             if message.role not in ("user", "assistant"):
@@ -710,7 +726,7 @@ class AIClient:
                     tool_specs=specs,
                     dispatch=dispatch,
                     timeout_s=route.timeout_s,
-                    route_extra=route.extra,
+                    route_extra=route_extra,
                 ):
                     if chunk.kind == "usage":
                         # Internal: the turn's summed usage. Recorded once below;

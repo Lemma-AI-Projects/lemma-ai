@@ -17,11 +17,13 @@ Fan-out (决策②, 拍板 1): `run_organize` enqueues
   Transient-failure resilience is the course-level re-enqueue (decision⑥),
   not Celery auto-retry.
 - `course.materialize_finalize` reads the DB (the truth, not the chord results)
-  and atomically flips the course: all chapters ready -> `ready` + done(); any
-  chapter failed -> `failed` + error() — both via single conditional UPDATEs.
-  When the retry budget is exhausted it first FORCES leftover non-terminal
-  chapters to `failed` (otherwise the conditional flip would no-op and the
-  course would hang in `materializing`).
+  and atomically flips the course via single conditional UPDATEs. Within the
+  retry budget the gate is STRICT (all ready -> `ready` + done(), else retry);
+  once the budget is exhausted it FORCES leftover non-terminal chapters to
+  `failed` and then delivers PARTIALLY (7-3 拍板): >=1 ready chapter -> course
+  `ready` + done() with failed chapters rendered in-course (self-heal on visit);
+  nothing ready -> `failed` + error(). Either way the course never hangs in
+  `materializing`.
 
 Celery 纪律: asyncio.run wraps the async body; the AI runtime is initialised for
 the overview model call and torn down after; the module engine is disposed at the
@@ -120,6 +122,7 @@ async def _materialize_chapter_steps(
         user_id=ctx.user_id,
         chapter_id=chapter_id,
         candidate_id=stored.candidate_id,
+        video_duration_s=stored.duration_s,
     )
     for step in CONTENT_STEPS:
         result = await step.ensure(step_ctx, video)
@@ -218,9 +221,9 @@ async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
                 return  # course stays `materializing`; the retry chord will finalize
 
         # Retries exhausted: force leftover non-terminal chapters to `failed`
-        # first (infra crashes keep them `researching` by design), so the
-        # conditional finalize_failed below necessarily fires — the course must
-        # never hang in `materializing`. Recoverable by re-organizing.
+        # first (infra crashes keep them `researching` by design), so one of the
+        # conditional flips below necessarily fires — the course must never hang
+        # in `materializing`.
         async with AsyncSessionLocal() as db:
             forced = await course_build_service.fail_unfinished_chapters(
                 db, course_id=course_id
@@ -232,6 +235,25 @@ async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
                 course_id,
                 forced,
             )
+        # Partial delivery (7-3 拍板): >=1 ready chapter ships the course as
+        # ready — failed chapters render as failed in-course and self-heal
+        # lazily on visit. Only a course with NOTHING usable fails outright.
+        async with AsyncSessionLocal() as db:
+            if await course_build_service.finalize_partial(db, course_id=course_id):
+                async with AsyncSessionLocal() as db:
+                    _done, total, failed = (
+                        await course_service.get_materialization_progress(
+                            db, course_id=course_id
+                        )
+                    )
+                logger.warning(
+                    "course %s delivered partially: %d/%d chapters failed",
+                    course_id,
+                    failed,
+                    total,
+                )
+                await publisher.done()
+                return
         async with AsyncSessionLocal() as db:
             if await course_build_service.finalize_failed(db, course_id=course_id):
                 await publisher.error(

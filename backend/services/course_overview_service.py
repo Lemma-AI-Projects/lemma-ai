@@ -60,6 +60,9 @@ class OverviewSnapshot:
 
     status: Literal["ready", "pending", "generating", "failed"]
     markdown: str | None
+    # Set for `failed` rows: the AIError code recorded by mark_failed. The
+    # materialize step uses it to tell transient failures (retry) from verdicts.
+    error_type: str | None = None
 
 
 async def _get(db: AsyncSession, chapter_id: uuid.UUID) -> ChapterOverview | None:
@@ -95,7 +98,9 @@ async def read_snapshot(
     if row.status == "ready" and row.candidate_id == candidate_id and row.markdown:
         return OverviewSnapshot(status="ready", markdown=row.markdown)
     if row.status == "failed":
-        return OverviewSnapshot(status="failed", markdown=None)
+        return OverviewSnapshot(
+            status="failed", markdown=None, error_type=row.error_type
+        )
     if row.status == "generating":
         return OverviewSnapshot(status="generating", markdown=None)
     # pending, or ready-but-stale (re-pick): the page should (re)generate.

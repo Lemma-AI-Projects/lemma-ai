@@ -36,6 +36,7 @@ from ai import (
     ai_client,
     tool_spec,
 )
+from ai.video_limits import media_resolution_for_duration
 from core import aio
 from core.security import CurrentUser
 from schemas.companion import CompanionChatRequest
@@ -60,6 +61,9 @@ class CompanionTurnContext:
     # assignment / unknown chapter) — the video tool then degrades to text-only.
     chapter_id: uuid.UUID | None = None
     candidate_id: uuid.UUID | None = None
+    # Chosen video duration: drives the long-video media-resolution downgrade
+    # (ai/video_limits); must match the overview's choice for cache hits.
+    video_duration_s: int | None = None
     # Set for a NEW conversation (its row doesn't exist yet); persist_turn
     # creates it (with course_id) together with the first turn.
     new_conversation_title: str | None = None
@@ -90,10 +94,13 @@ async def prepare_turn(
     # Optional: resolve the current chapter's chosen candidate. None (foreign /
     # unknown / no chosen video) just means "no video to load" — never a 404.
     candidate_id: uuid.UUID | None = None
+    video_duration_s: int | None = None
     if payload.chapter_id is not None:
-        candidate_id = await video_asset_service.get_chapter_chosen_candidate_id(
+        ref = await video_asset_service.get_chapter_chosen_candidate_ref(
             db, course_id=course_id, chapter_id=payload.chapter_id
         )
+        if ref is not None:
+            candidate_id, video_duration_s = ref
 
     if payload.conversation_id is None:
         return CompanionTurnContext(
@@ -105,6 +112,7 @@ async def prepare_turn(
             history=[],
             chapter_id=payload.chapter_id,
             candidate_id=candidate_id,
+            video_duration_s=video_duration_s,
             new_conversation_title=conversation_service.title_from_first_message(
                 payload.message
             ),
@@ -130,6 +138,7 @@ async def prepare_turn(
         history=history,
         chapter_id=payload.chapter_id,
         candidate_id=candidate_id,
+        video_duration_s=video_duration_s,
     )
 
 
@@ -198,6 +207,7 @@ async def stream_answer(context: CompanionTurnContext) -> AsyncIterator[AIChunk]
         user_id=str(context.user_id),
         course_id=str(context.course_id),
         conversation_id=str(context.conversation_id),
+        media_resolution=media_resolution_for_duration(context.video_duration_s),
     )
     try:
         async for chunk in chunk_stream:

@@ -20,6 +20,7 @@ from ai.coursegen.types import (
 from ai.errors import AIError
 from ai.search import VideoCandidate
 from ai.types import AIUseCase, StructuredStreamEvent
+from ai.video_limits import MAX_CANDIDATE_DURATION_S, fits_token_limit
 
 logger = logging.getLogger("lemma.ai.coursegen")
 
@@ -86,7 +87,24 @@ async def stream_compose_course(
     if not candidates:
         yield StructuredStreamEvent(kind="result", result=None)
         return
-    ranked = rank(candidates)[:_COMPOSE_TOP_K]
+    # 400 preflight (7-3 工单): videos longer than the provider's hard token cap
+    # fail EVERY overview/companion call deterministically, so they must never
+    # be selectable. Unknown durations pass (resolution downgrade + the provider
+    # error is the fallback for those).
+    usable = [c for c in candidates if fits_token_limit(c.duration_s)]
+    dropped = len(candidates) - len(usable)
+    if dropped:
+        logger.warning(
+            "compose dropped %d candidate(s) over the %ds provider token cap for"
+            " topic %r",
+            dropped,
+            MAX_CANDIDATE_DURATION_S,
+            topic,
+        )
+    if not usable:
+        yield StructuredStreamEvent(kind="result", result=None)
+        return
+    ranked = rank(usable)[:_COMPOSE_TOP_K]
     by_ref = {candidate_ref(candidate): candidate for candidate in ranked}
     prompt = _compose_prompt(topic, answers, ranked)
     async for event in ai_client.stream_generate(

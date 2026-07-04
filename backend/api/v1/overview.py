@@ -101,12 +101,21 @@ async def _generate(
         )
         return
 
+    # The asset is ready at this point; its duration drives the long-video
+    # media-resolution downgrade (must match the materialize path's choice so
+    # implicit context caching keeps hitting).
+    async with AsyncSessionLocal() as db:
+        stored = await video_asset_service.get_ready_stored_video(
+            db, chapter_id=chapter_id
+        )
+
     async for chunk in overview_core.generate_overview_chunks(
         course_id=course_id,
         user_id=user_id,
         chapter_id=chapter_id,
         candidate_id=candidate_id,
         video=video,
+        video_duration_s=stored.duration_s if stored is not None else None,
     ):
         yield encode_chunk(chunk)
 

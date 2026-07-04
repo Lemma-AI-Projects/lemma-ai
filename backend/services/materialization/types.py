@@ -27,6 +27,9 @@ class StepContext:
     user_id: uuid.UUID
     chapter_id: uuid.UUID
     candidate_id: uuid.UUID
+    # Chapter video duration (from the ready asset row) — drives the long-video
+    # media-resolution downgrade (ai/video_limits). None = unknown, keep default.
+    video_duration_s: int | None = None
 
 
 @dataclass
