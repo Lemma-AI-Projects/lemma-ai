@@ -109,6 +109,7 @@ class Settings(BaseSettings):
 
     supabase_url: str
     supabase_jwt_audience: str = "authenticated"
+    supabase_jwt_secret: str = ""
 
     database_url: str
 
