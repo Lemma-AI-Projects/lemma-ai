@@ -15,6 +15,7 @@ import {
   ConversationToolShell,
   type QuestionnaireAnswers,
 } from '@/features/conversation/ConversationToolShell'
+import { StreamdownStyleCanvas } from '@/features/conversation/markdown/StreamdownStyleCanvas'
 import type {
   ConversationToolQuestion,
   ConversationToolStage,
@@ -239,6 +240,8 @@ interface StagePreview {
   progress?: number
   failed?: boolean
 }
+
+type SandboxView = 'course-tool' | 'streamdown-style'
 
 const STAGE_PREVIEWS: StagePreview[] = [
   {
@@ -703,6 +706,7 @@ function ReadySandboxShell({
 export function ConversationSandboxPage() {
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({})
   const [searchReplayKey, setSearchReplayKey] = useState(0)
+  const [activeView, setActiveView] = useState<SandboxView>('course-tool')
 
   const handleAnswerChange = (questionId: string, option: string) => {
     setAnswers((current) => ({
@@ -714,78 +718,112 @@ export function ConversationSandboxPage() {
   return (
     <div className="h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
       <div className="mx-auto flex w-full max-w-[44rem] flex-col gap-10 px-6 py-12">
-        <header className="flex flex-col gap-1">
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900">
-            课程工具卡片 · 各阶段预览
-          </h1>
-          <p className="text-sm text-zinc-500">
-            纯前端样例，逐一展示 ConversationToolShell 的每个 stage。真实端到端流程请在对话中开启「Course Planning」开关测试。
-          </p>
+        <header className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900">
+              Sandbox
+            </h1>
+            <p className="text-sm text-zinc-500">
+              纯前端样例，用于先打磨视觉与交互，再接入真实数据。
+            </p>
+          </div>
+          <div className="flex w-fit flex-wrap items-center gap-1 rounded-full border border-zinc-200 bg-white p-1">
+            <button
+              type="button"
+              aria-pressed={activeView === 'course-tool'}
+              onClick={() => setActiveView('course-tool')}
+              className={
+                activeView === 'course-tool'
+                  ? 'h-8 rounded-full bg-zinc-950 px-3 text-sm font-medium text-white'
+                  : 'h-8 rounded-full px-3 text-sm font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
+              }
+            >
+              课程工具卡片
+            </button>
+            <button
+              type="button"
+              aria-pressed={activeView === 'streamdown-style'}
+              onClick={() => setActiveView('streamdown-style')}
+              className={
+                activeView === 'streamdown-style'
+                  ? 'h-8 rounded-full bg-zinc-950 px-3 text-sm font-medium text-white'
+                  : 'h-8 rounded-full px-3 text-sm font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
+              }
+            >
+              Streamdown 样式
+            </button>
+          </div>
         </header>
 
-        <section className="flex flex-col gap-3">
-          <div className="flex min-h-7 items-center justify-between gap-3">
-            <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-              conversation · thinking
-            </span>
-          </div>
-          <div
-            data-slot="conversation-thinking-preview"
-            className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5"
-          >
-            <ConversationReasoning
-              content="I should first identify the learner's current gap, then explain the concept using the smallest useful example before adding edge cases."
-              isStreaming
-            />
-          </div>
-        </section>
+        {activeView === 'streamdown-style' ? (
+          <StreamdownStyleCanvas />
+        ) : (
+          <>
+            <section className="flex flex-col gap-3">
+              <div className="flex min-h-7 items-center justify-between gap-3">
+                <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                  conversation · thinking
+                </span>
+              </div>
+              <div
+                data-slot="conversation-thinking-preview"
+                className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5"
+              >
+                <ConversationReasoning
+                  content="I should first identify the learner's current gap, then explain the concept using the smallest useful example before adding edge cases."
+                  isStreaming
+                />
+              </div>
+            </section>
 
-        {STAGE_PREVIEWS.map((preview) => (
-          <section key={preview.key} className="flex flex-col gap-3">
-            <div className="flex min-h-7 items-center justify-between gap-3">
-              <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-                {preview.label}
-              </span>
-              {preview.key === 'searching' ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setSearchReplayKey((current) => current + 1)}
-                  className="h-7 rounded-full px-2.5 text-xs font-medium text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-900"
-                >
-                  展示动效
-                </Button>
-              ) : null}
-            </div>
-            {preview.key === 'searching' ? (
-              <SearchPreviewShell key={searchReplayKey} />
-            ) : preview.key === 'materialization' ? (
-              <MaterializationSandboxShell
-                title="微积分速成：核心概念与应用基础"
-                units={preview.units ?? []}
-              />
-            ) : preview.key === 'ready' ? (
-              <ReadySandboxShell
-                title="微积分速成：核心概念与应用基础"
-                units={preview.units ?? []}
-              />
-            ) : (
-              <ConversationToolShell
-                title="微积分速成：核心概念与应用基础"
-                stage={preview.stage}
-                questions={preview.questions}
-                answers={answers}
-                units={preview.units}
-                progress={preview.progress}
-                failed={preview.failed}
-                onAnswerChange={handleAnswerChange}
-                onSubmitAnswers={() => undefined}
-                onCancel={() => undefined}
-                onEnterCourse={() => undefined}
-              />
-            )}
-          </section>
-        ))}
+            {STAGE_PREVIEWS.map((preview) => (
+              <section key={preview.key} className="flex flex-col gap-3">
+                <div className="flex min-h-7 items-center justify-between gap-3">
+                  <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                    {preview.label}
+                  </span>
+                  {preview.key === 'searching' ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setSearchReplayKey((current) => current + 1)}
+                      className="h-7 rounded-full px-2.5 text-xs font-medium text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-900"
+                    >
+                      展示动效
+                    </Button>
+                  ) : null}
+                </div>
+                {preview.key === 'searching' ? (
+                  <SearchPreviewShell key={searchReplayKey} />
+                ) : preview.key === 'materialization' ? (
+                  <MaterializationSandboxShell
+                    title="微积分速成：核心概念与应用基础"
+                    units={preview.units ?? []}
+                  />
+                ) : preview.key === 'ready' ? (
+                  <ReadySandboxShell
+                    title="微积分速成：核心概念与应用基础"
+                    units={preview.units ?? []}
+                  />
+                ) : (
+                  <ConversationToolShell
+                    title="微积分速成：核心概念与应用基础"
+                    stage={preview.stage}
+                    questions={preview.questions}
+                    answers={answers}
+                    units={preview.units}
+                    progress={preview.progress}
+                    failed={preview.failed}
+                    onAnswerChange={handleAnswerChange}
+                    onSubmitAnswers={() => undefined}
+                    onCancel={() => undefined}
+                    onEnterCourse={() => undefined}
+                  />
+                )}
+              </section>
+            ))}
+          </>
+        )}
       </div>
     </div>
   )
