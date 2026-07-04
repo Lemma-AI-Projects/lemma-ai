@@ -6,12 +6,18 @@ import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
+import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 
 const routes: RouteObject[] = [
+  {
+    // 公开落地页：未登录默认停留；已登录在页面内重定向到 /home。
+    path: '/',
+    element: <LandingPage />,
+  },
   {
     path: '/login',
     element: <LoginPage />,
@@ -20,11 +26,10 @@ const routes: RouteObject[] = [
     element: <RequireAuth />,
     children: [
       {
-        path: '/',
         element: <AppLayout />,
         children: [
           {
-            index: true,
+            path: 'home',
             element: <HomePage />,
           },
           {

@@ -27,7 +27,7 @@ export function ProjectPageActions({
     deleteMutation.mutate(
       { projectId },
       {
-        onSuccess: () => navigate('/'),
+        onSuccess: () => navigate('/home'),
         onError: (error) => console.error('Failed to delete project', error),
       }
     )

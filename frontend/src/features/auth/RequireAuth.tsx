@@ -11,7 +11,9 @@ export function RequireAuth() {
   }
 
   if (status === 'unauthed') {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    // 未登录一律回落地页（含退出登录后的场景）；from 透传给落地页，
+    // 落地页的登录入口再转交 LoginPage，登录成功仍可回到原页面。
+    return <Navigate to="/" replace state={{ from: location }} />
   }
 
   return <Outlet />

@@ -13,7 +13,7 @@ function getRedirectPath(location: Location) {
   const from = state?.from
 
   if (!from) {
-    return '/'
+    return '/home'
   }
 
   return `${from.pathname}${from.search}${from.hash}`

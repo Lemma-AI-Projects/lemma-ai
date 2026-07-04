@@ -195,7 +195,7 @@ export function ConversationPage() {
         <ConversationMoreMenu
           conversationId={id}
           projects={projectsQuery.data ?? []}
-          onDeleted={() => navigate('/')}
+          onDeleted={() => navigate('/home')}
         />
       </div>
 

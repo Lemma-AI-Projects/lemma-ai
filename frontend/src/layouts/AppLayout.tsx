@@ -29,7 +29,7 @@ function SidebarHeader({ children }: { children?: ReactNode }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between bg-zinc-100 px-3">
       <Button variant="ghost" size="icon-sm" aria-label="Home" asChild>
-        <Link to="/">
+        <Link to="/home">
           <Home className="size-4" />
         </Link>
       </Button>
@@ -112,7 +112,7 @@ export function AppLayout() {
   const navigationSidebarContent = (
     <>
       <div className="sticky top-14 z-10 flex flex-col gap-0.5 bg-zinc-100">
-        <SidebarItem icon={SquarePen} label="New chat" to="/" end />
+        <SidebarItem icon={SquarePen} label="New chat" to="/home" end />
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
