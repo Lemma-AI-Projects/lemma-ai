@@ -450,6 +450,7 @@ export function useConversationChat({
     liveMessages: state.liveMessages,
     streamingText: state.streamingText,
     streamingReasoningText: state.streamingReasoningText,
+    streamingTool: state.streamingTool,
     errorMessage: state.errorMessage,
     canRetry: state.canRetry,
     selfCreatedId,

@@ -43,6 +43,7 @@ from schemas.companion import CompanionChatRequest
 from services import (
     chapter_gemini_prep,
     conversation_service,
+    conversation_tool_service,
     course_service,
     video_asset_service,
 )
@@ -175,9 +176,13 @@ async def stream_answer(context: CompanionTurnContext) -> AsyncIterator[AIChunk]
     task scheduled synchronously in `finally`, so a mid-stream disconnect still
     lands the turn. raw_parts stays None — history is text-only by design (the
     video is re-introduced each turn via the tool, never replayed from history).
+
+    Besides the video tool, the global plugin tools (Desmos 三件套) are bound
+    every turn; a `tool` chunk (card) is captured as tool_ref -> tool_json.
     """
     parts: list[str] = []
     reasoning_parts: list[str] = []
+    tool_ref: dict | None = None
     persist_task: asyncio.Task | None = None
 
     def ensure_persist_scheduled() -> None:
@@ -196,14 +201,23 @@ async def stream_answer(context: CompanionTurnContext) -> AsyncIterator[AIChunk]
                     assistant_content=assistant_text,
                     assistant_reasoning_text=reasoning_text,
                     raw_parts=None,
+                    tool_ref=tool_ref,
                 )
             )
 
+    # New companion conversation: same first-turn rule as chat_service — the
+    # row lands with persist_turn, so plugin graphs stay unlinked until then.
+    plugin_tools = conversation_tool_service.build_global_tools(
+        user_id=context.user_id,
+        conversation_id=(
+            None if context.new_conversation_title else context.conversation_id
+        ),
+    )
     chunk_stream = ai_client.stream_tool_chat(
         AIUseCase.COURSE_COMPANION,
         question=context.question,
         history=context.history,
-        tools=[_build_video_tool(context)],
+        tools=[_build_video_tool(context), *plugin_tools],
         user_id=str(context.user_id),
         course_id=str(context.course_id),
         conversation_id=str(context.conversation_id),
@@ -215,6 +229,9 @@ async def stream_answer(context: CompanionTurnContext) -> AsyncIterator[AIChunk]
                 parts.append(chunk.text)
             elif chunk.kind == "reasoning" and chunk.reasoning_text:
                 reasoning_parts.append(chunk.reasoning_text)
+            elif chunk.kind == "tool":
+                if chunk.tool:
+                    tool_ref = chunk.tool
             elif chunk.kind == "done":
                 ensure_persist_scheduled()
             yield chunk

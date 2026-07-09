@@ -23,9 +23,13 @@ from ai.media.inputs import from_provider_file, from_url
 from ai.media.provider_files import delete_video, upload_video
 from ai.model_factory import init_http_client, shutdown_http_client
 from ai.native.gemini_video import close_shared_client
+from ai.skills import validate_skills
 from ai.streaming import encode_chunk
 from ai.tools import (
     LOAD_CHAPTER_VIDEO,
+    LOAD_SKILL,
+    READ_CURRENT_GRAPH,
+    RENDER_DESMOS_GRAPH,
     ToolBinding,
     ToolCall,
     ToolProgress,
@@ -47,8 +51,10 @@ from ai.types import (
 
 
 def init_ai_runtime() -> None:
-    """Validate the routing table and open the shared HTTP client (lifespan startup)."""
+    """Validate the routing table and skills, open the shared HTTP client
+    (lifespan startup)."""
     validate_routes()
+    validate_skills()
     init_http_client()
 
 
@@ -60,6 +66,9 @@ async def shutdown_ai_runtime() -> None:
 
 __all__ = [
     "LOAD_CHAPTER_VIDEO",
+    "LOAD_SKILL",
+    "READ_CURRENT_GRAPH",
+    "RENDER_DESMOS_GRAPH",
     "AIChunk",
     "AIClient",
     "AIConfigError",

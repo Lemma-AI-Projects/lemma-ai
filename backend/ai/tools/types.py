@@ -54,10 +54,16 @@ class ToolResult(BaseModel):
 
     `response` is the JSON payload handed back as the function_response (always).
     `media` (media tools only) is a video injected as a user-turn media Part.
+    `card` is a wire-ready (camelCase) payload for the FRONTEND: the tool loop
+    relays it as AIChunk(kind="tool") -> SSE `tool` event, attaching an
+    interactive card to the turn (e.g. {"type": "desmos_graph", "graphId": ...}).
+    Two audiences, two channels: `response` goes to the model, `card` to the
+    user — a card never rides inside the function_response.
     """
 
     response: dict[str, Any] = Field(default_factory=dict)
     media: VideoInput | None = None
+    card: dict[str, Any] | None = None
 
 
 # A handler runs a tool call: yields zero or more ToolProgress, then exactly one

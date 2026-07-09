@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 
+import type { ConversationToolRef } from '@/features/conversation/types'
 import { conversationsQueryRootKey } from '@/lib/queryKeys'
 import { supabase } from '@/lib/supabaseClient'
 import {
@@ -20,6 +21,8 @@ export interface LiveCourseCompanionMessage {
   content: string
   reasoningText?: string
   createdAt: string
+  /** Tool card attached to an assistant turn (e.g. desmos_graph). */
+  tool?: ConversationToolRef
 }
 
 interface CourseCompanionChatState {
@@ -27,6 +30,8 @@ interface CourseCompanionChatState {
   liveMessages: LiveCourseCompanionMessage[]
   streamingText: string
   streamingReasoningText: string
+  /** Tool card collected mid-stream; attached to the assistant turn on finalize. */
+  streamingTool: ConversationToolRef | null
   errorMessage: string | null
   canRetry: boolean
 }
@@ -36,6 +41,7 @@ type CourseCompanionChatAction =
   | { type: 'preparing' }
   | { type: 'delta'; text: string }
   | { type: 'reasoning'; text: string }
+  | { type: 'tool'; tool: ConversationToolRef }
   | { type: 'finalize'; createdAt: string }
   | { type: 'rollback' }
   | { type: 'failBeforeOutput'; message: string }
@@ -47,6 +53,7 @@ const initialState: CourseCompanionChatState = {
   liveMessages: [],
   streamingText: '',
   streamingReasoningText: '',
+  streamingTool: null,
   errorMessage: null,
   canRetry: false,
 }
@@ -61,7 +68,8 @@ function finalizeStreamingText(
   state: CourseCompanionChatState,
   createdAt: string
 ): LiveCourseCompanionMessage[] {
-  if (state.streamingText.length === 0) {
+  // Guard on either so a tool card is never dropped (mirrors main chat).
+  if (state.streamingText.length === 0 && state.streamingTool === null) {
     return state.liveMessages
   }
   const reasoningText = state.streamingReasoningText.trim()
@@ -72,6 +80,7 @@ function finalizeStreamingText(
       content: state.streamingText,
       ...(reasoningText ? { reasoningText: state.streamingReasoningText } : {}),
       createdAt,
+      ...(state.streamingTool ? { tool: state.streamingTool } : {}),
     },
   ]
 }
@@ -90,6 +99,7 @@ function reduce(
         ],
         streamingText: '',
         streamingReasoningText: '',
+        streamingTool: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -114,12 +124,19 @@ function reduce(
         status: 'streaming',
         streamingReasoningText: state.streamingReasoningText + action.text,
       }
+    case 'tool':
+      return {
+        ...state,
+        status: 'streaming',
+        streamingTool: action.tool,
+      }
     case 'finalize':
       return {
         status: 'idle',
         liveMessages: finalizeStreamingText(state, action.createdAt),
         streamingText: '',
         streamingReasoningText: '',
+        streamingTool: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -129,6 +146,7 @@ function reduce(
         liveMessages: withoutTrailingUserMessage(state.liveMessages),
         streamingText: '',
         streamingReasoningText: '',
+        streamingTool: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -138,6 +156,7 @@ function reduce(
         liveMessages: withoutTrailingUserMessage(state.liveMessages),
         streamingText: '',
         streamingReasoningText: '',
+        streamingTool: null,
         errorMessage: action.message,
         canRetry: false,
       }
@@ -147,6 +166,7 @@ function reduce(
         liveMessages: finalizeStreamingText(state, action.createdAt),
         streamingText: '',
         streamingReasoningText: '',
+        streamingTool: null,
         errorMessage: action.message,
         canRetry: true,
       }
@@ -316,6 +336,15 @@ export function useCourseCompanionChat({
             }
             apply({ type: 'delta', text })
           },
+          onTool: (tool) => {
+            if (requestIdRef.current !== requestId) return
+            // A tool event means the turn produced output (the card persists).
+            if (!hasOutputRef.current) {
+              hasOutputRef.current = true
+              adoptPendingId()
+            }
+            apply({ type: 'tool', tool })
+          },
         })
         if (requestIdRef.current !== requestId) return
         if (hasOutputRef.current) {
@@ -443,6 +472,7 @@ export function useCourseCompanionChat({
     liveMessages: state.liveMessages,
     streamingText: state.streamingText,
     streamingReasoningText: state.streamingReasoningText,
+    streamingTool: state.streamingTool,
     errorMessage: state.errorMessage,
     canRetry: state.canRetry,
     selfCreatedId,

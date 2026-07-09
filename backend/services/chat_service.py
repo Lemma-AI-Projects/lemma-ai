@@ -32,7 +32,12 @@ from core import aio
 from core.database import AsyncSessionLocal
 from core.security import CurrentUser
 from schemas.ai import ChatRequest
-from services import conversation_service, course_planning_service, project_service
+from services import (
+    conversation_service,
+    conversation_tool_service,
+    course_planning_service,
+    project_service,
+)
 
 
 @dataclass
@@ -111,7 +116,7 @@ async def prepare_turn(
 
 
 async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
-    """Run one AI turn and persist the message pair.
+    """Run one AI turn (with the global plugin tools bound) and persist the pair.
 
     Persistence runs on a protected background task (spawn_protected:
     synchronous scheduling, own task, module-held strong reference), never
@@ -122,11 +127,16 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
       cancellation, bug 2026-06-12): the finally block schedules the write
       synchronously, so it survives even when every await here insta-raises
       and this generator's frame is torn down.
+
+    A `tool` chunk (a plugin card, e.g. desmos_graph) is captured as the
+    turn's tool_ref and lands in ai_messages.tool_json — the same thin-card
+    mechanism course_planning uses, so history reload re-renders it in place.
     """
     parts: list[str] = []
     reasoning_parts: list[str] = []
     reasoning_text: str | None = None
     raw_parts: dict[str, Any] | None = None
+    tool_ref: dict[str, Any] | None = None
     persist_task: asyncio.Task[Any] | None = None
 
     def ensure_persist_scheduled() -> asyncio.Task[Any] | None:
@@ -145,15 +155,25 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                     assistant_content=assistant_text,
                     assistant_reasoning_text=assistant_reasoning_text,
                     raw_parts=raw_parts,
+                    tool_ref=tool_ref,
                 )
             )
         return persist_task
 
+    # New conversation: the row doesn't exist until persist_turn, so plugin
+    # tools must not FK-link a graph to it — the message tool_json is the link.
+    tools = conversation_tool_service.build_global_tools(
+        user_id=context.user_id,
+        conversation_id=(
+            None if context.new_conversation_title else context.conversation_id
+        ),
+    )
     chunk_stream = ai_client.stream_chat(
         AIUseCase.TEXT_CHAT,
         [*context.history, ChatMessage(role="user", content=context.user_content)],
         user_id=str(context.user_id),
         conversation_id=str(context.conversation_id),
+        tools=tools,
     )
     try:
         async for chunk in chunk_stream:
@@ -162,6 +182,9 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
             elif chunk.kind == "reasoning":
                 if chunk.reasoning_text:
                     reasoning_parts.append(chunk.reasoning_text)
+            elif chunk.kind == "tool":
+                if chunk.tool:
+                    tool_ref = chunk.tool
             elif chunk.kind == "done":
                 raw_parts = chunk.raw_parts
                 reasoning_text = chunk.reasoning_text

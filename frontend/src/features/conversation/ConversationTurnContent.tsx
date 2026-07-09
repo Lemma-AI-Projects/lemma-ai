@@ -1,3 +1,4 @@
+import { DesmosGraphCard } from '@/features/desmos/DesmosGraphCard'
 import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
 import { ConversationCourseTool } from './ConversationCourseTool'
@@ -29,9 +30,12 @@ function renderBlock(block: ConversationTurnBlock) {
     )
   }
 
-  // tool block: render the matching connected tool. Only course_planning exists
-  // today; a future tool adds a branch on block.toolType here.
-  return <ConversationCourseTool key={block.id} courseId={block.courseId} />
+  // tool block: render the matching connected card by tool type. Adding a
+  // tool = adding a branch here (the ref shape is a discriminated union).
+  if (block.tool.type === 'desmos_graph') {
+    return <DesmosGraphCard key={block.id} graphId={block.tool.graphId} />
+  }
+  return <ConversationCourseTool key={block.id} courseId={block.tool.courseId} />
 }
 
 export function ConversationTurnContent({

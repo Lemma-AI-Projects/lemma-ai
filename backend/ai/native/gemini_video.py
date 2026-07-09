@@ -363,7 +363,9 @@ def _media_resolution_from_route_extra(
 # --- function-calling tool loop (决策⑩-a): genai types stay inside this module ---
 
 # Bound the model->tool->continue loop so a misbehaving model can't spin forever.
-_MAX_TOOL_ROUNDS = 3
+# 4: the companion's worst case is video + read_current_graph + load_skill +
+# render_desmos_graph before the closing answer (5 generations total).
+_MAX_TOOL_ROUNDS = 4
 
 # A dispatcher runs one tool call and yields its progress/result (boundary types).
 ToolDispatch = Callable[[ToolCall], AsyncIterator[ToolProgress | ToolResult]]
@@ -497,6 +499,10 @@ async def stream_tool_chat(
                     result = event
             if result is None:
                 result = ToolResult(response={"status": "error"})
+            if result.card is not None:
+                # Card payloads go to the FRONTEND (SSE `tool` event), never
+                # into the function_response — two audiences, two channels.
+                yield AIChunk(kind="tool", tool=result.card)
             response_parts.append(
                 to_function_response_part(call.name, result.response)
             )

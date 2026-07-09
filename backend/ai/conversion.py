@@ -13,14 +13,18 @@ from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
     ThinkingPart,
+    ThinkingPartDelta,
     TextPart,
+    TextPartDelta,
     UserPromptPart,
     VideoUrl,
 )
+from pydantic_ai.tools import Tool as PydanticTool
+from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import RunUsage
 
 from ai.errors import UnsupportedCapabilityError
-from ai.tools.types import ToolCall, ToolSpec
+from ai.tools.types import ToolBinding, ToolCall, ToolResult, ToolSpec
 from ai.types import ChatMessage, TokenUsage, VideoInput
 
 
@@ -251,6 +255,81 @@ def to_function_response_part(name: str, response: dict[str, Any]) -> genai_type
 def to_media_part(video: VideoInput) -> genai_types.Part:
     """A media tool's VideoInput -> a native media Part (user-turn injection)."""
     return to_video_part(video, "native")
+
+
+def to_pydantic_toolset(
+    bindings: list[ToolBinding], card_sink: list[dict[str, Any]]
+) -> FunctionToolset:
+    """ToolBindings -> a per-run FunctionToolset (pydantic-ai channel dispatch,
+    the counterpart of the native loop's name->handler dispatch).
+
+    Each wrapped function drains its handler and returns `response` to the
+    framework (which feeds it back to the model); a `card` payload is pushed
+    into `card_sink` for the client to relay as AIChunk(kind="tool").
+
+    Text-channel constraints (documented in the plan):
+    - ToolProgress is ignored — this channel has no mid-tool progress stream;
+      long-running tools with `preparing` semantics belong on the native loop.
+    - `media` results are unsupported here (the video tool stays native); a
+      media payload is dropped rather than crashing the turn.
+
+    Tool.from_schema skips framework-side argument validation — args reach the
+    handler as-is, which is exactly the contract our handlers already have on
+    the native loop (Pydantic in the service is the verdict).
+    """
+    return FunctionToolset(
+        tools=[_binding_to_pydantic_tool(binding, card_sink) for binding in bindings]
+    )
+
+
+def _binding_to_pydantic_tool(
+    binding: ToolBinding, card_sink: list[dict[str, Any]]
+) -> PydanticTool:
+    spec = binding.spec
+    handler = binding.handler
+
+    async def call_tool(**kwargs: Any) -> dict[str, Any]:
+        result: ToolResult | None = None
+        async for event in handler(ToolCall(name=spec.name, args=kwargs)):
+            if isinstance(event, ToolResult):
+                result = event
+        if result is None:
+            return {"status": "error"}
+        if result.card is not None:
+            card_sink.append(result.card)
+        return result.response
+
+    return PydanticTool.from_schema(
+        call_tool,
+        name=spec.name,
+        description=spec.description,
+        json_schema=spec.parameters or {"type": "object", "properties": {}},
+    )
+
+
+def deltas_from_stream_event(event: Any) -> tuple[str, str]:
+    """(text_delta, reasoning_delta) from one model-request stream event.
+
+    agent.iter() node streams emit PartStartEvent (which may already carry
+    initial content) followed by PartDeltaEvents; both must be counted or the
+    first chunk of a part is silently dropped.
+    """
+    kind = getattr(event, "event_kind", "")
+    if kind == "part_start":
+        part = event.part
+        content = getattr(part, "content", None)
+        if isinstance(part, TextPart) and isinstance(content, str):
+            return content, ""
+        if isinstance(part, ThinkingPart) and isinstance(content, str):
+            return "", content
+    elif kind == "part_delta":
+        delta = event.delta
+        content = getattr(delta, "content_delta", None)
+        if isinstance(delta, TextPartDelta) and isinstance(content, str):
+            return content, ""
+        if isinstance(delta, ThinkingPartDelta) and isinstance(content, str):
+            return "", content
+    return "", ""
 
 
 def gemini_usage_to_token_usage(

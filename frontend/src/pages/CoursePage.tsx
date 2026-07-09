@@ -201,6 +201,7 @@ export function CoursePage() {
         message: message.content,
         date: message.createdAt,
         reasoningText: message.reasoningText,
+        tool: message.tool,
       }))
     )
     return [...historyTurns, ...liveTurns]
@@ -323,6 +324,7 @@ export function CoursePage() {
           status={chat.status}
           text={chat.streamingText}
           reasoningText={chat.streamingReasoningText}
+          tool={chat.streamingTool}
           errorMessage={chat.errorMessage}
           canRetry={chat.canRetry}
           waitingMessage="正在准备本章视频…"

@@ -174,6 +174,7 @@ export function ConversationPage() {
           status={chat.status}
           text={chat.streamingText}
           reasoningText={chat.streamingReasoningText}
+          tool={chat.streamingTool}
           errorMessage={chat.errorMessage}
           canRetry={chat.canRetry}
           onRetry={chat.retry}

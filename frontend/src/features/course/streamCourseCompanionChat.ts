@@ -1,3 +1,4 @@
+import type { ConversationToolRef } from '@/features/conversation/types'
 import { env } from '@/lib/env'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -29,6 +30,7 @@ export interface StreamCourseCompanionChatOptions {
   onPreparing?: () => void
   onDelta: (text: string) => void
   onReasoning?: (text: string) => void
+  onTool?: (tool: ConversationToolRef) => void
   onUsage?: (usage: CourseCompanionStreamUsage) => void
 }
 
@@ -45,6 +47,7 @@ export async function streamCourseCompanionChat(
     onPreparing,
     onDelta,
     onReasoning,
+    onTool,
     onUsage,
   } = options
 
@@ -97,6 +100,7 @@ export async function streamCourseCompanionChat(
     onPreparing,
     onDelta,
     onReasoning,
+    onTool,
     onUsage,
   })
 }
@@ -153,7 +157,7 @@ async function consumeSseStream(
   body: ReadableStream<Uint8Array>,
   handlers: Pick<
     StreamCourseCompanionChatOptions,
-    'onPreparing' | 'onDelta' | 'onReasoning' | 'onUsage'
+    'onPreparing' | 'onDelta' | 'onReasoning' | 'onTool' | 'onUsage'
   >
 ): Promise<void> {
   const reader = body.getReader()
@@ -180,6 +184,14 @@ async function consumeSseStream(
         const payload = JSON.parse(parsed.data) as { text?: string }
         if (typeof payload.text === 'string' && payload.text.length > 0) {
           handlers.onReasoning?.(payload.text)
+        }
+        return
+      }
+      case 'tool': {
+        // Wire-shaped tool card ref (e.g. {type:'desmos_graph', graphId}).
+        const payload = JSON.parse(parsed.data) as ConversationToolRef
+        if (payload && typeof payload.type === 'string') {
+          handlers.onTool?.(payload)
         }
         return
       }

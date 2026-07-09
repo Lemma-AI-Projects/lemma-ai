@@ -43,8 +43,7 @@ function createTurnBlocks(
     blocks.push({
       id: `${baseId}-tool`,
       type: 'tool',
-      toolType: message.tool.type,
-      courseId: message.tool.courseId,
+      tool: message.tool,
     })
   }
   // Never emit an empty turn (defensive — assistant turns always carry content).

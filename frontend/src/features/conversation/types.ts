@@ -56,20 +56,18 @@ export interface ConversationToolUnit {
 
 // Wire/persistence shape of a tool attached to a turn (matches the backend SSE
 // `tool` event and ai_messages.tool_json). `type` discriminates the tool.
-export interface ConversationToolRef {
-  type: 'course_planning'
-  courseId: string
-}
+export type ConversationToolRef =
+  | { type: 'course_planning'; courseId: string }
+  | { type: 'desmos_graph'; graphId: string }
 
 // A tool block is a thin REFERENCE: which tool sits in this turn and which
-// resource it drives. The card hydrates its own live data (stage / progress /
-// questions) from that id, so the same block renders identically live and on
-// history reload. `toolType` discriminates future tools (quiz / flashcards).
+// resource it drives. The card hydrates its own live data from that id, so the
+// same block renders identically live and on history reload. `tool.type`
+// discriminates the card component to render.
 export interface ConversationToolBlock {
   id: string
   type: 'tool'
-  toolType: ConversationToolRef['type']
-  courseId: string
+  tool: ConversationToolRef
 }
 
 export type ConversationTurnBlock =

@@ -1,7 +1,9 @@
 import { RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { DesmosGraphCard } from '@/features/desmos/DesmosGraphCard'
 import { ConversationReasoning } from './ConversationReasoning'
 import { AssistantMarkdown } from './markdown'
+import type { ConversationToolRef } from './types'
 
 export type ConversationStreamingTurnStatus =
   | 'idle'
@@ -20,6 +22,7 @@ export function ConversationStreamingTurn({
   status,
   text,
   reasoningText,
+  tool = null,
   errorMessage,
   canRetry,
   waitingMessage = 'Thinking...',
@@ -28,6 +31,10 @@ export function ConversationStreamingTurn({
   status: ConversationStreamingTurnStatus
   text: string
   reasoningText: string
+  /** Tool card already attached mid-stream (e.g. desmos_graph): rendered live
+   *  so the closing explanation can point at a visible graph. course_planning
+   *  keeps its existing finalize-time rendering. */
+  tool?: ConversationToolRef | null
   errorMessage: string | null
   canRetry: boolean
   waitingMessage?: string
@@ -57,6 +64,10 @@ export function ConversationStreamingTurn({
             {text}
           </AssistantMarkdown>
         </div>
+      )}
+
+      {status === 'streaming' && tool?.type === 'desmos_graph' && (
+        <DesmosGraphCard graphId={tool.graphId} />
       )}
 
       {status === 'error' && (
