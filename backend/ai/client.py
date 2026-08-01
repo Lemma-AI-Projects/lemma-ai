@@ -104,6 +104,7 @@ class AIClient:
             result = await agent.run(
                 prompt, model=model, deps=deps, message_history=history
             )
+            tracker.mark_first_token()
         except Exception as exc:
             await ensure_failure_recorded(tracker, error=exc)
             raise map_framework_error(exc) from exc
@@ -199,11 +200,13 @@ class AIClient:
                             previous_reasoning_text=previous_reasoning_text,
                         )
                         if reasoning_delta:
+                            tracker.mark_first_token()
                             yield AIChunk(
                                 kind="reasoning",
                                 reasoning_text=reasoning_delta,
                             )
                         if text_delta:
+                            tracker.mark_first_token()
                             emitted_chars += len(text_delta)
                             yield AIChunk(kind="delta", text=text_delta)
                     token_usage = to_token_usage(stream.usage)
@@ -348,12 +351,14 @@ class AIClient:
                                     )
                                     if reasoning_delta:
                                         streamed_reasoning += reasoning_delta
+                                        tracker.mark_first_token()
                                         yield AIChunk(
                                             kind="reasoning",
                                             reasoning_text=reasoning_delta,
                                         )
                                     if text_delta:
                                         emitted_chars += len(text_delta)
+                                        tracker.mark_first_token()
                                         yield AIChunk(kind="delta", text=text_delta)
                         elif Agent.is_call_tools_node(node):
                             # Tools execute while this stream is consumed;
@@ -485,6 +490,7 @@ class AIClient:
             result = await agent.run(
                 prompt, output_type=output_type, model=model, deps=deps
             )
+            tracker.mark_first_token()
         except Exception as exc:
             await ensure_failure_recorded(tracker, error=exc)
             raise map_framework_error(exc) from exc
@@ -566,6 +572,7 @@ class AIClient:
                         )
                         if reasoning_delta:
                             reasoning_chars += len(reasoning_delta)
+                            tracker.mark_first_token()
                             yield StructuredStreamEvent(
                                 kind="reasoning", reasoning_text=reasoning_delta
                             )
@@ -690,6 +697,7 @@ class AIClient:
             await ensure_failure_recorded(tracker, error=exc)
             raise map_framework_error(exc) from exc
 
+        tracker.mark_first_token()
         await record_success(
             tracker,
             usage=token_usage,
@@ -779,11 +787,13 @@ class AIClient:
                     if usage is not None:
                         usage_metadata = usage
                     if reasoning_delta:
+                        tracker.mark_first_token()
                         yield AIChunk(
                             kind="reasoning", reasoning_text=reasoning_delta
                         )
                     if text_delta:
                         emitted_chars += len(text_delta)
+                        tracker.mark_first_token()
                         yield AIChunk(kind="delta", text=text_delta)
             except (GeneratorExit, asyncio.CancelledError):
                 raise
@@ -908,6 +918,8 @@ class AIClient:
                         continue
                     if chunk.kind == "delta" and chunk.text:
                         emitted_chars += len(chunk.text)
+                    if chunk.kind in ("delta", "reasoning"):
+                        tracker.mark_first_token()
                     yield chunk  # reasoning / delta / preparing
             except (GeneratorExit, asyncio.CancelledError):
                 raise

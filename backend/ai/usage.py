@@ -27,6 +27,7 @@ from typing import Any
 from core.database import AsyncSessionLocal
 from models.ai_usage_log import AiUsageLog
 
+from ai.telemetry import emit_experience
 from ai.types import AIUseCase, ModelRoute, TokenUsage
 
 logger = logging.getLogger("lemma.ai.usage")
@@ -51,6 +52,12 @@ class UsageTracker:
     recorded_failures: int = 0
     finished: bool = False
 
+    # Experience telemetry (lever ⑥): timestamp of the first output token, and
+    # whether this turn ended on a degraded path. `degraded` is only ever set
+    # True once the graceful-degradation ladder (lever ②) lands.
+    first_token_at: float | None = None
+    degraded: bool = False
+
     @property
     def current_route(self) -> ModelRoute:
         index = min(self.failed_attempts, len(self.routes) - 1)
@@ -59,6 +66,23 @@ class UsageTracker:
     @property
     def latency_ms(self) -> int:
         return int((time.monotonic() - self.started_at) * 1000)
+
+    @property
+    def ttft_ms(self) -> int | None:
+        """Time-to-first-token in ms, or None if no token was ever produced."""
+        if self.first_token_at is None:
+            return None
+        return int((self.first_token_at - self.started_at) * 1000)
+
+    @property
+    def fell_back(self) -> bool:
+        """True if at least one route was tried and failed before success."""
+        return self.failed_attempts > 0
+
+    def mark_first_token(self) -> None:
+        """Record the first token's arrival (idempotent). Call from the facade."""
+        if self.first_token_at is None:
+            self.first_token_at = time.monotonic()
 
 
 _tracker_var: ContextVar[UsageTracker | None] = ContextVar(
@@ -204,6 +228,13 @@ async def _emit(
         "usage_missing": usage_missing,
     }
     logger.info("ai_usage %s", json.dumps(record, ensure_ascii=False, default=str))
+    emit_experience(
+        tracker,
+        route=route,
+        success=success,
+        error_type=error_type,
+        route_index=tracker.failed_attempts,
+    )
     await _persist(
         record, user_id=tracker.user_id, conversation_id=tracker.conversation_id
     )
