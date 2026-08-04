@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes Code Recon Report · LemmaHermes 情报</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ============ THEME TOKENS ============ */
+:root{
+  --bg:#070b12; --bg2:#0b111c; --card:rgba(255,255,255,.035); --card2:rgba(255,255,255,.07);
+  --line:rgba(255,255,255,.09); --line2:rgba(255,255,255,.16);
+  --tx:#dbe4f0; --tx2:#8fa1b8; --tx3:#5f7189;
+  --acc1:#22d3ee; --acc2:#818cf8; --green:#34d399; --amber:#fbbf24; --rose:#fb7185; --violet:#a78bfa;
+  --grad:linear-gradient(120deg,#22d3ee 0%,#818cf8 55%,#a78bfa 100%);
+  --shadow:0 20px 60px rgba(0,0,0,.45);
+  --codebg:rgba(2,6,12,.6);
+}
+html[data-theme="light"]{
+  --bg:#f4f6fa; --bg2:#e9edf4; --card:rgba(255,255,255,.82); --card2:#ffffff;
+  --line:rgba(15,30,60,.12); --line2:rgba(15,30,60,.22);
+  --tx:#16233a; --tx2:#4a5a74; --tx3:#7c8ba3;
+  --shadow:0 20px 50px rgba(30,50,90,.12);
+  --codebg:rgba(15,25,45,.05);
+}
+/* ============ BASE ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{
+  font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  background:var(--bg); color:var(--tx); line-height:1.75; font-size:15.5px;
+  transition:background .35s ease,color .35s ease;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(900px 500px at 15% -5%,rgba(34,211,238,.10),transparent 60%),
+    radial-gradient(900px 600px at 90% 10%,rgba(129,140,248,.10),transparent 60%),
+    radial-gradient(700px 500px at 50% 110%,rgba(167,139,250,.07),transparent 60%);
+}
+html[data-theme="light"] body::before{opacity:.6}
+::selection{background:rgba(34,211,238,.3)}
+/* ============ PROGRESS + NAV ============ */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:100;background:var(--grad);box-shadow:0 0 12px rgba(34,211,238,.6)}
+nav{
+  position:sticky;top:0;z-index:90;display:flex;align-items:center;gap:18px;
+  padding:12px 28px;margin-bottom:8px;
+  background:color-mix(in srgb,var(--bg) 72%,transparent);
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+  border-bottom:1px solid var(--line);
+}
+.nav-brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:14.5px;letter-spacing:.5px;white-space:nowrap}
+.nav-brand .logo{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;font-size:13px;color:#06121a;font-weight:900}
+.nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-links a{
+  color:var(--tx2);text-decoration:none;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:8px;
+  white-space:nowrap;transition:all .2s;letter-spacing:.3px;
+}
+.nav-links a:hover{color:var(--tx);background:var(--card2)}
+.nav-links a.active{color:#06121a;background:var(--grad)}
+#themeBtn{
+  flex-shrink:0;width:38px;height:38px;border-radius:11px;border:1px solid var(--line);cursor:pointer;
+  background:var(--card2);color:var(--tx);font-size:16px;display:grid;place-items:center;transition:all .25s;
+}
+#themeBtn:hover{transform:translateY(-1px);border-color:var(--line2);box-shadow:var(--shadow)}
+/* ============ LAYOUT ============ */
+main{max-width:1060px;margin:0 auto;padding:0 26px 90px}
+section{margin-top:74px}
+.sec-head{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.sec-num{
+  flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+  padding:5px 12px;border-radius:999px;background:var(--grad);color:#06121a;
+}
+h1,h2,h3,h4{line-height:1.3;letter-spacing:-.01em}
+h1{font-size:clamp(30px,5vw,46px);font-weight:900;margin:10px 0 6px}
+h2{font-size:clamp(22px,3.2vw,30px);font-weight:800}
+h3{font-size:19px;font-weight:700;margin:30px 0 10px;color:var(--tx)}
+h3 .tag{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--acc1);font-weight:600;margin-right:8px}
+h4{font-size:15.5px;font-weight:700;margin:18px 0 6px}
+p{margin:10px 0}
+.lead{color:var(--tx2);font-size:16.5px;max-width:760px}
+/* ============ HERO ============ */
+.hero{padding:72px 0 40px;position:relative}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--acc1);border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.08);padding:5px 13px;border-radius:999px;letter-spacing:1px;font-weight:600}
+.hero .sub{color:var(--tx2);margin-top:14px;font-size:15px;max-width:780px}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 13px;border-radius:9px;background:var(--card);border:1px solid var(--line);color:var(--tx2)}
+.chip b{color:var(--tx);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:36px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 18px;backdrop-filter:blur(10px);transition:transform .3s,border-color .3s}
+.stat:hover{transform:translateY(-3px);border-color:var(--line2)}
+.stat .v{font-size:30px;font-weight:800;font-family:'JetBrains Mono',monospace;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.stat .k{font-size:12.5px;color:var(--tx2);margin-top:4px;letter-spacing:.4px}
+@media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+/* ============ CARDS / BLOCKS ============ */
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin:16px 0;backdrop-filter:blur(10px);transition:border-color .3s}
+.card:hover{border-color:var(--line2)}
+.card .ttl{font-weight:700;font-size:15.5px;display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.cyan{background:var(--acc1);box-shadow:0 0 10px var(--acc1)}
+.dot.green{background:var(--green);box-shadow:0 0 10px var(--green)}
+.dot.amber{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+.dot.rose{background:var(--rose);box-shadow:0 0 10px var(--rose)}
+.dot.violet{background:var(--violet);box-shadow:0 0 10px var(--violet)}
+.callout{border-radius:14px;padding:16px 20px;margin:16px 0;border:1px solid;font-size:14.5px}
+.callout .co-t{font-weight:800;font-size:13px;letter-spacing:.5px;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.callout.neg{background:rgba(251,113,133,.07);border-color:rgba(251,113,133,.32);color:var(--tx)}
+.callout.neg .co-t{color:var(--rose)}
+.callout.warn{background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.32);color:var(--tx)}
+.callout.warn .co-t{color:var(--amber)}
+.callout.pos{background:rgba(52,211,153,.07);border-color:rgba(52,211,153,.32);color:var(--tx)}
+.callout.pos .co-t{color:var(--green)}
+.callout.info{background:rgba(34,211,238,.07);border-color:rgba(34,211,238,.30);color:var(--tx)}
+.callout.info .co-t{color:var(--acc1)}
+/* ============ CODE ============ */
+.codebox{margin:14px 0;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--codebg)}
+.codehead{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--tx3);letter-spacing:.5px}
+.copybtn{border:1px solid var(--line);background:var(--card2);color:var(--tx2);font-size:11px;padding:3px 10px;border-radius:7px;cursor:pointer;font-family:'JetBrains Mono',monospace;transition:all .2s}
+.copybtn:hover{color:var(--acc1);border-color:var(--acc1)}
+.copybtn.ok{color:var(--green);border-color:var(--green)}
+.codebox pre{padding:15px 18px;overflow-x:auto;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.8px;line-height:1.7;color:#c9d6e8}
+html[data-theme="light"] .codebox pre{color:#26324a}
+.tok-kw{color:#c792ea;font-weight:600}
+.tok-str{color:#9ece6a}
+.tok-com{color:#5c7087;font-style:italic}
+.tok-num{color:#ff9e64}
+html[data-theme="light"] .tok-kw{color:#7c3aed}
+html[data-theme="light"] .tok-str{color:#1a7f37}
+html[data-theme="light"] .tok-com{color:#8a97ad}
+html[data-theme="light"] .tok-num{color:#c2410c}
+/* ============ TABLES ============ */
+.tblwrap{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+thead th{background:var(--card2);color:var(--tx);font-weight:700;font-size:12.5px;letter-spacing:.6px;text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background .2s}
+tbody tr:hover{background:var(--card2)}
+td code,li code,p code{font-family:'JetBrains Mono',monospace;font-size:12.5px;background:var(--card2);border:1px solid var(--line);padding:1.5px 6px;border-radius:6px;color:var(--acc1)}
+html[data-theme="light"] td code,html[data-theme="light"] li code,html[data-theme="light"] p code{color:#0e7490}
+.mono{font-family:'JetBrains Mono',monospace;font-size:12.8px}
+/* ============ LISTS ============ */
+ul,ol{margin:10px 0 10px 4px;padding-left:22px}
+li{margin:6px 0}
+li::marker{color:var(--acc2)}
+ol.ev li{margin:14px 0}
+/* ============ QUOTE ============ */
+blockquote{border-left:3px solid var(--acc2);background:var(--card);padding:12px 18px;border-radius:0 12px 12px 0;margin:14px 0;color:var(--tx2);font-size:14.5px}
+blockquote .src{display:block;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--tx3)}
+/* ============ FLOW DIAGRAM ============ */
+.flowgrid{display:grid;grid-template-columns:1.35fr .9fr;gap:20px;margin:24px 0}
+@media(max-width:900px){.flowgrid{grid-template-columns:1fr}}
+.flowcol{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 18px}
+.flowcol .fc-t{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:1.5px;color:var(--tx3);font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.flowcol .fc-t .st{width:10px;height:10px;border-radius:3px}
+.fnode{
+  position:relative;border:1px solid var(--line);border-left:3px solid var(--acc1);border-radius:11px;
+  padding:9px 14px;margin:0 0 2px;font-size:13.5px;background:var(--card2);
+}
+.fnode .n-title{font-weight:700;font-size:13.5px}
+.fnode .n-sub{color:var(--tx2);font-size:12px;margin-top:2px;font-family:'JetBrains Mono',monospace}
+.fnode .n-step{position:absolute;right:10px;top:9px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--tx3);background:var(--bg2);border:1px solid var(--line);padding:1px 7px;border-radius:6px}
+.fnode.cyan{border-left-color:var(--acc1)}
+.fnode.violet{border-left-color:var(--violet)}
+.fnode.amber{border-left-color:var(--amber)}
+.fnode.green{border-left-color:var(--green)}
+.fnode.rose{border-left-color:var(--rose)}
+.fnode.dim{opacity:.86}
+.fnode.split{border-left-color:var(--green);background:linear-gradient(120deg,rgba(52,211,153,.10),var(--card2) 60%);box-shadow:0 0 0 1px rgba(52,211,153,.25),0 0 26px rgba(52,211,153,.12)}
+.fconn{width:2px;height:22px;margin-left:19px;background:var(--line2);position:relative}
+.fconn::after{content:"";position:absolute;bottom:-1px;left:-4px;border:4.5px solid transparent;border-top-color:var(--line2)}
+.fconn.dash{background:repeating-linear-gradient(to bottom,var(--line2) 0 5px,transparent 5px 9px);width:2px}
+.fconn.dash::after{border-top-color:var(--line2)}
+.fnode.loopbox{border-style:dashed;border-left-style:solid;background:rgba(129,140,248,.06)}
+.fn-loop-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--violet);letter-spacing:.5px;margin:14px 0 8px;font-weight:700}
+/* ============ EVIDENCE GRID ============ */
+.evgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
+@media(max-width:760px){.evgrid{grid-template-columns:1fr}}
+.evcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;border-top:3px solid var(--acc1);transition:transform .25s,border-color .25s}
+.evcard:hover{transform:translateY(-3px);border-color:var(--line2)}
+.evcard.bound{border-top-color:var(--amber)}
+.evcard.fuzzy{border-top-color:var(--violet)}
+.evcard .m{font-weight:800;font-size:14px;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.evcard .m .pill{font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--tx3);font-weight:600}
+.evcard .o{color:var(--tx2);font-size:13.2px;line-height:1.7}
+.evcard .e{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--acc1);line-height:1.8;word-break:break-word}
+/* ============ REVEAL / MISC ============ */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 0 4px;font-size:12.5px;color:var(--tx2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3.5px;display:inline-block}
+footer{border-top:1px solid var(--line);margin-top:90px;padding:34px 0 50px;text-align:center;color:var(--tx3);font-size:13px}
+footer .mono{display:block;margin-top:8px;font-size:11.5px}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--line2),transparent);margin:26px 0}
+@media(max-width:640px){main{padding:0 16px 70px}nav{padding:10px 14px}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav>
+  <div class="nav-brand"><span class="logo">H</span>RECON&nbsp;REPORT</div>
+  <div class="nav-links">
+    <a href="#baseline">规模基线</a>
+    <a href="#structure">结构扫描</a>
+    <a href="#memory">Memory</a>
+    <a href="#skills">Skill System</a>
+    <a href="#evolution">自我进化</a>
+    <a href="#loop">Agent Loop</a>
+    <a href="#map">代码地图</a>
+    <a href="#migration">迁移观察</a>
+    <a href="#blindspots">盲区</a>
+    <a href="#summary">总结</a>
+  </div>
+  <button id="themeBtn" title="切换主题" aria-label="切换主题">🌙</button>
+</nav>
+
+<main>
+
+<!-- ================= HERO ================= -->
+<header class="hero reveal in">
+  <span class="eyebrow">LEMMA-HERMES · CODE RECONNAISSANCE</span>
+  <h1>Hermes Code Recon Report</h1>
+  <p class="sub">代码侦察报告 · 基于 commit <code>cd6585abf</code> (branch <code>main</code>) · 方法：直接读代码，不采信 README / 宣传文档，所有结论附 <code>file:line</code> 证据。边界：只回答「现在有什么、怎么实现的、哪里值得关注」，不提架构建议。</p>
+  <div class="chips">
+    <span class="chip">Python 文件 <b>3,725</b></span>
+    <span class="chip">最大单文件 <b>cli.py 873KB</b></span>
+    <span class="chip">core 工具 <b>61</b></span>
+    <span class="chip">内置 skills <b>70</b></span>
+    <span class="chip">插件 <b>95</b></span>
+    <span class="chip">测试 <b>2,632</b></span>
+    <span class="chip">证据条目 <b>30+</b></span>
+  </div>
+  <div class="stats">
+    <div class="stat reveal"><div class="v" data-count="3725">0</div><div class="k">PYTHON FILES</div></div>
+    <div class="stat reveal"><div class="v" data-count="61">0</div><div class="k">CORE MODEL TOOLS</div></div>
+    <div class="stat reveal"><div class="v" data-count="21">0</div><div class="k">MESSAGE PLATFORMS</div></div>
+    <div class="stat reveal"><div class="v" data-count="90">0</div><div class="k">MAX_ITERATIONS</div></div>
+  </div>
+</header>
+
+<!-- ================= 0. BASELINE ================= -->
+<section id="baseline" class="reveal">
+  <div class="sec-head"><span class="sec-num">0</span><h2>规模基线</h2></div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>指标</th><th>数值</th></tr></thead>
+    <tbody>
+      <tr><td>Python 文件</td><td><b>3,725</b></td></tr>
+      <tr><td>最大单文件</td><td><code>cli.py</code> 873 KB / <code>hermes_state.py</code> 401 KB / <code>run_agent.py</code> 7,551 行</td></tr>
+      <tr><td>核心 Agent 类</td><td><code>run_agent.py:409</code> <code>class AIAgent</code></td></tr>
+      <tr><td>主循环</td><td><code>agent/conversation_loop.py:1142</code> <code>run_conversation()</code></td></tr>
+      <tr><td>模型可见工具（core）</td><td>61 个（<code>toolsets.py:31-86</code>）</td></tr>
+      <tr><td>Toolset 分组</td><td>34 个（<code>toolsets.py:101</code>）</td></tr>
+      <tr><td>工具注册调用</td><td>89 处 <code>registry.register()</code>（<code>tools/*.py</code>）</td></tr>
+      <tr><td>内置 skills</td><td>70 个 <code>SKILL.md</code>（14 分类）</td></tr>
+      <tr><td>可选 skills</td><td>111 个 <code>SKILL.md</code></td></tr>
+      <tr><td>插件（含 plugin.yaml）</td><td>95 个</td></tr>
+      <tr><td>测试文件</td><td>2,632 个 <code>.py</code>（<code>tests/</code>，29 MB）</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout info"><div class="co-t">◈ 第一印象</div>
+    这是一个<b>产品级单体</b>，不是一个 agent 框架。<code>agent/</code>(177) + <code>tools/</code>(127) + <code>hermes_cli/</code>(255) + <code>gateway/</code>(86) 四块加起来才是"Hermes"，而其中只有 <code>agent/</code> 的一小部分是真正的 agent 内核。</div>
+</section>
+
+<!-- ================= 1. STRUCTURE ================= -->
+<section id="structure" class="reveal">
+  <div class="sec-head"><span class="sec-num">1</span><h2>任务 1 · 代码结构扫描</h2></div>
+
+  <h3><span class="tag">1.1</span>入口点</h3>
+  <div class="tblwrap"><table>
+    <thead><tr><th>命令</th><th>入口</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>hermes</code></td><td><code>hermes_cli.main:main</code></td><td>主 CLI（gateway / cron / doctor 等子命令）</td></tr>
+      <tr><td><code>hermes-agent</code></td><td><code>run_agent:main</code></td><td>直接跑 agent</td></tr>
+      <tr><td><code>hermes-acp</code></td><td><code>acp_adapter.entry:main</code></td><td>ACP 协议适配（IDE 集成）</td></tr>
+    </tbody>
+  </table></div>
+  <p class="mono" style="color:var(--tx3)">pyproject.toml:348-351</p>
+
+  <h3><span class="tag">1.2</span>顶层目录</h3>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>agent/ — Agent 运行时内核</div>
+    <p>会话循环、prompt 组装、工具执行、上下文压缩、多家 LLM provider 适配、记忆/技能的后台自省、凭证与计费。<b>这里混装了「通用 agent 内核」和「Hermes 产品特性」。</b></p>
+    <div class="evgrid" style="margin-top:10px">
+      <div class="evcard"><div class="m"><span class="pill">CORE</span>conversation_loop.py</div><div class="o">主循环 run_conversation()，7141 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">CORE</span>prompt_builder.py</div><div class="o">system prompt 分块组装 + skills 索引缓存，2188 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">CORE</span>tool_executor.py</div><div class="o">工具分发、nudge 计数复位，2089 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">CORE</span>context_compressor.py</div><div class="o">上下文压缩（默认 50% 阈值），6708 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">LOOP</span>turn_context.py</div><div class="o">turn 前置：memory nudge 判定</div></div>
+      <div class="evcard"><div class="m"><span class="pill">LOOP</span>turn_finalizer.py</div><div class="o">turn 后置：skill nudge 判定 + 派发后台自省</div></div>
+      <div class="evcard"><div class="m"><span class="pill">SELF</span>background_review.py</div><div class="o">后台记忆/技能自省 fork，1027 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">SELF</span>curator.py</div><div class="o">技能生命周期管家（归档/合并/pin），2018 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">SELF</span>learning_graph / learning_mutations / learning_graph_render</div><div class="o">"journey" 学习可视化（桌面端）</div></div>
+      <div class="evcard"><div class="m"><span class="pill">SKILL</span>learn_prompt.py</div><div class="o">/learn：把用户描述转成 SKILL.md 的 prompt，150 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">MEM</span>memory_provider.py</div><div class="o">外部记忆插件桥接，315 行</div></div>
+      <div class="evcard"><div class="m"><span class="pill">INIT</span>agent_init.py</div><div class="o">AIAgent 初始化，记忆/技能配置在此落地</div></div>
+      <div class="evcard"><div class="m"><span class="pill">CACHE</span>agent_runtime_helpers.py</div><div class="o">prompt cache 断点策略（cache_control）</div></div>
+      <div class="evcard"><div class="m"><span class="pill">ADAPTER</span>anthropic / bedrock / codex_responses / gemini_native</div><div class="o">各家 wire format 适配</div></div>
+      <div class="evcard"><div class="m"><span class="pill">MOA</span>moa_loop.py</div><div class="o">Mixture-of-Agents 循环</div></div>
+      <div class="evcard"><div class="m"><span class="pill">TOY</span>pet/</div><div class="o">桌面精灵动画（Petdex）——纯装饰</div></div>
+    </div>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>tools/ — 模型可见工具的实现</div>
+    <p>每个文件用 <code>registry.register()</code> 自注册 schema + handler + check_fn（运行时可见性门控）。</p>
+    <div class="evgrid" style="margin-top:10px">
+      <div class="evcard"><div class="m">registry.py</div><div class="o">工具注册表，register() 在 :497，932 行</div></div>
+      <div class="evcard"><div class="m">memory_tool.py</div><div class="o">memory 工具 + MemoryStore（文件后端），1224+ 行</div></div>
+      <div class="evcard"><div class="m">todo_tool.py</div><div class="o">todo 工具 = 唯一的"规划"机制</div></div>
+      <div class="evcard"><div class="m">skills_tool.py</div><div class="o">skills_list / skill_view，1828 行</div></div>
+      <div class="evcard"><div class="m">skill_manager_tool.py</div><div class="o">skill_manage（create/patch/edit/delete），1768 行</div></div>
+      <div class="evcard"><div class="m">skills_hub.py</div><div class="o">外部技能仓库源（GitHub）、lockfile、隔离区、审计，4419 行</div></div>
+      <div class="evcard"><div class="m">skill_usage.py</div><div class="o">技能使用遥测 → curator 的反馈信号</div></div>
+      <div class="evcard"><div class="m">delegate_tool.py</div><div class="o">子 agent 委派（进程内构造子 AIAgent）</div></div>
+      <div class="evcard"><div class="m">async_delegation.py</div><div class="o">异步委派（落 DB 表）</div></div>
+      <div class="evcard"><div class="m">terminal / file / browser_* / mcp_tool …</div><div class="o">其余执行类工具</div></div>
+    </div>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot violet"></span>hermes_cli/ (255 py) — CLI 命令层 + 产品化子系统</div>
+    <p>认证、计费、备份、doctor、kanban DB、projects DB、可观测性、技能 hub CLI。</p>
+    <div class="mono" style="font-size:12.5px;color:var(--tx2)">main.py · commands.py · cli_commands_mixin.py · kanban_db.py（kanban.db：tasks/task_links/task_comments/task_events/…）· projects_db.py（projects/project_folders/project_meta/discovered_repos）· sqlite_runtime.py · sqlite_safe_read.py</div>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot violet"></span>gateway/ (86 py) — 消息网关</div>
+    <p>会话路由、投递保障（ledger）、去重、限流、平台注册、优雅停机、多平台并发。</p>
+    <div class="mono" style="font-size:12.5px;color:var(--tx2)">run.py · session.py · session_state.py · delivery.py · delivery_ledger.py · platform_registry.py · platforms/（api_server / signal / whatsapp / weixin / yuanbao / bluebubbles / webhook …）</div>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot violet"></span>plugins/ (194 py, 95 plugin.yaml) — 插件层（边缘扩展）</div>
+    <div class="mono" style="font-size:12.5px;color:var(--tx2)">
+      platforms/ 21 个消息平台（telegram/discord/slack/feishu/matrix/…）<br>
+      memory/ 8 个外部记忆后端（mem0/honcho/supermemory/byterover/hindsight/holographic/openviking/retaindb）<br>
+      model-providers/ (67 文件) · context_engine/ · cron_providers/ · observability/ · kanban/ · image_gen/ · video_gen/ · spotify/ · google_meet/ · hermes-achievements/
+    </div>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot green"></span>skills/ (70 SKILL.md) — 仓库自带技能</div>
+    <p>按 14 个分类目录组织，每类一个 DESCRIPTION.md。<code>index-cache/*.json</code> 为外部技能仓库索引缓存（anthropics/skills、openai/skills、lobehub）——技能市场。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot green"></span>optional-skills/ (111 SKILL.md)</div>
+    <p>默认不激活的官方技能，通过 skills hub 安装。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>cron/ (11 py) — 定时任务</div>
+    <p>jobs.json 存储、调度、执行记录、建议目录。<span class="mono" style="font-size:12.5px;color:var(--tx2)">jobs.py · scheduler.py · executions.py · suggestions.py · suggestion_catalog.py · blueprint_catalog.py</span></p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>根目录状态层 — SQLite 会话持久化 + 全文检索</div>
+    <div class="mono" style="font-size:12.5px;color:var(--tx2)">
+      hermes_state.py (401KB) SessionDB 主体 · hermes_state_common.py 所有 CREATE TABLE 在这里 · hermes_state_schema.py 迁移/列对账 · hermes_state_search.py (89KB) FTS5 检索（含 CJK）· hermes_constants.py (58KB) HERMES_HOME 与路径解析 · toolsets.py 工具集分组 + _HERMES_CORE_TOOLS · model_tools.py 工具 schema 编排层（薄）· run_agent.py AIAgent
+    </div>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot amber"></span>native/fts5_cjk/ — 自研 SQLite FTS5 CJK 分词器（C 扩展）</div>
+    <p class="mono" style="font-size:12.5px;color:var(--tx2)">fts5_cjk.c · build.sh</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot amber"></span>前端接入层 — 四套</div>
+    <p class="mono" style="font-size:12.5px;color:var(--tx2)">acp_adapter/ (11 py) · tui_gateway/ (22 py) · ui-tui/ · web/ · apps/desktop/（Electron 桌面应用，1473 文件）</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot rose"></span>tests/ (2632 py, 29MB) + 评测工具</div>
+    <p>测试规模超过被测代码本身，是这个项目最硬的资产之一。<span class="mono" style="font-size:12.5px;color:var(--tx2)">batch_runner.py / mini_swe_runner.py / datagen-config-examples/ — 批量评测 / SWE-bench 风格跑分 / 数据生成，RL &amp; eval 场景。</span></p>
+  </div>
+
+  <h3><span class="tag">1.3</span>磁盘状态布局（HERMES_HOME，默认 ~/.hermes）</h3>
+  <p><code>hermes_constants.py:59</code> → <code>Path.home()/".hermes"</code>；支持 profile 隔离 <code>~/.hermes/profiles/&lt;name&gt;</code>（<code>:173</code>）；Windows 走 <code>%LOCALAPPDATA%\hermes</code>。</p>
+  <div class="codebox"><div class="codehead"><span>~/.hermes/ 目录布局</span><button class="copybtn">复制</button></div>
+<pre data-lang="plain">~/.hermes/
+  config.yaml          所有行为配置（.env 只放密钥）  hermes_constants.py:1293
+  .env                 密钥                          hermes_constants.py:1308
+  state.db             会话 + 消息 + FTS             hermes_state.py:236
+  kanban.db            看板                          hermes_cli/kanban_db.py
+  MEMORY.md            agent 自己的笔记
+  USER.md              用户画像
+  SOUL.md              人格/身份（注入 system prompt）
+  memories/            agent/learning_mutations.py:33
+  skills/              用户 + agent 创建的技能        hermes_constants.py:1302
+    .usage.json        技能使用遥测                  tools/skill_usage.py:5
+    .archive/          curator 归档区
+    .curator_state     curator 状态
+    .skills_prompt_snapshot.json   skills 索引磁盘快照
+  cron/jobs.json       定时任务                      cron/jobs.py:4
+  cron/output/{job_id}/{ts}.md</pre></div>
+
+  <h3><span class="tag">1.4</span>state.db 表（hermes_state_common.py）</h3>
+  <div class="card"><p class="mono" style="font-size:13px">schema_version · sessions · messages · session_model_usage · state_meta · gateway_routing · compression_locks · async_delegations</p>
+  <p style="margin-top:8px">FTS 虚表三套：<code>messages_fts</code>（标准）、<code>messages_fts_trigram</code>、<code>messages_fts_cjk</code>（<code>hermes_state_search.py:1456</code>，依赖 <code>native/fts5_cjk.c</code>）。</p>
+  <p style="margin-top:8px"><code>sessions</code> 表字段很宽（<code>hermes_state_common.py:140-175</code>）：除会话标识外，直接内联了 <code>input_tokens / output_tokens / cache_read_tokens / cache_write_tokens / reasoning_tokens / billing_provider / billing_base_url / billing_mode / cwd / git_branch / git_repo_root</code>。→ <b>计费和 git 上下文被烧进了会话主表，不是旁路。</b></p></div>
+  <div class="callout neg"><div class="co-t">✕ 关键负向发现</div>
+    <code>state.db</code> 里<b>没有 memory 表</b>。记忆完全是文件态。</div>
+</section>
+
+<!-- ================= 2. MODULES ================= -->
+<section id="memory" class="reveal">
+  <div class="sec-head"><span class="sec-num">2</span><h2>任务 2 · 核心模块追踪 — Memory</h2></div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>存储位置 — 两个纯文本文件，不是数据库</div>
+    <div class="codebox"><div class="codehead"><span>记忆文件</span><button class="copybtn">复制</button></div>
+<pre data-lang="plain">~/.hermes/MEMORY.md   # agent 自己的笔记
+~/.hermes/USER.md     # 用户画像</pre></div>
+    <p>证据：<code>agent/learning_mutations.py:23</code> <code>_MEMORY_FILES = {"memory": "MEMORY.md", "profile": "USER.md"}</code>；<code>agent/agent_init.py:1632</code> 注释 <i># Persistent memory (MEMORY.md + USER.md) -- loaded from disk</i>。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>数据格式 — prose，用裸 § 分隔成"卡片"</div>
+    <blockquote><code>agent/learning_graph.py:196</code> — "MEMORY.md / USER.md are prose split on bare § separators"</blockquote>
+    <p>没有 schema、没有类型、没有时间戳、没有重要度评分、没有衰减、没有 embedding。唯一的约束是<b>字符预算</b>：</p>
+    <div class="codebox"><div class="codehead"><span>agent/agent_init.py:1653-1657</span><button class="copybtn">复制</button></div>
+<pre data-lang="py">agent._memory_store = MemoryStore(
+    memory_char_limit=mem_config.get("memory_char_limit", 2200),
+    user_char_limit=mem_config.get("user_char_limit", 1375),
+)
+agent._memory_store.load_from_disk()</pre></div>
+    <div class="callout warn"><div class="co-t">▲ 2200 + 1375 字符 —— 这是整个长期记忆的总容量上限</div></div>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>读取方式 — 不是检索，是全量注入</div>
+    <blockquote><code>tools/memory_tool.py:1155</code> — "Memory is injected into every future turn, so keep entries compact and high-signal."</blockquote>
+    <p>启动时 <code>load_from_disk()</code> 一次性读入，随 system prompt 常驻。<b>没有 RAG、没有向量、没有按需召回。</b>这与 <code>state.db</code> 里那套完整 FTS5 检索（含自研 CJK 分词器）形成鲜明反差——FTS 只服务于 <code>session_search</code> 工具（翻历史会话），不服务于记忆。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>写入方式 — 模型主动调 memory 工具（tools/memory_tool.py:1152）</div>
+    <div class="codebox"><div class="codehead"><span>memory 工具 schema</span><button class="copybtn">复制</button></div>
+<pre data-lang="py">"action": enum ["add", "replace", "remove"]
+"target": enum ["memory", "user"]
+"operations": [...]   # 批量、原子、仅对最终结果校验字符上限</pre></div>
+    <p>工具描述里写死了取舍优先级（<code>:1166-1174</code>）：<b>用户偏好与纠正 &gt; 环境事实 &gt; 流程</b>；显式排除 <i>任务进度 / 完成日志 / 临时 TODO</i>；并明确 <i>"Reusable procedures belong in a skill, not memory"</i> —— <b>记忆与技能的职责边界是靠 prompt 约束的，不是靠代码。</b></p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot amber"></span>默认关闭 + 作用域</div>
+    <p><b>默认关闭</b>：<code>agent/agent_init.py:1648-1649</code>，<code>memory_enabled</code> / <code>user_profile_enabled</code> 默认 <code>False</code>。</p>
+    <p><b>作用域</b>：单一全局文件，<b>不分用户、不分会话、不分平台</b>。gateway 服务多平台多用户时共享同一份 MEMORY.md。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot violet"></span>外部记忆后端</div>
+    <p><code>plugins/memory/</code> 下 8 个可替换 provider（mem0 / honcho / supermemory / byterover / hindsight / holographic / openviking / retaindb），经 <code>agent/memory_provider.py</code> 桥接，<code>memory.provider</code> 配置选一个，与内置文件存储并存。其中 <code>plugins/memory/holographic/store.py</code> 自带 <code>facts / entities / fact_entities / memory_banks</code> 表——<b>真正的结构化记忆在插件里，不在核心。</b></p>
+  </div>
+</section>
+
+<section id="skills" class="reveal">
+  <div class="sec-head"><span class="sec-num">3</span><h2>任务 2 · 核心模块追踪 — Skill System</h2></div>
+
+  <div class="card"><div class="ttl"><span class="dot green"></span>文件结构 — 目录 + SKILL.md + YAML frontmatter（实例 skills/research/arxiv/SKILL.md）</div>
+    <div class="codebox"><div class="codehead"><span>SKILL.md frontmatter</span><button class="copybtn">复制</button></div>
+<pre data-lang="yaml">---
+name: arxiv
+description: "Search arXiv papers by keyword, author, category, or ID."
+version: 1.0.0
+author: Hermes Agent
+license: MIT
+platforms: [linux, macos, windows]
+metadata:
+  hermes:
+    tags: [Research, Arxiv, Papers, Academic, Science, API]
+    related_skills: [ocr-and-documents]
+---
+# arXiv Research
+...（正文 10KB，含 Quick Reference 表格、bash 示例）</pre></div>
+    <p>分类目录各带一个 <code>DESCRIPTION.md</code>（只有一行 <code>description</code> frontmatter）。技能可附带 <code>scripts/</code> 子目录。</p>
+    <p><code>description</code> 有硬约束：<b>≤60 字符</b>。原因写在 <code>agent/learn_prompt.py:40-46</code>：</p>
+    <blockquote>"the system-prompt skill index truncates the description to 60 chars and loads it every session, so anything past char 60 is silently cut and never routes"</blockquote>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot green"></span>加载 / 渐进披露 — agent/prompt_builder.py:1584 build_skills_system_prompt()</div>
+    <ul>
+      <li>system prompt 里只放<b>紧凑索引</b>（name + ≤60 字符描述），正文不进 prompt</li>
+      <li>双层缓存：进程内 LRU + 磁盘快照 <code>.skills_prompt_snapshot.json</code>，用 mtime/size manifest 校验，跨进程重启存活（<code>:1590-1596</code>）</li>
+      <li>支持外部技能目录 <code>skills.external_dirs</code>（只读，本地优先）</li>
+      <li><code>compact_categories</code>（来自 <code>agent/coding_context.py</code> 的 coding posture）可把整个分类降级成"只列名字"，但<b>从不隐藏</b>：<code>:1605-1608</code> 明确 <i>"Nothing is ever hidden"</i></li>
+    </ul>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot green"></span>调用 — 三个模型工具，全在 _HERMES_CORE_TOOLS（toolsets.py:50）</div>
+    <div class="tblwrap"><table>
+      <thead><tr><th>工具</th><th>文件</th><th>作用</th></tr></thead>
+      <tbody>
+        <tr><td><code>skills_list</code></td><td><code>tools/skills_tool.py</code></td><td>列技能</td></tr>
+        <tr><td><code>skill_view</code></td><td><code>tools/skills_tool.py</code></td><td>读全文（<b>无 offset/limit</b>，AGENTS.md 明令禁止分页）</td></tr>
+        <tr><td><code>skill_manage</code></td><td><code>tools/skill_manager_tool.py:1631</code></td><td>create / patch / edit / delete / write_file / remove_file</td></tr>
+      </tbody>
+    </table></div>
+    <p><code>skill_manage</code> 的描述把定位写死了（<code>:1633-1634</code>）：<i>"Skills are your procedural memory — reusable approaches for recurring task types."</i></p>
+    <p><code>delete</code> 时可传 <code>absorbed_into=&lt;umbrella&gt;</code> 区分"合并"与"剪枝"，供 curator 消费（<code>:1640-1643</code>）。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot green"></span>创建 — 三条路径</div>
+    <ol>
+      <li><b>模型自主</b>：直接调 <code>skill_manage(action="create")</code>，写到 <code>~/.hermes/skills/</code></li>
+      <li><b>人触发 /learn</b>：<code>agent/learn_prompt.py</code>。注意其自述（<code>:18-22</code>）：<i>"There is no separate distillation engine and no model-tool footprint: the agent does the work with its existing toolset."</i> 即 <code>/learn</code> <b>只是一个 prompt 模板</b>，把 house style 塞给现役 agent，让它自己用 <code>skill_manage</code> 落盘。</li>
+      <li><b>后台自省自动创建</b>：见自我进化一节。</li>
+    </ol>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot violet"></span>Skills Hub — tools/skills_hub.py (4419行)</div>
+    <p>技能市场。<code>SkillSource</code> ABC + <code>GitHubSource</code>，<code>HubLockFile</code> 记录来源，带 quarantine / audit log / taps / index cache。<code>skills/index-cache/</code> 里已缓存 <code>anthropics/skills</code>、<code>openai/skills</code>、<code>lobehub</code> 三个源的索引，每条含 <code>trust_level</code>（如 <code>"trusted"</code>）。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>Skill / Plugin / MCP / Tool 四者边界</div>
+    <div class="tblwrap"><table>
+      <thead><tr><th>机制</th><th>注册点</th><th>形态</th></tr></thead>
+      <tbody>
+        <tr><td>Tool</td><td><code>tools/registry.py:497 register()</code></td><td>Python，进 model schema，<b>每次 API 调用都付费</b></td></tr>
+        <tr><td>Skill</td><td>文件系统扫描 → <code>prompt_builder.py:1584</code></td><td>Markdown，只有索引进 prompt</td></tr>
+        <tr><td>Plugin</td><td><code>plugin.yaml</code> + <code>plugins/plugin_utils.py</code></td><td>可注册 tool（需 <code>override=True</code> 才能覆盖内置）</td></tr>
+        <tr><td>MCP</td><td><code>tools/mcp_tool.py</code> / <code>mcp_serve.py</code></td><td>外部进程</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="evolution" class="reveal">
+  <div class="sec-head"><span class="sec-num">4</span><h2>任务 2 · 核心模块追踪 — Self Evolution</h2></div>
+  <p class="lead">这是最值得关注的部分。Hermes 的"自我改进"<b>确实存在闭环</b>，但由三个彼此独立的机制拼成，各自都很朴素。</p>
+
+  <h3><span class="tag">(A)</span>Background Review —— 每轮之后的自动自省</h3>
+  <div class="card"><blockquote><code>agent/background_review.py:1-16</code> — "After every turn, AIAgent.run_conversation may call spawn_background_review to fire off a daemon thread that replays the conversation snapshot in a forked AIAgent and asks itself 'should any skill/memory be saved or updated?'. Writes go straight to the memory + skill stores. Main conversation and prompt cache are never touched."</blockquote>
+  <p><b>触发条件是两个独立计数器：</b></p>
+  <div class="codebox"><div class="codehead"><span>agent/turn_context.py:584-590 — memory nudge：按【用户轮次】</span><button class="copybtn">复制</button></div>
+<pre data-lang="py">if (agent._memory_nudge_interval > 0
+        and "memory" in agent.valid_tool_names
+        and agent._memory_store):
+    agent._turns_since_memory += 1
+    if agent._turns_since_memory >= agent._memory_nudge_interval:
+        should_review_memory = True
+        agent._turns_since_memory = 0</pre></div>
+  <div class="codebox"><div class="codehead"><span>agent/turn_finalizer.py:699-704 — skill nudge：按【本轮工具迭代次数】</span><button class="copybtn">复制</button></div>
+<pre data-lang="py">if (agent._skill_nudge_interval > 0
+        and agent._iters_since_skill >= agent._skill_nudge_interval
+        and "skill_manage" in agent.valid_tool_names):
+    _should_review_skills = True
+    agent._iters_since_skill = 0</pre></div>
+  <p>默认都是 <b>10</b>（<code>agent/agent_init.py:1638</code> <code>_memory_nudge_interval = 10</code>；<code>:1736</code> <code>_skill_nudge_interval = 10</code>）。</p>
+  <p><b>派发点在响应交付之后</b>（<code>agent/turn_finalizer.py:714-722</code>）：</p>
+  <div class="codebox"><div class="codehead"><span>响应交付后的异步派发</span><button class="copybtn">复制</button></div>
+<pre data-lang="py"># Background memory/skill review — runs AFTER the response is delivered
+# so it never competes with the user's task for model attention.
+if final_response and not interrupted and (_should_review_memory or _should_review_skills):
+    agent._spawn_background_review(
+        messages_snapshot=list(messages),
+        review_memory=_should_review_memory, ...)</pre></div>
+  <p><b>成本设计很讲究</b>（<code>agent/background_review.py:31-41</code>）：默认用<b>主模型</b>跑，因为整段对话已在 prompt cache 里，是廉价的 cache read；只有当用户把 review 路由到别的模型（<code>auxiliary.background_review.*</code>）时，才改用<b>压缩 digest</b> 重放，以减少冷写 token。</p>
+  <p><b>权限收紧</b>：fork 的工具白名单只有 memory + skill 管理工具，其他运行时拒绝（<code>:12-14</code>）。<code>agent/background_review.py:852</code> 有一条注释记录了曾经的教训：<i>"Hardcoding ['memory', 'skills'] granted the review LLM the MEMORY.md ..."</i></p>
+  <div class="callout pos"><div class="co-t">✓ 结论</div>是的，Hermes 会在没有人要求的情况下自动写记忆、自动创建技能。</div>
+  </div>
+
+  <h3><span class="tag">(B)</span>Curator —— 技能生命周期管家</h3>
+  <div class="card"><blockquote><code>agent/curator.py:1-20</code> — "an auxiliary-model task that periodically reviews agent-created skills... runs inactivity-triggered (no cron daemon): when the agent is idle and the last curator run was longer than interval_hours ago, maybe_run_curator() spawns a forked AIAgent."</blockquote>
+  <p>职责：生命周期状态自动流转、pin / archive / consolidate / patch（经 <code>skill_manage</code>）、状态存 <code>.curator_state</code>。</p>
+  <p><b>硬不变量</b>（<code>:16-20</code>）：</p>
+  <ul>
+    <li>只碰 agent 创建的技能（<code>tools/skill_usage.is_agent_created</code>）</li>
+    <li><b>永不自动删除，只归档</b>，可恢复（<code>hermes curator restore</code>）</li>
+    <li>pinned 技能豁免</li>
+    <li>用 auxiliary client，<b>绝不碰主会话 prompt cache</b></li>
+  </ul></div>
+
+  <h3><span class="tag">(C)</span>Skill Usage Telemetry —— 唯一的反馈信号</h3>
+  <div class="card"><p><code>tools/skill_usage.py:1-23</code>：sidecar <code>~/.hermes/skills/.usage.json</code>，按技能名计数。计数由 <code>skill_view</code> / <code>skill_manage</code> 自增，curator 读派生的活跃时间戳做状态转移：</p>
+  <div class="codebox"><div class="codehead"><span>技能生命周期状态机</span><button class="copybtn">复制</button></div>
+<pre data-lang="plain">active   -> 默认
+stale    -> 未使用 > stale_after_days
+archived -> 未使用 > archive_after_days（移入 .archive/）
+pinned   -> 豁免自动转移</pre></div>
+  <p>刻意做成 sidecar 而不是 frontmatter，避免污染用户手写的 SKILL.md、避免与 hub 技能冲突。</p></div>
+
+  <h3><span class="tag">(D)</span>Curator Backup —— 变更前快照</h3>
+  <div class="card"><p><code>agent/curator_backup.py:1-11</code>：curator 每次做变更前，先把整个 <code>~/.hermes/skills/</code> 打成 <code>tar.gz</code> 快照存到 <code>.curator_backups/&lt;utc-iso&gt;/</code>，附 <code>manifest.json</code>（原因/时间/大小/文件数）。回滚时会<b>先把当前 skills/ 树也存成一个快照</b>，所以回滚本身也可撤销。</p>
+  <div class="callout info"><div class="co-t">◈ 这是整个自我改进机制里最保守的一环</div>自动写入 + 归档 + 快照 + 双向可回滚。<b>设计者显然不完全信任 LLM 对技能库的自主修改。</b></div></div>
+
+  <h3><span class="tag">(E)</span>agent/insights.py —— 与自我改进无关（重要负向发现）</h3>
+  <div class="card"><p>名字有误导性。实际是 <b>usage analytics 报表</b>，对标 Claude Code 的 <code>/insights</code> 命令：</p>
+  <blockquote><code>agent/insights.py:1-10</code> — "Analyzes historical session data from the SQLite state database to produce comprehensive usage insights — token consumption, cost estimates, tool usage patterns, activity trends, model/platform breakdowns"</blockquote>
+  <p><code>InsightsEngine(db).generate(days=30)</code> → <code>format_terminal(report)</code>，给人看的。<b>产物不写回任何存储，也从不回注 prompt。</b> 与 reflection / 经验积累无任何关系。</p></div>
+
+  <h3><span class="tag">(F)</span>Journey / Learning Graph —— 只是可视化</h3>
+  <div class="card"><p><code>agent/learning_graph.py:1-9</code> 自述 <i>"Assemble the 'learning made visible' graph for desktop"</i>。把 non-base 技能 + MEMORY.md/USER.md 的 <code>§</code> 卡片建成图，技能间的边来自 <code>related_skills</code>，记忆↔技能的边来自<b>词法重叠</b>（lexical overlap）。<code>agent/learning_mutations.py</code> 提供用户手动 edit/delete 节点（CLI <code>hermes journey</code>、TUI <code>/journey</code>、桌面 REST）。</p>
+  <div class="callout neg"><div class="co-t">✕ 这不是学习机制，是学习的展示层</div>图不参与任何检索或决策。</div></div>
+
+  <h3><span class="tag">★</span>自我改进的诚实评级</h3>
+  <div class="tblwrap"><table>
+    <thead><tr><th>维度</th><th>实际情况</th></tr></thead>
+    <tbody>
+      <tr><td>自动产出新记忆/技能</td><td><span style="color:var(--green);font-weight:700">✅ 有</span>（background review，无需人触发）</td></tr>
+      <tr><td>遗忘 / 收敛</td><td><span style="color:var(--green);font-weight:700">✅ 有</span>（curator 归档 + 字符预算硬上限）</td></tr>
+      <tr><td>反馈信号</td><td><span style="color:var(--amber);font-weight:700">⚠️ 只有"使用频次/最近使用时间"</span>。没有成功率、没有自评分、没有 reward、没有错误驱动修正</td></tr>
+      <tr><td>闭环性</td><td><span style="color:var(--amber);font-weight:700">⚠️ 半闭环</span>：产出 → 使用计数 → 生命周期流转，但<b>技能质量从不被评估</b>，只被"用没用过"评估</td></tr>
+      <tr><td>本质</td><td><b>LLM 自我总结写文件 + 基于使用频次的垃圾回收</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn"><div class="co-t">▲ 结论：介于 (a)(b) 之间、更偏 (b)</div>
+    不是真正的闭环学习（没有效果反馈），但也不只是被动的人在环建议——它确实会自主写入。唯一的"适应性"来自使用频次这一个非常弱的信号。<code>tests/</code>(2632 文件) 和 <code>batch_runner.py</code> / <code>mini_swe_runner.py</code> 说明<b>评测能力是有的</b>，但那是给开发者跑 CI/benchmark 的，<b>没有接回 agent 的自我改进回路</b>。</div>
+</section>
+
+<section id="loop" class="reveal">
+  <div class="sec-head"><span class="sec-num">5</span><h2>任务 2 · 核心模块追踪 — Agent Loop</h2></div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>主循环 — agent/conversation_loop.py:1142 run_conversation()</div>
+    <div class="codebox"><div class="codehead"><span>agent/conversation_loop.py:1316</span><button class="copybtn">复制</button></div>
+<pre data-lang="py">while (api_call_count < agent.max_iterations
+       and agent.iteration_budget.remaining > 0) or agent._budget_grace_call:</pre></div>
+    <p><b>三个终止条件</b>：迭代数上限（<code>max_iterations</code> 默认 <b>90</b>，<code>run_agent.py:443</code>，与子 agent 共享）、token/成本预算 <code>iteration_budget</code>、以及一次 grace call。超限走 <code>run_agent.py:7119 _handle_max_iterations()</code>。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot amber"></span>规划 — 没有独立的 planner 模块</div>
+    <p>唯一的规划机制是 <code>todo</code> 工具（<code>tools/todo_tool.py:267</code>）——模型自己维护 session 级任务清单，<code>merge</code> 语义，"同一时刻只能有一个 in_progress"。纯 prompt 约束，无状态机。</p>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>Prompt 组装（agent/prompt_builder.py）分块</div>
+    <ul>
+      <li><code>build_environment_hints()</code> <code>:1155</code> — 环境探针（含远程后端探测 <code>_probe_remote_backend</code>）</li>
+      <li><code>build_skills_system_prompt()</code> <code>:1584</code> — 技能紧凑索引（双层缓存）</li>
+      <li><code>load_soul_md()</code> <code>:1986</code> — <code>~/.hermes/SOUL.md</code> 人格</li>
+      <li><code>build_context_files_prompt()</code> <code>:2114</code> — cwd 上下文文件：<code>.hermes.md</code> / <code>AGENTS.md</code> / <code>CLAUDE.md</code> / <code>.cursorrules</code>（<code>:2017-2081</code>），带按 context length 动态裁剪 <code>_get_context_file_max_chars()</code> <code>:1294</code></li>
+      <li>MEMORY.md / USER.md 常驻</li>
+      <li><code>computer_use_guidance()</code> <code>:498</code></li>
+    </ul>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot violet"></span>Prompt Cache 保护（项目自称"sacred"，代码里确实有强制机制）</div>
+    <ul>
+      <li><code>agent/agent_runtime_helpers.py:1991</code> — 计算 <code>cache_control</code> 断点，按 provider 能力分流（Anthropic 原生 / OpenRouter / Kimi-Moonshot / Qwen Portal / Copilot 各有分支，<code>:2073-2140</code>）</li>
+      <li><code>agent/conversation_loop.py:905</code> <code>_ensure_cached_system_prompt_static()</code> — 强制 system prompt 静态</li>
+      <li><code>:608</code> <code>_stored_prompt_matches_runtime()</code> — 校验存储的 prompt 与运行时一致</li>
+      <li><code>:470</code> <code>_restore_or_build_system_prompt()</code> — 优先复原而非重建</li>
+      <li><code>:939</code> <code>_redecorate_prompt_cache_for_provider()</code> — 切 provider 时重贴断点</li>
+      <li><code>agent_runtime_helpers.py:1963</code> <code>strip_anthropic_cache_control()</code> — 不支持的后端剥离标记</li>
+    </ul>
+  </div>
+
+  <div class="card"><div class="ttl"><span class="dot cyan"></span>工具执行 + 上下文压缩 + 委派</div>
+    <p><b>工具执行</b>：<code>agent/tool_executor.py</code>。<code>tools/registry.py:497</code> 的 <code>register()</code> 带 <code>check_fn</code> —— 工具<b>按运行时环境动态出现在 schema 里</b>（如 <code>read_terminal</code>/<code>open_preview</code> 仅在 <code>HERMES_DESKTOP</code> 下可见，kanban 工具仅在 <code>HERMES_KANBAN_TASK</code> 下可见，<code>toolsets.py:36-40, 75-79</code>）。有审批门（<code>tools/approval.py</code>）。工具结果有大小上限 <code>max_result_size_chars</code>。</p>
+    <p><b>上下文压缩</b>：<code>agent/context_compressor.py</code>，默认 <code>threshold_percent = 0.50</code>（<code>:2156</code>），可按模型覆盖 <code>resolve_model_threshold()</code> <code>:1286</code>。压缩时会显式告诉模型 <i>"Your persistent memory (MEMORY.md, USER.md) in the system prompt remains fully authoritative"</i>（<code>:114, 6358</code>）。DB 里有 <code>compression_locks</code> 表做跨进程互斥。这是 AGENTS.md 里唯一被允许打破 prompt cache 的操作。</p>
+    <p><b>委派</b>：<code>tools/delegate_tool.py:2778 delegate_task()</code> → <code>:1504</code> 直接构造子 <code>AIAgent(...)</code>，<b>进程内递归</b>，共享同一套循环。异步委派落 <code>async_delegations</code> 表（<code>tools/async_delegation.py:142</code>），带 <code>owner_pid</code> / <code>delivery_state</code> / 重试计数——为跨进程崩溃恢复设计。</p>
+  </div>
+</section>
+
+<!-- ================= 3. CODE MAP ================= -->
+<section id="map" class="reveal">
+  <div class="sec-head"><span class="sec-num">6</span><h2>任务 3 · 代码地图（实际流程）</h2></div>
+  <div class="callout info"><div class="co-t">◈ 模板里的线性流程与代码不符</div>
+    实际是<b>双回路</b>：主回路同步，学习回路异步且滞后。</div>
+
+  <div class="legend">
+    <span><i style="background:var(--acc1)"></i>主回路 · 同步</span>
+    <span><i style="background:var(--violet)"></i>循环体</span>
+    <span><i style="background:var(--amber)"></i>学习回路 · 异步</span>
+    <span><i style="background:var(--green)"></i>用户侧交付点</span>
+    <span><i style="background:var(--rose)"></i>离线 GC 回路</span>
+  </div>
+
+  <div class="flowgrid">
+    <!-- MAIN LOOP -->
+    <div class="flowcol">
+      <div class="fc-t"><span class="st" style="background:var(--acc1)"></span>MAIN LOOP · 主回路（同步）</div>
+
+      <div class="fnode cyan"><span class="n-step">①</span><div class="n-title">User Input</div></div>
+      <div class="fconn"></div>
+      <div class="fnode cyan"><span class="n-step">②</span><div class="n-title">入口</div><div class="n-sub">hermes_cli.main / gateway.run / acp_adapter / tui_gateway</div></div>
+      <div class="fconn"></div>
+      <div class="fnode cyan"><span class="n-step">③</span><div class="n-title">turn_context.py · 前置</div><div class="n-sub">建/复用 session · memory nudge 计数+1 [:584]</div></div>
+      <div class="fconn"></div>
+      <div class="fnode cyan"><span class="n-step">④</span><div class="n-title">prompt_builder.py · system prompt 组装</div><div class="n-sub">SOUL.md · MEMORY.md · USER.md · skills 紧凑索引 · 上下文文件 · 首轮后冻结保 cache</div></div>
+      <div class="fconn"></div>
+
+      <div class="fnode violet loopbox"><span class="n-step">⑤</span><div class="n-title">conversation_loop.py:1142 run_conversation()</div><div class="n-sub">while (iterations &lt; 90 ∧ budget &gt; 0) [:1316]</div></div>
+      <div class="fn-loop-title">└ LOOP BODY</div>
+      <div class="fnode violet"><div class="n-title">LLM API call</div><div class="n-sub">贴 cache_control 断点 → 无 tool_calls 则跳出</div></div>
+      <div class="fconn"></div>
+      <div class="fnode violet"><div class="n-title">tool_executor.py 分发</div><div class="n-sub">todo（唯一"规划"）· skills_list/skill_view · skill_manage（当场写技能）· memory（当场写记忆）· terminal/file/browser/delegate_task · check_fn 门控 + approval · _iters_since_skill += 1 [:1385]</div></div>
+      <div class="fconn"></div>
+      <div class="fnode violet"><div class="n-title">超过 50% 上下文 → context_compressor</div><div class="n-sub">唯一允许破 cache 之处 · compression_locks 互斥</div></div>
+
+      <div class="fconn"></div>
+      <div class="fnode cyan"><span class="n-step">⑥</span><div class="n-title">turn_finalizer.py · 后置</div><div class="n-sub">skill nudge 判定 [:699] · _sync_external_memory_for_turn()</div></div>
+      <div class="fconn"></div>
+      <div class="fnode green split"><span class="n-step">⑦</span><div class="n-title">Response —— 交付给用户</div><div class="n-sub">到此用户侧结束，学习回路才开始</div></div>
+    </div>
+
+    <!-- ASYNC LOOPS -->
+    <div class="flowcol">
+      <div class="fc-t"><span class="st" style="background:var(--amber)"></span>LEARNING LOOP · 学习回路（异步）</div>
+
+      <div class="fnode amber"><span class="n-step">⑧</span><div class="n-title">_spawn_background_review() · daemon thread</div><div class="n-sub">turn_finalizer.py:714 · 响应交付之后</div></div>
+      <div class="fconn"></div>
+      <div class="fnode amber"><div class="n-title">fork AIAgent · 重放对话快照</div><div class="n-sub">工具白名单仅 memory + skills · 同模型→全量重放（吃 cache）· 异模型→digest</div></div>
+      <div class="fconn"></div>
+      <div class="fnode amber"><div class="n-title">写 MEMORY.md / USER.md</div></div>
+      <div class="fconn"></div>
+      <div class="fnode amber"><div class="n-title">写 ~/.hermes/skills/&lt;new&gt;/SKILL.md</div></div>
+
+      <div class="fn-loop-title" style="color:var(--rose)">└ 另一条独立回路：空闲触发 · 无 cron daemon</div>
+      <div class="fnode rose"><span class="n-step">⑨</span><div class="n-title">maybe_run_curator() · curator.py</div><div class="n-sub">读 .usage.json 使用遥测</div></div>
+      <div class="fconn"></div>
+      <div class="fnode rose"><div class="n-title">active ──未用N天──► stale ──未用M天──► archived (.archive/)</div><div class="n-sub">永不删除 · pinned 豁免</div></div>
+    </div>
+  </div>
+
+  <h3><span class="tag">★</span>与模板的三处关键差异</h3>
+  <div class="evgrid">
+    <div class="evcard"><div class="m">1 · Planning</div><div class="o">不是独立阶段，是循环内的一个普通工具（<code>todo</code>）。</div></div>
+    <div class="evcard"><div class="m">2 · Memory/Skill Update</div><div class="o">不在主链路上——既可以是循环内模型主动调工具，也可以是响应交付后的异步 fork。用户感知到的"回复完成"早于学习完成。</div></div>
+    <div class="evcard"><div class="m">3 · 离线 GC 回路</div><div class="o">多了一条 curator 回路，由空闲触发，不在任何 turn 的路径上。</div></div>
+  </div>
+</section>
+
+<!-- ================= 4. MIGRATION ================= -->
+<section id="migration" class="reveal">
+  <div class="sec-head"><span class="sec-num">7</span><h2>任务 4 · 迁移观察</h2></div>
+  <p class="lead">只做标记，不做判断。</p>
+
+  <h3><span class="tag">GENERIC</span>通用 Agent 基础设施</h3>
+  <div class="evgrid">
+    <div class="evcard"><div class="m">工具注册表 + 工具集门控</div><div class="o">与 Hermes 业务完全解耦的插件式工具层。register() 带 check_fn 做运行时可见性门控，是控制 schema 体积的通用机制。toolsets.py 的分组/别名/include 解析也是纯通用逻辑。</div><div class="e">tools/registry.py:497 · toolsets.py:31-86 · model_tools.py:294</div></div>
+    <div class="evcard"><div class="m">会话循环 + 迭代预算</div><div class="o">while(迭代上限 ∧ 预算) 的经典 agent loop，终止条件、grace call、max_iterations 处理都不含场景假设。</div><div class="e">agent/conversation_loop.py:1142,1316 · run_agent.py:443,7119</div></div>
+    <div class="evcard"><div class="m">Prompt Cache 断点策略</div><div class="o">跨 provider 的 cache_control 能力矩阵 + 剥离/重贴逻辑。这是这个仓库里最有迁移价值的独立资产之一，与业务零耦合。</div><div class="e">agent/agent_runtime_helpers.py:1991-2140 · agent/conversation_loop.py:905,939</div></div>
+    <div class="evcard"><div class="m">上下文压缩</div><div class="o">阈值解析、按模型覆盖、跨进程压缩锁、压缩后 memory 权威性声明。逻辑通用，但 6708 行的体量说明积累了大量 provider 特例。</div><div class="e">agent/context_compressor.py:1286,2156 · hermes_state_common.py (compression_locks)</div></div>
+    <div class="evcard"><div class="m">可插拔上下文引擎 (ContextEngine ABC)</div><div class="o">上下文管理被抽象成了有完整生命周期的 ABC——on_session_start / update_from_response / should_compress / compress / on_session_end，引擎还可自带工具（如 lcm_grep）。内置 compressor 只是默认实现，config 里 context.engine 一行可换。同时只允许一个引擎激活。<b>这是整个仓库里抽象得最干净的扩展点之一。</b></div><div class="e">agent/context_engine.py:1-26 · plugins/context_engine/ · agent/conversation_loop.py:1012</div></div>
+    <div class="evcard"><div class="m">Curator 快照 / 回滚</div><div class="o">变更前 tar.gz 全量快照 + manifest.json，回滚前再快照当前状态，使回滚本身可撤销。任何"让 LLM 自主改写持久化资产"的系统都需要这层保险，机制与 skill 内容无关。</div><div class="e">agent/curator_backup.py:1-11</div></div>
+    <div class="evcard"><div class="m">会话持久化 + FTS 检索</div><div class="o">sessions/messages + 三套 FTS5（标准/trigram/CJK）。检索层通用，但 sessions 表内联了 billing_* 和 git_* 列，schema 已被业务污染。</div><div class="e">hermes_state_common.py:140-175 · hermes_state_search.py:332,397,1456 · native/fts5_cjk.c</div></div>
+    <div class="evcard"><div class="m">Skill 渐进披露机制</div><div class="o">"索引进 prompt / 正文按需拉取" + 双层缓存（进程内 LRU + 磁盘 mtime 快照）。与 skill 内容无关，是纯粹的上下文经济学机制。</div><div class="e">agent/prompt_builder.py:1584-1640</div></div>
+    <div class="evcard"><div class="m">Skill 生命周期 + 使用遥测</div><div class="o">sidecar 遥测 → 状态机（active/stale/archived/pinned）→ 只归档不删除。通用的"技能垃圾回收"骨架。</div><div class="e">tools/skill_usage.py:18-23 · agent/curator.py:1-20</div></div>
+    <div class="evcard"><div class="m">后台自省 fork</div><div class="o">响应交付后异步 fork + 工具白名单 + 同模型吃 cache/异模型走 digest 的成本策略。机制通用，不依赖 Hermes 的具体记忆格式。</div><div class="e">agent/background_review.py:1-41 · agent/turn_finalizer.py:699-722</div></div>
+    <div class="evcard"><div class="m">委派 / 子 agent</div><div class="o">进程内递归构造子 AIAgent + 异步委派的 DB 持久化（owner_pid、delivery_state、重试）。跨进程崩溃恢复语义是通用的。</div><div class="e">tools/delegate_tool.py:1504,2778 · tools/async_delegation.py:142-157</div></div>
+    <div class="evcard"><div class="m">Provider 适配层</div><div class="o">anthropic / bedrock / codex-responses / gemini-native / azure 各自 wire format 适配 + 凭证池 + 故障转移。通用但极其厚重。</div><div class="e">agent/anthropic_adapter.py · agent/bedrock_adapter.py · agent/codex_responses_adapter.py · agent/credential_pool.py</div></div>
+    <div class="evcard"><div class="m">插件 ABC + plugin.yaml</div><div class="o">95 个 plugin.yaml 共用一套加载/配置 schema 约定；override=True 才能覆盖内置工具。边缘扩展的通用契约。</div><div class="e">plugins/plugin_utils.py · tools/registry.py:511-522</div></div>
+    <div class="evcard"><div class="m">Cron 调度</div><div class="o">jobs.json + 文件锁 + 执行记录 + 每任务 toolset 解析。通用调度层。</div><div class="e">cron/jobs.py:1-30 · cron/scheduler.py · cron/executions.py</div></div>
+  </div>
+
+  <h3><span class="tag">BOUND</span>明显与具体场景绑定</h3>
+  <div class="evgrid">
+    <div class="evcard bound"><div class="m">消息平台适配（21 个）</div><div class="o">telegram/discord/slack/feishu/matrix/whatsapp/wecom/line/irc/sms/… 加上 gateway 的投递保障、去重、限流、配对、优雅停机。绑定"个人消息助理"这一形态。gateway/ 86 个 py 全部服务于此。</div><div class="e">plugins/platforms/ (21 dirs) · gateway/platforms/ · gateway/delivery_ledger.py</div></div>
+    <div class="evcard bound"><div class="m">平台专属模型工具</div><div class="o">这些工具直接进了工具注册表，是 schema 层面的场景绑定，不只是插件。</div><div class="e">tools/discord_tool.py · tools/feishu_doc_tool.py · tools/feishu_drive_tool.py · gateway/platforms/yuanbao*.py</div></div>
+    <div class="evcard bound"><div class="m">桌面 GUI 工具</div><div class="o">read_terminal / close_terminal / open_preview / focus_pane 五个工具靠 check_fn 挂 HERMES_DESKTOP 门控，注释明说"只在 GUI 下有意义"。project_list/create/switch 更是刻意排除在 core 之外。</div><div class="e">toolsets.py:36-40,60-64 · apps/desktop/ (1473 文件) · tui_gateway/ · ui-tui/ · web/</div></div>
+    <div class="evcard bound"><div class="m">Kanban 多 agent 协作</div><div class="o">独立 kanban.db（6 张表）+ 13 个 kanban_* 模型工具，靠 HERMES_KANBAN_TASK 环境变量门控。绑定"多 agent 看板协作"场景。</div><div class="e">hermes_cli/kanban_db.py · tools/kanban_tools.py · toolsets.py:75-83</div></div>
+    <div class="evcard bound"><div class="m">计费 / 额度 / 订阅</div><div class="o">sessions 表内联 billing_provider/billing_base_url/billing_mode + 7 个 billing/credits 模块 + prompt 里的 entitlement 引导文案。绑定"付费 SaaS 产品"，不是 agent 能力。</div><div class="e">hermes_state_common.py:168-170 · agent/billing_*.py · agent/credits_tracker.py · agent/account_usage.py · agent/conversation_loop.py:328-455</div></div>
+    <div class="evcard bound"><div class="m">智能家居</div><div class="o">ha_list_entities / ha_get_state / ha_list_services / ha_call_service 四个工具进了 core 列表，靠 HASS_TOKEN 门控。</div><div class="e">toolsets.py:73-74 · skills/smart-home/</div></div>
+    <div class="evcard bound"><div class="m">语音 / TTS / 唤醒词</div><div class="o">text_to_speech 在 core 列表；voice_mode、transcription、neutts_samples、wakewords 一整套。绑定语音交互场景。</div><div class="e">toolsets.py:57 · tools/voice_mode.py · tools/tts_tool.py · tools/transcription_tools.py · tools/wakewords/</div></div>
+    <div class="evcard bound"><div class="m">媒体生成（图/视频）</div><div class="o">6 个 bfl_flux3_* 工具直接进 core 列表（含一个 prompting_guide 工具），外加 image_generate / video_generate / xai_video_* / flux3_video_tool。对通用 agent 而言这是很重的场景占位。</div><div class="e">toolsets.py:45-48 · tools/flux3_video_tool.py · plugins/image_gen/ · plugins/video_gen/</div></div>
+    <div class="evcard bound"><div class="m">桌面精灵 Petdex</div><div class="o">纯装饰。sprite atlas 解析 + 把 agent 活动映射到 idle/run/review/failed/wave/jump 动画。</div><div class="e">agent/pet/ (7 文件) · agent/pet/__init__.py:1-8</div></div>
+    <div class="evcard bound"><div class="m">场景化技能包</div><div class="o">apple(imessage/notes/reminders/findmy)、smart-home、social-media、media、email 等分类明确面向"个人生活助理"。另有 autonomous-ai-agents/ 分类（claude-code/codex/opencode/hermes-agent），面向"驱动其他 coding agent"。</div><div class="e">skills/apple/ · skills/smart-home/ · skills/social-media/ · skills/autonomous-ai-agents/</div></div>
+    <div class="evcard bound"><div class="m">编码姿态（coding posture）</div><div class="o">agent/coding_context.py 会把整类技能降级成"只列名字"，说明系统对"当前是不是在写代码"有专门分支。</div><div class="e">agent/coding_context.py · agent/prompt_builder.py:1605-1608</div></div>
+    <div class="evcard bound"><div class="m">评测 / RL / 数据生成</div><div class="o">batch_runner.py(59KB)、mini_swe_runner.py(29KB)、datagen-config-examples/、trajectory_compressor.py。面向研究/跑分，与运行时 agent 无耦合，也未接回自我改进回路。</div><div class="e">batch_runner.py · mini_swe_runner.py · trajectory_compressor.py</div></div>
+    <div class="evcard bound"><div class="m">成就系统</div><div class="o">plugins/hermes-achievements/ —— 游戏化激励，产品特性。</div><div class="e">plugins/hermes-achievements/ (12 文件)</div></div>
+  </div>
+
+  <h3><span class="tag">FUZZY</span>边界模糊（既通用又已被污染）</h3>
+  <div class="evgrid">
+    <div class="evcard fuzzy"><div class="m">hermes_state.py</div><div class="o">401KB 单文件。核心是通用会话存储，但里面混进了 telegram_dm_topic_mode / telegram_dm_topic_bindings 两张 Telegram 专属表的建表语句。</div><div class="e">hermes_state.py:7965,7978</div></div>
+    <div class="evcard fuzzy"><div class="m">cli.py</div><div class="o">873KB 单文件。AGENTS.md 自己把它列为需要拆分的 god-file。既是入口也是大量业务逻辑的堆放处。</div><div class="e">cli.py · AGENTS.md "Refactor god-files into clean modules"</div></div>
+    <div class="evcard fuzzy"><div class="m">记忆存储</div><div class="o">内置实现是文件态（MEMORY.md/USER.md，2200+1375 字符，全量注入，无检索、无 scope、无结构）；结构化能力全在 plugins/memory/ 的 8 个外部 provider 里。核心记忆能力本身很薄。</div><div class="e">agent/agent_init.py:1648-1657 · tools/memory_tool.py:1155 · plugins/memory/holographic/store.py</div></div>
+  </div>
+</section>
+
+<!-- ================= 5. BLINDSPOTS ================= -->
+<section id="blindspots" class="reveal">
+  <div class="sec-head"><span class="sec-num">8</span><h2>侦察盲区 / 未验证项</h2></div>
+  <p class="lead">诚实标注本次没能确认的点：</p>
+  <ol class="ev">
+    <li><code>~/.hermes</code> 运行时目录不存在（仓库未在本机跑过），所有磁盘布局结论来自代码常量，未经运行验证。</li>
+    <li><code>cli.py</code>(873KB) 未通读，只做了针对性 grep。里面可能还有未被本报告覆盖的子系统。</li>
+    <li><code>hermes_state.py</code>(401KB) 未通读，表结构结论来自 <code>hermes_state_common.py</code> 的 CREATE TABLE，可能有运行时动态建表遗漏。</li>
+    <li><code>MemoryStore</code> 类实现细节未逐行读（<code>tools/memory_tool.py</code> 前 1150 行），只确认了 schema、字符上限、加载入口。字符超限时的具体拒绝/截断行为未验证。</li>
+    <li><code>agent/moa_loop.py</code>（Mixture-of-Agents）未展开，不清楚是否默认启用、以及与 prompt cache 的交互。</li>
+    <li>AGENTS.md 提到的 <code>hermes-agent-dev</code> 技能及其 <code>references/self-improvement-loop.md</code>（自我改进循环的不变量文档）<b>不在本仓库内</b>，无法交叉验证。</li>
+    <li><code>agent/curator.py</code> 只读了头部 55 行与不变量声明，2018 行的具体 review prompt 与判定逻辑未逐行验证。</li>
+  </ol>
+  <div class="callout pos"><div class="co-t">✓ 已在本轮补查并关闭的缺口</div>
+    <code>agent/insights.py</code>（确认为 usage 报表，非自省，见 2.3-E）、<code>agent/curator_backup.py</code>（快照/回滚，见 2.3-D）、<code>agent/context_engine.py</code>（可插拔上下文引擎 ABC）。</div>
+</section>
+
+<!-- ================= 6. SUMMARY ================= -->
+<section id="summary" class="reveal">
+  <div class="sec-head"><span class="sec-num">9</span><h2>一句话总结</h2></div>
+  <div class="card"><p style="font-size:16px">Hermes 是一个<b>产品</b>，不是一个框架：真正可复用的 agent 内核大约集中在 <code>agent/</code> 的十几个文件 + <code>tools/registry.py</code> + <code>toolsets.py</code>，其余绝大部分体量服务于"跨 21 个消息平台的个人助理 + 桌面 GUI + 计费 SaaS"这一具体形态。</p></div>
+
+  <h3><span class="tag">★</span>最有参考价值的三个工程决策</h3>
+  <div class="evgrid">
+    <div class="evcard"><div class="m">1 · narrow waist</div><div class="o">61 个 core 工具 + <code>check_fn</code> 运行时门控，把 schema 成本压住。</div></div>
+    <div class="evcard"><div class="m">2 · prompt cache 至上</div><div class="o">system prompt 冻结、跨 provider 断点策略、后台自省 fork 刻意复用父 cache。</div></div>
+    <div class="evcard"><div class="m">3 · 技能的渐进披露 + 使用频次 GC</div><div class="o">索引进 prompt、正文按需拉、不用就归档（永不删除）。</div></div>
+  </div>
+
+  <div class="callout neg"><div class="co-t">✕ 它最薄的一环：记忆</div>
+    3575 字符的全量注入文本文件，无 scope、无结构、无检索、默认关闭——与它在会话检索上投入的三套 FTS5（含自研 CJK 分词器 C 扩展）形成强烈反差。而所谓"自我进化"，实质是 <b>LLM 定期自我总结写文件 + 基于"用没用过"的垃圾回收</b>，缺少任何效果反馈信号。</div>
+</section>
+
+<footer>
+  <span class="mono">HERMES CODE RECON REPORT · commit cd6585abf · branch main · 30+ evidence-backed observations</span>
+  <span class="mono">LemmaHermes 情报 · 基于代码，不基于宣传文档</span>
+</footer>
+</main>
+
+<script>
+/* ============ THEME ============ */
+const themeBtn=document.getElementById('themeBtn');
+const themes=['dark','light','system'];let ti=0;
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t);
+  themeBtn.textContent=t==='light'?'☀️':t==='dark'?'🌙':'🖥';
+}
+const saved=localStorage.getItem('recon-theme')||'dark';
+ti=themes.indexOf(saved)<0?0:themes.indexOf(saved);applyTheme(saved);
+themeBtn.addEventListener('click',()=>{ti=(ti+1)%themes.length;const t=themes[ti];localStorage.setItem('recon-theme',t);applyTheme(t);});
+matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>{if(themes[ti]==='system')applyTheme('system');});
+
+/* ============ PROGRESS + SCROLLSPY ============ */
+const bar=document.getElementById('progress');
+addEventListener('scroll',()=>{const h=document.documentElement;bar.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';},{passive:true});
+const links=[...document.querySelectorAll('.nav-links a')];
+const map={};links.forEach(a=>map[a.getAttribute('href').slice(1)]=a);
+const spy=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.remove('active'));const a=map[e.target.id];if(a)a.classList.add('active');}});},{rootMargin:'-30% 0px -65% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>spy.observe(s));
+
+/* ============ REVEAL ============ */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.06});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+/* ============ COUNT-UP ============ */
+const cio=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;cio.unobserve(e.target);
+  const el=e.target,target=+el.dataset.count,start=performance.now(),dur=1000;
+  (function tick(now){const p=Math.min((now-start)/dur,1),ease=1-Math.pow(1-p,3);
+    el.textContent=Math.round(target*ease).toLocaleString('en-US');
+    if(p<1)requestAnimationFrame(tick);})(start);}),{threshold:.5});
+document.querySelectorAll('.stat .v').forEach(el=>cio.observe(el));
+
+/* ============ CODE HIGHLIGHT ============ */
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const tokRe=/(\/\/[^\n]*|#[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|\b(import|from|def|class|return|if|elif|else|for|while|and|or|not|in|is|None|True|False|with|as|try|except|finally|lambda|yield|async|await|pass|break|continue|global|raise|assert|del)\b|(\b\d+(?:\.\d+)?\b)/g;
+function hl(code){return esc(code).replace(tokRe,(m,c,s,k,n)=>c?'<span class="tok-com">'+c+'</span>':s?'<span class="tok-str">'+s+'</span>':k?'<span class="tok-kw">'+k+'</span>':n?'<span class="tok-num">'+n+'</span>':m);}
+document.querySelectorAll('.codebox pre[data-lang]').forEach(pre=>{
+  const lang=pre.dataset.lang;
+  if(lang==='py'||lang==='yaml')pre.innerHTML=hl(pre.textContent);
+});
+
+/* ============ COPY ============ */
+document.querySelectorAll('.codebox').forEach(box=>{
+  const btn=box.querySelector('.copybtn'),pre=box.querySelector('pre');
+  if(!btn||!pre)return;
+  btn.addEventListener('click',async()=>{
+    const txt=pre.textContent;
+    try{await navigator.clipboard.writeText(txt);}catch(e){
+      const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy');}catch(_){}
+      ta.remove();
+    }
+    btn.textContent='✓ 已复制';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='复制';btn.classList.remove('ok');},1600);
+  });
+});
+</script>
+</body>
+</html>
