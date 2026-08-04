@@ -1,7 +1,7 @@
 """阶段一冒烟：诉求 → 问卷(plan) → 提交答案 → 大纲落库(intake)。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_course_planning.py
+    uv run python tests/smoke_course_planning.py
 
 service 层直测（绕过 HTTP 鉴权），真打 LLM，仿 smoke_projects 风格。
 """

@@ -2,7 +2,7 @@
 并验证 CourseDetailOut 从 ORM 直出 camelCase 嵌套快照。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_course_models.py
+    uv run python tests/smoke_course_models.py
 
 纯 ORM + schema 直测（Phase 1 无 service/api），与 smoke_projects 同款风格。
 """

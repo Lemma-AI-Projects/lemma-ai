@@ -2,7 +2,7 @@
 research_chapter 验证换真逻辑后 task/SSE 代码不变即可工作。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_course_build.py
+    uv run python tests/smoke_course_build.py
 
 直接 await tasks.course_build.run_build（绕过 Celery worker），仿 smoke_projects。
 build_course 内建 Apify client，故整套冒烟需要 APIFY_API_TOKEN（无则整体 SKIP）。

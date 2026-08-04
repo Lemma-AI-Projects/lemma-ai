@@ -10,7 +10,7 @@
 3. 滑动过期选择：回拨 last_accessed_at，验证 list_expired_assets 命中超期资产。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_video_delivery.py
+    uv run python tests/smoke_video_delivery.py
 
 需配置 Supabase 私有桶 + S3 access keys + service role（见 .env.example）；未配置则
 整体 SKIP。直接 await tasks.video_download.run_build 同款思路（绕过 worker），并把

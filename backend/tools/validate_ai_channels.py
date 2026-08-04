@@ -1,9 +1,9 @@
 """探针 1-6（终稿 12.1）— 文本轨 + 视频轨通道验证。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/validate_ai_channels.py            # 全部
-    uv run python scripts/validate_ai_channels.py --only text   # 仅 1-2
-    uv run python scripts/validate_ai_channels.py --only video  # 仅 3-6
+    uv run python tools/validate_ai_channels.py            # 全部
+    uv run python tools/validate_ai_channels.py --only text   # 仅 1-2
+    uv run python tools/validate_ai_channels.py --only video  # 仅 3-6
 
 文本轨（1-2，混合方案中止线）:
   对 text_chat 每条路由逐平台单测（绕过 FallbackModel）:

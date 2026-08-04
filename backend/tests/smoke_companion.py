@@ -11,8 +11,8 @@ DB 段（需 DB + 一门已建好的课程，--offline 跳过；无合适章节�
 与下一轮前端联调）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_companion.py            # 离线 + DB
-    uv run python scripts/smoke_companion.py --offline  # 仅离线
+    uv run python tests/smoke_companion.py            # 离线 + DB
+    uv run python tests/smoke_companion.py --offline  # 仅离线
 """
 
 import asyncio

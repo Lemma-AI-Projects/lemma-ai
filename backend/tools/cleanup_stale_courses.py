@@ -1,7 +1,7 @@
 """Manually sweep stale course drafts (status != ready, untouched for a while).
 
 Run (from backend/):
-    uv run python scripts/cleanup_stale_courses.py [--days N]   # default 7
+    uv run python tools/cleanup_stale_courses.py [--days N]   # default 7
 
 This is the manual runner for course_service.cleanup_stale_drafts (本期不进
 定时任务，按需手动跑)。

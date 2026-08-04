@@ -2,7 +2,7 @@
 （仅当 APIFY_API_TOKEN 配置时）真打 Apify yt/bili 各一次并核对台账落库。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_search_providers.py
+    uv run python tests/smoke_search_providers.py
 
 离线段样例 item 取自 docs/apify readme/*.md（yt 用 readme 单视频/频道样例；
 bili 按 readme 记录的字段构造，readme 未给完整 JSON）。

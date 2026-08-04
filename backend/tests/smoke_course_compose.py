@@ -10,8 +10,8 @@
   最后删课验证级联（含 course_search_candidates）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_course_compose.py            # 离线 + 联网
-    uv run python scripts/smoke_course_compose.py --offline  # 仅离线
+    uv run python tests/smoke_course_compose.py            # 离线 + 联网
+    uv run python tests/smoke_course_compose.py --offline  # 仅离线
 """
 
 import asyncio

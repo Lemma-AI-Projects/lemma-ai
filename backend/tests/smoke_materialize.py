@@ -12,8 +12,8 @@ DB 段（需 DB + 一个 Profile，--offline 跳过）：临时建一门 materia
 不触发 chord / Celery / AI（端到端真实物料化需 worker + 视频，见联调）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_materialize.py            # 离线 + DB
-    uv run python scripts/smoke_materialize.py --offline  # 仅离线
+    uv run python tests/smoke_materialize.py            # 离线 + DB
+    uv run python tests/smoke_materialize.py --offline  # 仅离线
 """
 
 import asyncio

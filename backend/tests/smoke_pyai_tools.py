@@ -1,7 +1,7 @@
 """pydantic-ai 工具通道风险闸门（Desmos 接入前置验证）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_pyai_tools.py
+    uv run python tests/smoke_pyai_tools.py
 
 验证四件事（plan: pyai-smoke）:
 1. Tool.from_schema 宽松 JSON schema 注入（框架跳过参数校验 -> Pydantic 判决可行）

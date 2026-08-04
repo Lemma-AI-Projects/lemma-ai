@@ -1,7 +1,7 @@
 """Project 域冒烟：建项目 → 项目内发起会话 → 列表/预览 → 移入移出 → 删项目回落。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_projects.py
+    uv run python tests/smoke_projects.py
 
 service 层直测（绕过 HTTP 鉴权），与 smoke_chat_persistence 同款风格。
 """

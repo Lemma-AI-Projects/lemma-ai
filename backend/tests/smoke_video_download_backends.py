@@ -2,8 +2,8 @@
 
 Run this on the Linux worker image after provisioning BBDown + ffmpeg:
 
-    uv run python scripts/smoke_video_download_backends.py --bilibili
-    uv run python scripts/smoke_video_download_backends.py --youtube
+    uv run python tests/smoke_video_download_backends.py --bilibili
+    uv run python tests/smoke_video_download_backends.py --youtube
 
 The script downloads into a temporary directory and verifies the produced mp4
 with ffprobe. It does not touch DB, Storage, API routes, or Celery.

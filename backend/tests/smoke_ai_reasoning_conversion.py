@@ -1,7 +1,7 @@
 """Smoke: AI reasoning extraction stays framework-part based.
 
 Run from backend/:
-    uv run python scripts/smoke_ai_reasoning_conversion.py
+    uv run python tests/smoke_ai_reasoning_conversion.py
 """
 
 import sys

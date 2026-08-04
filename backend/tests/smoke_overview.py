@@ -11,8 +11,8 @@ DB 段（需 DB + 一门带 chosen candidate 的章节，--offline 跳过；无�
     pending（再选片失效）；mark_failed -> failed 且可重新 claim（断连/失败后重生成）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_overview.py            # 离线 + DB
-    uv run python scripts/smoke_overview.py --offline  # 仅离线
+    uv run python tests/smoke_overview.py            # 离线 + DB
+    uv run python tests/smoke_overview.py --offline  # 仅离线
 """
 
 import asyncio

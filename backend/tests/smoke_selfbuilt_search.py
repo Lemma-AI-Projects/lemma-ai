@@ -4,8 +4,8 @@
 （自建 provider：cost_usd=0、actor_id=NULL）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_selfbuilt_search.py            # 离线 + 联网
-    uv run python scripts/smoke_selfbuilt_search.py --offline  # 仅离线
+    uv run python tests/smoke_selfbuilt_search.py            # 离线 + 联网
+    uv run python tests/smoke_selfbuilt_search.py --offline  # 仅离线
 
 离线样例 item 取自 docs/6-19 自建搜索方案/REPORT.md 的实测 JSON（4.1 / 4.2 节）。
 bilibili 联网可能遇风控（-412 / v_voucher），按可重试失败处理并标注，不算 smoke 崩。

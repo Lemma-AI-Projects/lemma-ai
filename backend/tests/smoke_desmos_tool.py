@@ -1,8 +1,8 @@
 """Desmos 工具链冒烟（skills + 三件套 + 门禁 + 零信任校验 + 真跑）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_desmos_tool.py            # 离线部分
-    uv run python scripts/smoke_desmos_tool.py --live     # 加真跑（需要 .env 与 DB）
+    uv run python tests/smoke_desmos_tool.py            # 离线部分
+    uv run python tests/smoke_desmos_tool.py --live     # 加真跑（需要 .env 与 DB）
 
 离线部分不碰网络/DB（handler 的落库通过传入假 user 前会被门禁/校验拦下的路径验证）；
 --live 用真实用户跑一轮「画抛物线」的完整工具循环（load_skill -> render -> 收尾），

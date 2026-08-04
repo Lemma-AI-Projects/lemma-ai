@@ -168,6 +168,16 @@ class Settings(BaseSettings):
     # boto3 multipart parallelism (parts uploaded concurrently per file).
     video_download_concurrency: int = 4
 
+    # ── LemmaHermes engine integration (monorepo contract) ─────────────────
+    # Inert until the engine package lands in the monorepo; these flags gate
+    # the adapter layer (injection / tools / tasks / learner tables) so the
+    # product ships with zero engine behavior until explicitly enabled.
+    lemma_hermes_enabled: bool = False
+    lemma_hermes_engine_package: str = "lemma_hermes"
+    # Empty => learner state lives in the main database (PG); once the engine
+    # lands this may point at a dedicated learner URL if we ever split it out.
+    lemma_hermes_learner_db_url: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

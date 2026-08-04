@@ -1,7 +1,7 @@
 """Phase 2 冒烟：对话落库 + 会话 CRUD 全链路（service 层直测，绕过 HTTP 鉴权）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_chat_persistence.py
+    uv run python tests/smoke_chat_persistence.py
 
 链路:
 1. 新会话首轮 -> 标题生成 + user/assistant 成对落库 + raw_parts 附件轨

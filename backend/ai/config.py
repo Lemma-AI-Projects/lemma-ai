@@ -18,7 +18,7 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Channels proven by scripts/validate_ai_channels.py.
+# Channels proven by tools/validate_ai_channels.py.
 # probes 1-2 passed 2026-06-10 (text); probes 3-6 passed 2026-06-10 (video,
 # native + framework engines both green — merge verdict: framework optional).
 _TESTED_CHANNELS = {

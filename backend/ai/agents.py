@@ -10,7 +10,7 @@ bind a pydantic output_type for structured generation (client.generate). The
 output types live in ai/coursegen/types.py (types-only import, no cycle).
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic_ai import Agent, RunContext
@@ -32,10 +32,18 @@ class LemmaDeps:
     user_id: str | None = None
     course_id: str | None = None
     # Phase 3: profile lookups / db handles land here.
+    # LemmaHermes integration contract (monorepo): the engine renders dynamic
+    # context blocks (learner identity / knowledge / rules) and appends them
+    # here. Empty until the engine lands — zero behavioral change.
+    lemma_context_blocks: list[str] = field(default_factory=list)
 
 
 def _inject_system_prompt(ctx: RunContext[LemmaDeps]) -> str:
-    return ctx.deps.system_prompt
+    base = ctx.deps.system_prompt
+    blocks = ctx.deps.lemma_context_blocks
+    if not blocks:
+        return base
+    return base + "\n\n" + "\n\n".join(b for b in blocks if b and b.strip())
 
 
 def _build_agent() -> Agent[LemmaDeps, str]:

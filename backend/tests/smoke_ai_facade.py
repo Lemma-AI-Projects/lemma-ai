@@ -1,7 +1,7 @@
 """门面级冒烟（回归集 12.2 的 1/2/4 项雏形）。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_ai_facade.py
+    uv run python tests/smoke_ai_facade.py
 
 链路: ai_client.chat -> ai_client.ask_video（合成视频 + Files API）->
 查 ai_usage_logs 确认两条成功台账都落了库 -> 清理测试文件。

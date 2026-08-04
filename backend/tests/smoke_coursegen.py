@@ -1,7 +1,7 @@
 """ai/coursegen 冒烟：离线验证排序/形状契约，在线真打 LLM+Apify 跑通问卷→大纲→单章研究。
 
 跑法（backend/ 目录下）:
-    uv run python scripts/smoke_coursegen.py
+    uv run python tests/smoke_coursegen.py
 
 离线段（必跑，不联网）：rank() 确定性 + top1 加权预期；ChapterResearchResult
 的 chosen 与 candidates 同一对象；产物 model_dump 与 schemas/course.py 形状对齐。
