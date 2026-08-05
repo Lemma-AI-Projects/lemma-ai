@@ -10,6 +10,11 @@ from api.v1.router import api_router
 from core.aio import drain_protected_writes
 from core.config import settings
 
+# Dev dashboard (/admindev): mounted and instrumented ONLY when enabled.
+if settings.dev_dashboard_enabled:
+    from admindev import monitor as admindev_monitor
+    from admindev.router import router as admindev_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -41,3 +46,16 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+if settings.dev_dashboard_enabled:
+
+    @app.middleware("http")
+    async def dev_metrics(request, call_next):  # noqa: ANN001 — Starlette signature
+        admindev_monitor.note_request()
+        try:
+            return await call_next(request)
+        except Exception:
+            admindev_monitor.note_error()
+            raise
+
+    app.include_router(admindev_router)

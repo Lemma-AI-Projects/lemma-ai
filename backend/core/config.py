@@ -178,6 +178,17 @@ class Settings(BaseSettings):
     # lands this may point at a dedicated learner URL if we ever split it out.
     lemma_hermes_learner_db_url: str = ""
 
+    # ── Dev dashboard (/admindev) ──────────────────────────────────────────
+    # Developer-only ops panel (monitor / component control / live architecture
+    # / dev message board). MUST stay off in production: control endpoints
+    # start and stop local processes.
+    dev_dashboard_enabled: bool = False
+    # Comma-separated "username:password" pairs for the two developers,
+    # e.g. "ceaser:lemma123,syk:lemma123". Secrets live in env, never in code.
+    dev_dashboard_users: str = ""
+    # Secret used to sign dev-dashboard session tokens (HMAC).
+    dev_dashboard_token_secret: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

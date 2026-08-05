@@ -4,6 +4,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CoursePage } from '@/pages/CoursePage'
+import { DevDashboardPage } from '@/pages/admindev/DevDashboardPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
@@ -13,6 +14,11 @@ import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 
 const routes: RouteObject[] = [
+  {
+    // Dev dashboard: own auth (ceaser/syk), outside the business RequireAuth.
+    path: 'admindev',
+    element: <DevDashboardPage />,
+  },
   {
     // 公开落地页：未登录默认停留；已登录在页面内重定向到 /home。
     path: '/',

@@ -9,6 +9,8 @@ from models.course import Course, CourseChapter, CourseUnit
 from models.course_candidate import ChapterVideoCandidate
 from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
+from models.dev_audit_log import DevAuditLog
+from models.dev_message import DevMessage
 from models.profile import Profile
 from models.project import Project
 from models.provider_usage_log import ProviderUsageLog
@@ -26,6 +28,8 @@ __all__ = [
     "CourseSearchCandidate",
     "CourseUnit",
     "DesmosGraph",
+    "DevAuditLog",
+    "DevMessage",
     "Profile",
     "Project",
     "ProviderUsageLog",
