@@ -33,20 +33,37 @@ def offline_registry() -> None:
     from ai.skills import catalog, skill_body, validate_skills
 
     validate_skills()
-    skills = catalog()
-    check("registry: desmos-graphing 被发现", any(s.name == "desmos-graphing" for s in skills))
+    names = {s.name for s in catalog()}
+    check(
+        "registry: 双技能被发现",
+        {"desmos-graphing", "desmos-3d-graphing"} <= names,
+        str(names),
+    )
     body = skill_body("desmos-graphing")
-    check("registry: 正文含关键规范", "一轮一图" in body and "\\\\sin" in body)
+    check("registry: 2D 正文含关键规范", "一轮一图" in body and "\\\\sin" in body)
+    body_3d = skill_body("desmos-3d-graphing")
+    check(
+        "registry: 3D 正文含关键规范",
+        "parametricDomainU" in body_3d and "\\\\rho" in body_3d,
+    )
 
 
 def offline_declarations() -> None:
-    from ai import LOAD_SKILL, READ_CURRENT_GRAPH, RENDER_DESMOS_GRAPH, tool_spec
+    from ai import (
+        LOAD_SKILL,
+        READ_CURRENT_GRAPH,
+        RENDER_DESMOS_3D_GRAPH,
+        RENDER_DESMOS_GRAPH,
+        tool_spec,
+    )
 
     load = tool_spec(LOAD_SKILL)
     check(
         "declarations: load_skill enum + catalog 内嵌",
-        load.parameters["properties"]["skill"]["enum"] == ["desmos-graphing"]
-        and "desmos-graphing" in load.description,
+        set(load.parameters["properties"]["skill"]["enum"])
+        == {"desmos-graphing", "desmos-3d-graphing"}
+        and "desmos-graphing" in load.description
+        and "desmos-3d-graphing" in load.description,
     )
     render = tool_spec(RENDER_DESMOS_GRAPH)
     check(
@@ -54,9 +71,17 @@ def offline_declarations() -> None:
         render.parameters["required"] == ["expressions"]
         and "load_skill" in render.description,
     )
+    render_3d = tool_spec(RENDER_DESMOS_3D_GRAPH)
     check(
-        "declarations: read 无参",
-        tool_spec(READ_CURRENT_GRAPH).parameters == {"type": "object", "properties": {}},
+        "declarations: render_3d 宽松 schema（无 mathBounds/zAxisLabel）",
+        render_3d.parameters["required"] == ["expressions"]
+        and "zAxisLabel" not in render_3d.parameters["properties"]
+        and "mathBounds" not in render_3d.parameters["properties"],
+    )
+    check(
+        "declarations: read 无参且 kind 感知",
+        tool_spec(READ_CURRENT_GRAPH).parameters == {"type": "object", "properties": {}}
+        and "kind" in tool_spec(READ_CURRENT_GRAPH).description,
     )
 
 
@@ -92,6 +117,54 @@ def offline_payload_validation() -> None:
             check(f"payload: 拒绝 {name}", False)
         except ValidationError:
             check(f"payload: 拒绝 {name}", True)
+
+
+def offline_payload_validation_3d() -> None:
+    from schemas.desmos import Desmos3DGraphPayload
+
+    valid = {
+        "expressions": [
+            {"id": "func_f", "latex": "f(x)=\\sqrt{x}", "hidden": True},
+            {"id": "surface", "latex": "(u, f(u)\\cos v, f(u)\\sin v)",
+             "color": "GREEN",
+             "parametricDomainU": {"min": "0", "max": "5"},
+             "parametricDomainV": {"min": "0", "max": "2\\pi"}},
+            {"id": "helix", "latex": "(\\cos t, \\sin t, t/4)",
+             "parametricDomain": {"min": "0", "max": "8\\pi"}},
+        ],
+        "degreeMode": False,
+    }
+    payload = Desmos3DGraphPayload.model_validate(valid)
+    check(
+        "payload3d: 合法样例通过（U/V 域）",
+        payload.expressions[1].parametric_domain_v is not None,
+    )
+
+    bad_cases = {
+        "mathBounds 不属于 3D": {
+            "expressions": [{"latex": "z=x"}],
+            "mathBounds": {"left": -5, "right": 5, "bottom": -5, "top": 5},
+        },
+        "polarMode 不属于 3D": {"expressions": [{"latex": "z=x"}], "polarMode": True},
+        "zAxisLabel 不属于 3D（实测无此设置）": {
+            "expressions": [{"latex": "z=x"}], "zAxisLabel": "z",
+        },
+        "polarDomain 不属于 3D 表达式": {
+            "expressions": [{"latex": "z=x", "polarDomain": {"min": "0", "max": "1"}}]
+        },
+        "重复 id（继承基类规则）": {
+            "expressions": [{"latex": "z=x", "id": "a"}, {"latex": "z=2x", "id": "a"}]
+        },
+        "非法色名（继承基类规则）": {
+            "expressions": [{"latex": "z=x", "color": "CYAN"}]
+        },
+    }
+    for name, case in bad_cases.items():
+        try:
+            Desmos3DGraphPayload.model_validate(case)
+            check(f"payload3d: 拒绝 {name}", False)
+        except ValidationError:
+            check(f"payload3d: 拒绝 {name}", True)
 
 
 async def offline_gate_behavior() -> None:
@@ -135,6 +208,27 @@ async def offline_gate_behavior() -> None:
     resp = await run("render_desmos_graph", {"expressions": [{"latex": "y=x", "color": "PINK"}]})
     check(
         "零信任: 非法载荷返回结构化错误",
+        resp.get("status") == "invalid" and bool(resp.get("errors")),
+        str(resp)[:120],
+    )
+
+    # 3D 门禁独立：2D 技能已加载不解锁 3D 工具，补课递的是 3D 规范
+    resp = await run("render_desmos_3d_graph", {"expressions": [{"latex": "z=x"}]})
+    check(
+        "门禁3d: 按技能独立 + 递 3D 规范",
+        resp.get("status") == "spec_required"
+        and 'name="desmos-3d-graphing"' in resp.get("spec", ""),
+        str(resp)[:100],
+    )
+
+    # 补课后 3D 非法载荷（mathBounds）-> invalid
+    resp = await run(
+        "render_desmos_3d_graph",
+        {"expressions": [{"latex": "z=x"}],
+         "mathBounds": {"left": -1, "right": 1, "bottom": -1, "top": 1}},
+    )
+    check(
+        "零信任3d: mathBounds 被拒",
         resp.get("status") == "invalid" and bool(resp.get("errors")),
         str(resp)[:120],
     )
@@ -198,7 +292,48 @@ async def live_round() -> None:
             )
             check("live: desmos_graphs 落库且含滑块", bool(ok and has_slider),
                   str(graph.ai_params_json)[:200] if graph else "no row")
+            check("live: kind='2d'", graph is not None and graph.kind == "2d")
             print("live text:", "".join(text_parts)[:120].replace("\n", " "))
+
+        # --- 3D 轮：模型应选 3D 技能与工具 ---
+        tools_3d = build_global_tools(user_id=user_id, conversation_id=None)
+        cards_3d: list[dict[str, Any]] = []
+        kinds_3d: list[str] = []
+        text_3d: list[str] = []
+        async for chunk in ai_client.stream_chat(
+            AIUseCase.TEXT_CHAT,
+            [ChatMessage(role="user", content="画一个三维曲面 z=x^2+y^2 帮我理解抛物面")],
+            user_id=str(user_id),
+            tools=tools_3d,
+        ):
+            kinds_3d.append(chunk.kind)
+            if chunk.kind == "tool" and chunk.tool:
+                cards_3d.append(chunk.tool)
+            elif chunk.kind == "delta" and chunk.text:
+                text_3d.append(chunk.text)
+        check(
+            "live3d: 3D 卡片 + done 事件序",
+            len(cards_3d) == 1
+            and cards_3d[0].get("type") == "desmos_3d_graph"
+            and kinds_3d[-1] == "done",
+            f"kinds={kinds_3d} cards={cards_3d}",
+        )
+        if cards_3d:
+            async with AsyncSessionLocal() as db:
+                graph_3d = await db.get(
+                    DesmosGraph, uuid.UUID(cards_3d[0]["graphId"])
+                )
+            check(
+                "live3d: 落库 kind='3d' 且 latex 含 z",
+                graph_3d is not None
+                and graph_3d.kind == "3d"
+                and any(
+                    "z" in expr.get("latex", "")
+                    for expr in graph_3d.ai_params_json["expressions"]
+                ),
+                str(graph_3d.ai_params_json)[:200] if graph_3d else "no row",
+            )
+            print("live3d text:", "".join(text_3d)[:120].replace("\n", " "))
     finally:
         await shutdown_ai_runtime()
         await engine.dispose()
@@ -208,6 +343,7 @@ async def main() -> int:
     offline_registry()
     offline_declarations()
     offline_payload_validation()
+    offline_payload_validation_3d()
     await offline_gate_behavior()
     if "--live" in sys.argv:
         await live_round()

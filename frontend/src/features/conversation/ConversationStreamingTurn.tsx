@@ -66,9 +66,10 @@ export function ConversationStreamingTurn({
         </div>
       )}
 
-      {status === 'streaming' && tool?.type === 'desmos_graph' && (
-        <DesmosGraphCard graphId={tool.graphId} />
-      )}
+      {status === 'streaming' &&
+        (tool?.type === 'desmos_graph' || tool?.type === 'desmos_3d_graph') && (
+          <DesmosGraphCard graphId={tool.graphId} />
+        )}
 
       {status === 'error' && (
         <div className="flex items-center gap-3">

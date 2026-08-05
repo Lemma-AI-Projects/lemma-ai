@@ -14,8 +14,9 @@ import type {
  * functions so the mapping is unit-testable without a calculator instance.
  */
 
-// Wire shape of desmos_graphs.ai_params_json (validated by schemas/desmos.py).
-export interface AiGraphExpression {
+// Wire shapes of desmos_graphs.ai_params_json (validated by schemas/desmos.py).
+
+interface AiExpressionBase {
   latex: string
   id?: string
   color?: string
@@ -23,8 +24,17 @@ export interface AiGraphExpression {
   hidden?: boolean
   label?: string
   sliderBounds?: { min: string; max: string; step?: string }
+}
+
+export interface AiGraphExpression extends AiExpressionBase {
   parametricDomain?: { min: string; max: string }
   polarDomain?: { min: string; max: string }
+}
+
+export interface AiGraph3DExpression extends AiExpressionBase {
+  parametricDomain?: { min: string; max: string }
+  parametricDomainU?: { min: string; max: string }
+  parametricDomainV?: { min: string; max: string }
 }
 
 export interface AiGraphParams {
@@ -32,6 +42,13 @@ export interface AiGraphParams {
   mathBounds?: DesmosMathBounds
   degreeMode?: boolean
   polarMode?: boolean
+  xAxisLabel?: string
+  yAxisLabel?: string
+}
+
+export interface AiGraph3DParams {
+  expressions: AiGraph3DExpression[]
+  degreeMode?: boolean
   xAxisLabel?: string
   yAxisLabel?: string
 }
@@ -81,38 +98,76 @@ export function toMathBounds(params: AiGraphParams): DesmosMathBounds | null {
   return bounds
 }
 
+function baseExpressionState(
+  expression: AiExpressionBase,
+  index: number
+): DesmosExpressionState {
+  const state: DesmosExpressionState = {
+    // AI ids are validated server-side; fall back to a positional id so
+    // every expression stays addressable.
+    id: expression.id ?? `expr_${index}`,
+    latex: expression.latex,
+  }
+  if (expression.color && COLOR_HEX[expression.color]) {
+    state.color = COLOR_HEX[expression.color]
+  }
+  if (expression.lineStyle) state.lineStyle = expression.lineStyle
+  if (expression.hidden !== undefined) state.hidden = expression.hidden
+  if (expression.label) {
+    state.label = expression.label
+    // Desmos hides labels unless showLabel is set — "given a label" always
+    // means "show it" in our schema, so the flag is applied here.
+    state.showLabel = true
+  }
+  if (expression.sliderBounds) {
+    state.sliderBounds = {
+      min: expression.sliderBounds.min,
+      max: expression.sliderBounds.max,
+      step: expression.sliderBounds.step ?? '',
+    }
+  }
+  return state
+}
+
 export function toExpressionStates(
   params: AiGraphParams
 ): DesmosExpressionState[] {
   return params.expressions.map((expression, index) => {
-    const state: DesmosExpressionState = {
-      // AI ids are validated server-side; fall back to a positional id so
-      // every expression stays addressable.
-      id: expression.id ?? `expr_${index}`,
-      latex: expression.latex,
-    }
-    if (expression.color && COLOR_HEX[expression.color]) {
-      state.color = COLOR_HEX[expression.color]
-    }
-    if (expression.lineStyle) state.lineStyle = expression.lineStyle
-    if (expression.hidden !== undefined) state.hidden = expression.hidden
-    if (expression.label) {
-      state.label = expression.label
-      // Desmos hides labels unless showLabel is set — "given a label" always
-      // means "show it" in our schema, so the flag is applied here.
-      state.showLabel = true
-    }
-    if (expression.sliderBounds) {
-      state.sliderBounds = {
-        min: expression.sliderBounds.min,
-        max: expression.sliderBounds.max,
-        step: expression.sliderBounds.step ?? '',
-      }
-    }
+    const state = baseExpressionState(expression, index)
     if (expression.parametricDomain) {
       state.parametricDomain = expression.parametricDomain
     }
     if (expression.polarDomain) state.polarDomain = expression.polarDomain
+    return state
+  })
+}
+
+// --- 3D variants ---
+
+export function toGraphSettings3D(params: AiGraph3DParams): DesmosGraphSettings {
+  const settings: DesmosGraphSettings = {}
+  if (params.degreeMode !== undefined) settings.degreeMode = params.degreeMode
+  if (params.xAxisLabel) settings.xAxisLabel = params.xAxisLabel
+  if (params.yAxisLabel) settings.yAxisLabel = params.yAxisLabel
+  return settings
+}
+
+export function toExpressionStates3D(
+  params: AiGraph3DParams
+): DesmosExpressionState[] {
+  return params.expressions.map((expression, index) => {
+    const state = baseExpressionState(expression, index)
+    if (expression.parametricDomain) {
+      state.parametricDomain = expression.parametricDomain
+    }
+    // Surface u/v domains: undocumented property names, verified in-browser
+    // via getExpressions() on a Calculator3D instance (2026-07-09).
+    if (expression.parametricDomainU) {
+      state.parametricDomain3Du = expression.parametricDomainU
+    }
+    if (expression.parametricDomainV) {
+      state.parametricDomain3Dv = expression.parametricDomainV
+    }
     return state
   })
 }

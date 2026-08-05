@@ -32,7 +32,12 @@ function renderBlock(block: ConversationTurnBlock) {
 
   // tool block: render the matching connected card by tool type. Adding a
   // tool = adding a branch here (the ref shape is a discriminated union).
-  if (block.tool.type === 'desmos_graph') {
+  // Both graph kinds share one card component — it reads the graph's `kind`
+  // from the GET response (DB truth) to pick the calculator constructor.
+  if (
+    block.tool.type === 'desmos_graph' ||
+    block.tool.type === 'desmos_3d_graph'
+  ) {
     return <DesmosGraphCard key={block.id} graphId={block.tool.graphId} />
   }
   return <ConversationCourseTool key={block.id} courseId={block.tool.courseId} />

@@ -15,12 +15,17 @@ export interface DesmosExpressionState {
   sliderBounds?: { min: string; max: string; step?: string }
   parametricDomain?: { min: string; max: string }
   polarDomain?: { min: string; max: string }
+  // 3D parametric-surface domains. Not in the official API docs; names
+  // verified in-browser via getExpressions() on a Calculator3D (2026-07-09).
+  parametricDomain3Du?: { min: string; max: string }
+  parametricDomain3Dv?: { min: string; max: string }
   [key: string]: unknown
 }
 
 export interface DesmosGraphSettings {
   degreeMode?: boolean
   polarMode?: boolean
+  // 3D settings expose only x/y labels (verified in-browser — no zAxisLabel).
   xAxisLabel?: string
   yAxisLabel?: string
 }
@@ -62,6 +67,12 @@ export interface DesmosConstructorOptions {
 
 export interface DesmosNamespace {
   GraphingCalculator(
+    element: HTMLElement,
+    options?: DesmosConstructorOptions
+  ): DesmosCalculator
+  // Built on top of the graphing calculator, shares its API surface (official
+  // 3D docs); availability depends on the API key's enabled features.
+  Calculator3D(
     element: HTMLElement,
     options?: DesmosConstructorOptions
   ): DesmosCalculator
