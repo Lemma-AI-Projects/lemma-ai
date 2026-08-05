@@ -26,17 +26,19 @@ async def create_graph(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID | None,
     ai_params: dict[str, Any],
+    kind: str = "2d",
 ) -> DesmosGraph:
     """Create a graph from a VALIDATED AI payload (the tool handler's write).
 
     conversation_id may be None on a new conversation's first turn (the
     conversation row lands with persist_turn); the message tool_json carries
-    the link either way.
+    the link either way. `kind` records which calculator renders it.
     """
     graph = DesmosGraph(
         user_id=user_id,
         conversation_id=conversation_id,
         ai_params_json=ai_params,
+        kind=kind,
     )
     db.add(graph)
     await db.commit()
@@ -72,14 +74,19 @@ async def update_user_edit(
     return graph
 
 
+# Both card types link a message to a desmos_graphs row (2D and 3D share the
+# table; the row's `kind` column is the authority on which calculator it is).
+_GRAPH_TOOL_TYPES = frozenset({"desmos_graph", "desmos_3d_graph"})
+
+
 async def find_latest_graph_id(
     db: AsyncSession, *, conversation_id: uuid.UUID
 ) -> uuid.UUID | None:
-    """The conversation's newest graph id via the tool_json chain.
+    """The conversation's newest graph id (2D or 3D) via the tool_json chain.
 
-    Scans the conversation's messages newest-first for a desmos_graph tool
-    ref. Rides the (conversation_id, created_at) composite index; tool turns
-    are rare so the scan short-circuits quickly in practice.
+    Scans the conversation's messages newest-first for a graph tool ref.
+    Rides the (conversation_id, created_at) composite index; tool turns are
+    rare so the scan short-circuits quickly in practice.
     """
     result = await db.execute(
         select(AiMessage.tool_json)
@@ -90,7 +97,7 @@ async def find_latest_graph_id(
         .order_by(AiMessage.created_at.desc())
     )
     for tool_json in result.scalars():
-        if isinstance(tool_json, dict) and tool_json.get("type") == "desmos_graph":
+        if isinstance(tool_json, dict) and tool_json.get("type") in _GRAPH_TOOL_TYPES:
             raw_id = tool_json.get("graphId")
             try:
                 return uuid.UUID(str(raw_id))
@@ -105,17 +112,20 @@ async def read_graph_snapshot(
     """The model-readable content of an owned graph (read_current_graph tool).
 
     Prefers the user-edited expression snapshot; falls back to the AI params'
-    expressions when the user never edited. None -> not owned / gone.
+    expressions when the user never edited. `kind` rides along so the model
+    knows which render tool matches this graph. None -> not owned / gone.
     """
     graph = await get_owned_graph(db, user_id=user_id, graph_id=graph_id)
     if graph is None:
         return None
     if graph.expressions_json:
         return {
+            "kind": graph.kind,
             "source": "user_edited",
             "expressions": graph.expressions_json,
         }
     return {
+        "kind": graph.kind,
         "source": "ai_original",
         "expressions": graph.ai_params_json.get("expressions", []),
     }

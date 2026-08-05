@@ -2,13 +2,15 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { apiClient } from '@/lib/apiClient'
 import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
-import type { AiGraphParams } from './translator'
+import type { AiGraph3DParams, AiGraphParams } from './translator'
 import type { DesmosExpressionState } from './desmosTypes'
 
 // Wire types (contract truth: backend schemas/desmos.py, camelCase).
 export interface DesmosGraphData {
   id: string
-  aiParams: AiGraphParams
+  /** Which calculator renders this graph — DB truth, set by the render tool. */
+  kind: '2d' | '3d'
+  aiParams: AiGraphParams | AiGraph3DParams
   /** Opaque calculator state saved after user edits; null until first edit. */
   state: unknown | null
   updatedAt: string

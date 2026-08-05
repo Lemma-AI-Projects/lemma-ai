@@ -49,7 +49,9 @@ class SliderBoundsIn(DomainIn):
     step: str = Field(default="", max_length=MAX_DOMAIN_CHARS)
 
 
-class ExpressionIn(BaseModel):
+class _ExpressionBase(BaseModel):
+    """Fields and validators shared by 2D and 3D expressions."""
+
     model_config = ConfigDict(
         alias_generator=to_camel, populate_by_name=True, extra="forbid"
     )
@@ -61,8 +63,6 @@ class ExpressionIn(BaseModel):
     hidden: bool | None = None
     label: str | None = Field(default=None, min_length=1, max_length=MAX_LABEL_CHARS)
     slider_bounds: SliderBoundsIn | None = None
-    parametric_domain: DomainIn | None = None
-    polar_domain: DomainIn | None = None
 
     @field_validator("id")
     @classmethod
@@ -88,6 +88,25 @@ class ExpressionIn(BaseModel):
         return value
 
 
+class ExpressionIn(_ExpressionBase):
+    """2D expression: adds the t-parametric and polar domains."""
+
+    parametric_domain: DomainIn | None = None
+    polar_domain: DomainIn | None = None
+
+
+class Expression3DIn(_ExpressionBase):
+    """3D expression: t-parametric curves plus u/v parametric surfaces.
+
+    No polarDomain — spherical/cylindrical forms are recognized from the latex
+    itself and their theta/phi defaults are deliberately not overridable (v1).
+    """
+
+    parametric_domain: DomainIn | None = None
+    parametric_domain_u: DomainIn | None = None
+    parametric_domain_v: DomainIn | None = None
+
+
 class MathBoundsIn(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -105,24 +124,23 @@ class MathBoundsIn(BaseModel):
         return self
 
 
-class DesmosGraphPayload(BaseModel):
-    """The validated render_desmos_graph payload — the single verdict."""
+class _GraphPayloadBase(BaseModel):
+    """Graph-level fields and the id-uniqueness rule shared by 2D and 3D."""
 
     model_config = ConfigDict(
         alias_generator=to_camel, populate_by_name=True, extra="forbid"
     )
 
-    expressions: list[ExpressionIn] = Field(min_length=1, max_length=MAX_EXPRESSIONS)
-    math_bounds: MathBoundsIn | None = None
     degree_mode: bool | None = None
-    polar_mode: bool | None = None
     x_axis_label: str | None = Field(default=None, max_length=MAX_AXIS_LABEL_CHARS)
     y_axis_label: str | None = Field(default=None, max_length=MAX_AXIS_LABEL_CHARS)
 
+    # Subclasses declare `expressions` with their own item type; this validator
+    # sees whichever list the subclass validated.
     @model_validator(mode="after")
-    def ids_unique(self) -> "DesmosGraphPayload":
+    def ids_unique(self) -> "_GraphPayloadBase":
         seen: set[str] = set()
-        for expression in self.expressions:
+        for expression in getattr(self, "expressions", []):
             if expression.id is None:
                 continue
             if expression.id in seen:
@@ -131,17 +149,44 @@ class DesmosGraphPayload(BaseModel):
         return self
 
 
+class DesmosGraphPayload(_GraphPayloadBase):
+    """The validated render_desmos_graph (2D) payload — the single verdict."""
+
+    expressions: list[ExpressionIn] = Field(min_length=1, max_length=MAX_EXPRESSIONS)
+    math_bounds: MathBoundsIn | None = None
+    polar_mode: bool | None = None
+
+
+class Desmos3DGraphPayload(_GraphPayloadBase):
+    """The validated render_desmos_3d_graph payload.
+
+    No mathBounds (the 3D viewport has no documented setter; users rotate and
+    zoom freely), no polarMode (spherical/cylindrical live in the latex), and
+    no zAxisLabel — verified in-browser: the 3D settings surface only exposes
+    x/yAxisLabel, a zAxisLabel would be silently ignored.
+    """
+
+    expressions: list[Expression3DIn] = Field(
+        min_length=1, max_length=MAX_EXPRESSIONS
+    )
+
+
 # --- graphs API contracts ---
 
 
 class DesmosGraphOut(BaseModel):
-    """Card hydrate: the AI spec (reset anchor) + the user-edit state if any."""
+    """Card hydrate: the AI spec (reset anchor) + the user-edit state if any.
+
+    `kind` tells the card which calculator to construct ('2d' -> 
+    GraphingCalculator, '3d' -> Calculator3D) without relying on the tool_json.
+    """
 
     model_config = ConfigDict(
         alias_generator=to_camel, populate_by_name=True, from_attributes=True
     )
 
     id: uuid.UUID
+    kind: str = "2d"
     ai_params: dict[str, Any] = Field(validation_alias="ai_params_json")
     state: dict[str, Any] | None = Field(default=None, validation_alias="state_json")
     updated_at: datetime

@@ -8,6 +8,7 @@ from ai.tools.declarations import (
     LOAD_CHAPTER_VIDEO,
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
+    RENDER_DESMOS_3D_GRAPH,
     RENDER_DESMOS_GRAPH,
     tool_spec,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "LOAD_CHAPTER_VIDEO",
     "LOAD_SKILL",
     "READ_CURRENT_GRAPH",
+    "RENDER_DESMOS_3D_GRAPH",
     "RENDER_DESMOS_GRAPH",
     "ToolBinding",
     "ToolCall",

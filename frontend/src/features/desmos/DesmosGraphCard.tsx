@@ -7,8 +7,11 @@ import type { DesmosCalculator } from './desmosTypes'
 import {
   CALCULATOR_OPTIONS,
   toExpressionStates,
+  toExpressionStates3D,
   toGraphSettings,
+  toGraphSettings3D,
   toMathBounds,
+  type AiGraph3DParams,
   type AiGraphParams,
 } from './translator'
 
@@ -17,13 +20,17 @@ const SAVE_THROTTLE_MS = 2000
 
 /**
  * The AI-drawn interactive graph card (tool_json thin ref -> hydrate by id).
+ * Renders BOTH kinds — `graph.kind` from the GET (DB truth, written by the
+ * render tool) picks the constructor: '2d' -> GraphingCalculator,
+ * '3d' -> Calculator3D. Everything else is the shared official API.
  *
  * Render path (official six-step sequence):
  * 1. construct with FIXED instance options (product decisions, never AI's);
  * 2/3/4. user-edited `state` present -> setState(blob); otherwise translate
- *    the AI params into updateSettings + setMathBounds + setExpressions;
- * 5. setDefaultState(AI translation) — the on-paper reset button always
- *    returns to the AI original, not the user's last edit;
+ *    the AI params into updateSettings (+ setMathBounds, 2D only) +
+ *    setExpressions;
+ * 5. setDefaultState(AI translation) — the reset button always returns to
+ *    the AI original, not the user's last edit;
  * 6. observeEvent('change') -> throttled PATCH of {state, expressions}
  *    (only isUserInitiated changes; API-driven setup must not save).
  */
@@ -64,11 +71,25 @@ export function DesmosGraphCard({ graphId }: { graphId: string }) {
     void loadDesmos()
       .then((desmos) => {
         if (disposed) return
-        calculator = desmos.GraphingCalculator(element, CALCULATOR_OPTIONS)
+        if (graph.kind === '3d' && typeof desmos.Calculator3D !== 'function') {
+          // 3D availability is per API key (Desmos.enabledFeatures).
+          setSetupError('当前 Desmos API key 未启用 3D 计算器')
+          return
+        }
+        calculator =
+          graph.kind === '3d'
+            ? desmos.Calculator3D(element, CALCULATOR_OPTIONS)
+            : desmos.GraphingCalculator(element, CALCULATOR_OPTIONS)
 
-        const aiParams: AiGraphParams = graph.aiParams
         const applyAiParams = () => {
           if (!calculator) return
+          if (graph.kind === '3d') {
+            const aiParams = graph.aiParams as AiGraph3DParams
+            calculator.updateSettings(toGraphSettings3D(aiParams))
+            calculator.setExpressions(toExpressionStates3D(aiParams))
+            return
+          }
+          const aiParams = graph.aiParams as AiGraphParams
           calculator.updateSettings(toGraphSettings(aiParams))
           const bounds = toMathBounds(aiParams)
           if (bounds) calculator.setMathBounds(bounds)

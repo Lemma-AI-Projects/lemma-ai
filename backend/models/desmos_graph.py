@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, func
+from sqlalchemy import CheckConstraint, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,10 +36,17 @@ class DesmosGraph(Base):
     """
 
     __tablename__ = "desmos_graphs"
+    __table_args__ = (
+        CheckConstraint("kind in ('2d', '3d')", name="ck_desmos_graphs_kind"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    # Which calculator renders this graph (2d -> GraphingCalculator, 3d ->
+    # Calculator3D). Self-describing so read_current_graph can tell the model
+    # which render tool matches, and the card doesn't depend on tool_json.
+    kind: Mapped[str] = mapped_column(String, nullable=False, server_default="2d")
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),

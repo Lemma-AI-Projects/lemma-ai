@@ -59,6 +59,7 @@ export interface ConversationToolUnit {
 export type ConversationToolRef =
   | { type: 'course_planning'; courseId: string }
   | { type: 'desmos_graph'; graphId: string }
+  | { type: 'desmos_3d_graph'; graphId: string }
 
 // A tool block is a thin REFERENCE: which tool sits in this turn and which
 // resource it drives. The card hydrates its own live data from that id, so the

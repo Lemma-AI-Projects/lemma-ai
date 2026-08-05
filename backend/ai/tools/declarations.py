@@ -21,6 +21,7 @@ from ai.tools.types import ToolSpec
 LOAD_CHAPTER_VIDEO = "load_chapter_video"
 LOAD_SKILL = "load_skill"
 RENDER_DESMOS_GRAPH = "render_desmos_graph"
+RENDER_DESMOS_3D_GRAPH = "render_desmos_3d_graph"
 READ_CURRENT_GRAPH = "read_current_graph"
 
 _REGISTRY: dict[str, ToolSpec] = {
@@ -65,13 +66,42 @@ _REGISTRY: dict[str, ToolSpec] = {
             "required": ["expressions"],
         },
     ),
+    RENDER_DESMOS_3D_GRAPH: ToolSpec(
+        name=RENDER_DESMOS_3D_GRAPH,
+        description=(
+            "渲染一张可交互的 Desmos 3D 立体图卡片给用户（三维曲面、空间点与"
+            "曲线、球坐标方程、参数曲面、旋转体、滑块）。首次使用前必须先调用 "
+            "load_skill 加载 desmos-3d-graphing 技能获取完整参数规范；每个回答"
+            "最多画一张图。二维平面图请用 render_desmos_graph。"
+        ),
+        # Loose top-level shape only — field rules live in the 3D skill;
+        # schemas/desmos.py (Desmos3DGraphPayload) is the enforcement.
+        # No zAxisLabel: the 3D settings surface only exposes x/y labels
+        # (verified in-browser 2026-07-09).
+        parameters={
+            "type": "object",
+            "properties": {
+                "expressions": {
+                    "type": "array",
+                    "description": "表达式列表（字段规范见 desmos-3d-graphing 技能）",
+                    "items": {"type": "object"},
+                },
+                "degreeMode": {"type": "boolean"},
+                "xAxisLabel": {"type": "string"},
+                "yAxisLabel": {"type": "string"},
+            },
+            "required": ["expressions"],
+        },
+    ),
     READ_CURRENT_GRAPH: ToolSpec(
         name=READ_CURRENT_GRAPH,
         description=(
             "读取本会话最新一张 Desmos 图的当前表达式内容（包含用户手动编辑后的"
-            "最新状态）。用户要求修改之前画的图时，必须先调用本工具了解现状。"
-            "注意：本工具只读不改——图不会自动更新，读取后必须再调用 "
-            "render_desmos_graph 输出完整的新图参数才算完成修改。无需任何参数。"
+            "最新状态），返回值的 kind 字段标明它是 2D 还是 3D 图。用户要求修改"
+            "之前画的图时，必须先调用本工具了解现状。注意：本工具只读不改——图"
+            "不会自动更新，读取后必须再调用与 kind 匹配的 render 工具"
+            "（render_desmos_graph / render_desmos_3d_graph）输出完整的新图参数"
+            "才算完成修改。无需任何参数。"
         ),
         parameters={"type": "object", "properties": {}},
     ),
