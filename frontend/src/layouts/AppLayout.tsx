@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   CalendarDays,
+  Coins,
   FlaskConical,
   FolderOpen,
   FolderPlus,
@@ -116,6 +117,7 @@ export function AppLayout() {
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
+        <SidebarItem icon={Coins} label="Credits" to="/gotopay" />
         <div
           className={cn(
             'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',

@@ -269,3 +269,19 @@
 [data-slot="course-video-player"] .vds-tooltip-content {
   backdrop-filter: none;
 }
+
+/* 支付页套餐卡片入场动画（纯 CSS，避免引入动画依赖）。 */
+@keyframes pay-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pay-fade-up {
+  animation: pay-fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

@@ -11,6 +11,7 @@ import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
+import { PayPage } from '@/features/payments/PayPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 
 const routes: RouteObject[] = [
@@ -49,6 +50,10 @@ const routes: RouteObject[] = [
           {
             path: 'plugins',
             element: <PluginsPage />,
+          },
+          {
+            path: 'gotopay',
+            element: <PayPage />,
           },
           {
             // 可选 id：/chat 为新会话态，采纳预生成 id 后 replace 为
