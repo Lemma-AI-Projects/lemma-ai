@@ -77,7 +77,18 @@
     "createFailed": "创建失败，请重试",
     "regenerate": "重新生成",
     "close": "关闭",
-    "companion": "伴学"
+    "companion": "伴学",
+    "components": {
+      "board": "画板",
+      "chat": "对话",
+      "courses": "课程",
+      "sources": "来源"
+    },
+    "boardPlaceholderTitle": "你的画板即将上线",
+    "boardPlaceholderDesc": "每个学习空间都配有一块知识画布——伴学讲懂的知识会被钉在这里变成卡片，这是你的知识长大的地方。",
+    "agentOnline": "随时在线",
+    "chatWithAgent": "和 TA 聊聊",
+    "coursesPlaceholderDesc": "绑定到该学习空间的课程将在这里展示。"
   },
   "plugins": {
     "subjectTabsAria": "按学科筛选插件",

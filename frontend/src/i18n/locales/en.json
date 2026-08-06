@@ -77,7 +77,18 @@
     "createFailed": "Creation failed. Try again.",
     "regenerate": "Regenerate",
     "close": "Close",
-    "companion": "Companion"
+    "companion": "Companion",
+    "components": {
+      "board": "Board",
+      "chat": "Chat",
+      "courses": "Courses",
+      "sources": "Sources"
+    },
+    "boardPlaceholderTitle": "Your Board is coming",
+    "boardPlaceholderDesc": "Every Learn Space has a knowledge canvas. When your companion explains something, it can be pinned here as cards — the place where your knowledge grows.",
+    "agentOnline": "Online",
+    "chatWithAgent": "Chat with TA",
+    "coursesPlaceholderDesc": "Courses bound to this space will show up here."
   },
   "plugins": {
     "subjectTabsAria": "Filter plugins by subject",

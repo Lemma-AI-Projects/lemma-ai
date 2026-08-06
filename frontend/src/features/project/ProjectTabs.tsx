@@ -1,7 +1,20 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
-const projectTabValues = ['Chats', 'Courses', 'Sources'] as const
-export type ProjectTab = (typeof projectTabValues)[number]
+/**
+ * Learn space 组件栏（learn space = 组件集合 + agent 的"组件"层）
+ * - Board / 对话 / 课程 / 来源 四个组件 tab，后续组件（图谱/复习/物料…）按注册表追加
+ * - 默认进 Board（知识长的地方）
+ */
+const componentValues = ['Board', 'Chats', 'Courses', 'Sources'] as const
+export type ProjectTab = (typeof componentValues)[number]
+
+const tabKeyMap: Record<ProjectTab, string> = {
+  Board: 'learnSpace.components.board',
+  Chats: 'learnSpace.components.chat',
+  Courses: 'learnSpace.components.courses',
+  Sources: 'learnSpace.components.sources',
+}
 
 export function ProjectTabs({
   value,
@@ -9,12 +22,12 @@ export function ProjectTabs({
 }: {
   value: ProjectTab
   onChange: (tab: ProjectTab) => void
-})
+}) {
+  const { t } = useTranslation()
 
-{
   return (
-    <div className="flex items-center gap-2">
-      {projectTabValues.map((tab) => (
+    <div className="flex items-center gap-1">
+      {componentValues.map((tab) => (
         <button
           key={tab}
           type="button"
@@ -26,7 +39,7 @@ export function ProjectTabs({
               : 'bg-transparent text-muted-foreground hover:bg-muted/50'
           )}
         >
-          {tab}
+          {t(tabKeyMap[tab])}
         </button>
       ))}
     </div>
