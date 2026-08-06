@@ -30,6 +30,7 @@ async def create_project(
         agent_personality=(agent or {}).get("personality"),
         agent_teaching_style=(agent or {}).get("teaching_style"),
         agent_welcome=(agent or {}).get("welcome_message"),
+        agent_soul_md=(agent or {}).get("soul_md"),
     )
     db.add(project)
     await db.commit()

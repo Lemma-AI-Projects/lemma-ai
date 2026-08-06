@@ -10,8 +10,9 @@ import {
   PERSONALITY_PRESETS,
   STRICTNESS_LEVELS,
   TEACHING_STYLE_PRESETS,
+  buildSoulMd,
 } from './agentTemplates'
-import { useAgentDraftMutation } from './learnSpaceApi'
+import { useAgentDraftMutation, type AgentDraft } from './learnSpaceApi'
 
 type DraftMode = 'custom' | 'template'
 
@@ -41,6 +42,8 @@ export function LearnSpaceOnboardingDialog({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   // ── 预览态 ──
   const [agentName, setAgentName] = useState('')
+  const [soulMd, setSoulMd] = useState('')
+  const [soulEditorOpen, setSoulEditorOpen] = useState(false)
 
   const draftMutation = useAgentDraftMutation()
   const createMutation = useCreateProjectMutation()
@@ -62,10 +65,22 @@ export function LearnSpaceOnboardingDialog({
       setStrictness(null)
       setSelectedTemplateId(null)
       setAgentName('')
+      setSoulMd('')
+      setSoulEditorOpen(false)
       draftMutation.reset()
       createMutation.reset()
     }
     onOpenChange(nextOpen)
+  }
+
+  /** 生成成功：记录名字 + 生成可编辑的 SOUL.md 草稿 */
+  const handleDraftSuccess = (data: AgentDraft) => {
+    setAgentName(data.agentName)
+    const trimmed = spaceName.trim()
+    if (trimmed) {
+      setSoulMd(buildSoulMd(trimmed, data))
+      setSoulEditorOpen(false)
+    }
   }
 
   const handleNext = (event: FormEvent<HTMLFormElement>) => {
@@ -92,7 +107,7 @@ export function LearnSpaceOnboardingDialog({
               }
             : {}),
         },
-        { onSuccess: (data) => setAgentName(data.agentName) }
+        { onSuccess: handleDraftSuccess }
       )
     } else {
       // 自定义：名字 + 性格 + 教学风格 + 严厉程度（严厉度并入性格描述）
@@ -106,7 +121,7 @@ export function LearnSpaceOnboardingDialog({
             : {}),
           ...(teachingStylePreset ? { teachingStyle: teachingStylePreset } : {}),
         },
-        { onSuccess: (data) => setAgentName(data.agentName) }
+        { onSuccess: handleDraftSuccess }
       )
     }
   }
@@ -122,6 +137,7 @@ export function LearnSpaceOnboardingDialog({
           personality: draft.personality,
           teachingStyle: draft.teachingStyle,
           welcomeMessage: draft.welcomeMessage,
+          ...(soulMd.trim() ? { soulMd: soulMd.trim() } : {}),
         },
       },
       {
@@ -434,6 +450,28 @@ export function LearnSpaceOnboardingDialog({
                         {draft.welcomeMessage}
                       </p>
                     </div>
+                  </div>
+
+                  {/* 直接编辑 SOUL.md（高级入口） */}
+                  <div className="rounded-xl border border-zinc-200/80">
+                    <button
+                      type="button"
+                      onClick={() => setSoulEditorOpen((open) => !open)}
+                      className="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span className="font-medium">
+                        直接编辑 SOUL.md
+                      </span>
+                      <span>{soulEditorOpen ? '收起' : '展开'}</span>
+                    </button>
+                    {soulEditorOpen && (
+                      <textarea
+                        value={soulMd}
+                        onChange={(event) => setSoulMd(event.target.value)}
+                        spellCheck={false}
+                        className="h-56 w-full resize-none rounded-b-xl border-t border-zinc-200/80 bg-zinc-50 p-3 font-mono text-xs leading-relaxed text-zinc-800 outline-none"
+                      />
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between pt-1">

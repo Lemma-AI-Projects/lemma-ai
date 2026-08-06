@@ -94,12 +94,14 @@ export function useProjectConversationsQuery(projectId: string | undefined) {
   })
 }
 
-/** Companion agent persona bound to a learn space (onboarding v1). */
+/** Companion agent persona bound to a learn space (onboarding). */
 export interface AgentProfile {
   agentName: string
   personality: string
   teachingStyle: string
   welcomeMessage: string
+  /** Full SOUL.md persona document (user-edited); authoritative for C1. */
+  soulMd?: string | null
 }
 
 export function useCreateProjectMutation() {

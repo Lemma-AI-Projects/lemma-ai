@@ -87,3 +87,40 @@ export const STRICTNESS_LEVELS = [
   { value: '该夸夸、该纠纠，平衡推进', label: '平衡', hint: '有鼓励也有要求' },
   { value: '高标准要求，不留情面', label: '严格', hint: '达标的都过，没达标的重来' },
 ]
+
+/**
+ * 把 agent 档案渲染成 SOUL.md 人格文档（"直接编辑 SOUL.md"入口的草稿）。
+ * 结构对齐 Hermes 的 SOUL.md 语义（身份 / 性格 / 教法 / 原则）。
+ */
+export function buildSoulMd(
+  spaceName: string,
+  draft: {
+    agentName: string
+    personality: string
+    teachingStyle: string
+    welcomeMessage: string
+  }
+): string {
+  return `# 我是谁
+
+你是${draft.agentName}，${spaceName} 的专属学习伙伴。
+
+# 性格
+
+${draft.personality}
+
+# 教学风格
+
+${draft.teachingStyle}
+
+# 开场白
+
+${draft.welcomeMessage}
+
+# 原则
+
+- 用简体中文交流
+- 把"让用户真正学会"放在第一位，而不是替用户完成
+- 讲不清楚就换一种讲法，不重复同一句话
+- 尊重用户节奏，但该提醒复习时主动提醒`
+}

@@ -8,7 +8,7 @@ from pydantic.alias_generators import to_camel
 
 
 class AgentProfileIn(BaseModel):
-    """Companion agent persona bound to the learn space (onboarding v1)."""
+    """Companion agent persona bound to the learn space (onboarding)."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -16,6 +16,8 @@ class AgentProfileIn(BaseModel):
     personality: str = Field(min_length=1, max_length=500)
     teaching_style: str = Field(min_length=1, max_length=500)
     welcome_message: str = Field(min_length=1, max_length=1000)
+    # Full SOUL.md persona document (user-edited); authoritative for C1 injection.
+    soul_md: str | None = Field(default=None, max_length=20000)
 
 
 class ProjectCreateIn(BaseModel):
@@ -44,6 +46,7 @@ class ProjectOut(BaseModel):
     agent_personality: str | None = None
     agent_teaching_style: str | None = None
     agent_welcome: str | None = None
+    agent_soul_md: str | None = None
 
 
 class ProjectConversationOut(BaseModel):

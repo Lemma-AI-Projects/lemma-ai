@@ -40,6 +40,10 @@ class Project(Base):
     agent_personality: Mapped[str | None] = mapped_column(Text, nullable=True)
     agent_teaching_style: Mapped[str | None] = mapped_column(Text, nullable=True)
     agent_welcome: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Full SOUL.md persona document (onboarding "直接编辑 SOUL.md" path).
+    # When present, it is the authoritative persona injected via C1; the
+    # individual fields above remain for UI display / list rendering.
+    agent_soul_md: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
