@@ -53,9 +53,18 @@ export function LearnSpaceOnboardingDialog({
 
   const handleCreate = () => {
     const trimmed = spaceName.trim()
-    if (!trimmed || createMutation.isPending) return
+    if (!trimmed || createMutation.isPending || !draft) return
+    // 把（可能被用户编辑过的）agent 档案随创建一并落库
     createMutation.mutate(
-      { name: trimmed },
+      {
+        name: trimmed,
+        agent: {
+          agentName: agentName.trim() || draft.agentName,
+          personality: draft.personality,
+          teachingStyle: draft.teachingStyle,
+          welcomeMessage: draft.welcomeMessage,
+        },
+      },
       {
         onSuccess: () => {
           handleOpenChange(false)

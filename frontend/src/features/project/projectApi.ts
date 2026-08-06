@@ -89,14 +89,26 @@ export function useProjectConversationsQuery(projectId: string | undefined) {
   })
 }
 
+/** Companion agent persona bound to a learn space (onboarding v1). */
+export interface AgentProfile {
+  agentName: string
+  personality: string
+  teachingStyle: string
+  welcomeMessage: string
+}
+
 export function useCreateProjectMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (variables: { name: string }) => {
+    mutationFn: async (variables: {
+      name: string
+      agent?: AgentProfile
+    }): Promise<ProjectItem> => {
       const { data } = await signOutOn401(
         apiClient.post<ProjectItem>('/api/v1/projects', {
           name: variables.name,
+          ...(variables.agent ? { agent: variables.agent } : {}),
         })
       )
       return data

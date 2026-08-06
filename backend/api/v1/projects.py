@@ -39,7 +39,10 @@ async def create_project(
     db: AsyncSession = Depends(get_db),
 ) -> Project:
     return await project_service.create_project(
-        db, user_id=current_user.id, name=payload.name
+        db,
+        user_id=current_user.id,
+        name=payload.name,
+        agent=payload.agent.model_dump() if payload.agent else None,
     )
 
 

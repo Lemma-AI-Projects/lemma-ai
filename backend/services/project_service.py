@@ -16,9 +16,21 @@ NAME_MAX_CHARS = 100
 
 
 async def create_project(
-    db: AsyncSession, *, user_id: uuid.UUID, name: str
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    name: str,
+    agent: dict | None = None,
 ) -> Project:
-    project = Project(user_id=user_id, name=name)
+    """Create a learn space; optional companion agent persona (onboarding v1)."""
+    project = Project(
+        user_id=user_id,
+        name=name,
+        agent_name=(agent or {}).get("agent_name"),
+        agent_personality=(agent or {}).get("personality"),
+        agent_teaching_style=(agent or {}).get("teaching_style"),
+        agent_welcome=(agent or {}).get("welcome_message"),
+    )
     db.add(project)
     await db.commit()
     await db.refresh(project)
