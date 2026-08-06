@@ -116,6 +116,7 @@ export function AppLayout() {
         <SidebarItem icon={SquarePen} label="New chat" to="/home" end />
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
+        <SidebarItem icon={FolderOpen} label="Learn Spaces" to="/learn-spaces" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
         <SidebarItem icon={Coins} label="Credits" to="/gotopay" />
         <div
@@ -127,10 +128,10 @@ export function AppLayout() {
       </div>
 
       <div className="mt-2 flex flex-col gap-1">
-        <SidebarSection title="Projects" forceClosed={projectsQuery.isPending}>
+        <SidebarSection title="Learn Spaces" forceClosed={projectsQuery.isPending}>
           <SidebarItem
             icon={FolderPlus}
-            label="New Project"
+            label="New Learn Space"
             onClick={() => setCreateProjectOpen(true)}
           />
           {projectsQuery.isPending ? (

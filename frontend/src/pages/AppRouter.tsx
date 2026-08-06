@@ -9,6 +9,7 @@ import { DevDashboardPage } from '@/pages/admindev/DevDashboardPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
+import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
@@ -56,6 +57,10 @@ const routes: RouteObject[] = [
           {
             path: 'plugins',
             element: <PluginsPage />,
+          },
+          {
+            path: 'learn-spaces',
+            element: <LearnSpacesPage />,
           },
           {
             path: 'gotopay',
