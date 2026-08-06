@@ -8,6 +8,11 @@ export interface ProjectItem {
   id: string
   name: string
   updatedAt: string
+  /** Bound companion agent (learn space onboarding v1); absent for legacy rows. */
+  agentName?: string | null
+  agentPersonality?: string | null
+  agentTeachingStyle?: string | null
+  agentWelcome?: string | null
 }
 
 export interface ProjectConversationItem {

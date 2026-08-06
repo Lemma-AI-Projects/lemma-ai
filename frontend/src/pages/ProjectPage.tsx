@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FolderOpen } from 'lucide-react'
+import { Bot, FolderOpen } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ProjectChatList } from '@/features/project/ProjectChatList'
@@ -54,11 +54,22 @@ export function ProjectPage() {
         <div className="flex w-full max-w-[48rem] flex-col">
           <div className="mb-7 flex translate-x-2 items-center gap-3">
             <FolderOpen className="size-9 text-foreground" strokeWidth={1.75} />
-            {projectQuery.isPending ? (
-              <Skeleton className="h-8 w-56" />
-            ) : (
-              <h1 className="text-2xl font-medium text-foreground">{projectName}</h1>
-            )}
+            <div className="flex flex-col gap-1">
+              {projectQuery.isPending ? (
+                <Skeleton className="h-8 w-56" />
+              ) : (
+                <h1 className="text-2xl font-medium text-foreground">{projectName}</h1>
+              )}
+              {projectQuery.data?.agentName && (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Bot className="size-3.5" />
+                  伴学：{projectQuery.data.agentName}
+                  {projectQuery.data.agentPersonality
+                    ? ` · ${projectQuery.data.agentPersonality}`
+                    : ''}
+                </span>
+              )}
+            </div>
           </div>
           <ProjectInput onSend={handleSend} />
           <div className="mt-7 translate-x-3">

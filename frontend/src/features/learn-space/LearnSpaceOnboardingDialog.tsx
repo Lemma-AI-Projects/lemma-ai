@@ -1,6 +1,7 @@
 import { type FormEvent, useRef, useState } from 'react'
 import { Bot, RefreshCw, Sparkles, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useCreateProjectMutation } from '@/features/project/projectApi'
@@ -25,6 +26,7 @@ export function LearnSpaceOnboardingDialog({
   const [agentName, setAgentName] = useState('')
   const draftMutation = useAgentDraftMutation()
   const createMutation = useCreateProjectMutation()
+  const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const draft = draftMutation.data
@@ -66,8 +68,10 @@ export function LearnSpaceOnboardingDialog({
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (created) => {
           handleOpenChange(false)
+          // 闭环：创建成功后直接进入新空间（带着它的老师）
+          navigate(`/project/${created.id}`)
         },
       }
     )

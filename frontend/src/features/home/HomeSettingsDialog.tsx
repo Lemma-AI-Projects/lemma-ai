@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { HomeSettingsAccountPage } from './HomeSettingsAccountPage'
 import { HomeSettingsBillingPage } from './HomeSettingsBillingPage'
 import { HomeSettingsGeneralPage } from './HomeSettingsGeneralPage'
+import { HomeSettingsMemoryPage } from './HomeSettingsMemoryPage'
 import { HomeSettingsStoragePage } from './HomeSettingsStoragePage'
 
 export type HomeSettingsTab =
@@ -139,10 +140,12 @@ export function HomeSettingsDialog({
                 )}
                 {tab.value === 'general' && <HomeSettingsGeneralPage />}
                 {tab.value === 'storage' && <HomeSettingsStoragePage />}
+                {tab.value === 'memory' && <HomeSettingsMemoryPage />}
                 {tab.value !== 'account' &&
                   tab.value !== 'billing' &&
                   tab.value !== 'general' &&
-                  tab.value !== 'storage' && (
+                  tab.value !== 'storage' &&
+                  tab.value !== 'memory' && (
                     <h2 className="text-lg font-normal text-zinc-900">
                       {tab.label}
                     </h2>
