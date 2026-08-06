@@ -14,7 +14,11 @@ async def create_agent_draft(
     payload: AgentDraftIn,
     current_user: CurrentUser = Depends(get_current_user),
 ) -> AgentDraftOut:
-    """Generate a companion agent draft for a learn space name (no persistence)."""
+    """Generate a companion agent draft (no persistence).
+
+    Optional user preferences (name / personality / teaching style) steer the
+    generation — templates and custom setups both pass through here.
+    """
     return await learn_space_service.generate_agent_draft(
-        payload.space_name, user_id=str(current_user.id)
+        payload, user_id=str(current_user.id)
     )
