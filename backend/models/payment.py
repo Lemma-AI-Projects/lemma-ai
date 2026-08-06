@@ -18,18 +18,21 @@ from core.database import Base
 
 
 class Payment(Base):
-    """A single PayPal order created for a credits purchase.
+    """A single provider order created for a credits purchase.
 
-    Idempotency is enforced three ways: `paypal_order_id` is UNIQUE (one row per
-    PayPal order), the `status` state machine only transitions forward, and the
-    capture path takes a row lock before granting credits. Any replay — a retried
-    frontend capture or a duplicated webhook — lands on an already-`captured`
-    row and is skipped, so credits are granted exactly once.
+    Multi-provider since 2026-08-06 (PayPal + Stripe card checkout):
+    `(provider, provider_order_id)` is UNIQUE (one row per provider order), the
+    `status` state machine only transitions forward, and the capture path takes
+    a row lock before granting credits. Any replay — a retried frontend capture
+    or a duplicated webhook — lands on an already-`captured` row and is skipped,
+    so credits are granted exactly once.
     """
 
     __tablename__ = "payments"
     __table_args__ = (
-        UniqueConstraint("paypal_order_id", name="uq_payments_paypal_order_id"),
+        UniqueConstraint(
+            "provider", "provider_order_id", name="uq_payments_provider_order"
+        ),
         CheckConstraint(
             "status in ('created', 'approved', 'captured', 'failed', 'refunded')",
             name="ck_payments_status",
@@ -48,7 +51,16 @@ class Payment(Base):
     credits: Mapped[int] = mapped_column(Integer, nullable=False)
     amount_usd: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default="USD")
-    paypal_order_id: Mapped[str] = mapped_column(String, nullable=False)
+    # ── Payment provider (multi-channel since 2026-08-06) ──────────────
+    # provider: "paypal" | "stripe"; provider_order_id is the provider-side
+    # order reference (PayPal order id / Stripe Checkout Session id).
+    provider: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="paypal"
+    )
+    provider_order_id: Mapped[str] = mapped_column(String, nullable=False)
+    # Legacy column (PayPal channel pre-provider-abstract days). Still written by
+    # the PayPal path for backward compatibility; NULL for Stripe rows.
+    paypal_order_id: Mapped[str | None] = mapped_column(String, nullable=True)
     paypal_payer_id: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=False, server_default="created")
     created_at: Mapped[datetime] = mapped_column(
@@ -66,9 +78,10 @@ class Payment(Base):
 
 
 class PaymentWebhookEvent(Base):
-    """Dedup + audit log for inbound PayPal webhooks.
+    """Dedup + audit log for inbound payment webhooks.
 
-    `paypal_event_id` is UNIQUE so a replayed webhook is recorded exactly once.
+    `paypal_event_id` (name kept for history; holds the provider's event id —
+    PayPal or Stripe) is UNIQUE so a replayed webhook is recorded exactly once.
     """
 
     __tablename__ = "payment_webhook_events"
@@ -80,6 +93,9 @@ class PaymentWebhookEvent(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    provider: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="paypal"
     )
     paypal_event_id: Mapped[str] = mapped_column(String, nullable=False)
     event_type: Mapped[str] = mapped_column(String, nullable=False)

@@ -93,6 +93,7 @@ export function PayPalButton({
                 packId: pack.id,
                 amount: pack.priceUsd,
                 currency: 'USD',
+                provider: 'paypal',
               })
               return res.orderId
             },

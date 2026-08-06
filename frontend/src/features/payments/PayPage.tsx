@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { PayPalButton } from './PayPalButton'
+import { StripeCheckoutButton } from './StripeCheckoutButton'
 import { CREDIT_PACKS } from './plans'
 import type { CreditPack } from './types'
 import { useBalance, usePaymentConfig } from './usePayments'
@@ -15,6 +16,8 @@ export function PayPage() {
   const [successCredits, setSuccessCredits] = useState<number | null>(null)
 
   const paypalReady = config.data?.paypalReady ?? false
+  const stripeReady = config.data?.stripeReady ?? false
+  const anyReady = paypalReady || stripeReady
 
   // 客观性价比最高档（单价最低），用于「最划算」徽标，把价格故事讲出来。
   const bestValueId = CREDIT_PACKS.reduce(
@@ -52,7 +55,7 @@ export function PayPage() {
               为你的学习力充值
             </h1>
             <p className="mt-1.5 max-w-md text-sm text-zinc-500">
-              一次性购买 credits，按量使用、永不过期。支付由 PayPal 安全处理。
+              一次性购买 credits，按量使用、永不过期。支付由 Stripe / PayPal 安全处理。
             </p>
           </div>
 
@@ -88,7 +91,7 @@ export function PayPage() {
           </div>
         )}
 
-        {!config.isLoading && !paypalReady && (
+        {!config.isLoading && !anyReady && (
           <div className="mt-6 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-500">
             支付后端尚未接入（后端 P0 进行中）。页面与交互已就绪，待后端联调即可上线。
           </div>
@@ -101,7 +104,8 @@ export function PayPage() {
               key={pack.id}
               pack={pack}
               index={index}
-              ready={paypalReady}
+              paypalReady={paypalReady}
+              stripeReady={stripeReady}
               bestValueId={bestValueId}
               onSuccess={handleSuccess}
               onError={handleError}
@@ -111,7 +115,7 @@ export function PayPage() {
 
         {/* 页脚说明 */}
         <p className="mt-10 text-center text-xs text-zinc-500">
-          币种 USD · 由 PayPal 处理付款与退款 · 一次性购买，不自动续费
+          币种 USD · 由 Stripe / PayPal 处理付款与退款 · 一次性购买，不自动续费
         </p>
       </div>
     </div>
@@ -121,13 +125,22 @@ export function PayPage() {
 interface PackCardProps {
   pack: CreditPack
   index: number
-  ready: boolean
+  paypalReady: boolean
+  stripeReady: boolean
   bestValueId: string
   onSuccess: (credits: number) => void
   onError: (message: string) => void
 }
 
-function PackCard({ pack, index, ready, bestValueId, onSuccess, onError }: PackCardProps) {
+function PackCard({
+  pack,
+  index,
+  paypalReady,
+  stripeReady,
+  bestValueId,
+  onSuccess,
+  onError,
+}: PackCardProps) {
   const popular = !!pack.popular
   const isBestValue = pack.id === bestValueId
   const perCredit = Math.round((pack.priceUsd / pack.credits) * 100)
@@ -213,10 +226,15 @@ function PackCard({ pack, index, ready, bestValueId, onSuccess, onError }: PackC
         ))}
       </ul>
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-2">
+        <StripeCheckoutButton
+          pack={pack}
+          ready={stripeReady}
+          onError={onError}
+        />
         <PayPalButton
           pack={pack}
-          ready={ready}
+          ready={paypalReady}
           onSuccess={onSuccess}
           onError={onError}
         />

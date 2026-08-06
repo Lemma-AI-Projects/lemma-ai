@@ -1,17 +1,17 @@
-"""Idempotent credit fulfillment for completed PayPal captures.
+"""Idempotent credit fulfillment for completed payment captures.
 
-The hard requirement: credits are granted EXACTLY ONCE per PayPal order, no matter
-how many times the capture endpoint is retried or how many duplicate webhooks
-arrive. We guarantee this with a row lock on the `payments` row plus a forward-only
-status state machine:
+The hard requirement: credits are granted EXACTLY ONCE per provider order, no
+matter how many times the capture endpoint is retried or how many duplicate
+webhooks arrive. We guarantee this with a row lock on the `payments` row plus a
+forward-only status state machine:
 
 - a payment already `captured` is a no-op (returns granted=False);
-- only a `COMPLETED` PayPal capture flips it to `captured` and grants credits;
+- only a `COMPLETED` capture flips it to `captured` and grants credits;
 - a non-completed capture (e.g. PENDING/APPROVED) is parked as `approved` and
   left for the webhook to finalize later.
 
-Both the capture endpoint and the webhook call `finalize_payment_capture`, so the
-two paths can never double-grant.
+Both the capture endpoint and the webhooks (PayPal + Stripe) call
+`finalize_payment`, so the paths can never double-grant.
 """
 
 import random
@@ -75,35 +75,41 @@ async def _grant_credits(
     return new_balance
 
 
-async def finalize_payment_capture(
+async def finalize_payment(
     db: AsyncSession,
-    paypal_order_id: str,
+    provider: str,
+    provider_order_id: str,
     *,
-    paypal_status: str,
+    status: str,
     payer_id: str | None = None,
 ) -> tuple[bool, int]:
     """Mark a Payment captured and grant credits, idempotently.
 
-    Returns (granted_this_call, credits_granted). `granted_this_call` is False when
-    the payment was already captured (replay) or when PayPal hasn't reported
-    COMPLETED yet.
+    Works for any provider ("paypal" | "stripe"): the row is located by
+    (provider, provider_order_id). Returns (granted_this_call, credits_granted).
+    `granted_this_call` is False when the payment was already captured (replay)
+    or when the provider hasn't reported COMPLETED yet.
     """
     pay = await db.scalar(
         select(Payment)
-        .where(Payment.paypal_order_id == paypal_order_id)
+        .where(
+            Payment.provider == provider,
+            Payment.provider_order_id == provider_order_id,
+        )
         .with_for_update()
     )
     if pay is None:
         return (False, 0)
     if pay.status == "captured":
         return (False, pay.credits)
-    if paypal_status != "COMPLETED":
+    if status != "COMPLETED":
         # PENDING / APPROVED: park it; the webhook will finalize on COMPLETED.
         pay.status = "approved"
         return (False, 0)
 
     pay.status = "captured"
-    pay.paypal_payer_id = payer_id
+    if payer_id is not None:
+        pay.paypal_payer_id = payer_id
     pay.captured_at = datetime.now(timezone.utc)
     new_balance = await _grant_credits(
         db, pay.user_id, pay.credits, f"purchase:{pay.id}", pay.id

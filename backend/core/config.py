@@ -248,6 +248,21 @@ class Settings(BaseSettings):
         """True when the active mode's client id + secret are both present."""
         return bool(self.paypal_client_id and self.paypal_client_secret)
 
+    # --- Stripe payments (card channel) ---
+    # Secret API key (sk_...) — leave empty to disable the card channel
+    # (frontend gates on `stripe_ready`). Checkout is Stripe-hosted, so no
+    # card data ever touches our servers.
+    stripe_secret_key: str = ""
+    # Webhook signing secret (whsec_...) from the Stripe dashboard.
+    stripe_webhook_secret: str = ""
+    # Base URL for checkout success/cancel redirects (set to the frontend origin).
+    stripe_checkout_origin: str = "http://localhost:5173"
+
+    @property
+    def stripe_ready(self) -> bool:
+        """True when the secret key is configured."""
+        return bool(self.stripe_secret_key)
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -7,7 +7,7 @@ import type {
   PaymentConfigResponse,
 } from './types'
 
-/** 探测后端支付能力（PayPal 是否就绪）。非 2xx 视为未就绪。 */
+/** 探测后端支付能力（PayPal / Stripe 是否就绪）。非 2xx 视为未就绪。 */
 export async function fetchPaymentConfig(): Promise<PaymentConfigResponse> {
   const { data } = await apiClient.get<PaymentConfigResponse>(
     '/api/v1/payments/config'
@@ -23,7 +23,11 @@ export async function fetchBalance(): Promise<BalanceResponse> {
   return data
 }
 
-/** 为某套餐创建 PayPal 订单，返回 orderId 交给 PayPal SDK。 */
+/**
+ * 为某套餐创建支付订单。
+ * - provider='paypal' → 返回 orderId 交给 PayPal SDK 完成支付
+ * - provider='stripe' → 返回 url（Stripe 托管结账页），前端跳转
+ */
 export async function createOrder(
   req: CreateOrderRequest
 ): Promise<CreateOrderResponse> {
@@ -34,7 +38,7 @@ export async function createOrder(
   return data
 }
 
-/** 支付完成后由前端回调，后端完成 capture 并入账。 */
+/** 支付完成后由前端回调（PayPal 通道），后端完成 capture 并入账。 */
 export async function captureOrder(
   orderId: string
 ): Promise<CaptureOrderResponse> {

@@ -14,16 +14,23 @@ export interface CreditPack {
   perks: string[]
 }
 
-/** 向后端申请创建 PayPal 订单的请求体。 */
+/** 支付通道：PayPal（内嵌 SDK）/ Stripe（托管 Checkout，信用卡）。 */
+export type PaymentProvider = 'paypal' | 'stripe'
+
+/** 向后端申请创建支付订单的请求体。 */
 export interface CreateOrderRequest {
   packId: string
   amount: number
   currency: 'USD'
+  /** 通道选择，默认 paypal */
+  provider?: PaymentProvider
 }
 
 export interface CreateOrderResponse {
-  /** PayPal order id，前端交回给 PayPal SDK 完成支付。 */
+  /** 通道侧订单号（PayPal order id / Stripe Checkout Session id）。 */
   orderId: string
+  /** Stripe 通道：跳转此托管结账页；PayPal 为 null（前端 SDK 内嵌）。 */
+  url?: string | null
 }
 
 export interface CaptureOrderResponse {
@@ -37,8 +44,9 @@ export interface BalanceResponse {
   credits: number
 }
 
-/** 后端支付能力探测：决定前端是否渲染真实 PayPal 按钮。 */
+/** 后端支付能力探测：决定前端渲染哪些真实支付按钮。 */
 export interface PaymentConfigResponse {
   paypalReady: boolean
+  stripeReady: boolean
   currency: string
 }

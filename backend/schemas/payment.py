@@ -19,6 +19,7 @@ class PaymentConfigResponse(_CamelModel):
     """Probes whether the backend can accept payments right now."""
 
     paypal_ready: bool
+    stripe_ready: bool
     currency: str
 
 
@@ -28,15 +29,22 @@ class BalanceResponse(_CamelModel):
 
 class CreateOrderRequest(_CamelModel):
     """Frontend sends the pack id; the server recomputes price from its own
-    pricing table and ignores `amount`/`currency` (anti-tamper)."""
+    pricing table and ignores `amount`/`currency` (anti-tamper).
+
+    `provider`: "paypal" | "stripe" — which channel to create the order on.
+    """
 
     pack_id: str
     amount: float = 0.0
     currency: str = "USD"
+    provider: str = "paypal"
 
 
 class CreateOrderResponse(_CamelModel):
     order_id: str
+    # Stripe channel: URL to redirect the user to (hosted Checkout). Null for
+    # providers that embed client-side (PayPal).
+    url: str | None = None
 
 
 class CaptureOrderRequest(_CamelModel):
