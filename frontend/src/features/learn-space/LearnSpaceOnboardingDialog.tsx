@@ -140,7 +140,7 @@ export function LearnSpaceOnboardingDialog({
               </DialogPrimitive.Title>
               <DialogPrimitive.Description className="text-xs text-muted-foreground">
                 {step === 1
-                  ? '一个学习空间 = 一个领域 + 一位专属伙伴'
+                  ? '一个学习空间 = 一堆组件的集合 + 一位专属 Agent'
                   : `TA 将陪你学习「${spaceName}」`}
               </DialogPrimitive.Description>
             </div>

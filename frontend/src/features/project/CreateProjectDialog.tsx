@@ -63,7 +63,7 @@ export function CreateProjectDialog({
           <div className="flex min-h-14 items-start gap-2 p-2 ps-4">
             <div className="mt-1 flex max-w-[calc(100%-100px)] flex-col">
               <DialogPrimitive.Title className="text-lg font-normal text-foreground">
-                创建项目
+                创建学习空间
               </DialogPrimitive.Title>
             </div>
             <div className="grow" />
@@ -87,7 +87,7 @@ export function CreateProjectDialog({
                   htmlFor="project-name"
                   className="mb-2 block text-sm text-foreground"
                 >
-                  项目名称
+                  学习空间名称
                 </label>
 
                 {/*
@@ -111,7 +111,7 @@ export function CreateProjectDialog({
                   />
                   <button
                     type="button"
-                    aria-label="打开项目图标和颜色菜单"
+                    aria-label="打开图标和颜色菜单"
                     className="group col-1 row-1 flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <div className="relative">
@@ -128,13 +128,13 @@ export function CreateProjectDialog({
                   <Info className="size-5" />
                 </div>
                 <p className="text-pretty text-xs text-muted-foreground">
-                  项目功能可将聊天、文件和自定义指令集中保存，以便用于持续进行的工作，或者单纯用于整理内容，让一切更井然有序。
+                  学习空间 = 组件的集合 + 专属 Agent：对话、Board、笔记、复习…都装在这里，一位 Agent 全程陪你学习。
                 </p>
               </aside>
 
               {createMutation.isError && (
                 <p className="mt-2 text-xs text-destructive">
-                  创建项目失败，请重试
+                  创建学习空间失败，请重试
                 </p>
               )}
             </div>
@@ -148,7 +148,7 @@ export function CreateProjectDialog({
                   disabled={isSubmitDisabled}
                   className="-translate-x-px -translate-y-px rounded-full"
                 >
-                  {createMutation.isPending ? '创建中…' : '创建项目'}
+                  {createMutation.isPending ? '创建中…' : '创建学习空间'}
                 </Button>
               </div>
             </div>
