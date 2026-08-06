@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useCreateProjectMutation } from '@/features/project/projectApi'
+import { useTranslation } from 'react-i18next'
 import {
   AGENT_TEMPLATES,
   PERSONALITY_PRESETS,
@@ -29,6 +30,7 @@ export function LearnSpaceOnboardingDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const { t } = useTranslation()
   const [step, setStep] = useState<1 | 2>(1)
   const [spaceName, setSpaceName] = useState('')
   // ── 塑造态 ──
@@ -168,12 +170,14 @@ export function LearnSpaceOnboardingDialog({
           <div className="flex min-h-14 items-start gap-2 p-2 ps-4">
             <div className="mt-1 flex max-w-[calc(100%-100px)] flex-col">
               <DialogPrimitive.Title className="text-lg font-normal text-foreground">
-                {step === 1 ? '创建一个 Learn Space' : '你的学习伙伴'}
+                {step === 1
+                  ? t('learnSpace.createTitle')
+                  : t('learnSpace.partnerTitle')}
               </DialogPrimitive.Title>
               <DialogPrimitive.Description className="text-xs text-muted-foreground">
                 {step === 1
-                  ? '一个学习空间 = 一堆组件的集合 + 一位专属 Agent'
-                  : `TA 将陪你学习「${spaceName}」`}
+                  ? t('learnSpace.definition')
+                  : t('learnSpace.partnerDesc', { name: spaceName })}
               </DialogPrimitive.Description>
             </div>
             <div className="grow" />
@@ -181,7 +185,7 @@ export function LearnSpaceOnboardingDialog({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="关闭"
+                aria-label={t('learnSpace.close')}
                 className="rounded-full"
               >
                 <X className="size-5" />
@@ -197,14 +201,14 @@ export function LearnSpaceOnboardingDialog({
                   htmlFor="learn-space-name"
                   className="mb-2 block text-sm text-foreground"
                 >
-                  你想学什么？
+                  {t('learnSpace.whatToLearn')}
                 </label>
                 <input
                   ref={inputRef}
                   id="learn-space-name"
                   type="text"
                   autoComplete="off"
-                  placeholder="TOEFL 备考 / AP 微积分 / 和声学…"
+                  placeholder={t('learnSpace.placeholder')}
                   value={spaceName}
                   onChange={(event) => setSpaceName(event.target.value)}
                   className="h-10 w-full rounded-md border border-zinc-200 bg-background px-3 text-sm text-foreground outline-none placeholder:text-zinc-400"
@@ -218,7 +222,7 @@ export function LearnSpaceOnboardingDialog({
                     disabled={spaceName.trim().length === 0}
                     className="-translate-x-px -translate-y-px rounded-full"
                   >
-                    下一步
+                    {t('learnSpace.next')}
                   </Button>
                 </div>
               </div>
@@ -230,8 +234,12 @@ export function LearnSpaceOnboardingDialog({
               <div className="flex rounded-full border border-zinc-200 bg-zinc-50 p-1">
                 {(
                   [
-                    { value: 'custom', label: '自己捏', icon: Wand2 },
-                    { value: 'template', label: '选模板', icon: Sparkles },
+                    { value: 'custom', label: t('learnSpace.custom'), icon: Wand2 },
+                    {
+                      value: 'template',
+                      label: t('learnSpace.template'),
+                      icon: Sparkles,
+                    },
                   ] as const
                 ).map((mode) => (
                   <button
@@ -262,12 +270,12 @@ export function LearnSpaceOnboardingDialog({
                       htmlFor="agent-name"
                       className="mb-2 block text-sm text-foreground"
                     >
-                      名字（留空让它自己起）
+                      {t('learnSpace.agentName')}
                     </label>
                     <input
                       id="agent-name"
                       type="text"
-                      placeholder="小格 / 安可…"
+                      placeholder={t('learnSpace.agentNamePlaceholder')}
                       value={customName}
                       onChange={(event) => setCustomName(event.target.value)}
                       className="h-10 w-full rounded-md border border-zinc-200 bg-background px-3 text-sm text-foreground outline-none placeholder:text-zinc-400"
@@ -275,7 +283,7 @@ export function LearnSpaceOnboardingDialog({
                   </div>
                   <div>
                     <span className="mb-2 block text-sm text-foreground">
-                      性格
+                      {t('learnSpace.personality')}
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {PERSONALITY_PRESETS.map((preset) => (
@@ -304,7 +312,7 @@ export function LearnSpaceOnboardingDialog({
                   </div>
                   <div>
                     <span className="mb-2 block text-sm text-foreground">
-                      怎么教
+                      {t('learnSpace.teachingStyle')}
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {TEACHING_STYLE_PRESETS.map((preset) => (
@@ -333,7 +341,7 @@ export function LearnSpaceOnboardingDialog({
                   </div>
                   <div>
                     <span className="mb-2 block text-sm text-foreground">
-                      多严厉
+                      {t('learnSpace.strictness')}
                     </span>
                     <div className="flex rounded-full border border-zinc-200 bg-zinc-50 p-1">
                       {STRICTNESS_LEVELS.map((level) => (
@@ -366,7 +374,9 @@ export function LearnSpaceOnboardingDialog({
                     disabled={isGenerating}
                     onClick={generate}
                   >
-                    {isGenerating ? 'TA 正在成型…' : '生成它'}
+                    {isGenerating
+                      ? t('learnSpace.generating')
+                      : t('learnSpace.generate')}
                   </Button>
                 </div>
               ) : (
@@ -404,14 +414,16 @@ export function LearnSpaceOnboardingDialog({
                     disabled={isGenerating || !selectedTemplateId}
                     onClick={generate}
                   >
-                    {isGenerating ? 'TA 正在成型…' : '用它'}
+                    {isGenerating
+                      ? t('learnSpace.generating')
+                      : t('learnSpace.useTemplate')}
                   </Button>
                 </div>
               )}
 
               {generateFailed && (
                 <p className="text-center text-xs text-destructive">
-                  生成失败，请检查网络后重试
+                  {t('learnSpace.generateFailed')}
                 </p>
               )}
 
@@ -433,7 +445,7 @@ export function LearnSpaceOnboardingDialog({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label="重新生成"
+                        aria-label={t('learnSpace.regenerate')}
                         className="rounded-full"
                         onClick={generate}
                         disabled={isGenerating}
@@ -460,9 +472,13 @@ export function LearnSpaceOnboardingDialog({
                       className="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground"
                     >
                       <span className="font-medium">
-                        直接编辑 SOUL.md
+                        {t('learnSpace.soulMd')}
                       </span>
-                      <span>{soulEditorOpen ? '收起' : '展开'}</span>
+                      <span>
+                        {soulEditorOpen
+                          ? t('learnSpace.soulMdCollapse')
+                          : t('learnSpace.soulMdExpand')}
+                      </span>
                     </button>
                     {soulEditorOpen && (
                       <textarea
@@ -483,7 +499,7 @@ export function LearnSpaceOnboardingDialog({
                       onClick={() => setStep(1)}
                       disabled={isGenerating}
                     >
-                      返回
+                      {t('learnSpace.back')}
                     </Button>
                     <Button
                       type="button"
@@ -492,12 +508,14 @@ export function LearnSpaceOnboardingDialog({
                       disabled={createMutation.isPending}
                       onClick={handleCreate}
                     >
-                      {createMutation.isPending ? '创建中…' : '创建空间'}
+                      {createMutation.isPending
+                        ? t('learnSpace.creating')
+                        : t('learnSpace.create')}
                     </Button>
                   </div>
                   {createMutation.isError && (
                     <p className="text-center text-xs text-destructive">
-                      创建失败，请重试
+                      {t('learnSpace.createFailed')}
                     </p>
                   )}
                 </>
@@ -514,7 +532,7 @@ export function LearnSpaceOnboardingDialog({
                     onClick={() => setStep(1)}
                     disabled={isGenerating}
                   >
-                    返回
+                    {t('learnSpace.back')}
                   </Button>
                 </div>
               )}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -29,33 +30,36 @@ export type PluginSubjectTab =
   | 'mythology'
   | 'chess'
 
-const subjectTabs: Array<{ value: PluginSubjectTab; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'general', label: '通用' },
-  { value: 'math', label: '数学' },
-  { value: 'physics', label: '物理' },
-  { value: 'chemistry', label: '化学' },
-  { value: 'biology', label: '生物' },
-  { value: 'programming', label: '编程' },
-  { value: 'languages', label: '语言' },
-  { value: 'history', label: '历史' },
-  { value: 'philosophy', label: '哲学' },
-  { value: 'astronomy', label: '天文' },
-  { value: 'music', label: '音乐' },
-  { value: 'art', label: '艺术' },
-  { value: 'economics', label: '经济' },
-  { value: 'law', label: '法律' },
-  { value: 'medicine', label: '医学' },
-  { value: 'psychology', label: '心理学' },
-  { value: 'archaeology', label: '考古' },
-  { value: 'linguistics', label: '语言学' },
-  { value: 'logic', label: '逻辑学' },
-  { value: 'classics', label: '古典学' },
-  { value: 'statistics', label: '统计学' },
-  { value: 'cryptography', label: '密码学' },
-  { value: 'paleontology', label: '古生物学' },
-  { value: 'mythology', label: '神话学' },
-  { value: 'chess', label: '棋类' },
+const subjectTabs: Array<{
+  value: PluginSubjectTab
+  labelKey: string
+}> = [
+  { value: 'all', labelKey: 'plugins.subjects.all' },
+  { value: 'general', labelKey: 'plugins.subjects.general' },
+  { value: 'math', labelKey: 'plugins.subjects.math' },
+  { value: 'physics', labelKey: 'plugins.subjects.physics' },
+  { value: 'chemistry', labelKey: 'plugins.subjects.chemistry' },
+  { value: 'biology', labelKey: 'plugins.subjects.biology' },
+  { value: 'programming', labelKey: 'plugins.subjects.programming' },
+  { value: 'languages', labelKey: 'plugins.subjects.languages' },
+  { value: 'history', labelKey: 'plugins.subjects.history' },
+  { value: 'philosophy', labelKey: 'plugins.subjects.philosophy' },
+  { value: 'astronomy', labelKey: 'plugins.subjects.astronomy' },
+  { value: 'music', labelKey: 'plugins.subjects.music' },
+  { value: 'art', labelKey: 'plugins.subjects.art' },
+  { value: 'economics', labelKey: 'plugins.subjects.economics' },
+  { value: 'law', labelKey: 'plugins.subjects.law' },
+  { value: 'medicine', labelKey: 'plugins.subjects.medicine' },
+  { value: 'psychology', labelKey: 'plugins.subjects.psychology' },
+  { value: 'archaeology', labelKey: 'plugins.subjects.archaeology' },
+  { value: 'linguistics', labelKey: 'plugins.subjects.linguistics' },
+  { value: 'logic', labelKey: 'plugins.subjects.logic' },
+  { value: 'classics', labelKey: 'plugins.subjects.classics' },
+  { value: 'statistics', labelKey: 'plugins.subjects.statistics' },
+  { value: 'cryptography', labelKey: 'plugins.subjects.cryptography' },
+  { value: 'paleontology', labelKey: 'plugins.subjects.paleontology' },
+  { value: 'mythology', labelKey: 'plugins.subjects.mythology' },
+  { value: 'chess', labelKey: 'plugins.subjects.chess' },
 ]
 
 export function PluginSubjectTabs({
@@ -65,11 +69,13 @@ export function PluginSubjectTabs({
   value: PluginSubjectTab
   onChange: (tab: PluginSubjectTab) => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <div
       className="mt-7 flex min-h-9 items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="tablist"
-      aria-label="按学科筛选插件"
+      aria-label="plugins.subjectTabsAria"
     >
       {subjectTabs.map((tab) => (
         <Button
@@ -86,7 +92,7 @@ export function PluginSubjectTabs({
           onClick={() => onChange(tab.value)}
           aria-current={value === tab.value ? 'page' : undefined}
         >
-          {tab.label}
+          {t(tab.labelKey)}
         </Button>
       ))}
     </div>

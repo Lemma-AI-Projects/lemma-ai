@@ -16,6 +16,7 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -30,6 +31,7 @@ export function LoginForm({
   onSuccess,
   ...props
 }: LoginFormProps) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -75,7 +77,7 @@ export function LoginForm({
       onSuccess()
       return
     }
-    setInfoMessage('注册成功！请前往邮箱查收确认邮件，确认后即可登录。')
+    setInfoMessage(t('auth.signupSuccess'))
   }
 
   async function handleGoogle() {
@@ -96,18 +98,16 @@ export function LoginForm({
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="rounded-[14px] border-[#e5e5e5] text-black">
         <CardHeader>
-          <CardTitle>{isSignup ? '注册 Lemma' : '登录 Lemma'}</CardTitle>
+          <CardTitle>{isSignup ? t('auth.signUpTitle') : t('auth.signInTitle')}</CardTitle>
           <CardDescription className="text-[#737373]">
-            {isSignup
-              ? '创建账号以开始使用 Lemma'
-              : '输入邮箱和密码登录你的 Lemma 账号'}
+            {isSignup ? t('auth.signUpDesc') : t('auth.signInDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field className="gap-3">
-                <FieldLabel htmlFor="email">邮箱</FieldLabel>
+                <FieldLabel htmlFor="email">{t('auth.email')}</FieldLabel>
                 <Input
                   id="email"
                   type="email"
@@ -121,14 +121,14 @@ export function LoginForm({
               </Field>
               <Field className="gap-3">
                 <div className="flex items-center">
-                  <FieldLabel htmlFor="password">密码</FieldLabel>
+                  <FieldLabel htmlFor="password">{t('auth.password')}</FieldLabel>
                   {!isSignup && (
                     <a
                       href="#"
                       onClick={(event) => event.preventDefault()}
                       className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                     >
-                      忘记密码？
+                      {t('auth.forgotPassword')}
                     </a>
                   )}
                 </div>
@@ -157,11 +157,11 @@ export function LoginForm({
                 >
                   {isSubmitting
                     ? isSignup
-                      ? '注册中...'
-                      : '登录中...'
+                      ? t('auth.signingUp')
+                      : t('auth.signingIn')
                     : isSignup
-                      ? '注册'
-                      : '登录'}
+                      ? t('auth.signUp')
+                      : t('auth.signIn')}
                 </Button>
                 <Button
                   variant="outline"
@@ -169,12 +169,12 @@ export function LoginForm({
                   onClick={handleGoogle}
                   className="rounded-[8px] border-[#e5e5e5] bg-white text-black shadow-xs hover:bg-[#f5f5f5] hover:text-black"
                 >
-                  使用 Google 登录
+                  {t('auth.google')}
                 </Button>
                 <FieldDescription className="text-center text-[#737373]">
                   {isSignup ? (
                     <>
-                      已经有账号？{' '}
+                      {t('auth.hasAccount')}{' '}
                       <a
                         href="#"
                         onClick={(event) => {
@@ -182,12 +182,12 @@ export function LoginForm({
                           switchMode('signin')
                         }}
                       >
-                        登录
+                        {t('auth.signInLink')}
                       </a>
                     </>
                   ) : (
                     <>
-                      还没有账号？{' '}
+                      {t('auth.noAccount')}{' '}
                       <a
                         href="#"
                         onClick={(event) => {
@@ -195,7 +195,7 @@ export function LoginForm({
                           switchMode('signup')
                         }}
                       >
-                        注册
+                        {t('auth.signUpLink')}
                       </a>
                     </>
                   )}

@@ -14,6 +14,7 @@ import {
   SquarePen,
 } from 'lucide-react'
 import { Link, Outlet, useMatch } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -79,6 +80,7 @@ function CourseSidebarSwitcher({
 }
 
 export function AppLayout() {
+  const { t } = useTranslation()
   const navRef = useRef<HTMLElement>(null)
   const courseMatch = useMatch('/course/:id')
   const [isScrolledFromTop, setIsScrolledFromTop] = useState(false)
@@ -113,12 +115,20 @@ export function AppLayout() {
   const navigationSidebarContent = (
     <>
       <div className="sticky top-14 z-10 flex flex-col gap-0.5 bg-zinc-100">
-        <SidebarItem icon={SquarePen} label="New chat" to="/home" end />
-        <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
-        <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
-        <SidebarItem icon={FolderOpen} label="Learn Spaces" to="/learn-spaces" />
-        <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
-        <SidebarItem icon={Coins} label="Credits" to="/gotopay" />
+        <SidebarItem icon={SquarePen} label={t('nav.newChat')} to="/home" end />
+        <SidebarItem icon={CalendarDays} label={t('nav.schedule')} to="/schedule" />
+        <SidebarItem
+          icon={LibraryBig}
+          label={t('nav.knowledgeBase')}
+          to="/knowledge"
+        />
+        <SidebarItem
+          icon={FolderOpen}
+          label={t('nav.learnSpaces')}
+          to="/learn-spaces"
+        />
+        <SidebarItem icon={Puzzle} label={t('nav.plugins')} to="/plugins" />
+        <SidebarItem icon={Coins} label={t('nav.credits')} to="/gotopay" />
         <div
           className={cn(
             'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',
@@ -128,10 +138,10 @@ export function AppLayout() {
       </div>
 
       <div className="mt-2 flex flex-col gap-1">
-        <SidebarSection title="Learn Spaces" forceClosed={projectsQuery.isPending}>
+        <SidebarSection title={t('nav.learnSpaces')} forceClosed={projectsQuery.isPending}>
           <SidebarItem
             icon={FolderPlus}
-            label="New Learn Space"
+            label={t('nav.newLearnSpace')}
             onClick={() => setLearnSpaceOnboardingOpen(true)}
           />
           {projectsQuery.isPending ? (
@@ -140,7 +150,7 @@ export function AppLayout() {
               <Skeleton className="h-5 w-4/5" />
             </div>
           ) : projectsQuery.isError ? (
-            <p className="px-3 py-1.5 text-sm text-zinc-400">加载失败</p>
+            <p className="px-3 py-1.5 text-sm text-zinc-400">{t('nav.loadFailed')}</p>
           ) : (
             <>
               {visibleProjects.map((item) => (
@@ -163,14 +173,14 @@ export function AppLayout() {
           )}
         </SidebarSection>
 
-        <SidebarSection title="Courses" forceClosed={coursesQuery.isPending}>
+        <SidebarSection title={t('nav.courses')} forceClosed={coursesQuery.isPending}>
           {coursesQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">
               <Skeleton className="h-5 w-full" />
               <Skeleton className="h-5 w-4/5" />
             </div>
           ) : coursesQuery.isError ? (
-            <p className="px-3 py-1.5 text-sm text-zinc-400">加载失败</p>
+            <p className="px-3 py-1.5 text-sm text-zinc-400">{t('nav.loadFailed')}</p>
           ) : (
             <>
               {visibleCourses.map((item) => (
@@ -194,14 +204,14 @@ export function AppLayout() {
         </SidebarSection>
 
         <SidebarSection
-          title="Chats"
+          title={t('nav.chats')}
           forceClosed={conversationsQuery.isPending}
           showLine={false}
         >
           {/* [sandbox] 临时调试入口，开发完成后可连同路由和沙盒页面整体移除。 */}
           <SidebarItem
             icon={FlaskConical}
-            label="Sandbox(调试)"
+            label={t('nav.sandbox')}
             to="/sandbox"
           />
           {conversationsQuery.isPending ? (
@@ -211,7 +221,7 @@ export function AppLayout() {
               <Skeleton className="h-5 w-3/5" />
             </div>
           ) : conversationsQuery.isError ? (
-            <p className="px-3 py-1.5 text-sm text-zinc-400">加载失败</p>
+            <p className="px-3 py-1.5 text-sm text-zinc-400">{t('nav.loadFailed')}</p>
           ) : (
             (conversationsQuery.data ?? []).map((item) => (
               <SidebarItem

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FolderOpen, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LearnSpaceOnboardingDialog } from '@/features/learn-space/LearnSpaceOnboardingDialog'
@@ -14,6 +15,7 @@ import { useProjectsQuery } from '@/features/project/projectApi'
  * 视觉风格与 ProjectPage / 侧栏分组完全一致（zinc 色调 + FolderOpen）。
  */
 export function LearnSpacesPage() {
+  const { t } = useTranslation()
   const [createOpen, setCreateOpen] = useState(false)
   const projectsQuery = useProjectsQuery()
   const spaces = projectsQuery.data ?? []
@@ -24,7 +26,7 @@ export function LearnSpacesPage() {
         <div className="mb-7 flex items-center justify-between">
           <div className="flex translate-x-2 items-center gap-3">
             <FolderOpen className="size-9 text-foreground" strokeWidth={1.75} />
-            <h1 className="text-2xl font-medium text-foreground">Learn Spaces</h1>
+            <h1 className="text-2xl font-medium text-foreground">{t('learnSpace.title')}</h1>
           </div>
           <Button
             type="button"
@@ -34,7 +36,7 @@ export function LearnSpacesPage() {
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />
-            New Learn Space
+            {t('nav.newLearnSpace')}
           </Button>
         </div>
 
@@ -44,12 +46,12 @@ export function LearnSpacesPage() {
             <Skeleton className="h-24 w-full" />
           </div>
         ) : projectsQuery.isError ? (
-          <p className="py-10 text-center text-sm text-zinc-400">加载失败，请刷新重试</p>
+          <p className="py-10 text-center text-sm text-zinc-400">{t('learnSpace.loadFailed')}</p>
         ) : spaces.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-transparent py-14">
             <FolderOpen className="size-8 text-zinc-300" strokeWidth={1.5} />
-            <p className="text-sm text-zinc-400">还没有学习空间</p>
-            <p className="text-xs text-zinc-400">点击右上角「New Learn Space」创建第一个</p>
+            <p className="text-sm text-zinc-400">{t('learnSpace.empty')}</p>
+            <p className="text-xs text-zinc-400">{t('learnSpace.emptyHint')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
