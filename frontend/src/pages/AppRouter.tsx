@@ -1,5 +1,6 @@
 import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { BoardDemoPage } from '@/features/board/BoardDemoPage'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
@@ -15,6 +16,11 @@ import { PayPage } from '@/features/payments/PayPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 
 const routes: RouteObject[] = [
+  {
+    // Board 底座验证（E0.1）：tldraw 最小画布 demo，临时调试入口。
+    path: 'board-demo',
+    element: <BoardDemoPage />,
+  },
   {
     // Dev dashboard: own auth (ceaser/syk), outside the business RequireAuth.
     path: 'admindev',
