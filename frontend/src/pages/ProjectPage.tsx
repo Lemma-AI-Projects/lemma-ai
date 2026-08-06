@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Bot, FolderOpen, GraduationCap, LayoutGrid, MessageCircle } from 'lucide-react'
+import { Bot, FolderOpen, GraduationCap, MessageCircle } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { BoardCanvas } from '@/features/board/BoardCanvas'
 import { ProjectChatList } from '@/features/project/ProjectChatList'
 import { ProjectComponentPlaceholder } from '@/features/project/ProjectComponentPlaceholder'
 import { ProjectInput } from '@/features/project/ProjectInput'
@@ -126,11 +127,9 @@ export function ProjectPage() {
           </div>
 
           {activeTab === 'Board' && (
-            <ProjectComponentPlaceholder
-              icon={LayoutGrid}
-              titleKey="learnSpace.boardPlaceholderTitle"
-              descKey="learnSpace.boardPlaceholderDesc"
-            />
+            <div className="mt-4">
+              <BoardCanvas key={id} learnSpaceId={id!} />
+            </div>
           )}
           {activeTab === 'Chats' && (
             <div className="mt-4">

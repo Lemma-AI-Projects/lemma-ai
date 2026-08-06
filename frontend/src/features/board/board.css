@@ -1,0 +1,42 @@
+/* ── Board 主题魔改：tldraw 默认 UI → Lemma zinc 风格 ──────────
+ * tldraw v5 的主题变量定义在 .tl-theme__light / .tl-theme__dark 类上，
+ * 用更高特异性选择器在本容器内覆盖，不影响其他 tldraw 实例。
+ * 色板对齐项目 zinc 系（zinc-50/100/200/300/400/500/900）。
+ */
+.lemma-board .tl-theme__light {
+  /* Canvas */
+  --tl-color-background: #fafafa; /* zinc-50 */
+  --tl-color-selection-fill: rgba(24, 24, 27, 0.08);
+  --tl-color-selection-stroke: #18181b; /* zinc-900 */
+  /* Panels & toolbars */
+  --tl-color-panel: #ffffff;
+  --tl-color-panel-contrast: #f4f4f5; /* zinc-100 */
+  --tl-color-panel-overlay: rgba(255, 255, 255, 0.72);
+  --tl-color-panel-transparent: rgba(255, 255, 255, 0.92);
+  --tl-color-overlay: rgba(250, 250, 250, 0.7);
+  /* Text */
+  --tl-color-text: #18181b; /* zinc-900 */
+  --tl-color-text-disabled: #a1a1aa; /* zinc-400 */
+  --tl-color-text-shadow: rgba(255, 255, 255, 0.6);
+  --tl-color-text-highlight: #fde68a; /* amber-200 */
+  --tl-color-tooltip: #27272a; /* zinc-800 */
+  /* Interaction */
+  --tl-color-primary: #18181b;
+  --tl-color-focus: #18181b;
+  --tl-color-selected: #18181b;
+  --tl-color-selected-contrast: #ffffff;
+  --tl-color-hint: #a1a1aa; /* zinc-400 */
+  --tl-color-low: #f4f4f5; /* zinc-100 (hover) */
+  --tl-color-low-border: #d4d4d8; /* zinc-300 */
+  --tl-color-divider: #e4e4e7; /* zinc-200 */
+  --tl-color-grid: rgba(24, 24, 27, 0.06);
+  /* Status */
+  --tl-color-success: #16a34a; /* green-600 */
+  --tl-color-warning: #d97706; /* amber-600 */
+  --tl-color-danger: #dc2626; /* red-600 */
+  --tl-color-info: #2563eb; /* blue-600 */
+  --tl-color-muted-none: #f4f4f5;
+  --tl-color-muted-1: #e4e4e7;
+  --tl-color-muted-2: #d4d4d8;
+  --tl-color-muted-3: #a1a1aa;
+}
