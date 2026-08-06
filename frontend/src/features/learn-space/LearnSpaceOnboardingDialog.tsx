@@ -5,7 +5,12 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useCreateProjectMutation } from '@/features/project/projectApi'
-import { AGENT_TEMPLATES, PERSONALITY_PRESETS } from './agentTemplates'
+import {
+  AGENT_TEMPLATES,
+  PERSONALITY_PRESETS,
+  STRICTNESS_LEVELS,
+  TEACHING_STYLE_PRESETS,
+} from './agentTemplates'
 import { useAgentDraftMutation } from './learnSpaceApi'
 
 type DraftMode = 'custom' | 'template'
@@ -29,6 +34,10 @@ export function LearnSpaceOnboardingDialog({
   const [draftMode, setDraftMode] = useState<DraftMode>('template')
   const [customName, setCustomName] = useState('')
   const [personalityPreset, setPersonalityPreset] = useState<string | null>(null)
+  const [teachingStylePreset, setTeachingStylePreset] = useState<string | null>(
+    null
+  )
+  const [strictness, setStrictness] = useState<string | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   // ── 预览态 ──
   const [agentName, setAgentName] = useState('')
@@ -49,6 +58,8 @@ export function LearnSpaceOnboardingDialog({
       setDraftMode('template')
       setCustomName('')
       setPersonalityPreset(null)
+      setTeachingStylePreset(null)
+      setStrictness(null)
       setSelectedTemplateId(null)
       setAgentName('')
       draftMutation.reset()
@@ -84,11 +95,16 @@ export function LearnSpaceOnboardingDialog({
         { onSuccess: (data) => setAgentName(data.agentName) }
       )
     } else {
+      // 自定义：名字 + 性格 + 教学风格 + 严厉程度（严厉度并入性格描述）
+      const personalityParts = [personalityPreset, strictness].filter(Boolean)
       draftMutation.mutate(
         {
           spaceName: trimmed,
           ...(customName.trim() ? { agentName: customName.trim() } : {}),
-          ...(personalityPreset ? { personality: personalityPreset } : {}),
+          ...(personalityParts.length
+            ? { personality: personalityParts.join('，') }
+            : {}),
+          ...(teachingStylePreset ? { teachingStyle: teachingStylePreset } : {}),
         },
         { onSuccess: (data) => setAgentName(data.agentName) }
       )
@@ -223,7 +239,7 @@ export function LearnSpaceOnboardingDialog({
               </div>
 
               {draftMode === 'custom' ? (
-                /* 自定义：名字 + 性格 */
+                /* 自定义：名字 + 性格 + 教学风格 + 严厉程度 */
                 <div className="flex flex-col gap-4">
                   <div>
                     <label
@@ -266,6 +282,63 @@ export function LearnSpaceOnboardingDialog({
                           )}
                         >
                           {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="mb-2 block text-sm text-foreground">
+                      怎么教
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {TEACHING_STYLE_PRESETS.map((preset) => (
+                        <button
+                          key={preset.value}
+                          type="button"
+                          onClick={() => {
+                            setTeachingStylePreset(
+                              teachingStylePreset === preset.value
+                                ? null
+                                : preset.value
+                            )
+                            draftMutation.reset()
+                          }}
+                          className={cn(
+                            'rounded-full border px-3 py-1.5 text-xs transition-colors',
+                            teachingStylePreset === preset.value
+                              ? 'border-foreground bg-foreground text-background'
+                              : 'border-zinc-200 text-zinc-600 hover:border-zinc-400'
+                          )}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="mb-2 block text-sm text-foreground">
+                      多严厉
+                    </span>
+                    <div className="flex rounded-full border border-zinc-200 bg-zinc-50 p-1">
+                      {STRICTNESS_LEVELS.map((level) => (
+                        <button
+                          key={level.value}
+                          type="button"
+                          title={level.hint}
+                          onClick={() => {
+                            setStrictness(
+                              strictness === level.value ? null : level.value
+                            )
+                            draftMutation.reset()
+                          }}
+                          className={cn(
+                            'flex-1 rounded-full py-1.5 text-xs transition-colors',
+                            strictness === level.value
+                              ? 'bg-background font-medium text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          {level.label}
                         </button>
                       ))}
                     </div>

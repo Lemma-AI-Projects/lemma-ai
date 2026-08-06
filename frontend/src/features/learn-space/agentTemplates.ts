@@ -64,4 +64,26 @@ export const PERSONALITY_PRESETS = [
   { value: '幽默有趣，擅长打比方', label: '幽默派' },
   { value: '严谨直接，不绕弯子', label: '严谨派' },
   { value: '犀利高效，直击弱点', label: '犀利派' },
+  { value: '耐心好脾气，怎么问都不烦', label: '耐心派' },
+  { value: '热情有活力，自带感染力', label: '活力派' },
+]
+
+/** 自定义路径的教学风格预设（chips） */
+export const TEACHING_STYLE_PRESETS = [
+  { value: '先把原理讲透，再谈应用', label: '先讲原理' },
+  { value: '真题/习题驱动，错一题讲一类', label: '真题驱动' },
+  { value: '动手实践，边做边学', label: '动手实践' },
+  { value: '循序渐进，小步快走', label: '循序渐进' },
+  { value: '多用生活类比，把抽象讲具体', label: '生活类比' },
+]
+
+/** 自定义路径的严厉程度（3 档） */
+export const STRICTNESS_LEVELS = [
+  {
+    value: '轻松鼓励为主，不催进度',
+    label: '宽松',
+    hint: '夸多于纠，节奏你定',
+  },
+  { value: '该夸夸、该纠纠，平衡推进', label: '平衡', hint: '有鼓励也有要求' },
+  { value: '高标准要求，不留情面', label: '严格', hint: '达标的都过，没达标的重来' },
 ]
