@@ -46,6 +46,11 @@ class AIUseCase(StrEnum):
     # learning-oriented Markdown summary, streamed (gemini_video + reasoning) and
     # cached. Distinct prompt from VIDEO_SUMMARY (study notes, not a recap).
     COURSE_OVERVIEW = "course_overview"
+    # Learn space onboarding: one-shot structured generation of the space's
+    # companion agent draft (name / personality / teaching style / welcome).
+    # v1 轻度自定义: draft is shown to the user for light editing before the
+    # space is created; no persistence on this path.
+    AGENT_DRAFT = "agent_draft"
 
 
 class VideoInputKind(StrEnum):

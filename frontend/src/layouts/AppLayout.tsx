@@ -23,7 +23,7 @@ import { SidebarSection } from '@/components/SidebarSection'
 import { useConversationsQuery } from '@/features/conversation/conversationApi'
 import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
 import { useCoursesListQuery } from '@/features/course/courseLearningApi'
-import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
+import { LearnSpaceOnboardingDialog } from '@/features/learn-space/LearnSpaceOnboardingDialog'
 import { useProjectsQuery } from '@/features/project/projectApi'
 
 function SidebarHeader({ children }: { children?: ReactNode }) {
@@ -82,7 +82,7 @@ export function AppLayout() {
   const navRef = useRef<HTMLElement>(null)
   const courseMatch = useMatch('/course/:id')
   const [isScrolledFromTop, setIsScrolledFromTop] = useState(false)
-  const [createProjectOpen, setCreateProjectOpen] = useState(false)
+  const [learnSpaceOnboardingOpen, setLearnSpaceOnboardingOpen] = useState(false)
   const activeCourseId = courseMatch?.params.id
   const conversationsQuery = useConversationsQuery()
   const projectsQuery = useProjectsQuery()
@@ -132,7 +132,7 @@ export function AppLayout() {
           <SidebarItem
             icon={FolderPlus}
             label="New Learn Space"
-            onClick={() => setCreateProjectOpen(true)}
+            onClick={() => setLearnSpaceOnboardingOpen(true)}
           />
           {projectsQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">
@@ -249,9 +249,9 @@ export function AppLayout() {
         <Outlet />
       </main>
 
-      <CreateProjectDialog
-        open={createProjectOpen}
-        onOpenChange={setCreateProjectOpen}
+      <LearnSpaceOnboardingDialog
+        open={learnSpaceOnboardingOpen}
+        onOpenChange={setLearnSpaceOnboardingOpen}
       />
     </div>
   )

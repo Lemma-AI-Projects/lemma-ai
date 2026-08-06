@@ -3,14 +3,14 @@ import { FolderOpen, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
+import { LearnSpaceOnboardingDialog } from '@/features/learn-space/LearnSpaceOnboardingDialog'
 import { useProjectsQuery } from '@/features/project/projectApi'
 
 /**
  * Learn Spaces 总览页（/learn-spaces）
  * - UI 改名层：Project → Learn Space（数据层仍为 projects，E1.1 统一升级）
  * - 展示用户所有学习空间，点击进入 /project/:id（路由升级随 E1.1）
- * - 创建入口复用现有 CreateProjectDialog（onboarding 流程后续单独设计）
+ * - 创建走 LearnSpaceOnboardingDialog（起名 → 伴学 agent 生成 → 创建）
  * 视觉风格与 ProjectPage / 侧栏分组完全一致（zinc 色调 + FolderOpen）。
  */
 export function LearnSpacesPage() {
@@ -72,7 +72,7 @@ export function LearnSpacesPage() {
         )}
       </div>
 
-      <CreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <LearnSpaceOnboardingDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   )
 }
