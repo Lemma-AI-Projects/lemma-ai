@@ -189,6 +189,18 @@ class Settings(BaseSettings):
     # Secret used to sign dev-dashboard session tokens (HMAC).
     dev_dashboard_token_secret: str = ""
 
+    # --- PayPal payments (live received 2026-08-05, sandbox 2026-08-06) ---
+    # Mode: "sandbox" (dev, no real money) | "live" (prod). Per the technical
+    # plan, stays "sandbox" until sandbox tests pass AND red-line #1 (video
+    # 红线1方案A) ships. Do NOT flip to "live" prematurely.
+    paypal_mode: str = "sandbox"
+    paypal_sandbox_client_id: str = ""
+    paypal_sandbox_client_secret: str = ""
+    paypal_live_client_id: str = ""
+    paypal_live_client_secret: str = ""
+    # Webhook ID from the PayPal app's webhook config (used to verify signatures).
+    paypal_webhook_id: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
@@ -200,6 +212,41 @@ class Settings(BaseSettings):
     @property
     def supabase_jwks_url(self) -> str:
         return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+
+    # --- PayPal helpers (derived from the fields above) ---
+
+    @property
+    def paypal_is_live(self) -> bool:
+        return self.paypal_mode == "live"
+
+    @property
+    def paypal_client_id(self) -> str:
+        return (
+            self.paypal_live_client_id
+            if self.paypal_is_live
+            else self.paypal_sandbox_client_id
+        )
+
+    @property
+    def paypal_client_secret(self) -> str:
+        return (
+            self.paypal_live_client_secret
+            if self.paypal_is_live
+            else self.paypal_sandbox_client_secret
+        )
+
+    @property
+    def paypal_api_base(self) -> str:
+        return (
+            "https://api.paypal.com"
+            if self.paypal_is_live
+            else "https://api.sandbox.paypal.com"
+        )
+
+    @property
+    def paypal_ready(self) -> bool:
+        """True when the active mode's client id + secret are both present."""
+        return bool(self.paypal_client_id and self.paypal_client_secret)
 
 
 @lru_cache

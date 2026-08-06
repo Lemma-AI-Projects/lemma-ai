@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, String, Table, func
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, String, Table, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -36,6 +36,12 @@ class Profile(Base):
     nickname: Mapped[str | None] = mapped_column(String, nullable=True)
     subscription_plan: Mapped[str] = mapped_column(
         String, nullable=False, server_default="free"
+    )
+    # One-time credits balance (purchased via PayPal). Server is authoritative;
+    # the purchased amount is always recomputed from the pack, never trusted from
+    # the client. Starts at 0 for every new user.
+    credits_balance: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
     )
     avatar_color: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

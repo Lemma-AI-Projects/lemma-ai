@@ -11,6 +11,7 @@ from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
 from models.dev_audit_log import DevAuditLog
 from models.dev_message import DevMessage
+from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.profile import Profile
 from models.project import Project
 from models.provider_usage_log import ProviderUsageLog
@@ -27,9 +28,12 @@ __all__ = [
     "CourseChapter",
     "CourseSearchCandidate",
     "CourseUnit",
+    "CreditLedger",
     "DesmosGraph",
     "DevAuditLog",
     "DevMessage",
+    "Payment",
+    "PaymentWebhookEvent",
     "Profile",
     "Project",
     "ProviderUsageLog",
