@@ -2,6 +2,7 @@ import {
   Brain,
   CircleUserRound,
   CreditCard,
+  FileText,
   HardDrive,
   Palette,
   Settings2,
@@ -15,6 +16,7 @@ import type { CurrentUser } from '@/features/auth/useCurrentUser'
 import { cn } from '@/lib/utils'
 import { HomeSettingsAccountPage } from './HomeSettingsAccountPage'
 import { HomeSettingsBillingPage } from './HomeSettingsBillingPage'
+import { HomeSettingsDocsPage } from './HomeSettingsDocsPage'
 import { HomeSettingsGeneralPage } from './HomeSettingsGeneralPage'
 import { HomeSettingsMemoryPage } from './HomeSettingsMemoryPage'
 import { HomeSettingsStoragePage } from './HomeSettingsStoragePage'
@@ -26,6 +28,7 @@ export type HomeSettingsTab =
   | 'storage'
   | 'memory'
   | 'personalization'
+  | 'docs'
 
 interface HomeSettingsTabItem {
   value: HomeSettingsTab
@@ -42,6 +45,7 @@ const homeSettingsTabs: (
   { value: 'storage', label: t('settings.storage'), icon: HardDrive },
   { value: 'memory', label: t('settings.memory'), icon: Brain },
   { value: 'personalization', label: t('settings.personalization'), icon: Palette },
+  { value: 'docs', label: t('settings.docs'), icon: FileText },
 ]
 
 interface HomeSettingsDialogProps {
@@ -149,11 +153,13 @@ export function HomeSettingsDialog({
                 {tab.value === 'general' && <HomeSettingsGeneralPage />}
                 {tab.value === 'storage' && <HomeSettingsStoragePage />}
                 {tab.value === 'memory' && <HomeSettingsMemoryPage />}
+                {tab.value === 'docs' && <HomeSettingsDocsPage />}
                 {tab.value !== 'account' &&
                   tab.value !== 'billing' &&
                   tab.value !== 'general' &&
                   tab.value !== 'storage' &&
-                  tab.value !== 'memory' && (
+                  tab.value !== 'memory' &&
+                  tab.value !== 'docs' && (
                     <h2 className="text-lg font-normal text-zinc-900">
                       {tab.label}
                     </h2>

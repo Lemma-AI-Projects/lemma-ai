@@ -43,7 +43,8 @@
     "personalization": "Personalization",
     "language": "Language",
     "selectLanguage": "Select language",
-    "close": "Close settings"
+    "close": "Close settings",
+    "docs": "Docs"
   },
   "learnSpace": {
     "title": "Learn Spaces",
