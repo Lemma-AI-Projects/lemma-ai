@@ -52,6 +52,11 @@ class TurnContext:
     new_conversation_title: str | None = None
     # New conversation born inside a project (ownership already verified).
     new_conversation_project_id: uuid.UUID | None = None
+    # C1 persona block for conversations inside a learn space (project):
+    # the bound agent's SOUL.md / persona fields, injected into the system
+    # prompt so the companion speaks with its own voice. None for unfiled or
+    # course conversations.
+    agent_persona: str | None = None
 
 
 # The previous turn's write is async (done doesn't wait for it); a fast
@@ -59,6 +64,42 @@ class TurnContext:
 # the worst observed write latency (~1.2s); forged ids pay ~1.75s before 404.
 _LOOKUP_GRACE_ATTEMPTS = 8
 _LOOKUP_GRACE_INTERVAL_S = 0.25
+
+
+def build_agent_persona(project: Any) -> str | None:
+    """C1 persona block for a learn space's bound agent.
+
+    The full SOUL.md document is authoritative when present (user-editable
+    persona); otherwise we compose a compact block from the individual
+    fields so legacy rows still get a voice. Returns None for spaces without
+    an agent — the prompt then stays the generic Lemma persona.
+    """
+    if project.agent_soul_md:
+        return project.agent_soul_md.strip()
+    parts: list[str] = []
+    if project.agent_name:
+        parts.append(f"你是这个学习空间的伴学老师，名字叫「{project.agent_name}」。")
+    if project.agent_personality:
+        parts.append(f"性格：{project.agent_personality}")
+    if project.agent_teaching_style:
+        parts.append(f"教学风格：{project.agent_teaching_style}")
+    if project.agent_welcome:
+        parts.append(f"开场白（自然的，不是模板）：{project.agent_welcome}")
+    return "\n".join(parts).strip() or None
+
+
+async def _agent_persona_for_project(
+    db: AsyncSession, *, user_id: uuid.UUID, project_id: uuid.UUID | None
+) -> str | None:
+    """Load the learn space's bound agent persona, if any (C1)."""
+    if project_id is None:
+        return None
+    project = await project_service.get_owned_project(
+        db, user_id=user_id, project_id=project_id
+    )
+    if project is None:
+        return None
+    return build_agent_persona(project)
 
 
 async def prepare_turn(
@@ -90,6 +131,9 @@ async def prepare_turn(
                 content
             ),
             new_conversation_project_id=payload.project_id,
+            agent_persona=(
+                build_agent_persona(project) if payload.project_id is not None else None
+            ),
         )
 
     conversation = None
@@ -112,6 +156,9 @@ async def prepare_turn(
         user_content=content,
         user_sent_at=datetime.now(UTC),
         history=[ChatMessage(role=row.role, content=row.content_text) for row in rows],
+        agent_persona=await _agent_persona_for_project(
+            db, user_id=user.id, project_id=conversation.project_id
+        ),
     )
 
 
@@ -173,6 +220,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         [*context.history, ChatMessage(role="user", content=context.user_content)],
         user_id=str(context.user_id),
         conversation_id=str(context.conversation_id),
+        prompt_vars={"agent_persona": context.agent_persona or ""},
         tools=tools,
     )
     try:
