@@ -1,5 +1,6 @@
 import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { OnboardingGuard } from '@/features/onboarding/OnboardingGuard'
 import { BoardDemoPage } from '@/features/board/BoardDemoPage'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
@@ -11,6 +12,7 @@ import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { OnboardingPage } from '@/pages/OnboardingPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { PayPage } from '@/features/payments/PayPage'
@@ -40,50 +42,61 @@ const routes: RouteObject[] = [
     element: <RequireAuth />,
     children: [
       {
-        element: <AppLayout />,
+        // Onboarding 门控：未完成容量首屏的新用户拦截于此（独立于 AppLayout，
+        // 全屏展示）；完成/跳过后放行进主应用。
+        path: 'onboarding',
+        element: <OnboardingPage />,
+      },
+      {
+        element: <OnboardingGuard />,
         children: [
           {
-            path: 'home',
-            element: <HomePage />,
-          },
-          {
-            path: 'schedule',
-            element: <SchedulePage />,
-          },
-          {
-            path: 'knowledge',
-            element: <KnowledgeBasePage />,
-          },
-          {
-            path: 'plugins',
-            element: <PluginsPage />,
-          },
-          {
-            path: 'learn-spaces',
-            element: <LearnSpacesPage />,
-          },
-          {
-            path: 'gotopay',
-            element: <PayPage />,
-          },
-          {
-            // 可选 id：/chat 为新会话态，采纳预生成 id 后 replace 为
-            // /chat/{id}，同一路由避免 remount 杀死进行中的流
-            path: 'chat/:id?',
-            element: <ConversationPage />,
-          },
-          {
-            // [sandbox] 临时调试路由，开发完成后可连同沙盒页面整体移除。
-            path: 'sandbox',
-            element: <ConversationSandboxPage />,
-          },
-          {
-            path: 'course/:id',
-            element: <CoursePage />,
-          },
-          {
-            path: 'project/:id',
-            element: <ProjectPage />,
+            element: <AppLayout />,
+            children: [
+              {
+                path: 'home',
+                element: <HomePage />,
+              },
+              {
+                path: 'schedule',
+                element: <SchedulePage />,
+              },
+              {
+                path: 'knowledge',
+                element: <KnowledgeBasePage />,
+              },
+              {
+                path: 'plugins',
+                element: <PluginsPage />,
+              },
+              {
+                path: 'learn-spaces',
+                element: <LearnSpacesPage />,
+              },
+              {
+                path: 'gotopay',
+                element: <PayPage />,
+              },
+              {
+                // 可选 id：/chat 为新会话态，采纳预生成 id 后 replace 为
+                // /chat/{id}，同一路由避免 remount 杀死进行中的流
+                path: 'chat/:id?',
+                element: <ConversationPage />,
+              },
+              {
+                // [sandbox] 临时调试路由，开发完成后可连同沙盒页面整体移除。
+                path: 'sandbox',
+                element: <ConversationSandboxPage />,
+              },
+              {
+                path: 'course/:id',
+                element: <CoursePage />,
+              },
+              {
+                path: 'project/:id',
+                element: <ProjectPage />,
+              },
+            ],
           },
         ],
       },

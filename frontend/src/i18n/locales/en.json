@@ -165,5 +165,26 @@
     "mStateDoing": "In progress",
     "mStatePlanned": "Planned",
     "quote": "Today's AI learning products are like a book in a bookstore — you open it, you keep going alone.\nLemma is the teacher beside you: one who knows you, follows you, pushes you, until you truly learn."
+  },
+  "onboarding": {
+    "eyebrow": "Lemma",
+    "title": "Anything you're curious about fits here.",
+    "subtitle": "Not for exams. Not for scores. For the sake of knowing.",
+    "inputPlaceholder": "What are you curious about?",
+    "rotatingPlaceholders": [
+      "Astrology? Sure.",
+      "Biomimicry? Sure.",
+      "Ancient Greek? Sure.",
+      "Swarm intelligence? Sure.",
+      "Glaciology? Sure.",
+      "Cat behavior? Sure.",
+      "Origami? Sure.",
+      "Birdwatching? Sure."
+    ],
+    "submit": "Begin",
+    "skip": "Skip for now",
+    "skipping": "Just a moment…",
+    "error": "Something went wrong. Try again.",
+    "footer": "No catalogs. No boundaries. Skip whenever you like."
   }
 }

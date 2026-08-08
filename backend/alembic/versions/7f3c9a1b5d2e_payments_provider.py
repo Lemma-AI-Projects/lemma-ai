@@ -11,7 +11,9 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "7f3c9a1b5d2e"
-down_revision = "0a9a68d3d7fd"
+# 2026-08-08 修正：此前误指向 root（0a9a68d3d7fd），导致多 head；改为指向
+# learn-space 链头（3a5b7c9d1e2f），由 merge 迁移统一汇入主线。
+down_revision = "3a5b7c9d1e2f"
 branch_labels = None
 depends_on = None
 

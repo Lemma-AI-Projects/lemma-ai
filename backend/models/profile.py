@@ -1,7 +1,17 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, String, Table, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,6 +54,14 @@ class Profile(Base):
         Integer, nullable=False, server_default="0"
     )
     avatar_color: Mapped[str] = mapped_column(String, nullable=False)
+    # New-user onboarding gate (capacity-first flow). `has_completed_onboarding`
+    # is false until the 5-step flow finishes; `onboarding_interests` holds the
+    # free-form answer captured on the first screen and seeds the first learn
+    # space / agent generation.
+    has_completed_onboarding: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+    onboarding_interests: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
