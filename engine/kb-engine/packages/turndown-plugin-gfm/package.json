@@ -1,0 +1,33 @@
+{
+  "name": "@triliumnext/turndown-plugin-gfm",
+  "version": "1.0.61",
+  "description": "Turndown plugin to add GitHub Flavored Markdown extensions.",
+  "author": "Dom Christie",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "gitHead": "05a29b450962bf05a8642bbd39446a1f679a96ba",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/laurent22/joplin-turndown-plugin-gfm.git"
+  },
+  "keywords": [
+    "turndown",
+    "turndown-plugin",
+    "html-to-markdown",
+    "html",
+    "markdown",
+    "github-flavored-markdown",
+    "gfm"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "happy-dom": "20.11.1",
+    "turndown": "7.2.4",
+    "turnish": "1.12.2",
+    "vitest": "4.1.10"
+  }
+}

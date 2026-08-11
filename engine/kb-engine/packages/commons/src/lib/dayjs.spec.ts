@@ -1,0 +1,78 @@
+import "dayjs/plugin/advancedFormat.js";
+import "dayjs/plugin/duration.js";
+import "dayjs/plugin/isBetween.js";
+import "dayjs/plugin/isoWeek.js";
+import "dayjs/plugin/isSameOrAfter.js";
+import "dayjs/plugin/isSameOrBefore.js";
+import "dayjs/plugin/quarterOfYear.js";
+import "dayjs/plugin/utc.js";
+
+import { LOCALES } from "./i18n.js";
+import { DAYJS_LOADER, dayjs, setDayjsLocale } from "./dayjs.js";
+import { describe, expect, it } from "vitest";
+
+describe("dayjs", () => {
+    it("all dayjs locales are valid", async () => {
+        for (const locale of LOCALES) {
+            if (locale.contentOnly) continue;
+
+            const dayjsLoader = DAYJS_LOADER[locale.id];
+            expect(dayjsLoader, `Locale ${locale.id} missing.`).toBeDefined();
+
+            await dayjsLoader();
+        }
+    });
+
+    describe("Plugins", () => {
+        it("advanced format is available", () => {
+            expect(dayjs("2023-10-01").format("Q")).not.toBe("Q");
+        });
+
+        it("duration plugin is available", () => {
+            const d = dayjs.duration({ hours: 2, minutes: 30 });
+            expect(d.asMinutes()).toBe(150);
+        });
+
+        it("is-between is available", () => {
+            expect(dayjs("2023-10-02").isBetween(dayjs("2023-10-01"), dayjs("2023-10-03"))).toBe(true);
+        });
+
+        it("iso-week is available", () => {
+            // ISO week number: 2023-01-01 is ISO week 52 of previous year
+            expect(dayjs("2023-01-01").isoWeek()).toBe(52);
+        });
+
+        it("is-same-or-before is available", () => {
+            expect(dayjs("2023-10-01").isSameOrBefore(dayjs("2023-10-02"))).toBe(true);
+        });
+
+        it("is-same-or-after is available", () => {
+            expect(dayjs("2023-10-02").isSameOrAfter(dayjs("2023-10-01"))).toBe(true);
+        });
+
+        it("quarter-year is available", () => {
+            expect(dayjs("2023-05-15").quarter()).toBe(2);
+        });
+
+        it("utc is available", () => {
+            const utcDate = dayjs("2023-10-01T12:00:00").utc();
+            expect(utcDate.utcOffset()).toBe(0);
+        });
+    });
+
+    describe("setDayjsLocale", () => {
+        it("sets the locale when present in the loader", async () => {
+            await setDayjsLocale("en");
+            expect(dayjs.locale()).toBe("en");
+        });
+
+        it("leaves the locale unchanged when not present in the loader", async () => {
+            await setDayjsLocale("en");
+            expect(dayjs.locale()).toBe("en");
+
+            // "xx-not-a-locale" is not a key in DAYJS_LOADER, so the locale must stay as "en".
+            await setDayjsLocale("xx-not-a-locale" as never);
+            expect(dayjs.locale()).toBe("en");
+        });
+    });
+});

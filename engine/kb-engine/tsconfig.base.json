@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "importHelpers": true,
+    "isolatedModules": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": false,       // TODO: Re-enable it at some point.
+    "noImplicitOverride": false,  // TODO: Re-enable it at some point.
+    "noImplicitReturns": false,   // TODO: Re-enable it at some point.
+    "noUnusedLocals": false,      // TODO: Re-enable it at some point.
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2022",
+    "customConditions": ["development"],
+    "verbatimModuleSyntax": false,  // TODO: Re-enable it when migrating back to ESM.
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "noUncheckedSideEffectImports": false,
+  }
+}
