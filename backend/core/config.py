@@ -178,6 +178,12 @@ class Settings(BaseSettings):
     # lands this may point at a dedicated learner URL if we ever split it out.
     lemma_hermes_learner_db_url: str = ""
 
+    # ── Semantic board (S3) ────────────────────────────────────────────────
+    # LLM enrichment of rule-computed clusters (labels + intent description).
+    # Default OFF: board works fine with pure rules; flip only after the
+    # enrichment path is smoke-tested. The LLM never produces coordinates.
+    board_semantic_enabled: bool = False
+
     # ── Dev dashboard (/admindev) ──────────────────────────────────────────
     # Developer-only ops panel (monitor / component control / live architecture
     # / dev message board). MUST stay off in production: control endpoints

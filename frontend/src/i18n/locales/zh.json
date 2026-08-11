@@ -186,5 +186,21 @@
     "skipping": "稍等…",
     "error": "出错了，请重试。",
     "footer": "没有目录，没有边界。想跳过随时可以。"
+  },
+  "board": {
+    "semanticPanelTitle": "语义整理",
+    "semanticClose": "关闭",
+    "semanticQuality": "布局质量",
+    "semanticIssues": "发现的问题",
+    "semanticNoIssues": "布局整洁，没有问题",
+    "semanticSuggestions": "整理建议",
+    "semanticApply": "应用",
+    "semanticApplied": "已应用",
+    "semanticUndo": "撤销整理",
+    "semanticNoSuggestions": "当前布局无需整理",
+    "semanticRuleOnly": "规则分析",
+    "semanticEnriched": "智能增强",
+    "semanticIntent": "布局意图",
+    "semanticThemes": "检测到的主题"
   }
 }

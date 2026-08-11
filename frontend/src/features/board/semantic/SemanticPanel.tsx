@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Wand2, X, Undo2, Check } from 'lucide-react'
+import { Wand2, X, Undo2, Check, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,10 @@ import type { LayoutSuggestion } from './types'
 interface SemanticPanelProps {
   result: BoardAnalysisResult
   appliedSuggestionId: string | null
+  /** S3：LLM 意图描述（enriched），无则为 null → 显示规则意图 */
+  llmIntentDescription?: string | null
+  /** S3：LLM 是否启用/成功（用于「规则分析」降级徽章） */
+  llmEnriched?: boolean
   onApply: (suggestion: LayoutSuggestion) => void
   onUndo: () => void
   onClose: () => void
@@ -35,6 +39,8 @@ function severityLabel(severity: 'critical' | 'major' | 'minor'): string {
 export function SemanticPanel({
   result,
   appliedSuggestionId,
+  llmIntentDescription,
+  llmEnriched = false,
   onApply,
   onUndo,
   onClose,
@@ -54,6 +60,16 @@ export function SemanticPanel({
           <span className="text-sm font-medium text-zinc-900">
             {t('board.semanticPanelTitle', '语义整理')}
           </span>
+          {!llmEnriched ? (
+            <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+              {t('board.semanticRuleOnly', '规则分析')}
+            </span>
+          ) : (
+            <span className="flex items-center gap-0.5 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600">
+              <Sparkles className="size-2.5" />
+              {t('board.semanticEnriched', '智能增强')}
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -124,6 +140,50 @@ export function SemanticPanel({
             {t('board.semanticNoIssues', '布局整洁，没有问题')}
           </p>
         )}
+
+        {/* S3 意图描述：LLM 优先，否则规则 intent */}
+        {(() => {
+          const description =
+            llmIntentDescription ?? result.intent.description
+          if (!description) return null
+          return (
+            <div className="mb-3 rounded-lg border border-indigo-100 bg-indigo-50/40 px-3 py-2">
+              <div className="mb-0.5 flex items-center gap-1 text-xs font-medium text-indigo-700">
+                {llmEnriched ? (
+                  <Sparkles className="size-3" />
+                ) : (
+                  <Wand2 className="size-3" />
+                )}
+                {t('board.semanticIntent', '布局意图')}
+              </div>
+              <p className="text-xs leading-relaxed text-zinc-600">
+                {description}
+              </p>
+            </div>
+          )
+        })()}
+
+        {/* 主题分组（S3：簇名 LLM 增强后可见） */}
+        {result.clusters.length > 0 ? (
+          <div className="mb-3">
+            <div className="mb-1.5 text-xs font-medium text-zinc-500">
+              {t('board.semanticThemes', '检测到的主题')}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {result.clusters.map((cluster) => (
+                <span
+                  key={cluster.id}
+                  className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700"
+                >
+                  {cluster.label}
+                  <span className="ml-1 text-[10px] font-normal text-zinc-400">
+                    {cluster.shapeIds.length}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* 建议列表 */}
         {result.suggestions.length > 0 ? (

@@ -3,13 +3,15 @@ import { Wand2 } from 'lucide-react'
 import { Tldraw, getSnapshot, loadSnapshot, type Editor } from 'tldraw'
 import 'tldraw/tldraw.css'
 import './board.css'
+import { apiClient } from '@/lib/apiClient'
 import { boardShapeUtils } from './shapes'
 import { SemanticPanel } from './semantic/SemanticPanel'
 import { analyzeRegion } from './semantic/analyzer'
 import { projectShapesToRegion, type AdapterBinding } from './semantic/tldraw-adapter'
 import { generateSuggestions } from './semantic/suggestions'
 import { applySuggestion, undoSnapshot, type PositionSnapshot } from './semantic/applier'
-import type { BoardAnalysisResult } from './semantic/types'
+import { buildBoardSemanticRequest, mergeSemanticEnrichment, type BoardSemanticResponse } from './semantic/llm'
+import type { BoardAnalysisResult, SemanticCluster } from './semantic/types'
 
 const boardKey = (learnSpaceId: string) => `lemma-board-${learnSpaceId}`
 /** 语义整理按钮需要的最少选中形状数 */
@@ -22,6 +24,7 @@ const MIN_SELECTED_FOR_ANALYSIS = 2
  * - 挂载时自动恢复该空间的快照（刷新不丢）
  * - UI 已魔改为 Lemma zinc 风格（board.css 覆盖 tldraw 主题变量）
  * - 语义整理（S2.4）：右上工具条 → 分析选中形状 → 面板显示质量/问题/建议 → 显式应用/撤销
+ * - 语义细化（S3）：规则结果先行展示，后台并发调后端 LLM → 成功则原位更新簇名/意图（不重算坐标）
  * - 由父级用 key={learnSpaceId} 渲染，保证空间切换时整体重挂载
  */
 export function BoardCanvas({ learnSpaceId }: { learnSpaceId: string }) {
@@ -32,8 +35,13 @@ export function BoardCanvas({ learnSpaceId }: { learnSpaceId: string }) {
   const [selectedCount, setSelectedCount] = useState(0)
   const [analysisResult, setAnalysisResult] = useState<BoardAnalysisResult | null>(null)
   const [appliedSuggestionId, setAppliedSuggestionId] = useState<string | null>(null)
+  // S3：LLM 增强结果（后到，原位更新）
+  const [llmClusters, setLlmClusters] = useState<SemanticCluster[] | null>(null)
+  const [llmIntentDescription, setLlmIntentDescription] = useState<string | null>(null)
+  const [llmEnriched, setLlmEnriched] = useState(false)
   const undoSnapshotRef = useRef<PositionSnapshot | null>(null)
   const analysisInFlightRef = useRef(false)
+  const llmInFlightRef = useRef(false)
 
   const flushSave = (editor: Editor) => {
     if (saveTimerRef.current) {
@@ -100,8 +108,35 @@ export function BoardCanvas({ learnSpaceId }: { learnSpaceId: string }) {
         processingTimeMs: 0,
         timestamp: new Date().toISOString(),
       })
+      // S3：重置 LLM 增强状态（新一次分析 → 先只显示规则结果）
+      setLlmClusters(null)
+      setLlmIntentDescription(null)
+      setLlmEnriched(false)
       setAppliedSuggestionId(null)
       undoSnapshotRef.current = null
+
+      // S3：后台并发调后端 LLM 语义细化——规则结果已先行展示，
+      // LLM 成功则原位更新簇名/意图（不重算坐标）；失败/门控关保持规则结果。
+      if (!llmInFlightRef.current) {
+        llmInFlightRef.current = true
+        const request = buildBoardSemanticRequest(region.shapes, analysis.clusters)
+        apiClient
+          .post<BoardSemanticResponse | null>('/api/v1/board/semantic', request)
+          .then(({ data }) => {
+            if (data) {
+              const merged = mergeSemanticEnrichment(analysis.clusters, data)
+              setLlmClusters(merged.enrichedClusters)
+              setLlmIntentDescription(merged.intentDescription)
+              setLlmEnriched(true)
+            }
+          })
+          .catch(() => {
+            // LLM 细化失败 → 保持规则结果（降级透明，无用户打扰）
+          })
+          .finally(() => {
+            llmInFlightRef.current = false
+          })
+      }
     } finally {
       analysisInFlightRef.current = false
     }
@@ -204,8 +239,14 @@ export function BoardCanvas({ learnSpaceId }: { learnSpaceId: string }) {
       {/* 结果面板（S2.4） */}
       {analysisResult ? (
         <SemanticPanel
-          result={analysisResult}
+          result={{
+            ...analysisResult,
+            // S3：LLM 增强结果后到 → 原位覆盖规则簇（不重算坐标）
+            clusters: llmClusters ?? analysisResult.clusters,
+          }}
           appliedSuggestionId={appliedSuggestionId}
+          llmIntentDescription={llmIntentDescription}
+          llmEnriched={llmEnriched}
           onApply={(suggestion) => {
             const editor = editorRef.current
             if (editor) handleApply(editor, suggestion.id)

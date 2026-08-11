@@ -186,5 +186,21 @@
     "skipping": "Just a moment…",
     "error": "Something went wrong. Try again.",
     "footer": "No catalogs. No boundaries. Skip whenever you like."
+  },
+  "board": {
+    "semanticPanelTitle": "Semantic Tidy",
+    "semanticClose": "Close",
+    "semanticQuality": "Layout quality",
+    "semanticIssues": "Issues found",
+    "semanticNoIssues": "Clean layout, no issues",
+    "semanticSuggestions": "Suggestions",
+    "semanticApply": "Apply",
+    "semanticApplied": "Applied",
+    "semanticUndo": "Undo tidy",
+    "semanticNoSuggestions": "Nothing to tidy",
+    "semanticRuleOnly": "Rule analysis",
+    "semanticEnriched": "AI enhanced",
+    "semanticIntent": "Layout intent",
+    "semanticThemes": "Themes detected"
   }
 }

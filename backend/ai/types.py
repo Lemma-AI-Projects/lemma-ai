@@ -51,6 +51,10 @@ class AIUseCase(StrEnum):
     # v1 轻度自定义: draft is shown to the user for light editing before the
     # space is created; no persistence on this path.
     AGENT_DRAFT = "agent_draft"
+    # Semantic board: LLM enriches rule-computed clusters with human labels and
+    # a one-line layout intent description. NEVER produces coordinates — the
+    # rule layer (frontend semantic/analyzer) stays authoritative for layout.
+    BOARD_SEMANTIC = "board_semantic"
 
 
 class VideoInputKind(StrEnum):

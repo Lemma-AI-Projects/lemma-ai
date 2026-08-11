@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from api.v1 import (
+    board,
     chat,
     companion,
     conversations,
@@ -28,5 +29,6 @@ api_router.include_router(overview.router)
 api_router.include_router(graphs.router)
 api_router.include_router(learn_spaces.router)
 api_router.include_router(onboarding.router)
+api_router.include_router(board.router)
 api_router.include_router(payments.router)
 api_router.include_router(webhooks.router)
