@@ -1,0 +1,25 @@
+{
+  "name": "kb-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lemma 知识库引擎：全量 Trilium core + PG 存储（P0 阶段）",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@triliumnext/core": "workspace:*",
+    "pg": "^8.13.1",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "pg-mem": "^3.0.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.0"
+  }
+}
