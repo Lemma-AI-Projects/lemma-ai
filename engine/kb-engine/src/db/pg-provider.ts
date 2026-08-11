@@ -106,6 +106,15 @@ export class PgProvider implements DatabaseProvider {
     this.bridge.exec('exec', query, [])
   }
 
+  /**
+   * 设置 RLS 租户上下文（会话级 app.user_id）。每请求调用一次；
+   * 同步桥串行执行，请求级设置/重置不会交叉污染。
+   * 空串 = 系统上下文（仅可见系统行）。
+   */
+  setAppUserId(userId: string): void {
+    this.bridge.exec('set_user_id', '', [], userId)
+  }
+
   close(): void {
     this.bridge.close()
     this.attached = false

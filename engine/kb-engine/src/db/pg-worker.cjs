@@ -300,6 +300,12 @@ async function handleMessage(msg) {
         result = { inTransaction };
         break;
       }
+      case 'set_user_id': {
+        // RLS 租户隔离：会话级 app.user_id（同步桥串行 → 请求级设置/重置安全）
+        await client.query(`SELECT set_config('app.user_id', $1, false)`, [msg.userId ?? '']);
+        result = { ok: true, userId: msg.userId ?? '' };
+        break;
+      }
       case 'ping': {
         result = { ok: true, inTransaction };
         break;

@@ -184,6 +184,11 @@ class Settings(BaseSettings):
     # enrichment path is smoke-tested. The LLM never produces coordinates.
     board_semantic_enabled: bool = False
 
+    # ── Knowledge base engine (kb-engine Node sidecar, P0-4) ────────────────
+    # Base URL of the kb-engine Express service (internal; the FastAPI gateway
+    # is the only entrypoint from the outside). Empty => KB endpoints 503.
+    kb_engine_url: str = ""
+
     # ── Dev dashboard (/admindev) ──────────────────────────────────────────
     # Developer-only ops panel (monitor / component control / live architecture
     # / dev message board). MUST stay off in production: control endpoints

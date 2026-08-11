@@ -78,12 +78,13 @@ export class PgSyncBridge {
    * params 为数组（位置参数）或纯对象（named 参数 :paramN），worker 按形态分支。
    */
   exec<T>(
-    kind: 'run' | 'get' | 'all' | 'exec' | 'begin' | 'commit' | 'rollback' | 'inTransaction' | 'ping',
+    kind: 'run' | 'get' | 'all' | 'exec' | 'begin' | 'commit' | 'rollback' | 'inTransaction' | 'ping' | 'set_user_id',
     sql: string,
     params: unknown[] | Record<string, unknown>,
+    userId?: string,
   ): T {
     if (this.closed) throw new Error('[pg-bridge] bridge is closed')
-    this.worker.postMessage({ kind, sql, params })
+    this.worker.postMessage({ kind, sql, params, userId })
 
     // 等待 worker 完成（worker 独立线程执行，不依赖主线程事件循环）
     while (Atomics.load(this.control, CONTROL_STATE) === STATE_IDLE) {

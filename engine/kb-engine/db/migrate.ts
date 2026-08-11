@@ -133,7 +133,7 @@ async function resolveDbVersion(): Promise<number> {
 async function loadPg(usePgMem?: boolean, pgMemDb?: unknown) {
   if (usePgMem) {
     const { newDb } = await import('pg-mem')
-    const db = (pgMemDb as { newDb?: unknown }) ?? newDb()
+    const db = (pgMemDb as { adapters: { createPg(): { Pool: new (opts?: object) => unknown } } } | undefined) ?? newDb()
     return {
       Pool: db.adapters.createPg().Pool as unknown as typeof import('pg').Pool,
       db,
