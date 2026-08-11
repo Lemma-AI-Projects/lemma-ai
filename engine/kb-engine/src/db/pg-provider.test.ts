@@ -20,6 +20,7 @@ beforeAll(() => {
     // pg-mem 不支持 information_schema 系统表查询 → 显式注入主键
     // （真 PG 自动探测，无需此配置）
     primaryKeys: { notes: 'id' },
+    conflictTargets: { notes: ['id'] },
     // pg-mem 列名不折叠，但生产映射按 Trilium schema 还原——注入同一映射验证 camelCase 键
     columnNames: {
       id: 'id', title: 'title', isdeleted: 'isDeleted',

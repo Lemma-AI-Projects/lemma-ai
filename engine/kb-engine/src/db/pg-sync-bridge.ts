@@ -32,6 +32,10 @@ export interface PgSyncBridgeOptions {
   primaryKeys?: Record<string, string>
   /** 列名还原映射（小写 → 原样）：默认加载内置 trilium-column-names.json；可覆盖 */
   columnNames?: Record<string, string>
+  /** 测试引导：pg-mem 模式建库后执行的 SQL（迁移产物）；真实部署走 db/migrate.ts */
+  bootstrapSql?: string
+  /** 冲突目标映射（表 → 冲突列）：INSERT OR REPLACE 的 ON CONFLICT 目标；模拟环境注入 */
+  conflictTargets?: Record<string, string[]>
   /** 单次响应最大字节数（默认 16MB，知识库查询足够） */
   payloadCapacity?: number
   /** worker 脚本路径（默认指向同目录 pg-worker.cjs） */
@@ -60,6 +64,8 @@ export class PgSyncBridge {
         usePgMem: opts.usePgMem ?? false,
         primaryKeys: opts.primaryKeys,
         columnNames: opts.columnNames,
+        bootstrapSql: opts.bootstrapSql,
+        conflictTargets: opts.conflictTargets,
         control: sab,
         payloadCapacity: capacity,
       },

@@ -78,6 +78,12 @@ function rewrite(sql, replacer) {
       while (j < n && sql[j] !== '"') j += 1;
       out.push(sql.slice(i, j + 1));
       i = j + 1;
+    } else if (ch === '`') {
+      // SQLite 反引号标识符（引擎 DDL 用 `paramId` 等）→ PG 双引号标识符
+      let j = i + 1;
+      while (j < n && sql[j] !== '`') j += 1;
+      out.push('"' + sql.slice(i + 1, j) + '"');
+      i = j + 1;
     } else if (ch === '-' && sql[i + 1] === '-') {
       let j = i + 2;
       while (j < n && sql[j] !== '\n') j += 1;
@@ -97,7 +103,8 @@ function rewrite(sql, replacer) {
       i += m[0].length;
     } else {
       let j = i;
-      while (j < n && !'?"\'":-/'.includes(sql[j])) j += 1;
+      // 特殊字符集合必须包含反引号（否则反引号被当普通文本吞掉，转换分支永不触发）
+      while (j < n && !'?"\'`:/-'.includes(sql[j])) j += 1;
       out.push(sql.slice(i, j));
       i = j;
     }
@@ -123,7 +130,6 @@ if (workerData.usePgMem) {
   pg.types.setTypeParser(pg.types.builtins.INT8, (v) => Number(v));
   client = new pg.Client({ connectionString: workerData.connectionString });
 }
-client.connect();
 
 const control = new Int32Array(workerData.control, 0, 4);
 const payload = new Uint8Array(workerData.control, 16, workerData.payloadCapacity);
@@ -189,22 +195,57 @@ async function getPrimaryKey(table) {
   return null;
 }
 
-/** INSERT OR REPLACE → ON CONFLICT (pk) DO UPDATE SET ... RETURNING pk */
+/** 冲突目标缓存：INSERT OR REPLACE → ON CONFLICT（主键或唯一索引） */
+const conflictTargetCache = new Map(); // table -> string[] | null
+if (workerData.conflictTargets) {
+  for (const [t, cols] of Object.entries(workerData.conflictTargets)) {
+    conflictTargetCache.set(t, cols);
+  }
+}
+async function getConflictTarget(table) {
+  if (conflictTargetCache.has(table)) return conflictTargetCache.get(table);
+  // 真 PG：唯一索引优先于主键（SQLite OR REPLACE 对任一唯一约束冲突都触发）
+  try {
+    const res = await client.query(
+      `SELECT a.attname FROM pg_index i
+       JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+       WHERE i.indrelid = $1::regclass AND i.indisunique
+       ORDER BY i.indisprimary DESC, a.attnum`,
+      [table],
+    );
+    const cols = res.rows.map((r) => r.attname);
+    conflictTargetCache.set(table, cols.length ? cols : null);
+    return cols.length ? cols : null;
+  } catch {
+    conflictTargetCache.set(table, null);
+    return null;
+  }
+}
+
+/**
+ * INSERT OR REPLACE → ON CONFLICT (target) DO UPDATE SET ... RETURNING pk。
+ * 冲突目标 = 唯一索引（entity_changes 的 UNIQUE(entityName, entityId) 触发，
+ * 而非主键 id）；RETURNING 用自增主键（lastInsertRowid 语义）。
+ */
 async function rewriteUpsert(converted) {
   const { sql, params, upsertTable, upsertColumns } = converted;
-  const pk = await getPrimaryKey(upsertTable);
-  if (!pk || !upsertColumns || !upsertColumns.includes(pk)) {
-    // 无主键或主键不在插入列：SQLite 的 OR REPLACE 语义（删旧插新）无法等价，
-    // 退化为普通 INSERT（引擎的 replace() 调用方 entity_changes 恒含主键，正常路径不会退化）。
+  const target = await getConflictTarget(upsertTable);
+  if (!target || target.length === 0 || !upsertColumns ||
+      !upsertColumns.some((c) => target.includes(c))) {
+    // 冲突目标不可得/不在插入列：SQLite OR REPLACE 在此情形本就是纯插入
+    // （无冲突可触发）→ 退化为普通 INSERT。
     return { sql: sql.replace(/^INSERT\s+OR\s+REPLACE/i, 'INSERT'), params };
   }
+  const conflictCols = target.join(', ');
   const setClause = upsertColumns
-    .filter((c) => c !== pk)
+    .filter((c) => !target.includes(c))
     .map((c) => `${c} = EXCLUDED.${c}`)
     .join(', ');
+  const pk = await getPrimaryKey(upsertTable);
+  const returning = pk || target[0];
   const newSql = `${sql
     .replace(/^INSERT\s+OR\s+REPLACE/i, 'INSERT')
-    .replace(/\s*;?\s*$/, '')} ON CONFLICT (${pk}) DO UPDATE SET ${setClause} RETURNING ${pk}`;
+    .replace(/\s*;?\s*$/, '')} ON CONFLICT (${conflictCols}) DO UPDATE SET ${setClause} RETURNING ${returning}`;
   return { sql: newSql, params };
 }
 
@@ -230,7 +271,9 @@ function writeResult(state, value) {
 }
 
 // ── 消息循环 ────────────────────────────────────────────────────────────────
-parentPort.on('message', async (msg) => {
+// 初始化完成（连接 + bootstrapSql）后才注册消息处理器：保证 pg-mem 测试场景下
+// 建表先于任何查询；主线程的 postMessage 在 ready 前会自然排队。
+async function handleMessage(msg) {
   Atomics.store(control, 0, 1); // busy
   try {
     let result;
@@ -301,7 +344,22 @@ parentPort.on('message', async (msg) => {
     writeResult(3, { message: String((e && e.message) || e) });
   }
   Atomics.notify(control, 0);
-});
+}
+
+// 初始化链：连接（+bootstrapSql）→ 注册消息处理。
+// bootstrapSql = 测试引导，把 pg-mem 库初始化为迁移产物（与 db/migrations/001 一致）；
+// 真实部署的建表走 db/migrate.ts（独立连接），不经由 provider。
+(async () => {
+  try {
+    await client.connect();
+    if (workerData.bootstrapSql) {
+      await client.query(workerData.bootstrapSql);
+    }
+  } catch (e) {
+    console.error('[pg-worker] init failed:', e.message);
+  }
+  parentPort.on('message', handleMessage);
+})();
 
 /**
  * 普通 INSERT 附加 RETURNING pk（提供 lastInsertRowid）。

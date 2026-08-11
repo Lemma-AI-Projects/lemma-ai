@@ -21,6 +21,10 @@ export interface PgProviderOptions {
   primaryKeys?: Record<string, string>
   /** 列名还原映射（小写 → 原样）：默认加载内置 trilium-column-names.json；可覆盖 */
   columnNames?: Record<string, string>
+  /** 测试引导：pg-mem 模式建库后执行的 SQL（迁移产物）；真实部署走 db/migrate.ts */
+  bootstrapSql?: string
+  /** 冲突目标映射（表 → 冲突列）：INSERT OR REPLACE 的 ON CONFLICT 目标；模拟环境注入 */
+  conflictTargets?: Record<string, string[]>
   payloadCapacity?: number
 }
 
@@ -34,6 +38,8 @@ export class PgProvider implements DatabaseProvider {
       usePgMem: opts.usePgMem,
       primaryKeys: opts.primaryKeys,
       columnNames: opts.columnNames,
+      bootstrapSql: opts.bootstrapSql,
+      conflictTargets: opts.conflictTargets,
       payloadCapacity: opts.payloadCapacity,
     })
     // 连接在 worker 内已建立（懒启动：首次 exec 时才真正连接）
@@ -106,8 +112,11 @@ export class PgProvider implements DatabaseProvider {
   }
 }
 
-/** 代理 Statement：无 worker 侧状态，每次调用经同步桥执行 */
+/** 代理 Statement：每次调用经同步桥执行；raw/pluck 为 statement 级模式开关 */
 class PgStatement implements Statement {
+  private pluckMode = false
+  private rawMode = false
+
   constructor(
     private readonly bridge: PgSyncBridge,
     private readonly sql: string,
@@ -118,15 +127,23 @@ class PgStatement implements Statement {
   }
 
   get(params: unknown): unknown {
-    if (params === undefined || params === null) {
-      return this.bridge.exec('get', this.sql, [])
+    let p: unknown[] | Record<string, unknown> = []
+    if (params !== undefined && params !== null) {
+      p = params as unknown[] | Record<string, unknown>
     }
-    // better-sqlite3 兼容：数组（位置参数）或纯对象（named 参数 :paramN）
-    return this.bridge.exec('get', this.sql, params as unknown[])
+    const row = this.bridge.exec('get', this.sql, p) as Record<string, unknown> | null
+    return this.shapeRow(row)
   }
 
   all(...params: unknown[]): unknown[] {
-    return this.bridge.exec('all', this.sql, flattenParams(params))
+    const rows = this.bridge.exec('all', this.sql, flattenParams(params)) as Record<string, unknown>[]
+    if (this.pluckMode) {
+      return rows.map((r) => (r ? Object.values(r)[0] : undefined))
+    }
+    if (this.rawMode) {
+      return rows.map((r) => (r ? Object.values(r) : r))
+    }
+    return rows
   }
 
   iterate(...params: unknown[]): IterableIterator<unknown> {
@@ -134,14 +151,24 @@ class PgStatement implements Statement {
     return rows[Symbol.iterator]()
   }
 
-  // better-sqlite3 的 raw/pluck 模式切换；引擎 SQL 中零使用（已核实），
-  // 返回 this 保持接口兼容（行为不变：始终返回对象行）。
-  raw(): this {
+  // better-sqlite3 模式切换：
+  //   pluck(true)  → get/all 只返回第一列值（SqlService.getValue 依赖）
+  //   raw(true)    → 行对象变值数组
+  raw(toggleState = true): this {
+    this.rawMode = toggleState
     return this
   }
 
-  pluck(): this {
+  pluck(toggleState = true): this {
+    this.pluckMode = toggleState
     return this
+  }
+
+  private shapeRow(row: Record<string, unknown> | null): unknown {
+    if (!row) return null
+    if (this.pluckMode) return Object.values(row)[0] ?? null
+    if (this.rawMode) return Object.values(row)
+    return row
   }
 }
 
