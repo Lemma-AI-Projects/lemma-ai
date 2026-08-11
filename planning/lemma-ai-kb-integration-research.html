@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Lemma 知识库 · Trilium 集成调研</title>
+<style>
+:root{--bg:#faf9f7;--surface:#ffffff;--surface2:#f3f1ec;--text:#242424;--muted:#6b6a66;--line:#e4e1da;--accent:#185fa5;--accent2:#0f6e56;--warn:#993c1d;--chip:#eef1f8}
+[data-theme="dark"]{--bg:#1c1c1c;--surface:#262626;--surface2:#303030;--text:#ececec;--muted:#a8a8a4;--line:#3a3a38;--accent:#85b7eb;--accent2:#5dcaa5;--warn:#f0997b;--chip:#2e3440}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.7}
+.layout{display:flex;min-height:100vh}
+aside{width:280px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
+main{flex:1;min-width:0;padding:28px 36px 80px;max-width:1120px;margin:0 auto}
+.brand{font-size:16px;font-weight:500;margin:0 0 2px}.brand-sub{color:var(--muted);font-size:12px;margin-bottom:16px}
+.nav-group-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px}
+.nav-item{display:block;text-decoration:none;color:var(--text);padding:7px 10px;border-radius:8px;margin-bottom:2px}
+.nav-item:hover{background:var(--surface2)}.nav-title{display:block;font-size:13px;font-weight:500}
+.nav-sub{display:block;font-size:11px;color:var(--muted)}
+.topbar{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap}
+.topbar h1{font-size:22px;font-weight:500;margin:0}.topbar .meta{color:var(--muted);font-size:12px}
+button{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 14px;cursor:pointer}
+button:hover{background:var(--surface2)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0 8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card .k{font-size:12px;color:var(--muted)}.card .v{font-size:14px;font-weight:500;margin-top:4px}
+.doc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 26px;margin:22px 0;scroll-margin-top:16px}
+.doc-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:14px;flex-wrap:wrap}
+.doc-head h2{margin:0;font-size:18px;font-weight:500;display:flex;align-items:center;gap:8px}
+.pin{font-size:11px;font-weight:500;color:#fff;background:var(--accent2);border-radius:999px;padding:2px 9px}
+.doc-meta{font-size:12px;color:var(--muted)}
+.doc-body h3{font-size:15px;font-weight:500;margin:20px 0 8px}
+.doc-body h4{font-size:14px;font-weight:500;margin:16px 0 6px}
+.doc-body p{margin:8px 0}
+.doc-body ul,.doc-body ol{margin:8px 0;padding-left:22px}
+.doc-body blockquote{margin:10px 0;padding:8px 14px;border-left:3px solid var(--accent);background:var(--surface2);border-radius:0 8px 8px 0;color:var(--muted)}
+.doc-body code{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--surface2);padding:1px 5px;border-radius:5px}
+.doc-body pre{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font-size:12.5px;line-height:1.55}
+.doc-body pre code{background:none;padding:0}
+.tw{overflow-x:auto;margin:12px 0}
+.doc-body table{border-collapse:collapse;width:100%;font-size:13px}
+.doc-body th,.doc-body td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.doc-body th{background:var(--surface2);font-weight:500}
+.doc-body tr:nth-child(even) td{background:var(--surface2)}
+.doc-body hr{border:none;border-top:1px solid var(--line);margin:20px 0}
+.doc-body strong{font-weight:500}
+a{color:var(--accent)}
+.tag{display:inline-block;font-size:11px;border-radius:999px;padding:1px 8px;margin:0 3px 3px 0}
+.tag-keep{background:#eaf3de;color:#3b6d11}.tag-cut{background:#fcebeb;color:#a32d2d}.tag-mod{background:#faeeda;color:#854f0b}.tag-ref{background:#e6f1fb;color:#185fa5}
+.burger{display:none}
+@media (max-width:860px){.layout{flex-direction:column}aside{position:static;height:auto;width:100%;display:none}aside.open{display:block}main{padding:16px 14px 60px}.burger{display:inline-block}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside id="nav">
+<p class="brand">Lemma 知识库 · 集成调研</p>
+<p class="brand-sub">Trilium Notes → Lemma 知识库魔改路线</p>
+<div class="nav-group"><div class="nav-group-title">总览</div>
+<a class="nav-item" href="#sec-overview"><span class="nav-title">项目概览</span><span class="nav-sub">Trilium 是什么 · 规模与定位</span></a>
+<a class="nav-item" href="#sec-stack"><span class="nav-title">技术栈全景</span><span class="nav-sub">monorepo · 前后端 · 存储</span></a>
+<a class="nav-item" href="#sec-arch"><span class="nav-title">核心架构</span><span class="nav-sub">三层缓存 · 实体 · 同步 · widget</span></a></div>
+<div class="nav-group"><div class="nav-group-title">能力拆解</div>
+<a class="nav-item" href="#sec-datamodel"><span class="nav-title">数据模型</span><span class="nav-sub">8 张表 · notes/branches/attributes</span></a>
+<a class="nav-item" href="#sec-notes"><span class="nav-title">18 种笔记类型</span><span class="nav-sub">文本/代码/画布/思维导图/表格/LLM</span></a>
+<a class="nav-item" href="#sec-features"><span class="nav-title">功能全景</span><span class="nav-sub">编辑器/搜索/脚本/图表/同步/加密</span></a>
+<a class="nav-item" href="#sec-api"><span class="nav-title">API 与接口</span><span class="nav-sub">ETAPI · 内部 REST · WebSocket</span></a></div>
+<div class="nav-group"><div class="nav-group-title">集成方案</div>
+<a class="nav-item" href="#sec-gap"><span class="nav-title">与 Lemma 现状差距</span><span class="nav-sub">Lemma KB 当前是 mock</span></a>
+<a class="nav-item" href="#sec-cut"><span class="nav-title">去掉什么</span><span class="nav-sub">平台壳 · 同步 · 分享 · 桌面/移动</span></a>
+<a class="nav-item" href="#sec-keep"><span class="nav-title">保留什么</span><span class="nav-sub">核心引擎 · 18 类型 · 搜索 · 脚本</span></a>
+<a class="nav-item" href="#sec-mod"><span class="nav-title">怎么魔改</span><span class="nav-sub">接入 Supabase · Lemma 皮肤 · 语义画板</span></a>
+<a class="nav-item" href="#sec-roadmap"><span class="nav-title">分阶段路线</span><span class="nav-sub">P0 引擎 → P1 类型 → P2 融合</span></a>
+<a class="nav-item" href="#sec-risk"><span class="nav-title">风险与决策</span><span class="nav-sub">规模 · 迁移 · 合规 · 待拍板</span></a></div>
+</aside>
+<main>
+<div class="topbar">
+<h1>Lemma 知识库 · Trilium 集成调研</h1>
+<span class="meta">2026-08-11 · 调研基线：D:\github projects\LemmaKnowledgeBase（TriliumNext/Trilium）</span>
+<button id="themeBtn" onclick="toggleTheme()">切换主题</button>
+</div>
+
+<div class="doc" id="sec-overview">
+<div class="doc-head"><h2>1. 项目概览</h2><span class="doc-meta">结论先行</span></div>
+<div class="doc-body">
+<p><strong>LemmaKnowledgeBase = Trilium Notes（TriliumNext 社区版）</strong>——一个功能极其完整、成熟的开源层级知识库应用。它不是"画板/笔记玩具"，而是一个可支撑 <strong>10 万+ 笔记</strong> 的生产级系统。</p>
+<div class="cards">
+<div class="card"><div class="k">代码规模</div><div class="v">1,959 个 TS 文件</div></div>
+<div class="card"><div class="k">核心包</div><div class="v">trilium-core 497</div></div>
+<div class="card"><div class="k">前端 client</div><div class="v">480 文件 · Preact</div></div>
+<div class="card"><div class="k">后端 server</div><div class="v">296 文件 · Express</div></div>
+<div class="card"><div class="k">笔记类型</div><div class="v">18 种</div></div>
+<div class="card"><div class="k">搜索表达式</div><div class="v">37 种</div></div>
+<div class="card"><div class="k">数据库表</div><div class="v">12 张（核心 8）</div></div>
+<div class="card"><div class="k">多语言</div><div class="v">含简体中文</div></div>
+</div>
+<p><strong>定位判断</strong>：这不是"借一个模块"，而是"搬一整个成熟产品内核"。它的价值在于：<strong>把 10 年积累的知识库能力（层级树/克隆/属性/脚本/图表/加密）一次性带来</strong>；成本在于：它自带一套完整的前后端与同步体系，必须做大规模裁剪才能融入 Lemma 的架构。</p>
+<p><strong>当前 Lemma 知识库</strong>：`frontend/src/features/knowledge/` 是纯 mock（74 行假数据文件列表），无后端、无层级、无搜索。差距 = 从"展示型文件列表"到"可承载 10 万笔记的引擎"。</p>
+</div>
+</div>
+
+<div class="doc" id="sec-stack">
+<div class="doc-head"><h2>2. 技术栈全景</h2><span class="doc-meta">monorepo · pnpm</span></div>
+<div class="doc-body">
+<table>
+<tr><th>层</th><th>技术</th><th>说明</th></tr>
+<tr><td>前端</td><td>Preact + jQuery widget 系统</td><td>非 React；widget 基类 + 可复用 Preact 组件</td></tr>
+<tr><td>后端</td><td>Node.js + Express</td><td>apps/server</td></tr>
+<tr><td>存储</td><td>SQLite（better-sqlite3）</td><td>单文件 DB；Lemma 需迁移到 Supabase PG</td></tr>
+<tr><td>富文本</td><td>CKEditor5（定制包）</td><td>WYSIWYG + markdown autoformat + KaTeX</td></tr>
+<tr><td>代码编辑器</td><td>CodeMirror + highlightjs</td><td>18 种笔记类型之一 code</td></tr>
+<tr><td>图表</td><td>Excalidraw / Mind Elixir / Mermaid / d3 force-graph / MapLibre</td><td>canvas / mindMap / mermaid / relationMap / geo</td></tr>
+<tr><td>表格</td><td>Univer（spreadsheet）</td><td>类 Excel 笔记类型</td></tr>
+<tr><td>AI</td><td>llmChat 笔记类型</td><td>自带 LLM 对话笔记</td></tr>
+<tr><td>桌面/移动/单机</td><td>Electron / Capacitor / WASM(sql.js)</td><td>3 套平台壳——集成时应全去掉</td></tr>
+</table>
+<blockquote>架构纪律：<code>trilium-core</code> 不能 import Node 内置模块（它同时跑在 server/desktop/standalone/browser worker）——这让核心引擎具备 <strong>浏览器可运行</strong> 的属性，对 Lemma 前端集成是利好。</blockquote>
+</div>
+</div>
+
+<div class="doc" id="sec-arch">
+<div class="doc-head"><h2>3. 核心架构</h2><span class="doc-meta">三层缓存 · 实体 · 同步 · widget</span></div>
+<div class="doc-body">
+<h3>3.1 三层缓存系统（数据访问铁律）</h3>
+<table>
+<tr><th>层</th><th>位置</th><th>作用</th></tr>
+<tr><td>Becca</td><td>服务端实体缓存</td><td><code>becca.notes[noteId]</code>；缓存方法自动产生 EntityChange 供同步</td></tr>
+<tr><td>Froca</td><td>客户端镜像</td><td>WebSocket 同步；<code>froca.getNote()</code></td></tr>
+<tr><td>Shaca</td><td>分享/发布缓存</td><td>公开笔记优化</td></tr>
+</table>
+<h3>3.2 实体系统（6 类核心实体）</h3>
+<ul>
+<li><code>BNote</code> — 笔记（title/type/mime/isProtected/blobId）</li>
+<li><code>BBranch</code> — 树形关系（<strong>多父克隆</strong>：一条笔记可挂多个位置）</li>
+<li><code>BAttribute</code> — 属性（label 标签 + relation 关系，可继承）</li>
+<li><code>BRevision</code> — 版本历史</li>
+<li><code>BBlob</code> — 二进制内容存储（内容与元数据分离）</li>
+<li><code>BOption</code> — 应用配置（同步选项系统）</li>
+</ul>
+<h3>3.3 同步协议</h3>
+<p>HMAC 认证 + EntityChange 增量推拉 + 内容 hash 校验——<strong>这套同步体系与 Lemma 的 Supabase Auth 冲突，集成时应整体剥离</strong>（Lemma 数据天然多端在线，不需要自建同步服务器）。</p>
+<h3>3.4 Widget 系统（前端 UI 范式）</h3>
+<ul>
+<li><code>BasicWidget / NoteContextAwareWidget / RightPanelWidget</code> — jQuery 基类</li>
+<li><code>type_widgets/</code> — 每种笔记类型的渲染器</li>
+<li>可复用 Preact 组件：Table(Tabulator) / Calendar(FullCalendar) / Dropdown / Badge / Form 系列</li>
+<li>命令注册表 + 快捷键 + 全局菜单</li>
+</ul>
+</div>
+</div>
+
+<div class="doc" id="sec-datamodel">
+<div class="doc-head"><h2>4. 数据模型</h2><span class="doc-meta">schema.sql · 12 张表</span></div>
+<div class="doc-body">
+<table>
+<tr><th>表</th><th>关键列</th><th>Lemma 集成要点</th></tr>
+<tr><td>notes</td><td>noteId / title / type / mime / isProtected / blobId / isDeleted</td><td>需映射 user_id 归属；去 isProtected（或用 PG 行级安全）</td></tr>
+<tr><td>branches</td><td>branchId / noteId / parentNoteId / notePosition / isExpanded</td><td><strong>多父克隆的核心</strong>——知识复用价值高</td></tr>
+<tr><td>attributes</td><td>attributeId / noteId / type(label|relation) / name / value / isInheritable</td><td><strong>强大</strong>：标签 + 关系 + 继承 = 灵活组织知识</td></tr>
+<tr><td>revisions</td><td>noteId / title / content / type / mime / utcDateCreated</td><td>版本历史；Lemma 可做"讲解历史回滚"</td></tr>
+<tr><td>blobs</td><td>blobId / content（二进制）/ size / hash</td><td>内容分离；Supabase Storage 或 PG bytea</td></tr>
+<tr><td>attachments</td><td>attachmentId / noteId / role / mime</td><td>附属于笔记的资源</td></tr>
+<tr><td>entity_changes</td><td>entityName / entityId / changeId / isErased</td><td>同步账本——集成时剥离</td></tr>
+<tr><td>options / recent_notes / user_data / sessions / etapi_tokens</td><td>配置 / 最近 / 用户数据 / 会话 / API 令牌</td><td>Options 并入 Lemma settings；其余裁剪</td></tr>
+</table>
+<blockquote>数据模型核心价值：<strong>notes + branches + attributes 三表就是 Trilium 的知识组织精髓</strong>——树形多父 + 属性关系，远超普通文件列表。</blockquote>
+</div>
+</div>
+
+<div class="doc" id="sec-notes">
+<div class="doc-head"><h2>5. 18 种笔记类型</h2><span class="doc-meta">LLM 可读类型表</span></div>
+<div class="doc-body">
+<table>
+<tr><th>类型</th><th>说明</th><th>Lemma 价值</th></tr>
+<tr><td>text</td><td>富文本（CKEditor + markdown + KaTeX + 表格）</td><td class="tag tag-keep">核心保留</td></tr>
+<tr><td>code</td><td>代码 + 语法高亮</td><td class="tag tag-keep">保留</td></tr>
+<tr><td>markdown</td><td>纯 markdown 编辑</td><td class="tag tag-keep">保留（轻量）</td></tr>
+<tr><td>file / image</td><td>文件 / 图片</td><td class="tag tag-keep">保留（接 Supabase Storage）</td></tr>
+<tr><td>search</td><td>保存的搜索查询（动态结果）</td><td class="tag tag-keep">保留（"我的知识查询"）</td></tr>
+<tr><td>book</td><td>多笔记合集阅读视图</td><td class="tag tag-mod">魔改（对齐课程/空间）</td></tr>
+<tr><td>launcher</td><td>启动器（快捷操作）</td><td class="tag tag-cut">裁剪</td></tr>
+<tr><td>contentWidget</td><td>自定义 UI 组件挂载点</td><td class="tag tag-cut">裁剪</td></tr>
+<tr><td>doc</td><td>内置帮助文档</td><td class="tag tag-cut">裁剪</td></tr>
+<tr><td>canvas</td><td>Excalidraw 白板</td><td class="tag tag-mod">与 Lemma Board 融合</td></tr>
+<tr><td>mindMap</td><td>思维导图（Mind Elixir）</td><td class="tag tag-mod">语义画板联动</td></tr>
+<tr><td>mermaid</td><td>Mermaid 图表（流程图/时序图）</td><td class="tag tag-keep">保留（讲解图）</td></tr>
+<tr><td>relationMap</td><td>关系图谱（force-graph）</td><td class="tag tag-keep">保留（知识点关系）</td></tr>
+<tr><td>noteMap</td><td>笔记/链接图</td><td class="tag tag-keep">保留</td></tr>
+<tr><td>webView</td><td>嵌入网页</td><td class="tag tag-cut">裁剪</td></tr>
+<tr><td>render</td><td>渲染自定义脚本输出</td><td class="tag tag-mod">魔改（渲染后端数据）</td></tr>
+<tr><td>spreadsheet</td><td>Univer 表格</td><td class="tag tag-keep">保留（学习数据表）</td></tr>
+<tr><td>llmChat</td><td>LLM 对话笔记</td><td class="tag tag-mod">接入 Lemma 伴学 agent</td></tr>
+</table>
+</div>
+</div>
+
+<div class="doc" id="sec-features">
+<div class="doc-head"><h2>6. 功能全景</h2><span class="doc-meta">编辑器 · 搜索 · 脚本 · 图表 · 同步 · 加密</span></div>
+<div class="doc-body">
+<h3>6.1 编辑与内容</h3>
+<ul>
+<li>富文本 WYSIWYG + markdown autoformat + 表格 + 图片 + KaTeX 数学公式</li>
+<li>代码编辑器（CodeMirror）+ 语法高亮</li>
+<li>Excalidraw 画布 / Mind Elixir 思维导图 / Mermaid / 关系图 / 笔记图 / 地理图</li>
+<li>Univer 电子表格（Excel 级）</li>
+<li>版本历史（revisions）+ 差异对比</li>
+<li>笔记加密（per-note protected）</li>
+</ul>
+<h3>6.2 搜索（37 种表达式）</h3>
+<p>全文搜索 + 结构化查询：<code>#标签</code> / <code>~关系</code> / <code>ancestor:</code> / <code>descendantOf:</code> / <code>property:</code> / <code>noteContentFulltext:</code> / <code>orderBy:</code>…… <strong>这是知识库"可查询性"的核心资产</strong>。</p>
+<h3>6.3 脚本系统</h3>
+<ul>
+<li>后端脚本 API（backend_script_api）+ 前端脚本 + 服务端脚本</li>
+<li>脚本笔记可创建/修改/查询任意笔记——<strong>知识库的自动化能力</strong></li>
+<li>Render 笔记类型 = 脚本渲染动态输出</li>
+</ul>
+<h3>6.4 协作与发布（裁剪项）</h3>
+<ul>
+<li>自托管同步服务器（HMAC + EntityChange）— <strong>剥离</strong></li>
+<li>公开分享发布（Shaca）— <strong>剥离</strong>（或按需保留只读分享）</li>
+<li>Web Clipper 浏览器插件 — 剥离</li>
+<li>OCR 识别 — 可延后</li>
+</ul>
+</div>
+</div>
+
+<div class="doc" id="sec-api">
+<div class="doc-head"><h2>7. API 与接口</h2><span class="doc-meta">ETAPI · 内部 REST · WebSocket</span></div>
+<div class="doc-body">
+<h3>7.1 ETAPI（外部 API，basic auth）</h3>
+<p><code>/etapi/notes</code> / <code>/etapi/create-note</code> / <code>/etapi/attributes</code> / <code>/etapi/branches</code> / <code>/etapi/revisions</code> / <code>/etapi/search</code>…… 基于 token 的自动化接口——<strong>可整体复用为 Lemma 的"知识库写读 API"蓝本</strong>，只需把认证从 etapi_token 换成 Lemma 的 Supabase JWT。</p>
+<h3>7.2 内部 REST（apps/server/src/routes/api，29 文件）</h3>
+<p>clipper / database / files / llm_chat / login / metrics / ocr / options / totp / etapi_tokens…… 内部 API 信任前端，集成时按 Lemma 路由体系重挂。</p>
+<h3>7.3 WebSocket（ws.ts）</h3>
+<p>实时同步 + Froca 客户端缓存——Lemma 若走 REST + React Query 即可不引入 WS。</p>
+</div>
+</div>
+
+<div class="doc" id="sec-gap">
+<div class="doc-head"><h2>8. 与 Lemma 现状的差距</h2><span class="doc-meta">诚实评级：从展示型到引擎型</span></div>
+<div class="doc-body">
+<table>
+<tr><th>维度</th><th>Lemma 现状</th><th>Trilium 提供</th><th>差距</th></tr>
+<tr><td>数据</td><td>mock 74 行文件列表</td><td>notes/branches/attributes 全模型</td><td class="tag tag-mod">需迁移 + 建表</td></tr>
+<tr><td>组织</td><td>扁平文件筛选</td><td>任意深度树 + 多父克隆 + 属性</td><td class="tag tag-mod">核心升级</td></tr>
+<tr><td>编辑</td><td>无编辑器</td><td>CKEditor5 / code / canvas / mindMap / 表格</td><td class="tag tag-keep">直接获得</td></tr>
+<tr><td>搜索</td><td>前端 contains</td><td>37 表达式结构化搜索</td><td class="tag tag-keep">直接获得</td></tr>
+<tr><td>持久化</td><td>无</td><td>SQLite（需换 PG）</td><td class="tag tag-mod">迁移</td></tr>
+<tr><td>AI 联动</td><td>伴学 agent + Board 语义层</td><td>llmChat + render + relationMap</td><td class="tag tag-mod">融合点</td></tr>
+</table>
+</div>
+</div>
+
+<div class="doc" id="sec-cut">
+<div class="doc-head"><h2>9. 去掉什么（裁剪清单）</h2><span class="doc-meta">原则：只留"知识组织引擎"，剥掉"独立产品壳"</span></div>
+<div class="doc-body">
+<table>
+<tr><th>裁剪项</th><th>原因</th><th>方式</th></tr>
+<tr><td>apps/server / desktop / standalone / mobile / web-clipper / website</td><td>Lemma 有自己的 FastAPI 后端与 React 前端</td><td class="tag tag-cut">不引入 apps/*</td></tr>
+<tr><td>同步协议（entity_changes / sync / ws）</td><td>Lemma 数据在 Supabase 云端，天然多端</td><td class="tag tag-cut">剥离</td></tr>
+<tr><td>加密（isProtected / protected session）</td><td>Supabase RLS 已承担安全；避免双加密体系</td><td class="tag tag-cut">剥离（或 RLS 化）</td></tr>
+<tr><td>分享/发布（Shaca / share-theme）</td><td>非当前 Lemma 核心场景</td><td class="tag tag-cut">延后</td></tr>
+<tr><td>launcher / contentWidget / webView / doc 类型</td><td>Trilium 特有 UI 壳</td><td class="tag tag-cut">裁剪</td></tr>
+<tr><td>桌面/移动平台抽象（ElectronApi / Capacitor / PlatformProvider）</td><td>Lemma 是纯 Web</td><td class="tag tag-cut">裁剪</td></tr>
+<tr><td>ETAPI token / TOTP / recovery codes</td><td>Lemma 用 Supabase Auth</td><td class="tag tag-cut">裁剪</td></tr>
+</table>
+</div>
+</div>
+
+<div class="doc" id="sec-keep">
+<div class="doc-head"><h2>10. 保留什么（核心资产）</h2><span class="doc-meta">trilium-core 引擎 + 类型系统 + 搜索</span></div>
+<div class="doc-body">
+<div class="cards">
+<div class="card"><div class="k">核心引擎</div><div class="v">trilium-core（497 文件）</div></div>
+<div class="card"><div class="k">数据模型</div><div class="v">notes/branches/attributes/revisions</div></div>
+<div class="card"><div class="k">18 类型</div><div class="v">text/code/canvas/mindMap/…</div></div>
+<div class="card"><div class="k">37 搜索</div><div class="v">结构化表达式</div></div>
+<div class="card"><div class="k">脚本</div><div class="v">backend/frontend/render</div></div>
+<div class="card"><div class="k">UI 组件库</div><div class="v">Table/Calendar/Badge/Form 系列</div></div>
+</div>
+<ul>
+<li><span class="tag tag-keep">保留</span> 树形层级 + <strong>多父克隆</strong>（知识复用核心）</li>
+<li><span class="tag tag-keep">保留</span> 属性系统（label 标签 + relation 关系 + 继承）</li>
+<li><span class="tag tag-keep">保留</span> 全文 + 结构化搜索</li>
+<li><span class="tag tag-keep">保留</span> 编辑器：CKEditor5 / code / canvas / mindMap / mermaid / spreadsheet</li>
+<li><span class="tag tag-keep">保留</span> revisions 版本历史</li>
+<li><span class="tag tag-keep">保留</span> 可复用 Preact 组件（Tabulator/FullCalendar/Badge/Dropdown）</li>
+</ul>
+</div>
+</div>
+
+<div class="doc" id="sec-mod">
+<div class="doc-head"><h2>11. 怎么魔改（Lemma 化）</h2><span class="doc-meta">四大改造面</span></div>
+<div class="doc-body">
+<h3>11.1 存储层：SQLite → Supabase PG</h3>
+<ul>
+<li>notes/branches/attributes 三表映射到 PG，加 <code>user_id</code> + RLS 行级安全</li>
+<li>blobs 内容 → Supabase Storage 或 PG bytea；附件同理</li>
+<li>revisions 保留；entity_changes 删除</li>
+</ul>
+<h3>11.2 认证：etapi_token → Supabase JWT</h3>
+<ul>
+<li>ETAPI 的 CRUD 蓝本保留，认证中间件换成 Lemma 的 <code>get_current_user</code></li>
+<li>所有查询强制 user_id 过滤（沿用 Lemma IDOR 红线）</li>
+</ul>
+<h3>11.3 UI：Trilium 皮肤 → Lemma zinc 风格 + React 接管</h3>
+<ul>
+<li>Widget jQuery 系统 → 可在 Lemma React 应用中按"知识库 tab"嵌入</li>
+<li>复用 Lemma 现有组件体系（ui/button、card、i18n）</li>
+<li>i18n：Trilium 自带中文翻译 → 并入 Lemma 的 en/zh.json</li>
+</ul>
+<h3>11.4 与 Lemma 独有能力融合（差异化价值）</h3>
+<ul>
+<li><span class="tag tag-mod">Board 融合</span>：canvas 类型 ↔ 现有 tldraw Board + 语义画板（S1/S2 已完成）</li>
+<li><span class="tag tag-mod">伴学联动</span>：llmChat 类型 ↔ C1 agent 人格；讲解落成知识笔记</li>
+<li><span class="tag tag-mod">learner 集成</span>：知识笔记 ↔ learner L2 knowledge_nodes 双向投影（评估框架 L4/L5 后续）</li>
+<li><span class="tag tag-mod">课程/空间</span>：book 类型 ↔ 课程 & learn space 容器</li>
+</ul>
+</div>
+</div>
+
+<div class="doc" id="sec-roadmap">
+<div class="doc-head"><h2>12. 分阶段路线</h2><span class="doc-meta">P0 引擎 → P1 类型 → P2 融合</span></div>
+<div class="doc-body">
+<table>
+<tr><th>阶段</th><th>范围</th><th>验收</th></tr>
+<tr><td><strong>P0 引擎</strong></td><td>迁 trilium-core 数据模型 + ETAPI 蓝本；建 PG 表（user_id + RLS）；Lemma 后端挂 <code>/kb/*</code> 路由</td><td>笔记 CRUD + 树 + 属性 + 搜索 端到端；迁移链单 head</td></tr>
+<tr><td><strong>P1 类型</strong></td><td>接 CKEditor5 富文本 + code + markdown + mermaid；React 端知识库 UI（树 + 编辑 + 搜索）</td><td>用户在知识库 tab 可建/编辑/搜笔记；i18n 双语</td></tr>
+<tr><td><strong>P2 融合</strong></td><td>canvas↔Board、llmChat↔伴学、relationMap↔语义画板、book↔课程</td><td>知识库与 Learn Space / agent / Board 全链路联动</td></tr>
+</table>
+</div>
+</div>
+
+<div class="doc" id="sec-risk">
+<div class="doc-head"><h2>13. 风险与决策</h2><span class="doc-meta">诚实评估</span></div>
+<div class="doc-body">
+<h3>风险登记</h3>
+<table>
+<tr><th>风险</th><th>影响</th><th>缓解</th></tr>
+<tr><td>规模大（1959 文件）引入成本高</td><td>高</td><td>只迁 trilium-core（497），剥离 apps/*</td></tr>
+<tr><td>SQLite→PG 语义差异（FTS/查询）</td><td>中</td><td>先建表 + 迁移脚本；搜索层适配 PG 方言</td></tr>
+<tr><td>Widget 系统与 React 冲突</td><td>中</td><td>核心引擎复用；UI 用 Lemma React 重写交互</td></tr>
+<tr><td>licensing / 合规</td><td>中</td><td>Trilium 开源（AGPL）——<strong>必须确认许可证与 Lemma 商业化的兼容性</strong></td></tr>
+<tr><td>双体系（KB 树 vs Board 画布）概念重叠</td><td>中</td><td>canvas 类型作为"画布视图"，不另起炉灶</td></tr>
+</table>
+<h3>待拍板</h3>
+<ol>
+<li><strong>许可证</strong>：Trilium 是 AGPL-3.0——Lemma 若商用闭源会冲突；<strong>是选 AGPL 合规路径、联系作者授权、还是仅借鉴架构不复用代码？</strong>（与之前 sandboxer"只复用逻辑"同理）</li>
+<li><strong>迁移深度</strong>：全量 trilium-core（功能最全）vs 最小引擎（仅 notes/branches/attributes/search + text 类型）？</li>
+<li><strong>集成入口</strong>：独立"知识库"tab（推荐）vs 融入 learn space 内部？</li>
+<li><strong>优先级</strong>：先 P0 引擎（数据底座）还是先接一个杀手类型（canvas↔Board / llmChat↔伴学）？</li>
+</ol>
+</div>
+</div>
+
+</main>
+</div>
+<script>
+function toggleTheme(){var h=document.documentElement;h.setAttribute("data-theme",h.getAttribute("data-theme")==="dark"?"light":"dark")}
+document.getElementById("themeBtn").addEventListener("click",toggleTheme);
+</script>
+</body>
+</html>
