@@ -25,6 +25,8 @@ export interface PgSyncBridgeOptions {
   connectionString: string
   /** 测试注入：true 时 worker 用 pg-mem 内存模拟替代真实 PG */
   usePgMem?: boolean
+  /** 测试注入：true 时 worker 用 pglite（WASM 真 PostgreSQL）——RLS/递归 CTE/回滚/TEMP 真语义 */
+  usePglite?: boolean
   /**
    * 显式主键映射（表 → 主键列）。真 PG 自动探测（pg_index/information_schema）；
    * pg-mem 等模拟环境不支持系统表查询，此时 INSERT RETURNING / upsert 依赖此配置。
@@ -62,6 +64,7 @@ export class PgSyncBridge {
       workerData: {
         connectionString: opts.connectionString,
         usePgMem: opts.usePgMem ?? false,
+        usePglite: opts.usePglite ?? false,
         primaryKeys: opts.primaryKeys,
         columnNames: opts.columnNames,
         bootstrapSql: opts.bootstrapSql,

@@ -79,10 +79,12 @@ function rewrite(sql, replacer) {
       out.push(sql.slice(i, j + 1));
       i = j + 1;
     } else if (ch === '`') {
-      // SQLite 反引号标识符（引擎 DDL 用 `paramId` 等）→ PG 双引号标识符
+      // SQLite 反引号标识符（引擎 DDL 用 `paramId` 等）→ 无引号（PG 折叠小写）。
+      // 不能转双引号：引号=大小写敏感标识符，与引擎查询的无引号小写折叠断裂
+      // （建表 "paramId" 后查询 paramid 报 column not exist）。
       let j = i + 1;
       while (j < n && sql[j] !== '`') j += 1;
-      out.push('"' + sql.slice(i + 1, j) + '"');
+      out.push(sql.slice(i + 1, j));
       i = j + 1;
     } else if (ch === '-' && sql[i + 1] === '-') {
       let j = i + 2;
@@ -116,11 +118,33 @@ function rewrite(sql, replacer) {
 // 用单个 Client 而非 Pool：DatabaseProvider 是同步语义，桥串行执行；
 // 单连接保证 BEGIN/COMMIT/ROLLBACK 必然落在同一连接（Pool 的多连接会把
 // 事务内语句分散到不同连接，导致事务失效——pg-mem 的 Pool 尤其不可靠）。
+//
+// 三种后端：
+//   - 生产：node-postgres Client（真实 Supabase PG）
+//   - pg-mem：内存模拟（接口兼容 node-postgres，但递归 CTE/RLS/ROLLBACK 数据级
+//     等真 PG 语义不支持——用于快速单测）
+//   - pglite：WASM 真 PostgreSQL（PostgreSQL 编译到 WASM）——真 PG 语义，
+//     用于验证 pg-mem 覆盖不到的能力（RLS/递归 CTE/回滚/TEMP）。连接角色是
+//     超级用户（bypass RLS），初始化链会 SET ROLE lemma_kb（非超级用户）使
+//     RLS 生效——与 Supabase 部署用 authenticated 连接语义一致。
 let client;
-if (workerData.usePgMem) {
+let usePglite = false;
+if (workerData.usePglite) {
+  usePglite = true; // 真正实例化在初始化链（需 await import ESM）
+} else if (workerData.usePgMem) {
   // 测试模式：pg-mem 内存模拟（接口兼容 node-postgres）
-  const { newDb } = require('pg-mem');
+  const { newDb, DataType } = require('pg-mem');
   const db = newDb();
+  // pg-mem 不实现 current_setting（001 的 user_id 动态默认值依赖）——注册：
+  // 测试语义下无会话变量 → 返回空串（COALESCE 兜底为系统行）
+  try {
+    db.public.registerFunction({
+      name: 'current_setting',
+      args: [DataType.text, DataType.bool],
+      returns: DataType.text,
+      implementation: () => '',
+    });
+  } catch {}
   const adapter = db.adapters.createPg();
   client = new adapter.Client({});
 } else {
@@ -337,7 +361,8 @@ async function handleMessage(msg) {
             const keys = Object.keys(last);
             if (keys.length) lastInsertRowid = Number(last[keys[0]]) || 0;
           }
-          result = { changes: res.rowCount ?? 0, lastInsertRowid };
+          // pglite 返回 affectedRows 而非 rowCount（node-postgres 语义差异）
+          result = { changes: res.rowCount ?? res.affectedRows ?? 0, lastInsertRowid };
         } else if (msg.kind === 'get') {
           result = res.rows[0] ? restoreRowKeys(res.rows[0]) : null;
         } else {
@@ -353,13 +378,34 @@ async function handleMessage(msg) {
 }
 
 // 初始化链：连接（+bootstrapSql）→ 注册消息处理。
-// bootstrapSql = 测试引导，把 pg-mem 库初始化为迁移产物（与 db/migrations/001 一致）；
+// bootstrapSql = 测试引导，把 pg-mem/pglite 库初始化为迁移产物（与 db/migrations/001 一致）；
 // 真实部署的建表走 db/migrate.ts（独立连接），不经由 provider。
 (async () => {
   try {
-    await client.connect();
+    if (usePglite) {
+      // WASM 真 PostgreSQL：动态 import（ESM 包，CJS worker 需 await）
+      const { PGlite } = await import('@electric-sql/pglite');
+      const db = new PGlite();
+      client = {
+        query: (sql, params) => db.query(sql, params ?? []),
+        exec: (sql) => db.exec(sql),
+        close: () => db.close(),
+      };
+    }
+    await client.connect?.();
     if (workerData.bootstrapSql) {
-      await client.query(workerData.bootstrapSql);
+      // 多语句引导（001 是整文件多语句；pg-mem query 容忍，pglite 需 exec）
+      if (usePglite) await client.exec(workerData.bootstrapSql);
+      else await client.query(workerData.bootstrapSql);
+    }
+    if (usePglite) {
+      // 租户验证角色：pglite 连接是超级用户（bypass RLS）——SET ROLE 非超级用户
+      // 使 RLS 生效（与 Supabase 部署用 authenticated 连接语义一致）。
+      await client.exec('CREATE ROLE lemma_kb NOLOGIN');
+      await client.exec('GRANT USAGE ON SCHEMA public TO lemma_kb');
+      await client.exec('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO lemma_kb');
+      await client.exec('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO lemma_kb');
+      await client.exec('SET ROLE lemma_kb');
     }
   } catch (e) {
     console.error('[pg-worker] init failed:', e.message);

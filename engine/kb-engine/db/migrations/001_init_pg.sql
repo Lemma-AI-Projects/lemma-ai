@@ -13,7 +13,7 @@
 -- ── entity_changes（变更日志，entity_changes.replace 依赖自增 id） ──────────
 CREATE TABLE IF NOT EXISTS entity_changes (
     id               BIGSERIAL PRIMARY KEY,
-    user_id          TEXT NOT NULL DEFAULT '',
+    user_id          TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     entityName       TEXT NOT NULL,
     entityId         TEXT NOT NULL,
     hash             TEXT NOT NULL,
@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS IDX_entity_changes_isErased_entityName
 -- ── branches（树形结构：多父克隆的核心） ────────────────────────────────────
 CREATE TABLE IF NOT EXISTS branches (
     branchId         TEXT NOT NULL PRIMARY KEY,
-    user_id          TEXT NOT NULL DEFAULT '',
+    user_id          TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     noteId           TEXT NOT NULL,
     parentNoteId     TEXT NOT NULL,
     notePosition     INTEGER NOT NULL,
@@ -53,7 +53,7 @@ CREATE INDEX IF NOT EXISTS IDX_branches_isDeleted_utcDateModified
 -- ── notes（笔记主表） ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS notes (
     noteId           TEXT NOT NULL PRIMARY KEY,
-    user_id          TEXT NOT NULL DEFAULT '',
+    user_id          TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     title            TEXT NOT NULL DEFAULT 'note',
     isProtected      INTEGER NOT NULL DEFAULT 0,
     type             TEXT NOT NULL DEFAULT 'text',
@@ -79,7 +79,7 @@ CREATE INDEX IF NOT EXISTS IDX_notes_isDeleted_utcDateModified
 -- ── revisions（版本历史） ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS revisions (
     revisionId        TEXT NOT NULL PRIMARY KEY,
-    user_id           TEXT NOT NULL DEFAULT '',
+    user_id           TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     noteId            TEXT NOT NULL,
     type              TEXT DEFAULT '' NOT NULL,
     mime              TEXT DEFAULT '' NOT NULL,
@@ -104,7 +104,7 @@ CREATE INDEX IF NOT EXISTS IDX_revisions_blobId ON revisions (blobId);
 -- ── options（配置键值；复合主键 (user_id, name)——配置键跨用户隔离） ─────────
 CREATE TABLE IF NOT EXISTS options (
     name             TEXT NOT NULL,
-    user_id          TEXT NOT NULL DEFAULT '',
+    user_id          TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     value            TEXT NOT NULL,
     isSynced         INTEGER DEFAULT 0 NOT NULL,
     utcDateModified  TEXT NOT NULL,
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS options (
 -- ── attributes（属性/label/relation 系统） ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS attributes (
     attributeId        TEXT NOT NULL PRIMARY KEY,
-    user_id            TEXT NOT NULL DEFAULT '',
+    user_id            TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     noteId             TEXT NOT NULL,
     type               TEXT NOT NULL,
     name               TEXT NOT NULL,
@@ -134,7 +134,7 @@ CREATE INDEX IF NOT EXISTS IDX_attributes_isDeleted_utcDateModified
 -- ── recent_notes（最近访问） ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS recent_notes (
     noteId           TEXT NOT NULL PRIMARY KEY,
-    user_id          TEXT NOT NULL DEFAULT '',
+    user_id          TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     notePath         TEXT NOT NULL,
     utcDateCreated   TEXT NOT NULL
 );
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS recent_notes (
 -- ── blobs（内容存储，content 为压缩 HTML 的文本表示） ───────────────────────
 CREATE TABLE IF NOT EXISTS blobs (
     blobId           TEXT NOT NULL PRIMARY KEY,
-    user_id          TEXT NOT NULL DEFAULT '',
+    user_id          TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     content          TEXT DEFAULT NULL,
     textRepresentation TEXT DEFAULT NULL,
     dateModified     TEXT NOT NULL,
@@ -152,7 +152,7 @@ CREATE TABLE IF NOT EXISTS blobs (
 -- ── attachments（附件） ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS attachments (
     attachmentId                    TEXT NOT NULL PRIMARY KEY,
-    user_id                         TEXT NOT NULL DEFAULT '',
+    user_id                         TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     ownerId                         TEXT NOT NULL,
     role                            TEXT NOT NULL,
     mime                            TEXT NOT NULL,
@@ -176,7 +176,7 @@ CREATE INDEX IF NOT EXISTS IDX_attachments_utcDateScheduledForErasureSince
 -- ── user_data（兼容：引擎 initDbConnection 会 CREATE IF NOT EXISTS；Supabase Auth 替代后无查询） ──
 CREATE TABLE IF NOT EXISTS user_data (
     tmpID                    INTEGER PRIMARY KEY,
-    user_id                  TEXT NOT NULL DEFAULT '',
+    user_id                  TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
     username                 TEXT,
     email                    TEXT,
     userIDEncryptedDataKey   TEXT,

@@ -24,23 +24,33 @@ ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY entity_changes_isolation ON entity_changes
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY branches_isolation ON branches
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY notes_isolation ON notes
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY revisions_isolation ON revisions
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY attributes_isolation ON attributes
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY recent_notes_isolation ON recent_notes
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY blobs_isolation ON blobs
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY attachments_isolation ON attachments
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY user_data_isolation ON user_data
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''));
+    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), '') OR user_id = '');
 -- options：系统行（user_id = ''）对所有人可见（initialized/dbVersion 种子）
 CREATE POLICY options_isolation ON options
-    USING (user_id = COALESCE(current_setting('app.user_id', true), '') OR user_id = '');
+    USING (user_id = COALESCE(current_setting('app.user_id', true), '') OR user_id = '')
+    WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), '') OR user_id = '');

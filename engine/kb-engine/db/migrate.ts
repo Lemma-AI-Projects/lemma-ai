@@ -132,8 +132,21 @@ async function resolveDbVersion(): Promise<number> {
 /** 按需加载 pg（生产）或 pg-mem（测试） */
 async function loadPg(usePgMem?: boolean, pgMemDb?: unknown) {
   if (usePgMem) {
-    const { newDb } = await import('pg-mem')
-    const db = (pgMemDb as { adapters: { createPg(): { Pool: new (opts?: object) => unknown } } } | undefined) ?? newDb()
+    const { newDb, DataType } = await import('pg-mem')
+    const db: { adapters: { createPg(): { Pool: new (opts?: object) => unknown } }; public: { registerFunction: (f: object) => void } } =
+      (pgMemDb as { adapters: { createPg(): { Pool: new (opts?: object) => unknown } }; public: { registerFunction: (f: object) => void } }) ?? newDb()
+    // pg-mem 不实现 current_setting（001 的 user_id 动态默认值依赖）——注册：
+    // 测试语义下无会话变量 → 返回空串（COALESCE 兜底为系统行）
+    try {
+      ;(db as { public: { registerFunction: (f: object) => void } }).public.registerFunction({
+        name: 'current_setting',
+        args: [DataType.text, DataType.bool],
+        returns: DataType.text,
+        implementation: () => '',
+      })
+    } catch {
+      // 已注册
+    }
     return {
       Pool: db.adapters.createPg().Pool as unknown as typeof import('pg').Pool,
       db,

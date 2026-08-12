@@ -17,6 +17,8 @@ export interface PgProviderOptions {
   connectionString: string
   /** 测试注入（pg-mem） */
   usePgMem?: boolean
+  /** 测试注入（pglite：WASM 真 PostgreSQL，验证真 PG 语义） */
+  usePglite?: boolean
   /** 显式主键映射（表 → 主键列）：真 PG 自动探测；模拟环境必须指定 */
   primaryKeys?: Record<string, string>
   /** 列名还原映射（小写 → 原样）：默认加载内置 trilium-column-names.json；可覆盖 */
@@ -36,6 +38,7 @@ export class PgProvider implements DatabaseProvider {
     this.bridge = new PgSyncBridge({
       connectionString: opts.connectionString,
       usePgMem: opts.usePgMem,
+      usePglite: opts.usePglite,
       primaryKeys: opts.primaryKeys,
       columnNames: opts.columnNames,
       bootstrapSql: opts.bootstrapSql,
