@@ -10,6 +10,7 @@ import {
   type KnowledgeBaseView,
 } from '@/features/knowledge/KnowledgeBaseToolbar'
 import { getKnowledgeBaseItems } from '@/features/knowledge/getKnowledgeBaseItems'
+import { NotesTreePanel } from '@/features/knowledge/NotesTreePanel'
 
 export function KnowledgeBasePage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -79,8 +80,11 @@ export function KnowledgeBasePage() {
   }
 
   return (
-    <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
-      <main className="min-h-full">
+    <div className="relative flex h-full overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50">
+      {/* P0-5：真实笔记树（Trilium 引擎，fail-open） */}
+      <NotesTreePanel />
+
+      <main className="min-h-full flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[810px] flex-col px-4 pt-10 pb-0">
           <KnowledgeBaseHeader
             searchTerm={searchTerm}

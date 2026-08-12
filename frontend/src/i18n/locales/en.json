@@ -202,5 +202,11 @@
     "semanticEnriched": "AI enhanced",
     "semanticIntent": "Layout intent",
     "semanticThemes": "Themes detected"
+  },
+  "knowledge": {
+    "notesTitle": "Notes",
+    "notesConnected": "Connected",
+    "notesUnavailable": "Knowledge base offline",
+    "notesEmpty": "No notes yet"
   }
 }

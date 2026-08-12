@@ -202,5 +202,11 @@
     "semanticEnriched": "智能增强",
     "semanticIntent": "布局意图",
     "semanticThemes": "检测到的主题"
+  },
+  "knowledge": {
+    "notesTitle": "笔记",
+    "notesConnected": "已连接",
+    "notesUnavailable": "笔记库未连接",
+    "notesEmpty": "还没有笔记"
   }
 }
