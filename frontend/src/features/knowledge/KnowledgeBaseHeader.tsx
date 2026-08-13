@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { Search } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 
 interface KnowledgeBaseHeaderProps {
@@ -46,7 +47,7 @@ export function KnowledgeBaseHeader({
             tabIndex={-1}
             type="file"
             className="sr-only"
-            onChange={() => console.log('TODO: upload knowledge files')}
+            onChange={() => toast.info('上传功能开发中，敬请期待')}
           />
           <Button
             type="button"

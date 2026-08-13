@@ -22,7 +22,8 @@ export function ConversationTurnActions({
           <button
             key={action.id}
             type="button"
-            className="text-sm text-muted-foreground"
+            className="cursor-pointer text-sm text-muted-foreground transition-colors hover:text-foreground"
+            onClick={action.onSelect}
           >
             {action.label}
           </button>

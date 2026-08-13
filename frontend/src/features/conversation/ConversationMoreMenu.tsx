@@ -10,6 +10,7 @@ import {
   Pin,
   Trash2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   ActionMenu,
   ActionMenuItem,
@@ -48,10 +49,6 @@ export function ConversationMoreMenu({
   const moveMutation = useMoveConversationMutation()
   const currentTitle = detail?.title ?? ''
 
-  const handleAction = (label: string) => {
-    console.log(label)
-  }
-
   const handleMove = (projectId: string) => {
     if (!conversationId) return
     moveMutation.mutate(
@@ -89,18 +86,17 @@ export function ConversationMoreMenu({
         <ActionMenuItem
           label="Files in chat"
           icon={FolderOpen}
-          onSelect={() => handleAction('Files in chat')}
+          onSelect={() => toast.info('文件列表功能开发中，敬请期待')}
         />
 
         <ActionMenuSub
           label="Move to Project"
           icon={FolderInput}
-          onClick={() => handleAction('Move to Project')}
         >
           <ActionMenuItem
             label="New Project"
             icon={FolderPlus}
-            onSelect={() => handleAction('New Project')}
+            onSelect={() => toast.info('新建项目功能开发中，敬请期待')}
           />
 
           <ActionMenuSeparator />
@@ -125,12 +121,12 @@ export function ConversationMoreMenu({
         <ActionMenuItem
           label="Pin Chat"
           icon={Pin}
-          onSelect={() => handleAction('Pin Chat')}
+          onSelect={() => toast.info('置顶功能开发中，敬请期待')}
         />
         <ActionMenuItem
           label="Archive"
           icon={Archive}
-          onSelect={() => handleAction('Archive')}
+          onSelect={() => toast.info('归档功能开发中，敬请期待')}
         />
         <ActionMenuItem
           label="Delete"

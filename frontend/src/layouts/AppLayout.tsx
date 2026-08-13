@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Link, Outlet, useMatch } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { Toaster } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -263,6 +264,7 @@ export function AppLayout() {
         open={learnSpaceOnboardingOpen}
         onOpenChange={setLearnSpaceOnboardingOpen}
       />
+      <Toaster richColors closeButton />
     </div>
   )
 }

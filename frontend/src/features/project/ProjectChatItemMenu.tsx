@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Archive,
   Ellipsis,
@@ -10,6 +11,7 @@ import {
   Share,
   Trash2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   ActionMenu,
   ActionMenuItem,
@@ -18,7 +20,9 @@ import {
 } from '@/components/ActionMenu'
 import { Button } from '@/components/ui/button'
 import { useMoveConversationMutation } from '@/hooks/useMoveConversation'
+import { useDeleteConversationMutation } from '@/features/conversation/conversationApi'
 import { useProjectsQuery } from './projectApi'
+import { RenameConversationDialog } from '@/features/conversation/RenameConversationDialog'
 
 export function ProjectChatItemMenu({
   chatId,
@@ -31,10 +35,10 @@ export function ProjectChatItemMenu({
 }) {
   const { data: projects } = useProjectsQuery()
   const moveMutation = useMoveConversationMutation()
+  const deleteMutation = useDeleteConversationMutation()
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   // 移到其他项目：排除当前所在项目
   const otherProjects = (projects ?? []).filter((item) => item.id !== projectId)
-
-  const log = (action: string) => console.log(action, chatId)
 
   const handleMove = (targetProjectId: string | null) => {
     moveMutation.mutate(
@@ -45,64 +49,84 @@ export function ProjectChatItemMenu({
     )
   }
 
-  const topItems: { icon: LucideIcon; label: string }[] = [
-    { icon: Share, label: 'Share' },
-    { icon: Pencil, label: 'Rename' },
+  const handleDelete = () => {
+    deleteMutation.mutate(
+      { conversationId: chatId },
+      {
+        onError: (error) => console.error('Failed to delete conversation', error),
+      }
+    )
+  }
+
+  const topItems: { icon: LucideIcon; label: string; onSelect: () => void }[] = [
+    { icon: Share, label: 'Share', onSelect: () => toast.info('分享功能开发中，敬请期待') },
+    { icon: Pencil, label: 'Rename', onSelect: () => setRenameDialogOpen(true) },
   ]
 
   return (
-    <ActionMenu
-      onContentClick={(event) => event.stopPropagation()}
-      trigger={
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label="More actions"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <Ellipsis className="size-5" />
-        </Button>
-      }
-    >
-      {topItems.map((item) => (
-        <ActionMenuItem
-          key={item.label}
-          {...item}
-          onSelect={() => log(item.label)}
-        />
-      ))}
-
-      <ActionMenuSub label="Move to Project" icon={FolderInput}>
-        <ActionMenuItem
-          icon={FolderPlus}
-          label="New Project"
-          onSelect={() => log('New Project')}
-        />
-        <ActionMenuSeparator />
-        {otherProjects.map((project) => (
+    <>
+      <ActionMenu
+        onContentClick={(event) => event.stopPropagation()}
+        trigger={
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="More actions"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Ellipsis className="size-5" />
+          </Button>
+        }
+      >
+        {topItems.map((item) => (
           <ActionMenuItem
-            key={project.id}
-            icon={Folder}
-            label={project.name}
-            disabled={moveMutation.isPending}
-            onSelect={() => handleMove(project.id)}
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            onSelect={item.onSelect}
           />
         ))}
-      </ActionMenuSub>
 
-      <ActionMenuItem
-        icon={FolderMinus}
-        label={`Remove from ${projectName}`}
-        disabled={moveMutation.isPending}
-        onSelect={() => handleMove(null)}
+        <ActionMenuSub label="Move to Project" icon={FolderInput}>
+          <ActionMenuItem
+            icon={FolderPlus}
+            label="New Project"
+            onSelect={() => toast.info('新建项目功能开发中，敬请期待')}
+          />
+          <ActionMenuSeparator />
+          {otherProjects.map((project) => (
+            <ActionMenuItem
+              key={project.id}
+              icon={Folder}
+              label={project.name}
+              disabled={moveMutation.isPending}
+              onSelect={() => handleMove(project.id)}
+            />
+          ))}
+        </ActionMenuSub>
+
+        <ActionMenuItem
+          icon={FolderMinus}
+          label={`Remove from ${projectName}`}
+          disabled={moveMutation.isPending}
+          onSelect={() => handleMove(null)}
+        />
+        <ActionMenuItem icon={Archive} label="Archive" onSelect={() => toast.info('归档功能开发中，敬请期待')} />
+        <ActionMenuItem
+          icon={Trash2}
+          label="Delete"
+          destructive
+          onSelect={handleDelete}
+        />
+      </ActionMenu>
+
+      <RenameConversationDialog
+        key={`${chatId}-rename`}
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        conversationId={chatId}
+        initialTitle=""
       />
-      <ActionMenuItem icon={Archive} label="Archive" onSelect={() => log('Archive')} />
-      <ActionMenuItem
-        icon={Trash2}
-        label="Delete"
-        destructive
-        onSelect={() => log('Delete')}
-      />
-    </ActionMenu>
+    </>
   )
 }

@@ -4,11 +4,12 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { ActionMenu, ActionMenuItem } from '@/components/ActionMenu'
 import { Button } from '@/components/ui/button'
 
-export function ProjectSourceItemMenu({ sourceId }: { sourceId: string }) {
-  const log = (action: string) => console.log(action, sourceId)
+export function ProjectSourceItemMenu({ sourceId: _sourceId }: { sourceId: string }) {
+  const notify = (action: string) => toast.info(`${action}功能开发中，敬请期待`)
 
   return (
     <ActionMenu
@@ -25,17 +26,17 @@ export function ProjectSourceItemMenu({ sourceId }: { sourceId: string }) {
         </Button>
       }
     >
-      <ActionMenuItem icon={Pencil} label="Rename" onSelect={() => log('Rename')} />
+      <ActionMenuItem icon={Pencil} label="Rename" onSelect={() => notify('Rename')} />
       <ActionMenuItem
         icon={Download}
         label="Download"
-        onSelect={() => log('Download')}
+        onSelect={() => notify('Download')}
       />
       <ActionMenuItem
         icon={Trash2}
         label="Remove"
         destructive
-        onSelect={() => log('Remove')}
+        onSelect={() => notify('Remove')}
       />
     </ActionMenu>
   )

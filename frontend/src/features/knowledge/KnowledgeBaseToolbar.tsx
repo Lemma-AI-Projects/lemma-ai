@@ -17,6 +17,7 @@ import {
   Upload,
   type LucideIcon,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -120,7 +121,7 @@ export function KnowledgeBaseToolbar({
               <Button
                 type="button"
                 className="h-9 min-h-9 shrink-0 rounded-full px-4 text-[14px] leading-5 font-medium tracking-[-0.18px]"
-                onClick={() => console.log('TODO: chat with selected knowledge')}
+                onClick={() => toast.info('聊天功能开发中，敬请期待')}
               >
                 <MessageCircle className="size-4" />
                 开始聊天
@@ -129,7 +130,7 @@ export function KnowledgeBaseToolbar({
                 type="button"
                 variant="secondary"
                 className="h-9 min-h-9 shrink-0 rounded-full px-4 text-[14px] leading-5 font-medium tracking-[-0.18px]"
-                onClick={() => console.log('TODO: download selected knowledge')}
+                onClick={() => toast.info('下载功能开发中，敬请期待')}
               >
                 <Download className="size-4" />
                 下载
@@ -138,7 +139,7 @@ export function KnowledgeBaseToolbar({
                 type="button"
                 variant="outline"
                 className="h-9 min-h-9 shrink-0 rounded-full border-destructive/30 px-4 text-[14px] leading-5 font-medium tracking-[-0.18px] text-destructive hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => console.log('TODO: delete selected knowledge')}
+                onClick={() => toast.info('删除功能开发中，敬请期待')}
               >
                 <Trash2 className="size-4" />
                 删除

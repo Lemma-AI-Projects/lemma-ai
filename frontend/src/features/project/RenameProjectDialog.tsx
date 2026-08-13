@@ -59,7 +59,7 @@ export function RenameProjectDialog({
           <div className="flex min-h-14 items-start gap-2 p-2 ps-4">
             <div className="mt-1 flex flex-col">
               <DialogPrimitive.Title className="text-lg font-normal text-foreground">
-                重命名项目
+                重命名学习空间
               </DialogPrimitive.Title>
             </div>
             <div className="grow" />
@@ -81,7 +81,7 @@ export function RenameProjectDialog({
                 ref={inputRef}
                 type="text"
                 autoComplete="off"
-                aria-label="项目名称"
+                aria-label="学习空间名称"
                 maxLength={100}
                 value={name}
                 onChange={(event) => setName(event.target.value)}

@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { getProjectSourceItems } from './getProjectSourceItems'
 import { ProjectSourceItemMenu } from './ProjectSourceItemMenu'
@@ -10,7 +11,7 @@ export function ProjectSourceList({ projectId }: { projectId: string }) {
     <ol className="divide-y divide-border">
       <li
         className="group/source-add flex min-h-14 cursor-pointer items-center gap-3 p-3 hover:bg-muted/50"
-        onClick={() => console.log('TODO: add source')}
+        onClick={() => toast.info('添加内容功能开发中，敬请期待')}
       >
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
           <Plus className="size-5" strokeWidth={2} />

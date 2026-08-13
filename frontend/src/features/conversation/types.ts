@@ -85,6 +85,7 @@ export interface ConversationTurnMetaData {
 export interface ConversationTurnAction {
   id: string
   label: string
+  onSelect?: () => void
 }
 
 export interface ConversationTurnVariant {

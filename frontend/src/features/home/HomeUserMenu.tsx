@@ -11,6 +11,7 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   ActionMenu,
   ActionMenuItem,
@@ -48,10 +49,6 @@ export function HomeUserMenu() {
   const secondaryAccounts = userAccounts.filter(
     (account) => account.id !== currentUserAccountId
   )
-
-  const handleAction = (label: string) => {
-    console.log(label)
-  }
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut()
@@ -141,7 +138,7 @@ export function HomeUserMenu() {
             <ActionMenuItem
               key={account.id}
               className="gap-2.5 rounded-md px-2 py-1.5"
-              onSelect={() => handleAction(`Switch account: ${account.id}`)}
+              onSelect={() => toast.info('切换账户功能开发中，敬请期待')}
             >
               <span
                 className="flex size-7 shrink-0 items-center justify-center rounded-full"
@@ -167,7 +164,7 @@ export function HomeUserMenu() {
 
           <ActionMenuItem
             className="gap-2.5 rounded-sm px-[9px] py-[9px] text-[13.5px]"
-            onSelect={() => handleAction('Add another account')}
+            onSelect={() => toast.info('添加账户功能开发中，敬请期待')}
           >
             <Plus className="size-[17px] shrink-0 text-foreground" />
             <span>添加另一个账户</span>
@@ -179,7 +176,7 @@ export function HomeUserMenu() {
         <ActionMenuItem
           label="升级套餐"
           icon={Sparkles}
-          onSelect={() => handleAction('Upgrade plan')}
+          onSelect={() => toast.info('升级套餐功能开发中，敬请期待')}
         />
         <ActionMenuItem
           label="个性化"
@@ -202,7 +199,7 @@ export function HomeUserMenu() {
         <ActionMenuItem
           label="帮助"
           icon={CircleHelp}
-          onSelect={() => handleAction('Help')}
+          onSelect={() => toast.info('帮助文档开发中，敬请期待')}
         />
         <ActionMenuItem
           label="退出登录"

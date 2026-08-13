@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Ellipsis, Pencil, Settings, Share2, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { ActionMenu, ActionMenuItem } from '@/components/ActionMenu'
 import { Button } from '@/components/ui/button'
 import { useDeleteProjectMutation } from './projectApi'
@@ -16,10 +17,6 @@ export function ProjectPageActions({
   const navigate = useNavigate()
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const deleteMutation = useDeleteProjectMutation()
-
-  const handleAction = (label: string) => {
-    console.log(label)
-  }
 
   const handleDelete = () => {
     if (!projectId) return
@@ -39,6 +36,7 @@ export function ProjectPageActions({
         variant="outline"
         aria-label="Share project"
         className="h-9 rounded-full bg-transparent px-3 hover:bg-muted"
+        onClick={() => toast.info('分享功能开发中，敬请期待')}
       >
         <Share2 className="size-4" />
         <span className="text-sm font-medium">Share</span>
@@ -62,12 +60,12 @@ export function ProjectPageActions({
           onSelect={() => setRenameDialogOpen(true)}
         />
         <ActionMenuItem
-          label="项目设置"
+          label="学习空间设置"
           icon={Settings}
-          onSelect={() => handleAction('项目设置')}
+          onSelect={() => toast.info('学习空间设置功能开发中，敬请期待')}
         />
         <ActionMenuItem
-          label="删除项目"
+          label="删除学习空间"
           icon={Trash2}
           destructive
           disabled={!projectId || deleteMutation.isPending}
