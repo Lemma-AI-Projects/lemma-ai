@@ -263,16 +263,27 @@ if (workerData.conflictTargets) {
 }
 async function getConflictTarget(table) {
   if (conflictTargetCache.has(table)) return conflictTargetCache.get(table);
-  // 真 PG：唯一索引优先于主键（SQLite OR REPLACE 对任一唯一约束冲突都触发）
+  // 真 PG：取【一个完整唯一索引】的列集（非主键优先——SQLite OR REPLACE 对任一
+  // 唯一约束冲突都触发；主键自增时新行主键不冲突，真正触发 replace 的是业务唯一
+  // 索引，如 entity_changes 的 UNIQUE(entityName, entityId)）。仅主键的表退化为主键。
+  // 列名还原 camelCase（PG 折叠小写 vs 引擎 INSERT 列 camelCase，否则匹配退化）。
   try {
     const res = await client.query(
-      `SELECT a.attname FROM pg_index i
-       JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-       WHERE i.indrelid = $1::regclass AND i.indisunique
-       ORDER BY i.indisprimary DESC, a.attnum`,
+      `SELECT t.cols FROM (
+         SELECT i.indisprimary,
+                array_agg(a.attname ORDER BY k.ord) AS cols
+         FROM pg_index i
+         JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord) ON true
+         JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+         WHERE i.indrelid = $1::regclass AND i.indisunique
+         GROUP BY i.indexrelid, i.indisprimary
+         ORDER BY i.indisprimary ASC
+         LIMIT 1
+       ) t`,
       [table],
     );
-    const cols = res.rows.map((r) => r.attname);
+    const raw = res.rows.length ? (res.rows[0].cols ?? []) : [];
+    const cols = raw.map((c) => columnNameMap[c] ?? c);
     conflictTargetCache.set(table, cols.length ? cols : null);
     return cols.length ? cols : null;
   } catch {
