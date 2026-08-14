@@ -173,6 +173,17 @@ CREATE INDEX IF NOT EXISTS IDX_attachments_isDeleted_utcDateModified
 CREATE INDEX IF NOT EXISTS IDX_attachments_utcDateScheduledForErasureSince
     ON attachments (utcDateScheduledForErasureSince);
 
+-- ── etapi_tokens（Becca loader 无条件查询此表——功能裁剪（不做 ETAPI 路由）≠表裁剪） ──
+CREATE TABLE IF NOT EXISTS etapi_tokens (
+    etapiTokenId    TEXT NOT NULL PRIMARY KEY,
+    user_id         TEXT NOT NULL DEFAULT COALESCE(current_setting('app.user_id', true), ''),
+    name            TEXT NOT NULL,
+    tokenHash       TEXT NOT NULL,
+    utcDateCreated  TEXT NOT NULL,
+    utcDateModified TEXT NOT NULL,
+    isDeleted       INTEGER NOT NULL DEFAULT 0
+);
+
 -- ── user_data（兼容：引擎 initDbConnection 会 CREATE IF NOT EXISTS；Supabase Auth 替代后无查询） ──
 CREATE TABLE IF NOT EXISTS user_data (
     tmpID                    INTEGER PRIMARY KEY,

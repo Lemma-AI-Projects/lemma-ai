@@ -34,11 +34,12 @@ describe('P0-3 迁移运行器', () => {
     for (const expected of [
       'entity_changes', 'branches', 'notes', 'revisions', 'options',
       'attributes', 'recent_notes', 'blobs', 'attachments', 'user_data',
+      // etapi_tokens：Becca loader 无条件查询（BEtapiToken 实体）——功能裁剪≠表裁剪
+      'etapi_tokens',
     ]) {
       expect(names).toContain(expected)
     }
-    // 裁剪表不建
-    expect(names).not.toContain('etapi_tokens')
+    // 裁剪表不建（sessions：认证会话表，引擎启动路径不查询）
     expect(names).not.toContain('sessions')
 
     // sqlite_master 视图：引擎 isDbInitialized 查询

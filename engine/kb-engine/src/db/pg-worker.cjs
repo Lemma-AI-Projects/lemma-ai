@@ -18,8 +18,27 @@ const SQLITE_TO_PG_REWRITES = [
   [/^BEGIN\s+IMMEDIATE/i, 'BEGIN'],
 ];
 
+/**
+ * 引擎 initDbConnection 每次启动会重建 user_data（SQLite 原样 DDL：
+ * DEFAULT "false" 双引号字符串在 PG 是标识符引用——非法；且业务连接角色
+ * 无 schema CREATE 权限，即使表已存在也 permission denied）。
+ * user_data 已由 001 迁移建好（PG 版）——该 DDL no-op 吞掉，表存在性由 001 保证。
+ */
+function noopUserDataDdl(sql) {
+  if (/^\s*CREATE\s+TABLE\s+(IF\s+NOT\s+EXISTS\s+)?"?user_data"?/i.test(sql)) {
+    return 'SELECT 1';
+  }
+  return sql;
+}
+
 function rewriteKnownDialect(sql) {
-  let out = sql;
+  let out = noopUserDataDdl(sql);
+  // options 表复合主键 (user_id, name)：引擎 SqlService.upsert 生成
+  // ON CONFLICT (name)（假设单列 PK）在 PG 不匹配唯一约束 → 补全为完整目标。
+  // 插入行 user_id 走动态默认（current_setting）→ 命中当前用户的配置行，语义正确。
+  if (/^\s*INSERT\s+INTO\s+options\b/i.test(out)) {
+    out = out.replace(/ON\s+CONFLICT\s*\(\s*name\s*\)/gi, 'ON CONFLICT (user_id, name)');
+  }
   for (const [re, rep] of SQLITE_TO_PG_REWRITES) {
     out = out.replace(re, rep);
   }
@@ -40,16 +59,26 @@ function convertQuery(sql, params) {
     return { sql: rewrite(sql, () => '$' + ++counter), params, upsertTable, upsertColumns };
   }
 
-  const entries = Object.entries(params || {})
-    .filter(([k]) => /^param\d+$/.test(k))
-    .sort(([a], [b]) => parseInt(a.slice(5), 10) - parseInt(b.slice(5), 10));
+  // named 参数对象：:paramN（SqlService 的 ??? 展开）与 @identifier（upsert）都支持
+  const keys = Object.keys(params || {});
+  const entries =
+    keys.filter((k) => /^param\d+$/.test(k))
+        .sort((a, b) => parseInt(a.slice(5), 10) - parseInt(b.slice(5), 10));
+  const entriesList = entries.length > 0 ? entries : keys;
+  const idxByFinal = new Map(entriesList.map((k, i) => [k, i + 1]));
   const sqlOut = rewrite(sql, (tok) => {
     const m = /^:param(\d+)$/.exec(tok);
     if (m) return '$' + parseInt(m[1], 10);
+    const at = /^@(\w+)$/.exec(tok);
+    if (at) {
+      const i = idxByFinal.get(at[1]);
+      if (!i) throw new Error(`[pg-dialect] unknown named param @${at[1]}: ${sql.slice(0, 120)}`);
+      return '$' + i;
+    }
     if (tok === '?') throw new Error(`[pg-dialect] positional placeholder in named query: ${sql.slice(0, 120)}`);
     return tok;
   });
-  return { sql: sqlOut, params: entries.map(([, v]) => v), upsertTable, upsertColumns };
+  return { sql: sqlOut, params: entriesList.map((k) => params[k]), upsertTable, upsertColumns };
 }
 
 function extractInsertColumns(sql) {
@@ -103,10 +132,16 @@ function rewrite(sql, replacer) {
       const m = /^:param\d+/.exec(sql.slice(i));
       out.push(replacer(m[0]));
       i += m[0].length;
+    } else if (ch === '@' && /^@\w+/.test(sql.slice(i))) {
+      // SqlService.upsert 的 @identifier 命名参数（如 @noteId）→ replacer（$n）
+      const m = /^@\w+/.exec(sql.slice(i));
+      out.push(replacer(m[0]));
+      i += m[0].length;
     } else {
       let j = i;
       // 特殊字符集合必须包含反引号（否则反引号被当普通文本吞掉，转换分支永不触发）
-      while (j < n && !'?"\'`:/-'.includes(sql[j])) j += 1;
+      // 同样包含 @（否则 @identifier 参数被当普通文本吞掉）
+      while (j < n && !'?@"\'`:/-'.includes(sql[j])) j += 1;
       out.push(sql.slice(i, j));
       i = j;
     }
@@ -380,6 +415,7 @@ async function handleMessage(msg) {
 // 初始化链：连接（+bootstrapSql）→ 注册消息处理。
 // bootstrapSql = 测试引导，把 pg-mem/pglite 库初始化为迁移产物（与 db/migrations/001 一致）；
 // 真实部署的建表走 db/migrate.ts（独立连接），不经由 provider。
+if (parentPort) {
 (async () => {
   try {
     if (usePglite) {
@@ -412,6 +448,7 @@ async function handleMessage(msg) {
   }
   parentPort.on('message', handleMessage);
 })();
+}
 
 /**
  * 普通 INSERT 附加 RETURNING pk（提供 lastInsertRowid）。
@@ -426,4 +463,8 @@ async function tryAttachReturning(sql, converted) {
 function extractInsertTable(sql) {
   const m = /^\s*INSERT\s+INTO\s+(\w+)/i.exec(sql);
   return m ? m[1] : null;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { noopUserDataDdl, rewriteKnownDialect, convertQuery };
 }
