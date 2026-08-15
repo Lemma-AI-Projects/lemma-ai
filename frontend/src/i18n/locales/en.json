@@ -207,6 +207,13 @@
     "notesTitle": "Notes",
     "notesConnected": "Connected",
     "notesUnavailable": "Knowledge base offline",
-    "notesEmpty": "No notes yet"
+    "notesEmpty": "No notes yet",
+    "notesNewPlaceholder": "New note title…",
+    "notesNewChild": "New child note",
+    "notesNewRoot": "New root note",
+    "notesRename": "Rename",
+    "notesDelete": "Delete",
+    "notesDeleteConfirm": "Delete \"{{title}}\"?",
+    "notesActionFailed": "Action failed, please try again later"
   }
 }

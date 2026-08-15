@@ -88,21 +88,28 @@ export function buildQuickSearchPath(searchString: string): string {
 
 export const quickSearchQueryKey = ['kb', 'quick-search'] as const
 
-/** 在指定笔记下新建（K4.2 树面板「+」用；成功刷新树） */
-export function useCreateNote(parentNoteId: string) {
+/**
+ * 在指定笔记下新建（K4.2 树面板「+」用；成功刷新树）。
+ * parentNoteId 放 variables（组件层不按节点拆 hook，避免条件调用）。
+ */
+export function useCreateNote() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (vars: {
+      parentNoteId: string
       title: string
       type?: string
       content?: string
     }): Promise<KbCreateNoteResult> => {
       const { data } = await signOutOn401(
-        apiClient.post<KbCreateNoteResult>(buildCreateNotePath(parentNoteId), {
-          title: vars.title,
-          type: vars.type ?? 'text',
-          content: vars.content ?? '',
-        })
+        apiClient.post<KbCreateNoteResult>(
+          buildCreateNotePath(vars.parentNoteId),
+          {
+            title: vars.title,
+            type: vars.type ?? 'text',
+            content: vars.content ?? '',
+          }
+        )
       )
       return data
     },
@@ -113,12 +120,14 @@ export function useCreateNote(parentNoteId: string) {
 }
 
 /** 改名（K4.2 inline 编辑用；成功刷新树） */
-export function useChangeTitle(noteId: string) {
+export function useChangeTitle() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (title: string) => {
+    mutationFn: async (vars: { noteId: string; title: string }) => {
       await signOutOn401(
-        apiClient.put(buildChangeTitlePath(noteId), { title })
+        apiClient.put(buildChangeTitlePath(vars.noteId), {
+          title: vars.title,
+        })
       )
     },
     onSuccess: () => {
@@ -128,12 +137,12 @@ export function useChangeTitle(noteId: string) {
 }
 
 /** 删除（K4.2 删除确认用；taskId 随机串满足引擎校验，成功刷新树） */
-export function useDeleteNote(noteId: string) {
+export function useDeleteNote() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (vars: { noteId: string }) => {
       await signOutOn401(
-        apiClient.delete(buildDeleteNotePath(noteId, randomTaskId()))
+        apiClient.delete(buildDeleteNotePath(vars.noteId, randomTaskId()))
       )
     },
     onSuccess: () => {

@@ -207,6 +207,13 @@
     "notesTitle": "笔记",
     "notesConnected": "已连接",
     "notesUnavailable": "笔记库未连接",
-    "notesEmpty": "还没有笔记"
+    "notesEmpty": "还没有笔记",
+    "notesNewPlaceholder": "新笔记标题…",
+    "notesNewChild": "新建子笔记",
+    "notesNewRoot": "新建根笔记",
+    "notesRename": "改名",
+    "notesDelete": "删除",
+    "notesDeleteConfirm": "删除「{{title}}」？",
+    "notesActionFailed": "操作失败，请重试或稍后再试"
   }
 }
