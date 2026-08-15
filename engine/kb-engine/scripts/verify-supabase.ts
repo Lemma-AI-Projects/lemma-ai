@@ -1,18 +1,21 @@
 /**
- * Supabase 部署验证脚本（连真 PG → 迁移 → RLS 角色检查 → 表清单）。
+ * Supabase 部署验证脚本（真 PG 连接）。
  *
  * 用法：
- *   KB_PG_CONNECTION_STRING="postgresql://...@host:5432/postgres" \
+ *   KB_PG_ADMIN_URL="postgresql://postgres:...@host:5432/postgres" \
+ *   KB_PG_CONNECTION_STRING="postgresql://lemma_kb:...@host:5432/postgres" \
  *     node --experimental-strip-types scripts/verify-supabase.ts
  *
- * 验证项：
- *   1. 连接可达（连接串）
- *   2. 迁移可跑（db/migrate.ts：9 业务表 + user_data + etapi_tokens + 种子）
- *   3. 幂等（二次跑不重复应用）
- *   4. 角色非 BYPASSRLS（RLS 生效前提）+ 序列权限
- *   5. 表清单 + options 种子（initialized/dbVersion）
+ * 两个连接的分工（生产姿势）：
+ *   - KB_PG_ADMIN_URL：迁移用（需要 schema DDL 权限；生产=管理连接/SQL 编辑器）。
+ *     缺省回退 KB_PG_CONNECTION_STRING（仅本地开发便利，生产必须显式给）。
+ *   - KB_PG_CONNECTION_STRING：业务连接（非 BYPASSRLS 角色），检查角色/权限/RLS。
  *
- * 注意：业务连接角色必须无 BYPASSRLS（不能用 postgres/service_role）。
+ * 验证项：
+ *   1. 迁移可跑（db/migrate.ts）+ 幂等（二次不重复应用）
+ *   2. 业务角色非 BYPASSRLS（RLS 生效前提）+ 序列权限
+ *   3. 表清单 + options 种子（initialized/dbVersion）
+ *   4. RLS 状态
  */
 import { readFileSync } from 'node:fs'
 
@@ -21,18 +24,19 @@ if (!conn) {
   console.error('[verify] KB_PG_CONNECTION_STRING is required')
   process.exit(1)
 }
+const adminConn = process.env.KB_PG_ADMIN_URL ?? conn
 
 const { runMigrations } = await import('../db/migrate.ts')
 
-// 1. 迁移（真 PG 连接串）
-console.log('[verify] 连接 + 迁移……')
-const first = await runMigrations({ connectionString: conn })
+// 1. 迁移（admin 连接：需要 DDL 权限；业务角色只跑查询）
+console.log('[verify] 迁移（admin 连接）……')
+const first = await runMigrations({ connectionString: adminConn })
 console.log(`[verify] 首次应用: ${first.applied.join(', ') || '(无)'} | dbVersion=${first.dbVersion}`)
 
-const second = await runMigrations({ connectionString: conn })
+const second = await runMigrations({ connectionString: adminConn })
 console.log(`[verify] 二次应用: ${second.applied.join(', ') || '(无，幂等 ✓)'}`)
 
-// 2. 角色/权限/表清单（用 pg 直查）
+// 2. 角色/权限/表清单（业务连接直查）
 const pg = await import('pg')
 const client = new pg.Client({ connectionString: conn })
 await client.connect()
@@ -48,9 +52,12 @@ try {
     console.log('[verify] 角色无 BYPASSRLS ✓（RLS 可生效）')
   }
 
-  // 序列权限（entity_changes.id 自增）
+  // 序列权限（entity_changes.id 自增）——只查 public schema（Supabase 的
+  // auth 等 schema 序列业务角色无权限，扫到会误报）
   const seq = await client.query(
-    "SELECT has_sequence_privilege(current_user, s.relname, 'USAGE') AS ok FROM pg_class s WHERE s.relkind='S' LIMIT 1",
+    "SELECT has_sequence_privilege(current_user, s.relname, 'USAGE') AS ok " +
+    "FROM pg_class s JOIN pg_namespace n ON n.oid = s.relnamespace " +
+    "WHERE s.relkind='S' AND n.nspname = 'public' LIMIT 1",
   )
   console.log(`[verify] 序列 USAGE 权限: ${seq.rows[0]?.ok ?? 'n/a'}（无序列时 n/a 正常）`)
 

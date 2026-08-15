@@ -282,7 +282,13 @@ async function getConflictTarget(table) {
        ) t`,
       [table],
     );
-    const raw = res.rows.length ? (res.rows[0].cols ?? []) : [];
+    // node-pg 对 array_agg（PG 数组）默认返回文本格式 "{a,b}"（非 JS 数组——
+    // pglite 兼容层返回真数组所以单测没暴露）；解析成数组再还原 camelCase。
+    const rawText = res.rows.length ? String(res.rows[0].cols ?? '') : '';
+    const raw = rawText
+      .replace(/^\{|\}$/g, '')
+      .split(',')
+      .filter(Boolean);
     const cols = raw.map((c) => columnNameMap[c] ?? c);
     conflictTargetCache.set(table, cols.length ? cols : null);
     return cols.length ? cols : null;
@@ -457,7 +463,21 @@ if (parentPort) {
   } catch (e) {
     console.error('[pg-worker] init failed:', e.message);
   }
-  parentPort.on('message', handleMessage);
+  // 串行队列：node-pg 的 Client 同一时刻只能执行一条 query。主线程的同步 exec
+  // 是阻塞的（Atomics.wait），但引擎内部有 fire-and-forget 异步查询（未 await），
+  // 会与后续 exec 并发 → pg 报 "client already executing" + payload 损坏。
+  // 所有消息经 Promise 链串行执行，彻底消除并发。
+  let queryChain = Promise.resolve();
+  parentPort.on('message', (msg) => {
+    queryChain = queryChain
+      .then(() => handleMessage(msg))
+      .catch((e) => {
+        // 队列执行期的未捕获错误（handleMessage 已 try/catch，此处兜底）
+        try {
+          writeResult(3, { message: String((e && e.message) || e) });
+        } catch {}
+      });
+  });
 })();
 }
 

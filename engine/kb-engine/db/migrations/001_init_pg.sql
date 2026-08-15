@@ -197,6 +197,14 @@ CREATE TABLE IF NOT EXISTS user_data (
     isSetup                  TEXT DEFAULT 'false'
 );
 
+-- ── root 笔记（空库初始化：引擎新建库路径会建 root，种子库跳过——部署必须补） ──
+INSERT INTO notes (noteId, user_id, title, type, mime, isProtected, isDeleted, dateCreated, dateModified, utcDateCreated, utcDateModified)
+VALUES ('root', '', 'root', 'text', 'text/html', 0, 0, now()::text, now()::text, now()::text, now()::text)
+ON CONFLICT (noteId) DO NOTHING;
+INSERT INTO branches (branchId, user_id, noteId, parentNoteId, notePosition, isExpanded, isDeleted, utcDateModified)
+VALUES ('root-branch', '', 'root', 'none', 10, 1, 0, now()::text)
+ON CONFLICT (branchId) DO NOTHING;
+
 -- ── sqlite_master 兼容视图（引擎 isDbInitialized 查询） ─────────────────────
 -- 用 information_schema.tables 而非 pg_catalog.pg_tables（pg-mem 与真 PG 双端兼容）
 CREATE OR REPLACE VIEW sqlite_master AS

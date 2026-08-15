@@ -15,7 +15,10 @@ revision = "7f3c9a1b5d2e"
 # learn-space 链头（3a5b7c9d1e2f），由 merge 迁移统一汇入主线。
 down_revision = "3a5b7c9d1e2f"
 branch_labels = None
-depends_on = None
+# 历史链缺陷修复（2026-08-15 真 PG 验证发现，与 9e2c4f6a8b1d 同型）：本迁移
+# ALTER payments，但 payments 由 a1b2c3d4e5f6（兄弟支）创建——merge 不保证
+# 兄弟支顺序，乱序执行导致 relation payments does not exist。depends_on 强制。
+depends_on = "a1b2c3d4e5f6"
 
 
 def upgrade() -> None:
