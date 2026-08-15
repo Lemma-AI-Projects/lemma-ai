@@ -14,65 +14,14 @@ Both the capture endpoint and the webhooks (PayPal + Stripe) call
 `finalize_payment`, so the paths can never double-grant.
 """
 
-import random
 import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.payment import CreditLedger, Payment
-from models.profile import Profile
-
-# Mirror user_service.AVATAR_PALETTE so a profile created here looks identical.
-_AVATAR_PALETTE = (
-    "#FF8F50",
-    "#A855F7",
-    "#0EA5E9",
-    "#22C55E",
-    "#F43F5E",
-    "#EAB308",
-    "#6366F1",
-    "#14B8A6",
-)
-
-
-async def _grant_credits(
-    db: AsyncSession,
-    user_id: uuid.UUID,
-    credits: int,
-    reason: str,
-    payment_id: uuid.UUID,
-) -> int:
-    """Add `credits` to the user's balance under a row lock; returns new balance.
-
-    Creates the profile if it somehow doesn't exist yet (it normally does, because
-    it's provisioned on first login), without committing — the caller's outer
-    transaction owns the commit.
-    """
-    profile = await db.get(Profile, user_id, with_for_update=True)
-    if profile is None:
-        profile = Profile(
-            id=user_id,
-            email="",
-            nickname=None,
-            subscription_plan="free",
-            avatar_color=random.choice(_AVATAR_PALETTE),
-            credits_balance=0,
-        )
-        db.add(profile)
-    new_balance = profile.credits_balance + credits
-    profile.credits_balance = new_balance
-    db.add(
-        CreditLedger(
-            user_id=user_id,
-            delta=credits,
-            balance_after=new_balance,
-            reason=reason,
-            payment_id=payment_id,
-        )
-    )
-    return new_balance
+from models.payment import Payment
+from services.credits.ledger import grant_credits
 
 
 async def finalize_payment(
@@ -111,7 +60,11 @@ async def finalize_payment(
     if payer_id is not None:
         pay.paypal_payer_id = payer_id
     pay.captured_at = datetime.now(timezone.utc)
-    new_balance = await _grant_credits(
-        db, pay.user_id, pay.credits, f"purchase:{pay.id}", pay.id
+    await grant_credits(
+        db,
+        pay.user_id,
+        pay.credits,
+        "purchase",
+        ref_id=str(pay.id),
     )
     return (True, pay.credits)

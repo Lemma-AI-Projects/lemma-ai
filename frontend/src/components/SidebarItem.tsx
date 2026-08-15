@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
@@ -8,6 +9,8 @@ interface SidebarItemProps {
   to?: string
   end?: boolean
   onClick?: () => void
+  /** 右侧插槽（如余额徽标），在 label 之后右对齐渲染。 */
+  trailing?: ReactNode
 }
 
 export function SidebarItem({
@@ -16,6 +19,7 @@ export function SidebarItem({
   to,
   end,
   onClick,
+  trailing,
 }: SidebarItemProps) {
   const classes = (isActive: boolean) =>
     cn(
@@ -35,6 +39,7 @@ export function SidebarItem({
       >
         {Icon && <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />}
         <span className="truncate">{label}</span>
+        {trailing && <span className="ml-auto shrink-0">{trailing}</span>}
       </NavLink>
     )
   }
@@ -47,6 +52,7 @@ export function SidebarItem({
     >
       {Icon && <Icon className="size-[18px] shrink-0" strokeWidth={1.75} />}
       <span className="truncate">{label}</span>
+      {trailing && <span className="ml-auto shrink-0">{trailing}</span>}
     </button>
   )
 }

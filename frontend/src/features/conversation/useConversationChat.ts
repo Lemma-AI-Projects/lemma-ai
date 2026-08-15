@@ -28,6 +28,8 @@ interface ConversationChatState {
   /** Tool card collected mid-stream; attached to the assistant turn on finalize. */
   streamingTool: ConversationToolRef | null
   errorMessage: string | null
+  /** 错误码（如 insufficient_credits），供 UI 决定是否展示充值引导。 */
+  errorCode: string | null
   /** 仅首字后出错可一键重试；首字前失败草稿已还原，用户重新发送即重试。 */
   canRetry: boolean
 }
@@ -41,8 +43,13 @@ type ConversationChatAction =
   | { type: 'finalize'; createdAt: string }
   /** 首字前停止：整轮未落库，回滚乐观渲染的 user 气泡。 */
   | { type: 'rollback' }
-  | { type: 'failBeforeOutput'; message: string }
-  | { type: 'failAfterOutput'; message: string; createdAt: string }
+  | { type: 'failBeforeOutput'; message: string; code: string | null }
+  | {
+      type: 'failAfterOutput'
+      message: string
+      code: string | null
+      createdAt: string
+    }
   | { type: 'reset' }
 
 const initialState: ConversationChatState = {
@@ -52,6 +59,7 @@ const initialState: ConversationChatState = {
   streamingReasoningText: '',
   streamingTool: null,
   errorMessage: null,
+  errorCode: null,
   canRetry: false,
 }
 
@@ -97,6 +105,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
+        errorCode: null,
         canRetry: false,
       }
     case 'delta':
@@ -125,6 +134,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
+        errorCode: null,
         canRetry: false,
       }
     case 'rollback':
@@ -135,6 +145,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
+        errorCode: null,
         canRetry: false,
       }
     case 'failBeforeOutput':
@@ -145,6 +156,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: action.message,
+        errorCode: action.code,
         canRetry: false,
       }
     case 'failAfterOutput':
@@ -155,6 +167,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: action.message,
+        errorCode: action.code,
         canRetry: true,
       }
     case 'reset':
@@ -170,21 +183,25 @@ const chatErrorMessages: Record<string, string> = {
   conversation_not_found: '会话不存在或已删除',
   project_not_found: '项目不存在或已删除',
   stream_interrupted: '连接中断，请重试',
+  insufficient_credits: '积分不足，请充值后再试',
 }
 
-function getChatErrorMessage(error: unknown): string {
+function getChatErrorInfo(error: unknown): {
+  message: string
+  code: string | null
+} {
   if (error instanceof ChatStreamError) {
     const message = chatErrorMessages[error.code]
-    if (message) return message
+    if (message) return { message, code: error.code }
     console.error('chat stream error:', error.code, error.message)
-    return '出错了，请重试'
+    return { message: '出错了，请重试', code: error.code }
   }
   // fetch 本身失败（后端未启动 / 断网）抛 TypeError
   if (error instanceof TypeError) {
-    return '无法连接服务器，请重试'
+    return { message: '无法连接服务器，请重试', code: null }
   }
   console.error('chat stream unexpected error:', error)
-  return '发送失败，请重试'
+  return { message: '发送失败，请重试', code: null }
 }
 
 function isAbortError(error: unknown): boolean {
@@ -356,18 +373,19 @@ export function useConversationChat({
           // 清掉本地会话，让 RequireAuth 守卫把用户带回登录页
           void supabase.auth.signOut()
         }
-        const message = getChatErrorMessage(error)
+        const { message, code } = getChatErrorInfo(error)
         if (hasOutputRef.current) {
           // 部分回答后端已落库，就是这条消息的最终内容
           apply({
             type: 'failAfterOutput',
             message,
+            code,
             createdAt: new Date().toISOString(),
           })
         } else {
           // 整轮未落库：回滚 user 气泡、丢弃预生成 id、草稿还原到输入框
           pendingIdRef.current = null
-          apply({ type: 'failBeforeOutput', message })
+          apply({ type: 'failBeforeOutput', message, code })
           callbacksRef.current.onRestoreDraft(lastUserTextRef.current ?? content)
         }
         invalidateConversations()
@@ -452,6 +470,7 @@ export function useConversationChat({
     streamingReasoningText: state.streamingReasoningText,
     streamingTool: state.streamingTool,
     errorMessage: state.errorMessage,
+    errorCode: state.errorCode,
     canRetry: state.canRetry,
     selfCreatedId,
     send,

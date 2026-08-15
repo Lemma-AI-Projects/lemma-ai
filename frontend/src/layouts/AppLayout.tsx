@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Badge } from '@/components/ui/badge'
 import {
   CalendarDays,
   Coins,
@@ -25,8 +26,34 @@ import { SidebarSection } from '@/components/SidebarSection'
 import { useConversationsQuery } from '@/features/conversation/conversationApi'
 import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
 import { useCoursesListQuery } from '@/features/course/courseLearningApi'
+import { useBalance } from '@/features/payments/usePayments'
 import { LearnSpaceOnboardingDialog } from '@/features/learn-space/LearnSpaceOnboardingDialog'
 import { useProjectsQuery } from '@/features/project/projectApi'
+
+/** 侧边栏积分入口右侧展示的余额徽标 */
+function CreditsBadge() {
+  const balance = useBalance()
+  if (balance.isLoading) {
+    return (
+      <Skeleton className="h-4 w-10 rounded-full" />
+    )
+  }
+  if (balance.isError || !balance.data) {
+    return null
+  }
+  const isLow = balance.data.credits <= 50
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'px-1.5 py-0 text-[10px] font-medium tabular-nums',
+        isLow ? 'bg-red-50 text-red-600 border-red-200' : 'bg-zinc-50 text-zinc-600 border-zinc-200'
+      )}
+    >
+      {balance.data.credits}
+    </Badge>
+  )
+}
 
 function SidebarHeader({ children }: { children?: ReactNode }) {
   return (
@@ -129,7 +156,12 @@ export function AppLayout() {
           to="/learn-spaces"
         />
         <SidebarItem icon={Puzzle} label={t('nav.plugins')} to="/plugins" />
-        <SidebarItem icon={Coins} label={t('nav.credits')} to="/gotopay" />
+        <SidebarItem
+          icon={Coins}
+          label={t('nav.credits')}
+          to="/gotopay"
+          trailing={<CreditsBadge />}
+        />
         <div
           className={cn(
             'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',

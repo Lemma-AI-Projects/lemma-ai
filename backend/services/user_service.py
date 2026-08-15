@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from models.payment import CreditLedger
 from models.profile import Profile
 
 # A small palette so each new user gets a distinct, stable avatar color.
@@ -17,6 +18,11 @@ AVATAR_PALETTE = (
     "#6366F1",
     "#14B8A6",
 )
+
+# Free credits granted on first login (拍板 2026-08-14). Enough for a real
+# first experience of the AI features; the balance is metered against actual
+# AI cost (1 credit = $0.01) and hard-blocks at zero.
+SIGNUP_BONUS_CREDITS = 500
 
 
 async def get_or_create_profile(
@@ -45,8 +51,17 @@ async def get_or_create_profile(
         nickname=None,
         subscription_plan="free",
         avatar_color=random.choice(AVATAR_PALETTE),
+        credits_balance=SIGNUP_BONUS_CREDITS,
     )
     db.add(profile)
+    db.add(
+        CreditLedger(
+            user_id=user_id,
+            delta=SIGNUP_BONUS_CREDITS,
+            balance_after=SIGNUP_BONUS_CREDITS,
+            reason="signup_bonus",
+        )
+    )
     try:
         await db.commit()
     except IntegrityError:

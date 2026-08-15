@@ -7,6 +7,7 @@ from api.v1 import (
     companion,
     conversations,
     courses,
+    credits,
     graphs,
     health,
     learn_spaces,
@@ -33,4 +34,5 @@ api_router.include_router(onboarding.router)
 api_router.include_router(board.router)
 api_router.include_router(kb_gateway.router)
 api_router.include_router(payments.router)
+api_router.include_router(credits.router)
 api_router.include_router(webhooks.router)

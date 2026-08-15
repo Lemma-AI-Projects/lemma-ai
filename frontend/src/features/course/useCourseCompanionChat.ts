@@ -33,6 +33,8 @@ interface CourseCompanionChatState {
   /** Tool card collected mid-stream; attached to the assistant turn on finalize. */
   streamingTool: ConversationToolRef | null
   errorMessage: string | null
+  /** 错误码（如 insufficient_credits），供 UI 决定是否展示充值引导。 */
+  errorCode: string | null
   canRetry: boolean
 }
 
@@ -44,8 +46,8 @@ type CourseCompanionChatAction =
   | { type: 'tool'; tool: ConversationToolRef }
   | { type: 'finalize'; createdAt: string }
   | { type: 'rollback' }
-  | { type: 'failBeforeOutput'; message: string }
-  | { type: 'failAfterOutput'; message: string; createdAt: string }
+  | { type: 'failBeforeOutput'; message: string; code: string | null }
+  | { type: 'failAfterOutput'; message: string; code: string | null; createdAt: string }
   | { type: 'reset' }
 
 const initialState: CourseCompanionChatState = {
@@ -55,6 +57,7 @@ const initialState: CourseCompanionChatState = {
   streamingReasoningText: '',
   streamingTool: null,
   errorMessage: null,
+  errorCode: null,
   canRetry: false,
 }
 
@@ -101,6 +104,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
+        errorCode: null,
         canRetry: false,
       }
     case 'preparing': {
@@ -138,6 +142,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
+        errorCode: null,
         canRetry: false,
       }
     case 'rollback':
@@ -148,6 +153,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: null,
+        errorCode: null,
         canRetry: false,
       }
     case 'failBeforeOutput':
@@ -158,6 +164,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: action.message,
+        errorCode: action.code,
         canRetry: false,
       }
     case 'failAfterOutput':
@@ -168,6 +175,7 @@ function reduce(
         streamingReasoningText: '',
         streamingTool: null,
         errorMessage: action.message,
+        errorCode: action.code,
         canRetry: true,
       }
     case 'reset':
@@ -186,20 +194,24 @@ const companionErrorMessages: Record<string, string> = {
   not_found: '课程、章节或会话不存在',
   chapter_required: '请先打开一个视频章节',
   stream_interrupted: '连接中断，请重试',
+  insufficient_credits: '积分不足，请充值后再试',
 }
 
-function getCompanionErrorMessage(error: unknown): string {
+function getCompanionErrorInfo(error: unknown): {
+  message: string
+  code: string | null
+} {
   if (error instanceof CourseCompanionStreamError) {
     const message = companionErrorMessages[error.code]
-    if (message) return message
+    if (message) return { message, code: error.code }
     console.error('course companion stream error:', error.code, error.message)
-    return '出错了，请重试'
+    return { message: '出错了，请重试', code: error.code }
   }
   if (error instanceof TypeError) {
-    return '无法连接服务器，请重试'
+    return { message: '无法连接服务器，请重试', code: null }
   }
   console.error('course companion stream unexpected error:', error)
-  return '发送失败，请重试'
+  return { message: '发送失败，请重试', code: null }
 }
 
 function isAbortError(error: unknown): boolean {
@@ -371,7 +383,7 @@ export function useCourseCompanionChat({
         ) {
           void supabase.auth.signOut({ scope: 'local' })
         }
-        const message = getCompanionErrorMessage(error)
+        const { message, code } = getCompanionErrorInfo(error)
         if (hasOutputRef.current) {
           const settledConversationId =
             activeConversationId ??
@@ -380,6 +392,7 @@ export function useCourseCompanionChat({
           apply({
             type: 'failAfterOutput',
             message,
+            code,
             createdAt: new Date().toISOString(),
           })
           if (settledConversationId) {
@@ -387,7 +400,7 @@ export function useCourseCompanionChat({
           }
         } else {
           pendingIdRef.current = null
-          apply({ type: 'failBeforeOutput', message })
+          apply({ type: 'failBeforeOutput', message, code })
           callbacksRef.current.onRestoreDraft(lastUserTextRef.current ?? content)
         }
         invalidateConversationLists()
@@ -474,6 +487,7 @@ export function useCourseCompanionChat({
     streamingReasoningText: state.streamingReasoningText,
     streamingTool: state.streamingTool,
     errorMessage: state.errorMessage,
+    errorCode: state.errorCode,
     canRetry: state.canRetry,
     selfCreatedId,
     send,

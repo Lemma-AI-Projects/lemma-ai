@@ -21,6 +21,7 @@ from core.security import CurrentUser, get_current_user
 from models.ai_conversation import AiConversation
 from schemas.companion import CompanionChatRequest, CompanionConversationOut
 from services import companion_service, conversation_service, course_service
+from services.credits.ledger import InsufficientCredits, require_credits
 
 router = APIRouter(prefix="/courses", tags=["companion"])
 
@@ -61,6 +62,15 @@ async def companion_chat(
     # Short-lived session (NOT Depends(get_db)): a streaming response holds its
     # dependency's DB for the whole stream and errors on cleanup on disconnect.
     async with AsyncSessionLocal() as db:
+        # Hard credit gate (拍板 2026-08-14): zero credits blocks the turn with
+        # a clean 402 so the client can route to the top-up page.
+        try:
+            await require_credits(db, current_user.id, min_credits=1)
+        except InsufficientCredits as exc:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="insufficient_credits",
+            ) from exc
         context = await companion_service.prepare_turn(
             db, payload, current_user, course_id=course_id
         )

@@ -176,8 +176,10 @@ export function ConversationPage() {
           reasoningText={chat.streamingReasoningText}
           tool={chat.streamingTool}
           errorMessage={chat.errorMessage}
+          errorCode={chat.errorCode}
           canRetry={chat.canRetry}
           onRetry={chat.retry}
+          onTopUp={() => navigate('/gotopay')}
         />
       </>
     )

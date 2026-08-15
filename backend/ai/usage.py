@@ -25,10 +25,12 @@ from decimal import Decimal
 from typing import Any
 
 from core.database import AsyncSessionLocal
+from core import aio
 from models.ai_usage_log import AiUsageLog
 
 from ai.telemetry import emit_experience
 from ai.types import AIUseCase, ModelRoute, TokenUsage
+from services.credits.ledger import deduct_credits, usd_to_credits
 
 logger = logging.getLogger("lemma.ai.usage")
 
@@ -261,3 +263,41 @@ async def _persist(
                 await session.commit()
     except Exception:  # noqa: BLE001 — the ledger must never break the AI call
         logger.exception("failed to persist ai_usage_log row (trace_id=%s)", record["trace_id"])
+        return
+
+    # Meter the user's credits against the actual AI cost (拍板 2026-08-14:
+    # 1 credit = $0.01). Fire-and-forget like the ledger write above — a credit
+    # hiccup must never break the AI response. Only successful, attributed,
+    # paid calls deduct; failures/free tiers are tracking-only.
+    if record.get("success") and user_id and record.get("cost_usd"):
+        aio.spawn_protected(
+            _deduct_for_usage(
+                user_id=user_id,
+                cost_usd=record["cost_usd"],
+                trace_id=record["trace_id"],
+            )
+        )
+
+
+async def _deduct_for_usage(
+    *, user_id: str, cost_usd: Decimal | None, trace_id: str
+) -> None:
+    """Deduct credits for a metered AI call; never raises to the caller."""
+    credits = usd_to_credits(cost_usd)
+    if credits <= 0:
+        return
+    try:
+        async with asyncio.timeout(15):
+            async with AsyncSessionLocal() as session:
+                await deduct_credits(
+                    session,
+                    uuid.UUID(user_id),
+                    credits,
+                    "ai_usage",
+                    ref_id=trace_id,
+                )
+                await session.commit()
+    except Exception:  # noqa: BLE001 — metering must never break the AI call
+        logger.exception(
+            "failed to deduct credits for ai_usage (trace_id=%s)", trace_id
+        )

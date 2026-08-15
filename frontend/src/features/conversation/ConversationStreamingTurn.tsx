@@ -1,4 +1,4 @@
-import { RotateCw } from 'lucide-react'
+import { Coins, RotateCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DesmosGraphCard } from '@/features/desmos/DesmosGraphCard'
 import { ConversationReasoning } from './ConversationReasoning'
@@ -17,6 +17,7 @@ export type ConversationStreamingTurnStatus =
  * markdown。出错时半截内容已由状态机定稿进消息列表（后端已落库），
  * 这里只渲染错误横幅；canRetry（首字后出错）时附重试按钮，首字前
  * 失败则草稿已还原到输入框，用户重新发送即重试。
+ * insufficient_credits 时展示「去充值」引导，跳转充值页。
  */
 export function ConversationStreamingTurn({
   status,
@@ -24,9 +25,11 @@ export function ConversationStreamingTurn({
   reasoningText,
   tool = null,
   errorMessage,
+  errorCode = null,
   canRetry,
   waitingMessage = 'Thinking...',
   onRetry,
+  onTopUp,
 }: {
   status: ConversationStreamingTurnStatus
   text: string
@@ -36,9 +39,13 @@ export function ConversationStreamingTurn({
    *  keeps its existing finalize-time rendering. */
   tool?: ConversationToolRef | null
   errorMessage: string | null
+  /** 错误码（如 insufficient_credits），决定是否展示充值引导。 */
+  errorCode?: string | null
   canRetry: boolean
   waitingMessage?: string
   onRetry: () => void
+  /** 积分不足时展示「去充值」按钮的跳转回调。 */
+  onTopUp?: () => void
 }) {
   if (status === 'idle') {
     return null
@@ -72,8 +79,20 @@ export function ConversationStreamingTurn({
         )}
 
       {status === 'error' && (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="text-sm text-destructive">{errorMessage ?? '出错了，请重试'}</p>
+          {errorCode === 'insufficient_credits' && onTopUp && (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="rounded-full bg-transparent"
+              onClick={onTopUp}
+            >
+              <Coins className="size-3" />
+              去充值
+            </Button>
+          )}
           {canRetry && (
             <Button
               type="button"
