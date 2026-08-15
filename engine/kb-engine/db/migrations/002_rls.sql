@@ -27,10 +27,12 @@ CREATE POLICY entity_changes_isolation ON entity_changes
     USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
     WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY branches_isolation ON branches
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    USING (user_id = COALESCE(current_setting('app.user_id', true), '')
+           OR (user_id = '' AND noteId = 'root'))
     WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY notes_isolation ON notes
-    USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
+    USING (user_id = COALESCE(current_setting('app.user_id', true), '')
+           OR (user_id = '' AND noteId = 'root'))
     WITH CHECK (user_id = COALESCE(current_setting('app.user_id', true), ''));
 CREATE POLICY revisions_isolation ON revisions
     USING (user_id = COALESCE(current_setting('app.user_id', true), ''))
