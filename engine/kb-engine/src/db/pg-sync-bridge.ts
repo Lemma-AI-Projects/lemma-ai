@@ -96,7 +96,7 @@ export class PgSyncBridge {
 
     const state = Atomics.load(this.control, CONTROL_STATE)
     const len = Atomics.load(this.control, CONTROL_LEN)
-    const json = new TextDecoder().decode(this.payload.subarray(0, len))
+    let json = new TextDecoder().decode(this.payload.subarray(0, len))
 
     // 复位状态供下一次调用
     Atomics.store(this.control, CONTROL_STATE, STATE_IDLE)
@@ -106,7 +106,22 @@ export class PgSyncBridge {
       const parsed = JSON.parse(json) as { message: string }
       throw new Error(parsed.message || '[pg-bridge] worker error')
     }
-    return JSON.parse(json, reviver) as T
+
+    // 防御：共享内存普通写与 Atomics 通知的跨线程可见性在 Windows 偶发延迟
+    // （worker 已 notify 但 payload 尚未完全可见）——解析失败短等重读，最多 3 次。
+    let parsed: T
+    for (let attempt = 0; ; attempt++) {
+      try {
+        parsed = JSON.parse(json, reviver) as T
+        break
+      } catch {
+        if (attempt >= 2) throw new Error('[pg-bridge] invalid worker payload')
+        Atomics.wait(this.control, CONTROL_STATE, STATE_IDLE, 50)
+        const len2 = Atomics.load(this.control, CONTROL_LEN)
+        json = new TextDecoder().decode(this.payload.subarray(0, len2))
+      }
+    }
+    return parsed
   }
 
   close(): void {

@@ -8,7 +8,7 @@
  *   4. POST /kb/api/notes/:parentNoteId/children —— 写路径（createNote，建子笔记）
  *   5. 门控：未调用 mountApiRoutes 时 /kb/api/* 404（默认关 = 无暴露面）
  */
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import request from 'supertest'
 import { PgProvider } from '../db/pg-provider.ts'
@@ -52,6 +52,7 @@ ON CONFLICT DO NOTHING;
 let ctx: EngineContext
 let provider: PgProvider
 let app: ReturnType<typeof createKbApp>
+afterAll(() => provider?.close())
 
 beforeAll(async () => {
   provider = new PgProvider({

@@ -8,7 +8,7 @@
  *   3. 写后一致：BNote().save() 后 becca.notes 即时含新 noteId（PG 与缓存同源）
  *   4. 引擎业务方法可用（getNote/title 读回——K2 挂载的前置断言）
  */
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { PgProvider } from '../db/pg-provider.ts'
 import { initEngineContext, type EngineContext } from './engine-context.ts'
@@ -46,9 +46,11 @@ ON CONFLICT DO NOTHING;
 `
 
 let ctx: EngineContext
+let provider: PgProvider
+afterAll(() => provider?.close())
 
 beforeAll(async () => {
-  const provider = new PgProvider({
+  provider = new PgProvider({
     connectionString: 'pglite://k1',
     usePglite: true,
     primaryKeys: PRIMARY_KEYS,

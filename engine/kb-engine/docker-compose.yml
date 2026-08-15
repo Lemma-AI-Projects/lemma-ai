@@ -1,0 +1,59 @@
+# kb-engine + FastAPI 网关部署编排（真 Supabase 环境）
+#
+# 前置：Supabase 项目（云端或本地 supabase start）已就绪，PG 连接串可用。
+# 角色要求：业务连接角色必须【无 BYPASSRLS】（如 authenticated / 自定义 lemma_kb），
+# 不能是 postgres/service_role（它们绕过 RLS，租户隔离失效）。
+#
+# 用法：
+#   docker compose -f engine/kb-engine/docker-compose.yml up -d
+#
+# 环境变量（部署时注入，勿提交明文）：
+#   KB_PG_CONNECTION_STRING  侧车连 Supabase PG（非 bypass RLS 角色）
+#   SUPABASE_URL / SUPABASE_JWT_SECRET  网关 JWT 验证
+#   KB_ENGINE_URL            网关 → 侧车内网地址
+#   VITE_API_BASE_URL（前端构建时）→ 网关公网地址
+services:
+  kb-engine:
+    build:
+      context: ./engine/kb-engine
+      dockerfile: Dockerfile
+    environment:
+      - KB_PG_CONNECTION_STRING=${KB_PG_CONNECTION_STRING}
+      - KB_PORT=3210
+      # 全量 API（搜索/写路径/编辑器）——生产启用；false 时仅 /kb/health + 只读树
+      - KB_FULL_API_ENABLED=${KB_FULL_API_ENABLED:-true}
+    expose:
+      - "3210"
+    networks:
+      - lemma-internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3210/kb/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - AIHUBMIX_API_KEY=${AIHUBMIX_API_KEY}
+      # 网关 → 侧车（内网）
+      - KB_ENGINE_URL=${KB_ENGINE_URL:-http://kb-engine:3210}
+    ports:
+      - "8000:8000"
+    depends_on:
+      kb-engine:
+        condition: service_healthy
+    networks:
+      - lemma-internal
+    restart: unless-stopped
+
+networks:
+  lemma-internal:
+    driver: bridge
