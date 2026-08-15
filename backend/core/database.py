@@ -22,14 +22,19 @@ class Base(DeclarativeBase):
 #   超限报 EMAXCONNSESSION)。SQLAlchemy 默认 5+10 让单进程能冲到 15 条 —— uvicorn 与
 #   每个 Celery worker 各持一份 engine, 必须收敛每进程上限。
 # - pool_recycle: 长闲连接主动换新, 避免被 pooler/NAT 掐掉后才发现。
-engine = create_async_engine(
-    settings.database_url,
-    pool_pre_ping=True,
-    pool_size=3,
-    max_overflow=2,
-    pool_recycle=1800,
-    connect_args={"timeout": 10, "command_timeout": 30},
-)
+# - sqlite（测试内存库）不支持 pool_size/max_overflow 等连接池参数——按方言分支，
+#   生产（asyncpg）走完整纪律参数，测试（sqlite）走默认池。
+if settings.database_url.startswith("sqlite"):
+    engine = create_async_engine(settings.database_url)
+else:
+    engine = create_async_engine(
+        settings.database_url,
+        pool_pre_ping=True,
+        pool_size=3,
+        max_overflow=2,
+        pool_recycle=1800,
+        connect_args={"timeout": 10, "command_timeout": 30},
+    )
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
