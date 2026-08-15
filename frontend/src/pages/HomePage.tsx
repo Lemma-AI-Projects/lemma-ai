@@ -5,7 +5,11 @@ import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
 import { ChatInput } from '@/features/home/ChatInput'
 import { HomeUserMenu } from '@/features/home/HomeUserMenu'
-import { suggestions } from '@/mock/homeSuggestions'
+import { suggestions as baseSuggestions } from '@/mock/homeSuggestions'
+import {
+  usePlugins,
+} from '@/features/plugins/pluginsApi'
+import { installedPluginSuggestions } from '@/features/plugins/pluginSuggestions'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -22,6 +26,14 @@ export function HomePage() {
       },
     })
   }
+
+  // P5-A：首页建议 = 通用 4 条 + 已安装学科插件的增补建议（真实安装态驱动；
+  // 后端不可达时 usePlugins isError → 仅通用 4 条，fail-open 不崩）。
+  const { data: installedPlugins } = usePlugins()
+  const pluginSuggestions = installedPluginSuggestions(
+    installedPlugins?.filter((p) => p.installed).map((p) => p.subject) ?? []
+  )
+  const suggestions = [...baseSuggestions, ...pluginSuggestions]
 
   // TODO: wire to real schedule data (e.g. completed / total tasks for today).
   // Kept as a placeholder so the ring + icon swap can be exercised visually.
@@ -73,6 +85,7 @@ export function HomePage() {
                 icon={s.icon}
                 iconColor={s.iconColor}
                 label={s.label}
+                onClick={() => handleSend(s.label)}
               />
             ))}
           </div>
