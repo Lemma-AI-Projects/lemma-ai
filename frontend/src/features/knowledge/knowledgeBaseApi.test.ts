@@ -8,7 +8,9 @@ import {
   buildChangeTitlePath,
   buildCreateNotePath,
   buildDeleteNotePath,
+  buildNoteBlobPath,
   buildQuickSearchPath,
+  buildUpdateNoteDataPath,
 } from './knowledgeBaseApi'
 
 describe('K4.1 kb write/search API 路径构建', () => {
@@ -46,6 +48,26 @@ describe('K4.1 kb write/search API 路径构建', () => {
   it('搜索：GET /quick-search/:searchString（中文编码）', () => {
     expect(buildQuickSearchPath('导数')).toBe(
       '/api/v1/kb/api/quick-search/%E5%AF%BC%E6%95%B0'
+    )
+  })
+})
+
+describe('K5.2 内容读写 API 路径构建', () => {
+  it('读内容：GET /notes/:noteId/blob', () => {
+    expect(buildNoteBlobPath('note-abc')).toBe(
+      '/api/v1/kb/api/notes/note-abc/blob'
+    )
+  })
+
+  it('读内容：noteId 含中文 → encodeURIComponent', () => {
+    expect(buildNoteBlobPath('导数 笔记')).toBe(
+      '/api/v1/kb/api/notes/%E5%AF%BC%E6%95%B0%20%E7%AC%94%E8%AE%B0/blob'
+    )
+  })
+
+  it('存内容：PUT /notes/:noteId/data', () => {
+    expect(buildUpdateNoteDataPath('note-abc')).toBe(
+      '/api/v1/kb/api/notes/note-abc/data'
     )
   })
 })

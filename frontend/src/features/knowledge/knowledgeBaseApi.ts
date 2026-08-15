@@ -88,6 +88,63 @@ export function buildQuickSearchPath(searchString: string): string {
 
 export const quickSearchQueryKey = ['kb', 'quick-search'] as const
 
+// ── K5：内容读写（编辑器） ──────────────────────────────────────────────────
+
+/** 笔记内容 blob：GET /notes/:noteId/blob（text 笔记 content 为 HTML 字符串） */
+export function buildNoteBlobPath(noteId: string): string {
+  return `/api/v1/kb/api/notes/${encodeURIComponent(noteId)}/blob`
+}
+
+/** 保存内容：PUT /notes/:noteId/data（body: { content, attachments? }） */
+export function buildUpdateNoteDataPath(noteId: string): string {
+  return `/api/v1/kb/api/notes/${encodeURIComponent(noteId)}/data`
+}
+
+/** blob POJO（引擎 blobService.getBlobPojo 返回；isStubbed = 内容被同步裁剪） */
+export interface KbNoteBlob {
+  blobId: string
+  content: string | null
+  contentLength: number
+  isStubbed: boolean
+}
+
+export const noteContentQueryKey = (noteId: string) =>
+  ['kb', 'note-content', noteId] as const
+
+/** 读取笔记内容（编辑器加载用；失败/门控关 → null，组件 fail-open 显示不可用） */
+export function useNoteContent(noteId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: noteContentQueryKey(noteId),
+    queryFn: async (): Promise<KbNoteBlob | null> => {
+      const { data } = await signOutOn401(
+        apiClient.get<KbNoteBlob>(buildNoteBlobPath(noteId))
+      )
+      return data ?? null
+    },
+    enabled: enabled && noteId.length > 0,
+    retry: false,
+    staleTime: 60_000,
+  })
+}
+
+/** 保存内容（编辑器保存用；成功后 invalidate 内容缓存 + 树（标题可能变）） */
+export function useUpdateNoteContent(noteId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (content: string) => {
+      await signOutOn401(
+        apiClient.put(buildUpdateNoteDataPath(noteId), { content })
+      )
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: noteContentQueryKey(noteId),
+      })
+      void queryClient.invalidateQueries({ queryKey: notesTreeQueryKey })
+    },
+  })
+}
+
 /**
  * 在指定笔记下新建（K4.2 树面板「+」用；成功刷新树）。
  * parentNoteId 放 variables（组件层不按节点拆 hook，避免条件调用）。
