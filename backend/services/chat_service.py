@@ -57,6 +57,10 @@ class TurnContext:
     # prompt so the companion speaks with its own voice. None for unfiled or
     # course conversations.
     agent_persona: str | None = None
+    # C1 learner 记忆注入块（L1 S3）：<memory-context>（概念掌握 + 最近卡点）。
+    # 仅 learn space 对话 + lemma_hermes 门控开时非 None；其余为 None =>
+    # 模板 Memory guidance 不激活，行为与注入前一致。
+    learner_memory: str | None = None
 
 
 # The previous turn's write is async (done doesn't wait for it); a fast
@@ -102,6 +106,58 @@ async def _agent_persona_for_project(
     return build_agent_persona(project)
 
 
+# ── L1 S3：learner 记忆注入块（C1）────────────────────────────────────────
+_LEARNER_MEMORY_MAX_CHARS = 800
+
+# D2 决策（自然引用）：guidance 只在有记忆时随块输出——模板只留 $learner_memory
+# 一个占位，无记忆时整段为空，prompt 与注入前逐字节一致。
+_LEARNER_MEMORY_GUIDANCE = (
+    "Memory guidance:\n"
+    "- You may reference the learner's past knowledge state naturally, like a\n"
+    "  real tutor would (\"你上次卡在换元法，这次我们从这里继续\"), without\n"
+    "  announcing that you are reading a record.\n"
+    "- Never invent states that are not in the block."
+)
+
+
+def build_learner_memory_block(
+    user_id: uuid.UUID, project_id: uuid.UUID | None
+) -> str | None:
+    """C1 learner 记忆注入（S3，2026-08-15）。
+
+    触发条件（全满足才注入）：
+    - learn space 对话（project_id 非 None）——S3 计划定义的范围
+    - lemma_hermes 门控开（get_learner_service() 非 None）
+    D3 决策：只注入「概念掌握 + 最近卡点」两层（knowledge_summary +
+    memory_context），硬限 800 字符防 prompt 膨胀。
+    每 turn 重新生成（不做会话缓存）：S4 工具调用会改 learner 状态，缓存
+    会让下一轮看到过期记忆；SQLite 查询毫秒级，turn 级成本可接受。
+    fail-open：learner 服务异常 => None（不阻塞对话）。
+    """
+    if project_id is None:
+        return None
+    from services.learner.learner_service import get_learner_service
+
+    svc = get_learner_service()
+    if svc is None:
+        return None
+    try:
+        uid = str(user_id)
+        summary = svc.knowledge_summary(uid, limit=8)
+        memory = svc.memory_context(uid, limit=5)
+        block = "\n".join(p for p in (summary, memory) if p and p.strip())
+        if not block:
+            return None
+        if len(block) > _LEARNER_MEMORY_MAX_CHARS:
+            block = block[:_LEARNER_MEMORY_MAX_CHARS] + "…"
+        return (
+            f"<memory-context>\n{block}\n</memory-context>\n\n"
+            f"{_LEARNER_MEMORY_GUIDANCE}"
+        )
+    except Exception:  # noqa: BLE001 — fail-open：记忆是增强，不阻塞对话
+        return None
+
+
 async def prepare_turn(
     db: AsyncSession, payload: ChatRequest, user: CurrentUser
 ) -> TurnContext | None:
@@ -134,6 +190,9 @@ async def prepare_turn(
             agent_persona=(
                 build_agent_persona(project) if payload.project_id is not None else None
             ),
+            learner_memory=build_learner_memory_block(
+                user.id, payload.project_id
+            ),
         )
 
     conversation = None
@@ -158,6 +217,9 @@ async def prepare_turn(
         history=[ChatMessage(role=row.role, content=row.content_text) for row in rows],
         agent_persona=await _agent_persona_for_project(
             db, user_id=user.id, project_id=conversation.project_id
+        ),
+        learner_memory=build_learner_memory_block(
+            user.id, conversation.project_id
         ),
     )
 
@@ -220,7 +282,10 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         [*context.history, ChatMessage(role="user", content=context.user_content)],
         user_id=str(context.user_id),
         conversation_id=str(context.conversation_id),
-        prompt_vars={"agent_persona": context.agent_persona or ""},
+        prompt_vars={
+            "agent_persona": context.agent_persona or "",
+            "learner_memory": context.learner_memory or "",
+        },
         tools=tools,
     )
     try:

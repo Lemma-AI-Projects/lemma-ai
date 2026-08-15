@@ -23,6 +23,7 @@ LOAD_SKILL = "load_skill"
 RENDER_DESMOS_GRAPH = "render_desmos_graph"
 RENDER_DESMOS_3D_GRAPH = "render_desmos_3d_graph"
 READ_CURRENT_GRAPH = "read_current_graph"
+LEARNER_STATE = "learner_state"
 
 _REGISTRY: dict[str, ToolSpec] = {
     LOAD_CHAPTER_VIDEO: ToolSpec(
@@ -104,6 +105,51 @@ _REGISTRY: dict[str, ToolSpec] = {
             "才算完成修改。无需任何参数。"
         ),
         parameters={"type": "object", "properties": {}},
+    ),
+    # ── L1 S4：learner 记忆读写（C3 工具，2026-08-15）──────────────────────
+    # 引擎 LearnerCore.handle_action 的 action 制封装：一个工具、多个 action
+    # （upsert_concept / record_episode / query_knowledge / add_rule / due_reviews）。
+    # 参数 schema 刻意松（FC schema 是提示、skill 是教材、Pydantic 是法律）：
+    # handler 侧对 action 白名单 + 必填字段做硬校验，非法调用返回错误 JSON。
+    LEARNER_STATE: ToolSpec(
+        name=LEARNER_STATE,
+        description=(
+            "读写学习者的记忆状态（概念掌握 / 学习过程记录 / 规则偏好 / 复习调度）。"
+            "动作（action）与参数：\n"
+            "- upsert_concept：更新概念掌握度。参数 concept（概念名，必填）、"
+            "success（本次是否答对，bool）、domain（领域，默认 general）、"
+            "exposed（是否暴露给学习者，默认 false）。\n"
+            "- record_episode：记录一次学习过程。参数 goal（目标，必填）、"
+            "concept / plugin / method / result（partial|success|failure，默认 "
+            "partial）/ reason / new_strategy（均可选）。\n"
+            "- query_knowledge：查询概念掌握状态。参数 concepts（概念名数组，"
+            "可空——空则返回最近记录）。\n"
+            "- add_rule：记录一条教学规则偏好。参数 rule（规则文本，必填）、"
+            "source（来源，默认 manual）。\n"
+            "- due_reviews：查询到期的复习项。参数 limit（数量，默认 5）。\n"
+            "用途：老师自然引用学习者历史状态（无需点明在读记录）；学习者明确"
+            "表达困惑/卡点/偏好时，调用对应 action 把状态记下来。"
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "upsert_concept",
+                        "record_episode",
+                        "query_knowledge",
+                        "add_rule",
+                        "due_reviews",
+                    ],
+                },
+                "arguments": {
+                    "type": "object",
+                    "description": "各 action 的参数对象（见 description）。",
+                },
+            },
+            "required": ["action"],
+        },
     ),
 }
 

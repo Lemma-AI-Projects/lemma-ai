@@ -174,8 +174,10 @@ class Settings(BaseSettings):
     # product ships with zero engine behavior until explicitly enabled.
     lemma_hermes_enabled: bool = False
     lemma_hermes_engine_package: str = "lemma_hermes"
-    # Empty => learner state lives in the main database (PG); once the engine
-    # lands this may point at a dedicated learner URL if we ever split it out.
+    # Learner 状态存储（2026-08-15 D1 决策：SQLite 先行，引擎零改动）：
+    # 空 => 默认 backend/data/learner.db（引擎原生 SQLite，migrate 自动建 7 表）。
+    # 非空 => 覆盖为自定义路径（测试/多环境用）。PG 抽象为 T2.1 独立项，
+    # 迁移时保持表结构一致（7 表全含 user_id，L1 单文件可接受）。
     lemma_hermes_learner_db_url: str = ""
 
     # ── Semantic board (S3) ────────────────────────────────────────────────

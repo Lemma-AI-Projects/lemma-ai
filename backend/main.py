@@ -21,6 +21,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Fail fast on a broken routing table and open the shared HTTP connection
     # pool that every AI provider call reuses for the process lifetime.
     init_ai_runtime()
+    # LemmaHermes L1 S2：门控开时预热 learner 服务（首次构造即建 7 表）。
+    # 门控关 => get_learner_service() 返回 None，零副作用。预热失败不崩 app
+    # （fail-open：记忆是增强能力，不阻塞核心链路）。
+    from services.learner.learner_service import get_learner_service
+
+    if settings.lemma_hermes_enabled:
+        try:
+            get_learner_service()
+        except Exception:  # noqa: BLE001 — 预热失败仅记录，不阻塞启动
+            import logging
+
+            logging.getLogger(__name__).exception(
+                "learner service warmup failed (continuing without memory)"
+            )
     try:
         yield
     finally:

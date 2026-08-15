@@ -19,3 +19,5 @@ Tool discipline (applies whenever tools are available):
   producing tool with the complete new content to make any change real.
 
 $agent_persona
+
+$learner_memory

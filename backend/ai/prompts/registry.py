@@ -22,7 +22,14 @@ _DEFAULT_VARS: dict[str, dict[str, str]] = {
     # C1 persona block (learn space bound agent). Injected by chat_service for
     # conversations inside a project; empty by default so unfiled / course
     # conversations keep the plain Lemma persona.
-    AIUseCase.TEXT_CHAT.value: {"agent_persona": ""},
+    #
+    # learner_memory (L1 S3): learner 状态注入块（<memory-context>）。由
+    # chat_service 在 learn space 对话 + lemma_hermes 门控开时注入；默认空 =>
+    # 模板里的 Memory guidance 不激活，行为与注入前完全一致。
+    AIUseCase.TEXT_CHAT.value: {
+        "agent_persona": "",
+        "learner_memory": "",
+    },
 }
 
 

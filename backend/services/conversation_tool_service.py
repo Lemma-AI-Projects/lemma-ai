@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel, ValidationError
 
 from ai import (
+    LEARNER_STATE,
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
     RENDER_DESMOS_3D_GRAPH,
@@ -49,6 +50,18 @@ from ai.skills import skill_body, skill_names
 from core.database import AsyncSessionLocal
 from schemas.desmos import Desmos3DGraphPayload, DesmosGraphPayload
 from services import desmos_graph_service
+
+# L1 S4：learner_state 工具支持的 action 白名单（引擎 handle_action 1:1；
+# 未知 action 由 handler 返回错误 JSON 而非抛异常——工具循环内自愈）。
+_LEARNER_ACTIONS = frozenset(
+    {
+        "upsert_concept",
+        "record_episode",
+        "query_knowledge",
+        "add_rule",
+        "due_reviews",
+    }
+)
 
 
 @dataclass
@@ -112,6 +125,48 @@ def build_global_tools(
     message tool_json carries the link (course_planning precedent).
     """
     ctx = TurnToolContext()
+
+    # ── L1 S4：learner 记忆读写（C3 工具）───────────────────────────────────
+    # 门控开才注册（get_learner_service() 非 None）；门控关 => 从 toolset 剔除，
+    # 模型看不到这个工具——双门控（功能 + 工具）可回滚。
+    def build_learner_binding() -> ToolBinding | None:
+        from services.learner.learner_service import get_learner_service
+
+        svc = get_learner_service()
+        if svc is None:
+            return None
+        spec = tool_spec(LEARNER_STATE)
+
+        async def learner_handler(
+            call: ToolCall,
+        ) -> AsyncIterator[ToolProgress | ToolResult]:
+            action = str(call.args.get("action") or "")
+            if action not in _LEARNER_ACTIONS:
+                yield ToolResult(
+                    response={
+                        "status": "unknown_action",
+                        "available": sorted(_LEARNER_ACTIONS),
+                    }
+                )
+                return
+            args = call.args.get("arguments") or {}
+            if not isinstance(args, dict):
+                yield ToolResult(
+                    response={"status": "error", "error": "arguments must be an object"}
+                )
+                return
+            result = svc.handle_action(str(user_id), action, **args)
+            if not result.get("success"):
+                yield ToolResult(
+                    response={
+                        "status": "error",
+                        "error": result.get("error", "unknown error"),
+                    }
+                )
+                return
+            yield ToolResult(response={"status": "ok", **result})
+
+        return ToolBinding(spec=spec, handler=learner_handler)
 
     async def load_skill_handler(
         call: ToolCall,
@@ -237,4 +292,5 @@ def build_global_tools(
             for config in _RENDER_CONFIGS
         ),
         ToolBinding(spec=tool_spec(READ_CURRENT_GRAPH), handler=read_handler),
+        *([learner_binding] if (learner_binding := build_learner_binding()) else []),
     ]

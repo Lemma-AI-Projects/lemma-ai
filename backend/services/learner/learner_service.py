@@ -5,10 +5,13 @@
   服务形式暴露：action 转发（C3 工具数据面）+ 记忆上下文生成（C1 注入数据面）
 - 铁律：engine/ 零改动；所有读写必须显式传 user_id（禁止引擎 default 值）
 - 存储：SQLite 单文件（引擎原生 migrate 自动建 7 表）；PG 抽象（T2.1）独立项
+- 生命周期（S2，2026-08-15）：懒加载进程单例 get_learner_service()；
+  门控关 => None（S3/S4 调用点判 None 跳过，零副作用）
 """
 from __future__ import annotations
 
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 # ── 引擎路径接入（monorepo：engine/lemma-hermes）─────────────────────────────
@@ -19,6 +22,9 @@ if str(_ENGINE_DIR) not in sys.path:
 
 from agent.learner.learner_core import LearnerCore  # noqa: E402
 
+# 默认 learner 库位置：backend/data/learner.db（与主库 PG 分离，T2.1 欠账登记）
+_DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "learner.db"
+
 
 class LearnerService:
     """LearnerCore 的 backend 适配：懒加载单例 + 显式 user_id 规约。
@@ -28,6 +34,7 @@ class LearnerService:
     """
 
     def __init__(self, db_path: str | Path) -> None:
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._core = LearnerCore(str(db_path))
 
     # ── C3 工具数据面：action 转发（引擎 handle_action 1:1 透传） ──────────────
@@ -57,3 +64,22 @@ class LearnerService:
             for r in rows
         ]
         return "\n".join(lines)
+
+
+# ── S2 生命周期：懒加载进程单例（门控关 => None）────────────────────────────
+@lru_cache(maxsize=1)
+def _get_learner_service(db_path: str | Path | None) -> LearnerService | None:
+    """构造 LearnerService（db_path 覆盖用；None => 默认路径）。"""
+    from core.config import settings
+
+    if not settings.lemma_hermes_enabled:
+        return None
+    return LearnerService(
+        db_path or settings.lemma_hermes_learner_db_url or _DEFAULT_DB_PATH
+    )
+
+
+def get_learner_service() -> LearnerService | None:
+    """进程级访问器：门控开 => LearnerService 单例（首次构造即建 7 表）；
+    门控关 => None（调用点判 None 跳过，S3/S4 零副作用）。"""
+    return _get_learner_service(None)
