@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -12,6 +12,7 @@ import {
   Pencil,
   PenTool,
   Plus,
+  Search,
   Table2,
   Trash2,
   Unplug,
@@ -25,6 +26,7 @@ import {
   useCreateNote,
   useChangeTitle,
   useDeleteNote,
+  useQuickSearch,
   type KbTreeNode,
 } from '@/features/knowledge/knowledgeBaseApi'
 
@@ -292,6 +294,16 @@ export function NotesTreePanel() {
   const changeTitle = useChangeTitle()
   const deleteNote = useDeleteNote()
 
+  // ── K4.3 搜索：debounce 300ms → useQuickSearch（enabled 控制：空串/未连接不发） ──
+  const [search, setSearch] = useState('')
+  const [debounced, setDebounced] = useState('')
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(search), 300)
+    return () => clearTimeout(id)
+  }, [search])
+  const searchQuery = useQuickSearch(debounced, connected)
+  const searching = debounced.trim().length > 0
+
   const toggle = (noteId: string) => {
     setExpanded((prev) => {
       const next = new Set(prev)
@@ -299,6 +311,14 @@ export function NotesTreePanel() {
       else next.add(noteId)
       return next
     })
+  }
+
+  /** 点击搜索结果：按 notePath 链（root/a/b）展开树 + 清空搜索回树视图 */
+  const expandToPath = (notePath: string) => {
+    const ids = notePath.split('/').filter((s) => s && s !== 'root')
+    setExpanded((prev) => new Set([...prev, ...ids]))
+    setSearch('')
+    setDebounced('')
   }
 
   return (
@@ -342,6 +362,23 @@ export function NotesTreePanel() {
         </span>
       </div>
 
+      {/* K4.3 搜索框（未连接时禁用） */}
+      <div className="border-b border-zinc-100 p-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            disabled={!connected}
+            placeholder={t('knowledge.notesSearchPlaceholder', '搜索笔记…')}
+            className="w-full rounded-md border border-zinc-200 bg-zinc-50 py-1.5 pr-2 pl-7 text-[12px] text-zinc-700 outline-none placeholder:text-zinc-400 focus:border-indigo-400 focus:bg-white disabled:opacity-50"
+          />
+          {searching && searchQuery.isFetching && (
+            <Loader2 className="absolute top-1/2 right-2 size-3.5 -translate-y-1/2 animate-spin text-zinc-400" />
+          )}
+        </div>
+      </div>
+
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {isLoading ? (
           <div className="space-y-1.5 p-1">
@@ -357,6 +394,41 @@ export function NotesTreePanel() {
           <div className="px-2 py-6 text-center text-[12px] text-zinc-400">
             {t('knowledge.notesUnavailable', '笔记库未连接')}
           </div>
+        ) : searching ? (
+          // ── 搜索结果视图（K4.3） ──
+          searchQuery.isError ? (
+            <div className="px-2 py-6 text-center text-[12px] text-zinc-400">
+              {t('knowledge.notesSearchUnavailable', '搜索暂不可用')}
+            </div>
+          ) : searchQuery.isLoading ? (
+            <div className="px-2 py-6 text-center text-[12px] text-zinc-400">
+              {t('knowledge.notesSearching', '搜索中…')}
+            </div>
+          ) : (searchQuery.data?.searchResults ?? []).length === 0 ? (
+            <div className="px-2 py-6 text-center text-[12px] text-zinc-400">
+              {t('knowledge.notesNoResults', '没有匹配的笔记')}
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {searchQuery.data?.searchResults.map((r, i) => (
+                <button
+                  key={`${r.notePath}-${i}`}
+                  type="button"
+                  onClick={() => expandToPath(r.notePath)}
+                  className="block w-full rounded-md px-2 py-1.5 text-left transition-colors hover:bg-zinc-100"
+                >
+                  <div className="truncate text-[13px] text-zinc-700">
+                    {r.noteTitle || '(untitled)'}
+                  </div>
+                  {r.contentSnippet && (
+                    <div className="truncate text-[11px] text-zinc-400">
+                      {r.contentSnippet}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )
         ) : tree && tree.length > 0 ? (
           <div className="space-y-0.5">
             {tree.map((node) => (

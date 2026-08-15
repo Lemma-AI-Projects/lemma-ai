@@ -214,6 +214,10 @@
     "notesRename": "Rename",
     "notesDelete": "Delete",
     "notesDeleteConfirm": "Delete \"{{title}}\"?",
-    "notesActionFailed": "Action failed, please try again later"
+    "notesActionFailed": "Action failed, please try again later",
+    "notesSearchPlaceholder": "Search notes…",
+    "notesSearching": "Searching…",
+    "notesNoResults": "No matching notes",
+    "notesSearchUnavailable": "Search unavailable"
   }
 }
