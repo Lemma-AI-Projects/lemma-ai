@@ -218,6 +218,26 @@
     "notesSearchPlaceholder": "Search notes…",
     "notesSearching": "Searching…",
     "notesNoResults": "No matching notes",
-    "notesSearchUnavailable": "Search unavailable"
+    "notesSearchUnavailable": "Search unavailable",
+    "editorPlaceholder": "Start typing…",
+    "editorSaving": "Saving…",
+    "editorUnsaved": "Unsaved",
+    "editorSaved": "Saved",
+    "editorSave": "Save",
+    "editorBold": "Bold",
+    "editorItalic": "Italic",
+    "editorStrike": "Strikethrough",
+    "editorHeading1": "Heading 1",
+    "editorHeading2": "Heading 2",
+    "editorHeading3": "Heading 3",
+    "editorBulletList": "Bullet list",
+    "editorOrderedList": "Ordered list",
+    "editorCodeBlock": "Code block",
+    "editorLink": "Link",
+    "editorLinkPrompt": "Link URL",
+    "editorUndo": "Undo",
+    "editorRedo": "Redo",
+    "editorUnavailable": "Content unavailable (engine offline or disabled)",
+    "editorStubbed": "This note was not synced to this device"
   }
 }

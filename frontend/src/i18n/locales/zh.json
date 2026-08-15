@@ -218,6 +218,26 @@
     "notesSearchPlaceholder": "搜索笔记…",
     "notesSearching": "搜索中…",
     "notesNoResults": "没有匹配的笔记",
-    "notesSearchUnavailable": "搜索暂不可用"
+    "notesSearchUnavailable": "搜索暂不可用",
+    "editorPlaceholder": "开始输入…",
+    "editorSaving": "保存中…",
+    "editorUnsaved": "未保存",
+    "editorSaved": "已保存",
+    "editorSave": "保存",
+    "editorBold": "加粗",
+    "editorItalic": "斜体",
+    "editorStrike": "删除线",
+    "editorHeading1": "标题 1",
+    "editorHeading2": "标题 2",
+    "editorHeading3": "标题 3",
+    "editorBulletList": "无序列表",
+    "editorOrderedList": "有序列表",
+    "editorCodeBlock": "代码块",
+    "editorLink": "链接",
+    "editorLinkPrompt": "链接地址",
+    "editorUndo": "撤销",
+    "editorRedo": "重做",
+    "editorUnavailable": "内容暂不可用（引擎未连接或未开启）",
+    "editorStubbed": "该笔记内容未同步到本机"
   }
 }

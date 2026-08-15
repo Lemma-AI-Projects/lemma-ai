@@ -11,6 +11,13 @@ import {
 } from '@/features/knowledge/KnowledgeBaseToolbar'
 import { getKnowledgeBaseItems } from '@/features/knowledge/getKnowledgeBaseItems'
 import { NotesTreePanel } from '@/features/knowledge/NotesTreePanel'
+import { NoteEditor } from '@/features/knowledge/NoteEditor'
+
+/** 树节点选中态（K5.4：右侧编辑器） */
+interface SelectedNote {
+  noteId: string
+  title: string
+}
 
 export function KnowledgeBasePage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -20,6 +27,7 @@ export function KnowledgeBasePage() {
   const [typeFilter, setTypeFilter] = useState<KnowledgeBaseTypeFilter>(null)
   const [view, setView] = useState<KnowledgeBaseView>('list')
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+  const [selectedNote, setSelectedNote] = useState<SelectedNote | null>(null)
 
   const items = useMemo(() => getKnowledgeBaseItems(), [])
   const visibleItems = useMemo(() => {
@@ -81,10 +89,16 @@ export function KnowledgeBasePage() {
 
   return (
     <div className="relative flex h-full overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50">
-      {/* P0-5：真实笔记树（Trilium 引擎，fail-open） */}
-      <NotesTreePanel />
+      {/* P0-5 树 + K5.4 选中回调（点节点 → 右侧编辑器） */}
+      <NotesTreePanel onSelectNote={setSelectedNote} />
 
-      <main className="min-h-full flex-1 overflow-y-auto">
+      {selectedNote ? (
+        // K5：笔记编辑器（选中树节点后替换文件视图）
+        <main className="min-h-0 flex-1 overflow-hidden bg-white">
+          <NoteEditor noteId={selectedNote.noteId} title={selectedNote.title} />
+        </main>
+      ) : (
+        <main className="min-h-full flex-1 overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[810px] flex-col px-4 pt-10 pb-0">
           <KnowledgeBaseHeader
             searchTerm={searchTerm}
@@ -124,7 +138,8 @@ export function KnowledgeBasePage() {
             />
           )}
         </div>
-      </main>
+        </main>
+      )}
     </div>
   )
 }

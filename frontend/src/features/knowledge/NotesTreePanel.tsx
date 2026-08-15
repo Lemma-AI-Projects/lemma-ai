@@ -63,6 +63,7 @@ interface TreeNodeProps {
   depth: number
   expanded: Set<string>
   onToggle: (noteId: string) => void
+  onSelect: (note: { noteId: string; title: string }) => void
   ops: PanelOps | null
   setOps: (ops: PanelOps | null) => void
   createNote: ReturnType<typeof useCreateNote>
@@ -75,6 +76,7 @@ function TreeNode({
   depth,
   expanded,
   onToggle,
+  onSelect,
   ops,
   setOps,
   createNote,
@@ -141,7 +143,10 @@ function TreeNode({
       >
         <button
           type="button"
-          onClick={() => hasChildren && onToggle(node.noteId)}
+          onClick={() => {
+            onSelect({ noteId: node.noteId, title: node.title ?? '' })
+            if (hasChildren) onToggle(node.noteId)
+          }}
           className={cn(
             'flex min-w-0 flex-1 items-center gap-1.5 text-left',
             !hasChildren && 'cursor-default'
@@ -265,6 +270,7 @@ function TreeNode({
               depth={depth + 1}
               expanded={expanded}
               onToggle={onToggle}
+              onSelect={onSelect}
               ops={ops}
               setOps={setOps}
               createNote={createNote}
@@ -284,7 +290,11 @@ function TreeNode({
  * - 写：新建子笔记 / 改名 / 删除（K4.1 mutation，成功 invalidate 刷新树）
  * - fail-open：读失败显示占位不阻塞；写失败（门控关 502 等）内联提示不崩
  */
-export function NotesTreePanel() {
+export function NotesTreePanel({
+  onSelectNote,
+}: {
+  onSelectNote?: (note: { noteId: string; title: string }) => void
+} = {}) {
   const { t } = useTranslation()
   const { data: tree, isLoading, isError } = useNotesTree()
   const connected = !isError && !isLoading
@@ -438,6 +448,7 @@ export function NotesTreePanel() {
                 depth={0}
                 expanded={expanded}
                 onToggle={toggle}
+                onSelect={onSelectNote ?? (() => {})}
                 ops={ops}
                 setOps={setOps}
                 createNote={createNote}
