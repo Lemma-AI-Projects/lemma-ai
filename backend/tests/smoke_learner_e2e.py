@@ -2,12 +2,16 @@
 
 backend 惯例（smoke_*.py）：直接 python 运行，断言失败退出码非零。
 覆盖（S5 验收场景，计划定义）：
-  1. 注入开关对照：同一 learn space 对话，门控开 vs 关的 system prompt diff
+  1. 注入开关对照：同一对话，门控开 vs 关的 system prompt diff
      ——门控关 => prompt 与基线逐字节一致；门控开 => 含 <memory-context>
   2. 持久化闭环：三轮模拟——①空库 query（老师无记忆）②record_episode 落库
      （「我卡在换元法」→ 工具调用）③重建 service（模拟重启对话）再 query
      => 状态仍在
   3. 门控关回归：S1/S4 smoke 全绿（子进程，settings 启动时读取）
+
+2026-08-19 收敛：注入不再以 project_id 作硬拦（普通对话同样可注入），
+主题作为 query 传入 memory_context 做 prefetch 过滤（注：knowledge_summary
+层是用户最近概念，不过滤；主题过滤作用于 memory_context 层）。
 
 真 AI 三轮对话（老师自然引用）需真实模型 key，本 smoke 用数据层等价验证
 （注入块正确 + 工具落库 + 重启仍在），自然语言层留给部署后手动验收。
@@ -35,14 +39,15 @@ from services.learner.learner_service import (  # noqa: E402
 )
 
 UID = uuid.uuid4()
-PID = uuid.uuid4()
+# 注入主题：模拟普通对话（无 project_id）里用户这条消息，作为 prefetch 的 query
+TOPIC = "换元法"
 
 
 def main() -> None:
     # ── 场景 2a：第一轮——空库，老师无记忆可引用 ─────────────────────────────
     svc = get_learner_service()
     assert svc is not None
-    blk_empty = build_learner_memory_block(UID, PID)
+    blk_empty = build_learner_memory_block(UID, TOPIC)
     assert blk_empty is None, f"空库应无注入块: {blk_empty}"
 
     # ── 场景 2b：第二轮——「我卡在换元法」→ record_episode 落库（S4 工具数据面）──
@@ -55,7 +60,7 @@ def main() -> None:
     assert r["success"], f"upsert_concept 失败: {r}"
 
     # 工具回合后的注入块应包含换元法（同轮状态立即可见——turn 级生成的价值）
-    blk_after = build_learner_memory_block(UID, PID)
+    blk_after = build_learner_memory_block(UID, TOPIC)
     assert blk_after and "换元法" in blk_after, f"落库后注入块应含换元法: {blk_after}"
 
     # ── 场景 2c：第三轮——重启（新 service 实例=新连接）再问 => 状态仍在 ────
@@ -65,7 +70,7 @@ def main() -> None:
     assert any("换元法" in (k.get("concept") or "") for k in r["knowledge"]), (
         f"重启后换元法应仍在: {r}"
     )
-    blk_reopen = build_learner_memory_block(UID, PID)
+    blk_reopen = build_learner_memory_block(UID, TOPIC)
     assert blk_reopen and "换元法" in blk_reopen, "重启后注入块应仍含换元法"
 
     # 用户隔离：另一个用户看不到 UID 的记忆

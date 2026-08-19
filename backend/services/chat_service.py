@@ -121,21 +121,23 @@ _LEARNER_MEMORY_GUIDANCE = (
 
 
 def build_learner_memory_block(
-    user_id: uuid.UUID, project_id: uuid.UUID | None
+    user_id: uuid.UUID, topic: str | None = None
 ) -> str | None:
-    """C1 learner 记忆注入（S3，2026-08-15）。
+    """C1 learner 记忆注入（S3，2026-08-15；2026-08-19 收敛到普通对话）。
 
     触发条件（全满足才注入）：
-    - learn space 对话（project_id 非 None）——S3 计划定义的范围
     - lemma_hermes 门控开（get_learner_service() 非 None）
+    - 用户已有 learner 数据（否则两段都为空 => None）
+    不再以 project_id 作硬拦：普通对话（无 project_id）同样可注入。
     D3 决策：只注入「概念掌握 + 最近卡点」两层（knowledge_summary +
     memory_context），硬限 800 字符防 prompt 膨胀。
+    主题过滤（2026-08-19 收敛）：topic 作为 memory_context 的 query 传入
+    prefetch，只注入与当前对话主题匹配的概念，降低跨主题串线；topic 为空
+    时 memory_context 退化为近期摘要兜底。
     每 turn 重新生成（不做会话缓存）：S4 工具调用会改 learner 状态，缓存
     会让下一轮看到过期记忆；SQLite 查询毫秒级，turn 级成本可接受。
     fail-open：learner 服务异常 => None（不阻塞对话）。
     """
-    if project_id is None:
-        return None
     from services.learner.learner_service import get_learner_service
 
     svc = get_learner_service()
@@ -144,7 +146,7 @@ def build_learner_memory_block(
     try:
         uid = str(user_id)
         summary = svc.knowledge_summary(uid, limit=8)
-        memory = svc.memory_context(uid, limit=5)
+        memory = svc.memory_context(uid, query=topic or "", limit=5)
         block = "\n".join(p for p in (summary, memory) if p and p.strip())
         if not block:
             return None
@@ -191,7 +193,7 @@ async def prepare_turn(
                 build_agent_persona(project) if payload.project_id is not None else None
             ),
             learner_memory=build_learner_memory_block(
-                user.id, payload.project_id
+                user.id, topic=content
             ),
         )
 
@@ -219,7 +221,7 @@ async def prepare_turn(
             db, user_id=user.id, project_id=conversation.project_id
         ),
         learner_memory=build_learner_memory_block(
-            user.id, conversation.project_id
+            user.id, topic=content
         ),
     )
 
