@@ -551,6 +551,16 @@ class LearnerCore:
                 written += 1
         return written
 
+    def has_review(self, user_id: str, node_id: int) -> bool:
+        """只读存在性：该知识点在复习队列中是否已有条目。限只读——不写不改排期，
+        供 backend「学习→首次入队」衔接做守卫（有则不动既有排期）。"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM review_queue WHERE user_id=? AND node_id=? LIMIT 1",
+                (user_id, node_id),
+            ).fetchone()
+        return row is not None
+
     def enqueue_review(
         self,
         user_id: str,
