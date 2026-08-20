@@ -25,6 +25,10 @@ from agent.learner.learner_core import LearnerCore  # noqa: E402
 # 默认 learner 库位置：backend/data/learner.db（与主库 PG 分离，T2.1 欠账登记）
 _DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "learner.db"
 
+# 复习闭环供料：新概念首次复习间隔（SM-2 首档惯例）。D4 拍① = 1 天。
+# 语义：记过/测过的概念隔天进入"该复习"，today-due 逐步有真实数据。
+_FIRST_REVIEW_INTERVAL_DAYS = 1
+
 
 class LearnerService:
     """LearnerCore 的 backend 适配：懒加载单例 + 显式 user_id 规约。
@@ -40,10 +44,43 @@ class LearnerService:
     # ── C3 工具数据面：action 转发（引擎 handle_action 1:1 透传） ──────────────
     def handle_action(self, user_id: str, action: str, **kwargs) -> dict:
         """模型工具的 action 分发（upsert_concept/record_episode/query_knowledge/
-        add_rule/due_reviews）。user_id 必传——禁止隐式 default 作用域。"""
+        add_rule/due_reviews）。user_id 必传——禁止隐式 default 作用域。
+
+        复习闭环供料（2026-08-20）：学习/记录动作成功后，为新概念补「首次入队」，
+        让 review_queue 有数据、today-due 不再恒空。fail-open：供料异常不影响
+        学习结果返回。"""
         if not user_id:
             return {"success": False, "error": "user_id required"}
-        return self._core.handle_action(user_id, action, **kwargs)
+        result = self._core.handle_action(user_id, action, **kwargs)
+        if result.get("success"):
+            try:
+                self._ensure_initial_review(user_id, action, kwargs)
+            except Exception:  # noqa: BLE001 — 供料是增强，不阻塞学习写入
+                pass
+        return result
+
+    def _ensure_initial_review(
+        self, user_id: str, action: str, kwargs: dict
+    ) -> None:
+        """学习/记录动作后，若该概念在复习队列尚无条目则首次入队（D1 供料）。
+
+        只读守卫 has_review 保证：已有条目 => 不动既有排期（不覆盖
+        record_episode 刚算出的新 interval）。"""
+        if action not in ("upsert_concept", "record_episode"):
+            return
+        concept = str(kwargs.get("concept") or "").strip()
+        if not concept:
+            return
+        domain = str(kwargs.get("domain") or "general")
+        node = self._core.get_concept(user_id, concept, domain)
+        node_id = node.get("node_id") if node else None
+        if node_id is None:
+            return
+        if self._core.has_review(user_id, node_id):
+            return
+        self._core.enqueue_review(
+            user_id, concept, domain, interval_days=_FIRST_REVIEW_INTERVAL_DAYS
+        )
 
     # ── C1 注入数据面：记忆上下文生成（S3 用） ─────────────────────────────────
     def memory_context(
