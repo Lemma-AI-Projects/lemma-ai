@@ -1,10 +1,11 @@
-import { CalendarCheck2, CalendarClock } from 'lucide-react'
+import { CalendarCheck2, CalendarClock, WifiOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { ActionChip } from '@/components/ActionChip'
 import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
 import { ChatInput } from '@/features/home/ChatInput'
 import { HomeUserMenu } from '@/features/home/HomeUserMenu'
+import { useMemoryOverviewQuery } from '@/features/learner/learnerApi'
 import { suggestions as baseSuggestions } from '@/mock/homeSuggestions'
 import {
   usePlugins,
@@ -35,19 +36,31 @@ export function HomePage() {
   )
   const suggestions = [...baseSuggestions, ...pluginSuggestions]
 
-  // TODO: wire to real schedule data (e.g. completed / total tasks for today).
-  // Kept as a placeholder so the ring + icon swap can be exercised visually.
-  const todayTaskProgress = 40
-  const isAllTasksDone = todayTaskProgress >= 100
-  const TaskIcon = isAllTasksDone ? CalendarCheck2 : CalendarClock
+  // L1 主线闭环：今日任务进度环接真实 learner 数据（D3 语义——复习队列健康度）。
+  // 后端 memory_overview 只给「当前待复习数 todayDueCount」，没有「今日已完成/总
+  // 数」，故进度取诚实二元制：引擎不可用=0、待复习清空=100、仍有待复习=0——绝不
+  // 在 40 之外编造中间百分比（见计划 §2.3 防过拟合决策）。
+  const { data: overview, isError } = useMemoryOverviewQuery()
+  const enabled = overview?.enabled === true && !isError
+  const dueCount = enabled ? overview.todayDueCount : 0
+  const isAllTasksDone = enabled && dueCount === 0
+  const todayTaskProgress = isAllTasksDone ? 100 : 0
+  const TaskIcon = !enabled ? WifiOff : isAllTasksDone ? CalendarCheck2 : CalendarClock
+  const taskStatusLabel = !enabled
+    ? '今日任务（记忆引擎未启用）'
+    : isAllTasksDone
+      ? '今日复习已清空'
+      : `今日待复习（${dueCount} 项）`
 
   return (
     <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
       <div className="absolute right-4 top-4 flex items-center gap-2">
         <Button
           variant="ghost"
-          aria-label="Today's task progress"
-          className="relative size-8 rounded-full p-0"
+          aria-label={taskStatusLabel}
+          title={taskStatusLabel}
+          disabled={!enabled}
+          className="relative size-8 rounded-full p-0 disabled:cursor-default disabled:opacity-60"
         >
           {/* 32x32 ring with 1.5px stroke replaces the old `border
               border-zinc-200` outline; outer edge of the stroke still

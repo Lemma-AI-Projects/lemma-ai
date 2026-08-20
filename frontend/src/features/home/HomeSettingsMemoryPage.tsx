@@ -1,17 +1,25 @@
-import { Brain, Clock3, Database, ShieldCheck, Sparkles } from 'lucide-react'
+import { Brain, Clock3, Database, ShieldCheck, Sparkles, WifiOff } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import {
+  useMemoryOverviewQuery,
+  useReviewDueQuery,
+} from '@/features/learner/learnerApi'
 
 /**
- * 设置 · 记忆栏目（v1）
- * 基于 Lemma Hermes learner 记忆引擎（7 表：identity / knowledge_nodes /
- * knowledge_edges / learning_patterns / learning_episodes / meta_rules /
- * review_queue）设计 UI 骨架。数据接入随 E1/T2.1（learner 接入后端），
- * 当前为「内核就绪、数据接入中」的诚实占位：控件 disabled 并注明。
+ * 设置 · 记忆栏目（L1 主线闭环，2026-08-20）
+ * 由 disabled 占位改为读接口驱动：掌握度概览 + 今日待复习来自真实 learner
+ * 数据。写操作（暂停/清除）本期仍 disabled（D4：读先行，避免数据丢失风险）。
+ * 门控关（overview.enabled===false）/后端不可达 => 优雅降级为「未启用」，不报错。
  */
 export function HomeSettingsMemoryPage() {
+  const { data: overview, isError } = useMemoryOverviewQuery()
+  const enabled = overview?.enabled === true && !isError
+  const { data: due = [], isLoading: dueLoading } = useReviewDueQuery(enabled)
+  const buckets = overview?.masteryBuckets ?? { mastered: 0, learning: 0, new: 0 }
+
   return (
     <>
       <h2 className="text-lg font-normal text-zinc-900">记忆</h2>
@@ -22,12 +30,16 @@ export function HomeSettingsMemoryPage() {
         <span className="text-[16px] font-normal leading-7 text-zinc-600">
           学习记忆引擎
           <span className="block text-xs leading-5 text-zinc-400">
-            Lemma Hermes learner · 内核就绪，数据接入中
+            Lemma Hermes learner
+            {enabled ? ' · 已启用，正在记录学习轨迹' : ' · 未启用'}
           </span>
         </span>
-        <Badge variant="outline" className="gap-1 text-zinc-500">
-          <Database className="size-3" />
-          接入中
+        <Badge
+          variant={enabled ? 'default' : 'outline'}
+          className={enabled ? '' : 'text-zinc-400'}
+        >
+          {enabled ? <Database className="size-3" /> : <WifiOff className="size-3" />}
+          {enabled ? '已启用' : '未启用'}
         </Badge>
       </div>
       <Separator className="bg-zinc-200" />
@@ -62,16 +74,68 @@ export function HomeSettingsMemoryPage() {
       </div>
       <Separator className="bg-zinc-200" />
 
+      {/* 知识掌握度概览 */}
+      <div className="flex flex-col gap-3 py-4">
+        <span className="text-[16px] font-normal leading-7 text-zinc-600">
+          知识掌握度
+          <span className="block text-xs leading-5 text-zinc-400">
+            {enabled ? `共 ${overview?.conceptCount ?? 0} 个知识点` : '记忆引擎未启用'}
+          </span>
+        </span>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-lg border border-zinc-200 p-3">
+            <span className="block text-lg font-medium text-zinc-900">
+              {enabled ? buckets.mastered : '—'}
+            </span>
+            <span className="block text-xs text-zinc-500">已掌握</span>
+          </div>
+          <div className="rounded-lg border border-zinc-200 p-3">
+            <span className="block text-lg font-medium text-zinc-900">
+              {enabled ? buckets.learning : '—'}
+            </span>
+            <span className="block text-xs text-zinc-500">学习中</span>
+          </div>
+          <div className="rounded-lg border border-zinc-200 p-3">
+            <span className="block text-lg font-medium text-zinc-900">
+              {enabled ? buckets.new : '—'}
+            </span>
+            <span className="block text-xs text-zinc-500">待学</span>
+          </div>
+        </div>
+      </div>
+      <Separator className="bg-zinc-200" />
+
       {/* 复习队列预览 */}
       <div className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-4 py-3">
         <span className="text-[16px] font-normal leading-7 text-zinc-600">
           今日待复习
           <span className="block text-xs leading-5 text-zinc-400">
-            复习队列接入后在此显示
+            {enabled
+              ? dueLoading
+                ? '加载中…'
+                : '按遗忘曲线安排 · 完成一项少一项'
+              : '记忆引擎未启用'}
           </span>
         </span>
-        <span className="text-sm text-zinc-300">—</span>
+        <span className="text-sm text-zinc-600">
+          {enabled && !dueLoading ? due.length : '—'}
+        </span>
       </div>
+      {enabled && !dueLoading && due.length > 0 && (
+        <div className="flex flex-wrap gap-2 pb-4">
+          {due.map((d) => (
+            <span
+              key={d.nodeId}
+              className="rounded-full border border-zinc-200 px-2 py-0.5 text-xs text-zinc-600"
+            >
+              {d.concept}
+            </span>
+          ))}
+        </div>
+      )}
+      {enabled && !dueLoading && due.length === 0 && (
+        <p className="pb-4 text-xs text-zinc-400">今日没有待复习，继续保持。</p>
+      )}
       <Separator className="bg-zinc-200" />
 
       {/* 隐私控制 */}
@@ -82,7 +146,7 @@ export function HomeSettingsMemoryPage() {
             暂停后 AI 不再读写你的学习记忆
           </span>
         </span>
-        <Switch disabled aria-label="暂停记忆（引擎接入后启用）" />
+        <Switch disabled aria-label="暂停记忆（写入路径接入后启用）" />
       </div>
       <Separator className="bg-zinc-200" />
 
