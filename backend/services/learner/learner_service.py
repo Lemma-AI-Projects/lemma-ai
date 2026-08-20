@@ -65,6 +65,57 @@ class LearnerService:
         ]
         return "\n".join(lines)
 
+    # ── 前端读接口数据面（L1 主线闭环，2026-08-20）──────────────────────────
+    # 全部透传引擎、不改 engine；纵贯铁律：user_id 必传，禁止隐式 default 作用域。
+    def get_knowledge(
+        self, user_id: str, limit: int = 50
+    ) -> list[dict]:
+        """结构化掌握度列表（返回 knowledge_nodes 行 dict）。"""
+        if not user_id:
+            return []
+        return self._core.get_knowledge(user_id, limit=limit)
+
+    def get_due_reviews(
+        self, user_id: str, limit: int = 50
+    ) -> list[dict]:
+        """今日到期待复习列表（review_queue JOIN knowledge_nodes 行 dict）。"""
+        if not user_id:
+            return []
+        # now 由引擎默认取当前 UTC 时间（due IS NULL 或 due <= now 视为到期）。
+        return self._core.get_due_reviews(user_id, limit=limit)
+
+    def memory_overview(self, user_id: str) -> dict:
+        """记忆面板概览（聚合，供前端首屏）：概念数 / 掌握分布 / 今日待复习数。
+
+        引擎零改动铁律：仅有 knowledge_nodes + review_queue 两个可读面，因此
+        概览只聚合这两者，不统计引擎未暴露给日的片段数。门控由调用点
+        get_learner_service() 判空决定（本方法返回 enabled 供接口透传）。"""
+        if not user_id:
+            return {
+                "enabled": False,
+                "concept_count": 0,
+                "mastery_buckets": {"mastered": 0, "learning": 0, "new": 0},
+                "today_due_count": 0,
+            }
+        knowledge = self._core.get_knowledge(user_id, limit=1000)
+        due = self._core.get_due_reviews(user_id, limit=1000)
+        buckets: dict[str, int] = {"mastered": 0, "learning": 0, "new": 0}
+        for k in knowledge:
+            mastery = float(k.get("mastery") or 0.0)
+            attempts = int(k.get("attempts") or 0)
+            if mastery >= 0.8:
+                buckets["mastered"] += 1
+            elif attempts > 0 and mastery > 0.0:
+                buckets["learning"] += 1
+            else:
+                buckets["new"] += 1
+        return {
+            "enabled": True,
+            "concept_count": len(knowledge),
+            "mastery_buckets": buckets,
+            "today_due_count": len(due),
+        }
+
 
 # ── S2 生命周期：懒加载进程单例（门控关 => None）────────────────────────────
 @lru_cache(maxsize=1)

@@ -12,6 +12,7 @@ from api.v1 import (
     graphs,
     health,
     learn_spaces,
+    learner,
     onboarding,
     overview,
     payments,
@@ -31,6 +32,7 @@ api_router.include_router(companion.router)
 api_router.include_router(overview.router)
 api_router.include_router(graphs.router)
 api_router.include_router(learn_spaces.router)
+api_router.include_router(learner.router)
 api_router.include_router(onboarding.router)
 api_router.include_router(board.router)
 api_router.include_router(kb_gateway.router)
