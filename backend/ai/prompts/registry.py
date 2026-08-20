@@ -30,6 +30,12 @@ _DEFAULT_VARS: dict[str, dict[str, str]] = {
         "agent_persona": "",
         "learner_memory": "",
     },
+    # L1 主线闭环（2026-08-20）：course companion 注入 learner 记忆。默认空 =>
+    # 模板里 $learner_memory 不激活，行为与注入前一致；缺此默认 vars 会让
+    # 字面量 $learner_memory 泄漏进 prompt（safe_substitute 保留缺省占位符）。
+    AIUseCase.COURSE_COMPANION.value: {
+        "learner_memory": "",
+    },
 }
 
 

@@ -42,6 +42,7 @@ from core.security import CurrentUser
 from schemas.companion import CompanionChatRequest
 from services import (
     chapter_gemini_prep,
+    chat_service,
     conversation_service,
     conversation_tool_service,
     course_service,
@@ -68,6 +69,9 @@ class CompanionTurnContext:
     # Set for a NEW conversation (its row doesn't exist yet); persist_turn
     # creates it (with course_id) together with the first turn.
     new_conversation_title: str | None = None
+    # C1 learner 记忆注入块（L1 主线闭环，2026-08-20）：由 build_learner_memory_block
+    # 生成，与普通对话同一语义；门控关 or 无数据时为 None => prompt_vars 空串防泄。
+    learner_memory: str | None = None
 
 
 async def prepare_turn(
@@ -91,6 +95,12 @@ async def prepare_turn(
     )
     if course is None:
         return None
+
+    # C1 记忆注入（L1 主线闭环，2026-08-20）：复用 chat_service 的注入函数，
+    # topic 用本轮伴学提问。延迟 import 规避启动期循环；门控关/无数据 => None。
+    from services.chat_service import build_learner_memory_block
+
+    learner_memory = build_learner_memory_block(user.id, topic=payload.message)
 
     # Optional: resolve the current chapter's chosen candidate. None (foreign /
     # unknown / no chosen video) just means "no video to load" — never a 404.
@@ -117,6 +127,7 @@ async def prepare_turn(
             new_conversation_title=conversation_service.title_from_first_message(
                 payload.message
             ),
+            learner_memory=learner_memory,
         )
 
     conversation = await conversation_service.get_owned_conversation(
@@ -140,6 +151,7 @@ async def prepare_turn(
         chapter_id=payload.chapter_id,
         candidate_id=candidate_id,
         video_duration_s=video_duration_s,
+        learner_memory=learner_memory,
     )
 
 
@@ -222,6 +234,7 @@ async def stream_answer(context: CompanionTurnContext) -> AsyncIterator[AIChunk]
         course_id=str(context.course_id),
         conversation_id=str(context.conversation_id),
         media_resolution=media_resolution_for_duration(context.video_duration_s),
+        prompt_vars={"learner_memory": context.learner_memory or ""},
     )
     try:
         async for chunk in chunk_stream:
