@@ -21,17 +21,17 @@ logger = logging.getLogger(__name__)
 # Channels proven by tools/validate_ai_channels.py.
 # probes 1-2 passed 2026-06-10 (text); probes 3-6 passed 2026-06-10 (video,
 # native + framework engines both green — merge verdict: framework optional).
+# deepseek text probes passed 2026-08-23 against a real key (--only text,
+# deepseek-chat + deepseek-reasoner both green, usage complete).
 _TESTED_CHANNELS = {
     ("aihubmix", "openai_compatible"),
     ("openrouter", "openrouter"),
     ("aihubmix", "gemini_video"),
-}
-# Known but not yet probed. Allowed in the table with a startup warning until
-# the probe verdict moves them up (终稿 5.1 配置纪律). DeepSeek lands here until
-# tools/validate_ai_channels.py --only text passes against a real key.
-_UNTESTED_CHANNELS: set[tuple[str, str]] = {
     ("deepseek", "openai_compatible"),
 }
+# Known but not yet probed. Allowed in the table with a startup warning until
+# the probe verdict moves them up (终稿 5.1 配置纪律).
+_UNTESTED_CHANNELS: set[tuple[str, str]] = set()
 
 _PLATFORM_API_KEYS = {
     "aihubmix": "AIHUBMIX_API_KEY",
