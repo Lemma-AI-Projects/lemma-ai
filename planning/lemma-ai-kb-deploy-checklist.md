@@ -1,8 +1,9 @@
 # kb-engine Supabase 部署检查清单
 
 > 状态：2026-08-15 · 用途：真 Supabase 环境部署前的必检项 + 执行步骤
-> 背景：本机无 PG/Docker（daemon 不可用）/云凭据——真 Supabase 连接留此清单，
-> 代码侧部署形态已用 e2e-local（pglite 真 HTTP 全链路）验证（6/6）。
+> **本机真 Supabase 验证已完成（本地 supabase start + lemma-kb 角色）**：verify 全绿、
+> 侧车全量启动（Becca 加载真库）、写路径闭环（建/改/存/搜）、网关 JWT 全链路、
+> RLS 租户隔离（A 树含自己笔记，B 仅 root）。真验证新增部署要点见下。
 
 ## 一、Supabase 环境准备
 
@@ -63,6 +64,15 @@ select count(*) from notes where noteId = 'n-a';  -- 期望 0（A 的行不可�
 select set_config('app.user_id', 'user-a', false);
 select count(*) from notes where noteId = 'n-a';  -- 期望 1
 ```
+
+## 四·补、真 PG 验证新增部署要点（2026-08-15 实测）
+
+- [ ] **迁移用管理连接**：`KB_PG_ADMIN_URL`（DDL 权限）跑迁移；业务连接只跑查询——GRANT 在迁移**后**执行（GRANT ON ALL TABLES 只覆盖已存在表）
+- [ ] **root 骨架种子已进 001**（`noteId='root'` + root-branch，ON CONFLICT 幂等）——空库必须初始化，否则引擎 getNoteOrThrow('root') 失败
+- [ ] **RLS root 放行已进 002**（notes/branches 用户上下文可见系统 root）——否则用户树断裂
+- [ ] backend 迁移链 depends_on 已修 2 处（9e2c4f6a8b1d / 7f3c9a1b5d2e）——兄弟支乱序 ALTER 先于 CREATE 必崩
+- [ ] `KB_PG_CONNECTION_STRING` 用业务角色（无 BYPASSRLS）；本地验证建角色参考：
+      `create role lemma_kb login password '...'; grant usage on schema public to lemma_kb;`
 
 ## 五、生产注意事项
 

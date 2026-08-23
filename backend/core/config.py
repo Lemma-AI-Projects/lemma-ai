@@ -117,6 +117,11 @@ class Settings(BaseSettings):
     aihubmix_api_key: str
     aihubmix_openai_base_url: str = "https://aihubmix.com/v1"
     aihubmix_gemini_base_url: str = "https://aihubmix.com/gemini"
+    # DeepSeek API (OpenAI-compatible cost tier; TEXT use cases only). Empty by
+    # default = disabled; an AI_ROUTES_JSON deepseek route activates it. Video/
+    # vision use cases are NOT served by DeepSeek.
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com"
     ai_default_timeout_seconds: float = 30
     # native | pydantic_ai — stays native until probes 3-6 all pass (终稿 8.2).
     ai_video_engine: str = "native"

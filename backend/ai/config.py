@@ -27,12 +27,16 @@ _TESTED_CHANNELS = {
     ("aihubmix", "gemini_video"),
 }
 # Known but not yet probed. Allowed in the table with a startup warning until
-# the probe verdict moves them up (终稿 5.1 配置纪律).
-_UNTESTED_CHANNELS: set[tuple[str, str]] = set()
+# the probe verdict moves them up (终稿 5.1 配置纪律). DeepSeek lands here until
+# tools/validate_ai_channels.py --only text passes against a real key.
+_UNTESTED_CHANNELS: set[tuple[str, str]] = {
+    ("deepseek", "openai_compatible"),
+}
 
 _PLATFORM_API_KEYS = {
     "aihubmix": "AIHUBMIX_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
 }
 
 
@@ -91,4 +95,6 @@ def validate_routes() -> None:
             if env_name == "AIHUBMIX_API_KEY" and not settings.aihubmix_api_key:
                 raise AIConfigError(f"route {use_case} needs {env_name} to be set")
             if env_name == "OPENROUTER_API_KEY" and not settings.openrouter_api_key:
+                raise AIConfigError(f"route {use_case} needs {env_name} to be set")
+            if env_name == "DEEPSEEK_API_KEY" and not settings.deepseek_api_key:
                 raise AIConfigError(f"route {use_case} needs {env_name} to be set")

@@ -73,6 +73,11 @@ def build_model(route: ModelRoute) -> Model:
     channel = (route.platform, route.adapter)
     if channel == ("aihubmix", "openai_compatible"):
         model = _build_aihubmix_openai(route)
+    elif channel == ("deepseek", "openai_compatible"):
+        # Same OpenAI-compatible surface as aihubmix; the only difference is
+        # continuous_usage stays OFF (D4① — DeepSeek sends standard streamed
+        # usage the framework sums correctly, no AiHubMix-style duplication).
+        model = _build_deepseek_openai(route)
     elif channel == ("openrouter", "openrouter"):
         model = _build_openrouter(route)
     elif channel == ("aihubmix", "gemini_video"):
@@ -89,19 +94,45 @@ def build_model(route: ModelRoute) -> Model:
 
 
 def _build_aihubmix_openai(route: ModelRoute) -> Model:
-    client = AsyncOpenAI(
+    # AiHubMix repeats cumulative usage across stream chunks (verified against
+    # /v1 on 2026-06-10); continuous_usage=True tells the framework to trust the
+    # cumulative figure instead of summing per-chunk deltas.
+    return _build_openai_compatible(
         base_url=settings.aihubmix_openai_base_url,
         api_key=settings.aihubmix_api_key,
+        route=route,
+        continuous_usage=True,
+    )
+
+
+def _build_deepseek_openai(route: ModelRoute) -> Model:
+    # DeepSeek sends standard streamed usage deltas; the framework sums them
+    # correctly, so continuous_usage stays OFF (D4① — never inherit AiHubMix's
+    # platform-specific flag).
+    return _build_openai_compatible(
+        base_url=settings.deepseek_base_url,
+        api_key=settings.deepseek_api_key,
+        route=route,
+        continuous_usage=False,
+    )
+
+
+def _build_openai_compatible(
+    base_url: str, api_key: str, route: ModelRoute, *, continuous_usage: bool
+) -> Model:
+    client = AsyncOpenAI(
+        base_url=base_url,
+        api_key=api_key,
         max_retries=_HTTP_MAX_RETRIES,
         http_client=_require_http_client(),
     )
     settings_kwargs: dict[str, Any] = {
         "timeout": route.timeout_s,
-        # AiHubMix repeats cumulative usage across stream chunks (verified
-        # against /v1 on 2026-06-10); without this flag the framework sums
-        # them and doubles the billed token counts.
-        "openai_continuous_usage_stats": True,
     }
+    if continuous_usage:
+        # AiHubMix-only: cumulative usage across stream chunks; without this
+        # the framework sums per-chunk deltas and doubles the billed tokens.
+        settings_kwargs["openai_continuous_usage_stats"] = True
     _apply_openai_thinking_settings(settings_kwargs, route)
     return OpenAIChatModel(
         route.model,
