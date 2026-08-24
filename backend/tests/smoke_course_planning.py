@@ -1,9 +1,12 @@
-"""阶段一冒烟：诉求 → 问卷(plan) → 提交答案 → 大纲落库(intake)。
+"""阶段一冒烟：诉求 → 课程壳(intake) → 后台问卷 → 提交答案 → organizing。
 
 跑法（backend/ 目录下）:
     uv run python tests/smoke_course_planning.py
 
 service 层直测（绕过 HTTP 鉴权），真打 LLM，仿 smoke_projects 风格。
+搜索前置状态机：create_course_shell -> intake -> generate_and_store_questionnaire
+(受保护后台任务) -> submit_answers -> organizing（大纲由 Celery compose 生成，
+本脚本只验证到 organizing 为止，不依赖 Celery worker）。
 """
 
 import asyncio
