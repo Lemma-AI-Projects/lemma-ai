@@ -51,18 +51,13 @@ async def main() -> int:
             await db.refresh(conversation)
             conversation_id = conversation.id
 
-        # --- 1. plan：诉求 -> 问卷 ---
+        # --- 1. plan：诉求 -> 课程壳(intake) + 后台问卷生成 ---
         async with AsyncSessionLocal() as db:
-            course, questionnaire = await course_planning_service.create_plan(
+            course = await course_planning_service.create_course_shell(
                 db, user, topic="我想学微积分", conversation_id=conversation_id
             )
             course_id = course.id
-        check(course.status == "intake", "create_plan -> Course.status=intake")
-        check(len(questionnaire.questions) >= 1, "问卷非空 (>=1 题)")
-        check(
-            all(len(q.options) >= 2 for q in questionnaire.questions),
-            "每题 >=2 选项",
-        )
+        check(course.status == "intake", "create_course_shell -> Course.status=intake")
 
         async with AsyncSessionLocal() as db:
             fresh = await course_service.get_owned_course(
@@ -72,6 +67,27 @@ async def main() -> int:
                 fresh is not None and fresh.conversation_id == conversation_id,
                 "conversation_id 落库正确",
             )
+
+        # 问卷在受保护后台任务生成（真打 LLM）；await 完成后读回
+        await course_planning_service.generate_and_store_questionnaire(
+            course_id, topic="我想学微积分"
+        )
+        async with AsyncSessionLocal() as db:
+            questionnaire = await course_service.get_questionnaire(
+                db, user_id=user.id, course_id=course_id
+            )
+        check(
+            questionnaire is not None and len(questionnaire.questions) >= 1,
+            "问卷非空 (>=1 题)",
+        )
+        check(
+            all(len(q.options) >= 2 for q in questionnaire.questions),
+            "每题 >=2 选项",
+        )
+        async with AsyncSessionLocal() as db:
+            fresh = await course_service.get_owned_course(
+                db, user_id=user.id, course_id=course_id
+            )
             check(
                 fresh is not None
                 and bool(fresh.intake_json)
@@ -79,7 +95,7 @@ async def main() -> int:
                 "intake_json 含问卷产物",
             )
 
-        # --- 2. intake：提交答案 -> 大纲落库 ---
+        # --- 2. intake：提交答案 -> organizing（搜索前置，大纲由 Celery compose） ---
         answers = {q.id: q.options[0] for q in questionnaire.questions}
         async with AsyncSessionLocal() as db:
             detail = await course_planning_service.submit_answers(
@@ -87,42 +103,21 @@ async def main() -> int:
             )
         check(detail is not None, "submit_answers 返回快照")
         assert detail is not None
-        check(detail.status == "outline_ready", "intake -> status=outline_ready")
-        check(len(detail.units) >= 1, "大纲 >=1 unit")
-        check(
-            all(len(u.chapters) >= 1 and u.title for u in detail.units),
-            "每个 unit >=1 chapter 且 title 非空",
-        )
-        check(
-            all(ch.title for u in detail.units for ch in u.chapters),
-            "每个 chapter title 非空",
-        )
+        check(detail.status == "organizing", "intake -> status=organizing（搜索前置）")
+        check(len(detail.units) == 0, "organizing 快照 units 为空（大纲在 Celery 生成）")
 
         async with AsyncSessionLocal() as db:
             fresh = await course_service.get_owned_course(
                 db, user_id=user.id, course_id=course_id
             )
             check(
-                fresh is not None and fresh.status == "outline_ready",
-                "状态机落库 outline_ready",
+                fresh is not None and fresh.status == "organizing",
+                "状态机落库 organizing",
             )
             check(
                 fresh is not None and "answers" in (fresh.intake_json or {}),
                 "intake_json 已 merge 答案",
             )
-            units = (
-                await db.execute(
-                    select(CourseUnit).where(CourseUnit.course_id == course_id)
-                )
-            ).scalars().all()
-            check(len(units) >= 1, "units 落库")
-            unit_ids = [u.id for u in units]
-            chapters = (
-                await db.execute(
-                    select(CourseChapter).where(CourseChapter.unit_id.in_(unit_ids))
-                )
-            ).scalars().all()
-            check(len(chapters) >= 1, "chapters 落库")
 
         # --- 3. <ready 的课程不进列表 ---
         async with AsyncSessionLocal() as db:
