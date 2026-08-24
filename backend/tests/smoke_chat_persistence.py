@@ -24,7 +24,7 @@ from sqlalchemy import func, select
 
 from ai import init_ai_runtime, shutdown_ai_runtime
 from core.aio import drain_protected_writes
-from core.database import AsyncSessionLocal
+from core.database import AsyncSessionLocal, engine
 from core.security import CurrentUser
 from models.ai_conversation import AiMessage
 from models.ai_usage_log import AiUsageLog
@@ -319,6 +319,7 @@ async def main() -> int:
         check(gone is None, "会话已删除")
     finally:
         await shutdown_ai_runtime()
+        await engine.dispose()
 
     print()
     if FAILURES:
