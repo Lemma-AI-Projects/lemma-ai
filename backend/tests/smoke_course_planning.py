@@ -124,7 +124,7 @@ async def main() -> int:
             listed = await course_service.list_courses(db, user_id=user.id)
             check(
                 all(c.id != course_id for c in listed),
-                "outline_ready 课程不在 list_courses (status<ready)",
+                "organizing 课程不在 list_courses (status<ready)",
             )
 
         # --- 4. IDOR 红线 ---
