@@ -13,6 +13,7 @@ import asyncio
 import sys
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -96,11 +97,15 @@ async def main() -> int:
             )
 
         # --- 2. intake：提交答案 -> organizing（搜索前置，大纲由 Celery compose） ---
+        # organize_course.delay 需要 Redis broker；本脚本只验证状态机到 organizing，
+        # 用 mock 隔离入队副作用（仍断言入队参数），不依赖 Redis/Celery worker。
         answers = {q.id: q.options[0] for q in questionnaire.questions}
-        async with AsyncSessionLocal() as db:
-            detail = await course_planning_service.submit_answers(
-                db, user, course_id=course_id, answers=answers
-            )
+        with patch("tasks.course_organize.organize_course.delay") as mock_delay:
+            async with AsyncSessionLocal() as db:
+                detail = await course_planning_service.submit_answers(
+                    db, user, course_id=course_id, answers=answers
+                )
+            mock_delay.assert_called_once_with(str(course_id))
         check(detail is not None, "submit_answers 返回快照")
         assert detail is not None
         check(detail.status == "organizing", "intake -> status=organizing（搜索前置）")

@@ -12,6 +12,7 @@
 """
 
 import asyncio
+import contextlib
 import sys
 import uuid
 from pathlib import Path
@@ -259,15 +260,21 @@ async def main() -> int:
                 user,
             )
         assert ctx_c is not None
+        gen_c = stream_turn(ctx_c)
         received_c = ""
         deltas_c = 0
         with anyio.CancelScope() as scope:
-            async for chunk in stream_turn(ctx_c):
+            async for chunk in gen_c:
                 if chunk.kind == "delta" and chunk.text:
                     received_c += chunk.text
                     deltas_c += 1
                     if deltas_c >= 2:
                         scope.cancel()
+                        break  # 显式退出：避免取消异常触发隐式 aclose 在后台
+                        # 创建 async_generator_athrow 任务污染连接池
+        # 非取消上下文显式终结生成器：终结器内的受保护写正常调度、不泄漏
+        with contextlib.suppress(Exception):
+            await gen_c.aclose()
         await asyncio.sleep(1.5)  # 异步生成器终结器需要时间触发
         await drain_protected_writes()
         rows = await message_rows(conv_id)
