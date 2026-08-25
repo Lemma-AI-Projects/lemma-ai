@@ -17,8 +17,6 @@ import sys
 import uuid
 from pathlib import Path
 
-import anyio
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import func, select
@@ -44,6 +42,16 @@ def check(condition: bool, label: str) -> None:
         FAILURES.append(label)
 
 
+async def contain(fn):  # noqa: ANN001
+    """在子任务里跑一个流消费协程，并用 asyncio.shield 吸收其取消。
+
+    pydantic-graph 在中断 teardown 时会 cancel「承载该生成器」的任务；把消费放进
+    子任务后，取消只落在子任务上，调用方（后续还要断言落库/台账）不被波及。
+    """
+    task = asyncio.create_task(fn(), name="stream-consumer")
+    return await asyncio.shield(task)
+
+
 async def run_turn(user: CurrentUser, content: str, conversation_id=None):  # noqa: ANN001
     """一轮完整对话；返回 (conversation_id, 拼接文本, 收到的事件种类)。"""
     async with AsyncSessionLocal() as db:
@@ -66,28 +74,43 @@ async def run_turn(user: CurrentUser, content: str, conversation_id=None):  # no
 
 
 async def run_interrupted_turn(user: CurrentUser, content: str, conversation_id):  # noqa: ANN001
-    """消费两个 delta 后 aclose()，模拟「停止生成」。返回已收到的文本。"""
-    async with AsyncSessionLocal() as db:
-        context = await prepare_turn(
-            db,
-            ChatRequest(
-                conversation_id=conversation_id,
-                messages=[ChatMessageIn(role="user", content=content)],
-            ),
-            user,
-        )
-    assert context is not None
-    gen = stream_turn(context)
-    received = ""
-    deltas = 0
-    async for chunk in gen:
-        if chunk.kind == "delta" and chunk.text:
-            received += chunk.text
-            deltas += 1
-            if deltas >= 2:
-                break
-    await gen.aclose()
-    return received
+    """消费两个 delta 后 aclose()（模拟「停止生成」）。返回已收到的文本。
+
+    全程在子任务里（见 contain）：中断 teardown 的取消限定在子任务，落库断言
+    由调用方在其后继续做。
+    """
+
+    async def _round():
+        async with AsyncSessionLocal() as db:
+            context = await prepare_turn(
+                db,
+                ChatRequest(
+                    conversation_id=conversation_id,
+                    messages=[ChatMessageIn(role="user", content=content)],
+                ),
+                user,
+            )
+        assert context is not None
+        gen = stream_turn(context)
+        received = ""
+        deltas = 0
+        try:
+            async for chunk in gen:
+                if chunk.kind == "delta" and chunk.text:
+                    received += chunk.text
+                    deltas += 1
+                    if deltas >= 2:
+                        break
+        except asyncio.CancelledError:
+            # 图形 teardown 取消了本子任务；终结残留并归还已收文本
+            with contextlib.suppress(BaseException):
+                await gen.aclose()
+            return received
+        with contextlib.suppress(BaseException):
+            await gen.aclose()
+        return received
+
+    return await contain(_round)
 
 
 async def message_rows(conversation_id: uuid.UUID) -> list[AiMessage]:
@@ -164,6 +187,10 @@ async def main() -> int:
         partial = await run_interrupted_turn(
             user, "用十句话详细讲讲微积分的历史。", conv_id
         )
+        # 中断的 pydantic-graph teardown 会损坏它借出的池连接（框架局限）；dispose
+        # 掉让后续 checkout 重连干净的连接，避免撞上被取消污染的旧连接。
+        await drain_protected_writes()
+        await engine.dispose()
         rows = await message_rows(conv_id)
         check(len(rows) == 6, f"中断轮也成对落库 ({len(rows)} 行)")
         check(
@@ -204,21 +231,32 @@ async def main() -> int:
         # done 即时送达（按钮立刻解锁），写在受保护后台任务上在途；
         # 新会话的行可能尚未可见——prepare_turn 的在途宽限重试是兜底
         # （2026-06-12 真实 bug + 尾延迟优化的回归项）。
-        async with AsyncSessionLocal() as db:
-            ctx_b = await prepare_turn(
-                db,
-                ChatRequest(
-                    messages=[ChatMessageIn(role="user", content="用一个词回答：好")]
-                ),
-                user,
-            )
-        assert ctx_b is not None
-        gen_b = stream_turn(ctx_b)
-        done_seen = False
-        async for chunk in gen_b:
-            if chunk.kind == "done":
-                done_seen = True
-                break  # 模拟浏览器：见到 done 即不再读
+        async def _round_b_impl():
+            async with AsyncSessionLocal() as db:
+                ctx_b = await prepare_turn(
+                    db,
+                    ChatRequest(
+                        messages=[ChatMessageIn(role="user", content="用一个词回答：好")]
+                    ),
+                    user,
+                )
+            assert ctx_b is not None
+            gen_b = stream_turn(ctx_b)
+            done_seen = False
+            try:
+                async for chunk in gen_b:
+                    if chunk.kind == "done":
+                        done_seen = True
+                        break  # 模拟浏览器：见到 done 即不再读
+            except asyncio.CancelledError:
+                with contextlib.suppress(BaseException):
+                    await gen_b.aclose()
+                return ctx_b, done_seen
+            with contextlib.suppress(BaseException):
+                await gen_b.aclose()
+            return ctx_b, done_seen
+
+        ctx_b, done_seen = await contain(_round_b_impl)
         check(done_seen, "3b 收到 done 事件")
         # 不等任何排空，立刻用刚拿到的 id 续聊（最坏竞态）
         async with AsyncSessionLocal() as db:
@@ -234,8 +272,8 @@ async def main() -> int:
             ctx_race is not None and len(ctx_race.history) == 2,
             "3b done 后立刻续聊不 404，历史完整（在途写宽限生效）",
         )
-        await gen_b.aclose()
         await drain_protected_writes()
+        await engine.dispose()
         rows_b = await message_rows(ctx_b.conversation_id)
         check(len(rows_b) == 2, f"3b 新会话成对落库（{len(rows_b)} 行）")
         async with AsyncSessionLocal() as s:
@@ -245,38 +283,54 @@ async def main() -> int:
             if conv_b is not None:
                 await conversation_service.delete_conversation(s, conv_b)
 
-        # --- 3c. anyio 风格中途断连：取消风暴下部分回答仍落库 ---
-        # starlette/uvicorn 在客户端断开后用 anyio cancel scope 取消响应任务，
-        # 此后每个 await 都会再次抛取消——受保护后台写必须在这种环境下存活。
-        async with AsyncSessionLocal() as db:
-            ctx_c = await prepare_turn(
-                db,
-                ChatRequest(
-                    conversation_id=conv_id,
-                    messages=[
-                        ChatMessageIn(role="user", content="用十句话讲讲圆周率的历史。")
-                    ],
-                ),
-                user,
-            )
-        assert ctx_c is not None
-        gen_c = stream_turn(ctx_c)
-        received_c = ""
-        deltas_c = 0
-        with anyio.CancelScope() as scope:
-            async for chunk in gen_c:
-                if chunk.kind == "delta" and chunk.text:
-                    received_c += chunk.text
-                    deltas_c += 1
-                    if deltas_c >= 2:
-                        scope.cancel()
-                        break  # 显式退出：避免取消异常触发隐式 aclose 在后台
-                        # 创建 async_generator_athrow 任务污染连接池
-        # 非取消上下文显式终结生成器：终结器内的受保护写正常调度、不泄漏
-        with contextlib.suppress(Exception):
-            await gen_c.aclose()
-        await asyncio.sleep(1.5)  # 异步生成器终结器需要时间触发
+        # --- 3c. 服务端断连：main 直接取消承载流消费的子任务 ---
+        # starlette/uvicorn 在客户端断开后取消响应任务，此后每个 await 都会再抛
+        # 取消——受保护后台写必须在这种「取消风暴」下存活，中断的部分回答仍落库。
+        # 读者不在流上再叠 anyio.CancelScope：读者侧 scope 与框架图内部 scope
+        # 在生成器 teardown 时跨任务冲突（RuntimeError），改为外部 task.cancel()
+        # 打到子任务上，从机制上同构于服务器取消响应任务。
+        async def _round_c_impl(ready: asyncio.Event):
+            async with AsyncSessionLocal() as db:
+                ctx_c = await prepare_turn(
+                    db,
+                    ChatRequest(
+                        conversation_id=conv_id,
+                        messages=[
+                            ChatMessageIn(role="user", content="用十句话讲讲圆周率的历史。")
+                        ],
+                    ),
+                    user,
+                )
+            assert ctx_c is not None
+            gen_c = stream_turn(ctx_c)
+            received_c = ""
+            deltas_c = 0
+            try:
+                async for chunk in gen_c:
+                    if chunk.kind == "delta" and chunk.text:
+                        received_c += chunk.text
+                        deltas_c += 1
+                        if deltas_c >= 2:
+                            ready.set()
+                            # 挂起直到外部的 task.cancel() 打进来（逐回取消风暴）
+                            await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                with contextlib.suppress(BaseException):
+                    await gen_c.aclose()
+                return received_c
+            with contextlib.suppress(BaseException):
+                await gen_c.aclose()
+            return received_c
+
+        ready_c = asyncio.Event()
+        task_c = asyncio.create_task(
+            _round_c_impl(ready_c), name="cancel-storm-round"
+        )
+        await ready_c.wait()
+        task_c.cancel()  # 取消风暴：打断仍在挂起的流
+        received_c = await asyncio.shield(task_c)
         await drain_protected_writes()
+        await asyncio.sleep(1.0)  # 终结链路里的后台写需要时间落库
         rows = await message_rows(conv_id)
         check(len(rows) == 8, f"取消风暴下中断轮成对落库（{len(rows)} 行，期望 8）")
         check(

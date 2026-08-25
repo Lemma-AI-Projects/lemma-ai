@@ -318,7 +318,11 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         # Close the inner generator deterministically (books the interrupted
         # ledger row now instead of whenever GC finalizes it). May insta-raise
         # under cancellation — the persist above no longer depends on it.
-        with contextlib.suppress(Exception):
+        # GeneratorExit/CancelledError are BaseException (NOT Exception), so we
+        # suppress them too: an async-generator teardown here cannot be allowed
+        # to leave a dangling `async_generator_athrow` finalizer that later
+        # pollutes the connection pool from a GC callback.
+        with contextlib.suppress(BaseException):
             await chunk_stream.aclose()
         if persist_task is not None and not persist_task.done():
             with contextlib.suppress(asyncio.CancelledError):

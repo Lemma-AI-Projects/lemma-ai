@@ -317,9 +317,23 @@ class StreamMixin:
                 except (GeneratorExit, asyncio.CancelledError) as exc:
                     interrupted = exc
             finally:
-                await run_cm.__aexit__(None, None, None)
+                # Close the graph deterministically. Under an interrupted
+                # stream the TaskGroup self-cancels and __aexit__ finishes with
+                # CancelledError — suppress it (BaseException, not Exception):
+                # we cannot let generator teardown fan out to the caller loop.
+                with contextlib.suppress(BaseException):
+                    await run_cm.__aexit__(None, None, None)
             if interrupted is not None:
-                raise interrupted
+                # Interrupted stream (stop button / client disconnect). Terminate
+                # WITHOUT re-raising: re-raising GeneratorExit/CancelledError here
+                # propagates through run_cm.__aexit__'s TaskGroup, whose exit is
+                # cut short so its user-facing cancel scope keeps the host task
+                # registered; the dangling generator is later GC'd as an
+                # `async_generator_athrow` finalizer that re-cancels the scope and
+                # poisons the caller's event loop. Normal return closes the
+                # generator tree cleanly; the interrupted turn is already booked
+                # by the protected-write in `finally` (and finalize_stream).
+                return
             if empty_response:
                 yield AIChunk(
                     kind="error",
