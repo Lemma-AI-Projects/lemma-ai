@@ -17,6 +17,8 @@ interface SemanticPanelProps {
   onApply: (suggestion: LayoutSuggestion) => void
   onUndo: () => void
   onClose: () => void
+  /** 面板定位类名（fullBleed 下需让出顶部悬浮 chrome，父级注入） */
+  positionClass?: string
 }
 
 function qualityLabel(score: number): string {
@@ -44,6 +46,7 @@ export function SemanticPanel({
   onApply,
   onUndo,
   onClose,
+  positionClass = 'right-3 top-3',
 }: SemanticPanelProps) {
   const { t } = useTranslation()
   const panelRef = useRef<HTMLDivElement>(null)
@@ -51,7 +54,7 @@ export function SemanticPanel({
   return (
     <div
       ref={panelRef}
-      className="pointer-events-auto absolute right-3 top-3 z-[100] w-80 rounded-xl border border-zinc-200/80 bg-white shadow-lg"
+      className={`pointer-events-auto absolute ${positionClass} z-[100] w-80 rounded-xl border border-zinc-200/80 bg-white shadow-lg`}
     >
       {/* 头部 */}
       <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">

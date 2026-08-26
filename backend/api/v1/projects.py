@@ -6,13 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
 from models.project import Project
+from schemas.board import BoardSnapshotIn, BoardSnapshotOut
 from schemas.project import (
     ProjectConversationOut,
     ProjectCreateIn,
     ProjectOut,
     ProjectUpdateIn,
 )
-from services import conversation_service, project_service
+from services import board_service, conversation_service, project_service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -110,3 +111,42 @@ async def delete_project(
     project = await _owned_or_404(db, current_user, project_id)
     # Conversations inside fall back to the main list (FK SET NULL).
     await project_service.delete_project(db, project)
+
+
+@router.get("/{project_id}/board/snapshot", response_model=BoardSnapshotOut)
+async def get_board_snapshot(
+    project_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BoardSnapshotOut:
+    # IDOR 红线：先校验空间归属，再读快照（他人空间视同不存在）。
+    await _owned_or_404(db, current_user, project_id)
+    snapshot = await board_service.get_snapshot(db, project_id=project_id)
+    if snapshot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="board_snapshot_not_found",
+        )
+    return BoardSnapshotOut(
+        project_id=snapshot.project_id,
+        snapshot=snapshot.snapshot,
+        updated_at=snapshot.updated_at,
+    )
+
+
+@router.put("/{project_id}/board/snapshot", response_model=BoardSnapshotOut)
+async def save_board_snapshot(
+    project_id: uuid.UUID,
+    payload: BoardSnapshotIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> BoardSnapshotOut:
+    await _owned_or_404(db, current_user, project_id)
+    snapshot = await board_service.save_snapshot(
+        db, project_id=project_id, snapshot=payload.snapshot
+    )
+    return BoardSnapshotOut(
+        project_id=snapshot.project_id,
+        snapshot=snapshot.snapshot,
+        updated_at=snapshot.updated_at,
+    )
