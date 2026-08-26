@@ -27,6 +27,8 @@
     "signingIn": "登录中...",
     "signingUp": "注册中...",
     "google": "使用 Google 登录",
+    "github": "使用 GitHub 登录",
+    "orContinueWithEmail": "或使用邮箱继续",
     "hasAccount": "已经有账号？",
     "noAccount": "还没有账号？",
     "signInLink": "登录",

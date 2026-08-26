@@ -16,6 +16,7 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Github } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabaseClient'
@@ -80,11 +81,11 @@ export function LoginForm({
     setInfoMessage(t('auth.signupSuccess'))
   }
 
-  async function handleGoogle() {
+  async function handleOAuth(provider: 'google' | 'github') {
     setErrorMessage('')
     setInfoMessage('')
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider,
       options: { redirectTo: window.location.origin },
     })
     if (error) {
@@ -104,6 +105,30 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-col gap-2.5">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => handleOAuth('google')}
+              className="rounded-[8px] border-[#e5e5e5] bg-white text-black shadow-xs hover:bg-[#f5f5f5] hover:text-black"
+            >
+              {t('auth.google')}
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => handleOAuth('github')}
+              className="rounded-[8px] border-[#e5e5e5] bg-white text-black shadow-xs hover:bg-[#f5f5f5] hover:text-black"
+            >
+              <Github className="size-4" aria-hidden="true" />
+              {t('auth.github')}
+            </Button>
+            <div className="my-1 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[#e5e5e5]" />
+              <span className="text-xs text-[#737373]">{t('auth.orContinueWithEmail')}</span>
+              <div className="h-px flex-1 bg-[#e5e5e5]" />
+            </div>
+          </div>
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field className="gap-3">
@@ -162,14 +187,6 @@ export function LoginForm({
                     : isSignup
                       ? t('auth.signUp')
                       : t('auth.signIn')}
-                </Button>
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={handleGoogle}
-                  className="rounded-[8px] border-[#e5e5e5] bg-white text-black shadow-xs hover:bg-[#f5f5f5] hover:text-black"
-                >
-                  {t('auth.google')}
                 </Button>
                 <FieldDescription className="text-center text-[#737373]">
                   {isSignup ? (

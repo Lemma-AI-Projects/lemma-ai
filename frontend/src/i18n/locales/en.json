@@ -27,6 +27,8 @@
     "signingIn": "Signing in...",
     "signingUp": "Signing up...",
     "google": "Continue with Google",
+    "github": "Continue with GitHub",
+    "orContinueWithEmail": "or continue with email",
     "hasAccount": "Already have an account?",
     "noAccount": "Don't have an account yet?",
     "signInLink": "Sign in",
