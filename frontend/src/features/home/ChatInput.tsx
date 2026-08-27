@@ -13,6 +13,11 @@ const HOME_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-5px]'
 // Home add menu horizontal offset. Aligns the menu left edge with the input border.
 const HOME_ADD_MENU_ALIGN_OFFSET = -14
 
+// Decorative chin below the input. It mirrors the course video's layered
+// underlay, but stays shorter because it does not contain actions yet.
+const HOME_INPUT_CHIN_CLASS_NAME =
+  'relative z-0 -mt-[22px] h-[56px] rounded-b-[22px] bg-zinc-100'
+
 export function ChatInput({
   className,
   onSend,
@@ -44,60 +49,59 @@ export function ChatInput({
   }
 
   return (
-    <div
-      className={cn(
-        'flex flex-col rounded-[26px] border border-zinc-200 bg-white',
-        className
-      )}
-    >
-      <textarea
-        placeholder="Ask anything about this lesson..."
-        rows={1}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-20 w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
-        style={{ fieldSizing: 'content' } as React.CSSProperties}
-      />
+    <div className={cn('relative', className)}>
+      <div className="relative z-10 flex flex-col rounded-[22px] border border-zinc-200 bg-white">
+        <textarea
+          placeholder="Ask anything about this lesson..."
+          rows={1}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
+          style={{ fieldSizing: 'content' } as React.CSSProperties}
+        />
 
-      <div className="flex items-center gap-2 px-4 pt-1 pb-4">
-        <div
-          className={cn(
-            HOME_PLUS_BOTTOM_OFFSET_CLASS,
-            HOME_PLUS_LEFT_OFFSET_CLASS,
-            'flex items-center gap-2'
-          )}
-        >
-          <InputAddMenu
-            contextLabel="Include page context"
-            menuAlignOffset={HOME_ADD_MENU_ALIGN_OFFSET}
-            planningIcon={BookOpenCheck}
-            planningLabel="Course Planning"
-            referenceLabel="Reference materials"
-            planningEnabled={coursePlanningEnabled}
-            onPlanningEnabledChange={setCoursePlanningEnabled}
-          />
-        </div>
-
-        <div className="mb-[-4px] ml-auto mr-[-4px]">
-          <Button
-            type="button"
-            variant="default"
-            size="icon"
-            disabled={!hasContent}
-            onClick={submit}
+        <div className="flex items-center gap-2 px-4 pt-1 pb-4">
+          <div
             className={cn(
-              'rounded-full transition-colors',
-              hasContent
-                ? 'bg-zinc-900 text-white hover:bg-zinc-800'
-                : 'bg-zinc-200 text-zinc-400 cursor-default'
+              HOME_PLUS_BOTTOM_OFFSET_CLASS,
+              HOME_PLUS_LEFT_OFFSET_CLASS,
+              'flex items-center gap-2'
             )}
-            aria-label="Send message"
           >
-            <ArrowUp className="size-[18px]" />
-          </Button>
+            <InputAddMenu
+              contextLabel="Include page context"
+              menuAlignOffset={HOME_ADD_MENU_ALIGN_OFFSET}
+              planningIcon={BookOpenCheck}
+              planningLabel="Course Planning"
+              referenceLabel="Reference materials"
+              planningEnabled={coursePlanningEnabled}
+              onPlanningEnabledChange={setCoursePlanningEnabled}
+            />
+          </div>
+
+          <div className="mb-[-4px] ml-auto mr-[-4px]">
+            <Button
+              type="button"
+              variant="default"
+              size="icon"
+              disabled={!hasContent}
+              onClick={submit}
+              className={cn(
+                'rounded-full transition-colors',
+                hasContent
+                  ? 'bg-zinc-900 text-white hover:bg-zinc-800'
+                  : 'bg-zinc-200 text-zinc-400 cursor-default'
+              )}
+              aria-label="Send message"
+            >
+              <ArrowUp className="size-[18px]" />
+            </Button>
+          </div>
         </div>
       </div>
+
+      <div aria-hidden className={HOME_INPUT_CHIN_CLASS_NAME} />
     </div>
   )
 }
