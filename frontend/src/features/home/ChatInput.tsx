@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from 'react'
-import { ArrowUp, BookOpenCheck } from 'lucide-react'
+import { ArrowUp, BookOpenCheck, GraduationCap } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
+import { InputMenu } from '@/components/InputMenu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -13,10 +14,10 @@ const HOME_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-5px]'
 // Home add menu horizontal offset. Aligns the menu left edge with the input border.
 const HOME_ADD_MENU_ALIGN_OFFSET = -14
 
-// Decorative chin below the input. It mirrors the course video's layered
-// underlay, but stays shorter because it does not contain actions yet.
+// Action chin below the input. Its negative overlap mirrors the course video's
+// layered underlay while reserving a compact row for mode buttons.
 const HOME_INPUT_CHIN_CLASS_NAME =
-  'relative z-0 -mt-[22px] h-[56px] rounded-b-[22px] bg-zinc-100'
+  'relative z-0 -mt-[22px] flex h-[62px] items-center gap-1.5 rounded-b-[22px] bg-zinc-100 px-3.5 pt-[22px]'
 
 export function ChatInput({
   className,
@@ -101,7 +102,26 @@ export function ChatInput({
         </div>
       </div>
 
-      <div aria-hidden className={HOME_INPUT_CHIN_CLASS_NAME} />
+      <div className={HOME_INPUT_CHIN_CLASS_NAME}>
+        <InputMenu
+          align="start"
+          side="bottom"
+          sideOffset={7}
+          contentClassName="h-24 w-40 min-w-0 rounded-lg p-0 shadow-none"
+          trigger={
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-7 gap-1.5 -translate-y-[1px] rounded-full bg-transparent px-2.5 text-[14.5px] font-normal leading-5 text-zinc-700 hover:bg-black/[0.05] hover:text-zinc-950 data-[state=open]:bg-black/[0.08] data-[state=open]:text-zinc-950 data-[state=open]:hover:bg-black/[0.08] has-[>svg]:px-2.5"
+            >
+              <GraduationCap className="size-[17px]" />
+              <span>创造课程</span>
+            </Button>
+          }
+        >
+          <div aria-hidden className="h-full w-full" />
+        </InputMenu>
+      </div>
     </div>
   )
 }
