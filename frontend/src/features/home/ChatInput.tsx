@@ -3,6 +3,7 @@ import { ArrowUp, BookOpenCheck, GraduationCap } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { InputMenu } from '@/components/InputMenu'
 import { Button } from '@/components/ui/button'
+import { CourseSourceSegmentedControl } from '@/features/home/CourseSourceSegmentedControl'
 import { cn } from '@/lib/utils'
 
 // Home input plus button left offset. Negative margin moves it further left.
@@ -79,6 +80,7 @@ export function ChatInput({
               planningEnabled={coursePlanningEnabled}
               onPlanningEnabledChange={setCoursePlanningEnabled}
             />
+            <CourseSourceSegmentedControl />
           </div>
 
           <div className="mb-[-4px] ml-auto mr-[-4px]">
