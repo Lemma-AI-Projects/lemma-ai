@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react'
-import { ArrowUp, GraduationCap } from 'lucide-react'
+import { ArrowUp, BrainCircuit, Globe2, Puzzle } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { InputMenu } from '@/components/InputMenu'
 import { Button } from '@/components/ui/button'
@@ -121,10 +121,48 @@ export function ChatInput({
             <Button
               type="button"
               variant="ghost"
-              className="h-7 gap-1.5 -translate-y-[1px] rounded-full bg-transparent px-2.5 text-[14.5px] font-normal leading-5 text-zinc-700 hover:bg-black/[0.05] hover:text-zinc-950 data-[state=open]:bg-black/[0.08] data-[state=open]:text-zinc-950 data-[state=open]:hover:bg-black/[0.08] has-[>svg]:px-2.5"
+              className="h-7 gap-1.5 -translate-y-[1px] rounded-full bg-transparent px-2.5 text-[14px] font-normal leading-5 text-zinc-700 hover:bg-black/[0.05] hover:text-zinc-950 data-[state=open]:bg-black/[0.08] data-[state=open]:text-zinc-950 data-[state=open]:hover:bg-black/[0.08] has-[>svg]:px-2.5"
             >
-              <GraduationCap className="size-[17px]" />
-              <span>创造课程</span>
+              <Puzzle className="size-[16.5px]" />
+              <span>未使用插件</span>
+            </Button>
+          }
+        >
+          <div aria-hidden className="h-full w-full" />
+        </InputMenu>
+
+        <InputMenu
+          align="start"
+          side="bottom"
+          sideOffset={7}
+          contentClassName="h-24 w-40 min-w-0 rounded-lg p-0 shadow-none"
+          trigger={
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-7 gap-1.5 -translate-y-[1px] rounded-full bg-transparent px-2.5 text-[14px] font-normal leading-5 text-zinc-700 hover:bg-black/[0.05] hover:text-zinc-950 data-[state=open]:bg-black/[0.08] data-[state=open]:text-zinc-950 data-[state=open]:hover:bg-black/[0.08] has-[>svg]:px-2.5"
+            >
+              <Globe2 className="size-[16.5px]" />
+              <span>联网搜索未启用</span>
+            </Button>
+          }
+        >
+          <div aria-hidden className="h-full w-full" />
+        </InputMenu>
+
+        <InputMenu
+          align="start"
+          side="bottom"
+          sideOffset={7}
+          contentClassName="h-24 w-40 min-w-0 rounded-lg p-0 shadow-none"
+          trigger={
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-7 gap-1.5 -translate-y-[1px] rounded-full bg-transparent px-2.5 text-[14px] font-normal leading-5 text-zinc-700 hover:bg-black/[0.05] hover:text-zinc-950 data-[state=open]:bg-black/[0.08] data-[state=open]:text-zinc-950 data-[state=open]:hover:bg-black/[0.08] has-[>svg]:px-2.5"
+            >
+              <BrainCircuit className="size-[16.5px]" />
+              <span>未连接记忆</span>
             </Button>
           }
         >

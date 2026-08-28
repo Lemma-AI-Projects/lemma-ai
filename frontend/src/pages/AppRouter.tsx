@@ -3,6 +3,7 @@ import { RequireAuth } from '@/features/auth/RequireAuth'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
+import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
@@ -35,6 +36,10 @@ const routes: RouteObject[] = [
           {
             path: 'schedule',
             element: <SchedulePage />,
+          },
+          {
+            path: 'courses',
+            element: <CourseCenterPage />,
           },
           {
             path: 'knowledge',
