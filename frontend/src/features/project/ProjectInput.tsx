@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react'
-import { ArrowUp, BookOpenCheck } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -18,11 +18,9 @@ export function ProjectInput({
   onSend,
 }: {
   className?: string
-  onSend: (text: string, options?: { tool?: 'course_planning' }) => void
+  onSend: (text: string) => void
 }) {
   const [value, setValue] = useState('')
-  // One-shot Course Planning toggle for the message this input sends.
-  const [coursePlanningEnabled, setCoursePlanningEnabled] = useState(false)
   const hasContent = value.trim().length > 0
 
   const submit = () => {
@@ -30,9 +28,8 @@ export function ProjectInput({
     if (!text) {
       return
     }
-    onSend(text, coursePlanningEnabled ? { tool: 'course_planning' } : undefined)
+    onSend(text)
     setValue('')
-    setCoursePlanningEnabled(false)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -71,11 +68,7 @@ export function ProjectInput({
           <InputAddMenu
             contextLabel="Include project context"
             menuAlignOffset={PROJECT_ADD_MENU_ALIGN_OFFSET}
-            planningIcon={BookOpenCheck}
-            planningLabel="Course Planning"
             referenceLabel="Reference project files"
-            planningEnabled={coursePlanningEnabled}
-            onPlanningEnabledChange={setCoursePlanningEnabled}
           />
         </div>
 

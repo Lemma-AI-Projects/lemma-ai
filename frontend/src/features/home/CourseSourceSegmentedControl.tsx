@@ -2,7 +2,6 @@ import {
   useCallback,
   useLayoutEffect,
   useRef,
-  useState,
 } from 'react'
 import {
   GraduationCap,
@@ -20,10 +19,10 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-type CourseSource = 'free-course' | 'video-course' | 'chat'
+export type HomeComposerMode = 'free-course' | 'video-course' | 'chat'
 
 interface CourseSourceOption {
-  value: CourseSource
+  value: HomeComposerMode
   label: string
   labelMaxWidth: number
   iconColor: string
@@ -62,12 +61,15 @@ const labelTransition = [
 
 export function CourseSourceSegmentedControl({
   className,
+  onValueChange,
+  value,
 }: {
   className?: string
+  onValueChange: (value: HomeComposerMode) => void
+  value: HomeComposerMode
 }) {
-  const [value, setValue] = useState<CourseSource>('free-course')
   const rootRef = useRef<HTMLDivElement>(null)
-  const itemRefs = useRef<Record<CourseSource, HTMLButtonElement | null>>({
+  const itemRefs = useRef<Record<HomeComposerMode, HTMLButtonElement | null>>({
     'free-course': null,
     'video-course': null,
     chat: null,
@@ -124,7 +126,7 @@ export function CourseSourceSegmentedControl({
             nextValue === 'video-course' ||
             nextValue === 'chat'
           ) {
-            setValue(nextValue)
+            onValueChange(nextValue)
           }
         }}
         aria-label="对话模式"

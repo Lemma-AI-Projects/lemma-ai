@@ -17,7 +17,7 @@ interface ConversationLocationState {
   messageKey?: string
   /** 项目页发起的新会话：直接诞生在该项目里。 */
   projectId?: string
-  /** 首页/项目页开启 Course Planning 后带入：本条消息走工具回合。 */
+  /** 首页选择“视频课程”后带入：本条消息走 Course Planning 工具回合。 */
   tool?: 'course_planning'
 }
 
@@ -32,9 +32,6 @@ export function ConversationPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [draft, setDraft] = useState('')
-  // One-shot per the design: toggling Course Planning applies to the next send,
-  // then resets. Page-local UI state (rules 第四章), not server data.
-  const [coursePlanningEnabled, setCoursePlanningEnabled] = useState(false)
 
   const chat = useConversationChat({
     conversationId: id,
@@ -97,14 +94,7 @@ export function ConversationPage() {
   }, [id, messagesQuery.data, chat.liveMessages])
 
   const handleSend = (text: string) => {
-    chat.send(
-      text,
-      coursePlanningEnabled ? { tool: 'course_planning' } : undefined
-    )
-    // One-shot: the tool applies to this message only.
-    if (coursePlanningEnabled) {
-      setCoursePlanningEnabled(false)
-    }
+    chat.send(text)
   }
 
   const isBusy = chat.status === 'submitted' || chat.status === 'streaming'
@@ -216,8 +206,6 @@ export function ConversationPage() {
               isStreaming={isBusy}
               onSend={handleSend}
               onStop={chat.stop}
-              coursePlanningEnabled={coursePlanningEnabled}
-              onCoursePlanningChange={setCoursePlanningEnabled}
             />
           </div>
           {/* Mask sits one layer below the input and is pulled up by the input's

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   BookOpen,
-  Brain,
   Copy,
   FileText,
   Globe,
@@ -11,7 +10,6 @@ import {
   Lightbulb,
   ListChecks,
   Plus,
-  type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -25,16 +23,10 @@ import {
 
 interface InputAddMenuProps {
   className?: string
-  planningIcon?: LucideIcon
   contextLabel?: string
   menuAlignOffset?: number
-  planningLabel?: string
   referenceLabel?: string
   toolsLabel?: string
-  // Controlled course-planning toggle. When provided, the caller owns the state
-  // (so a send can read/reset it); omitted -> the switch stays self-managed.
-  planningEnabled?: boolean
-  onPlanningEnabledChange?: (enabled: boolean) => void
 }
 
 // Plus button size. Change this value to adjust the circular button diameter.
@@ -50,19 +42,11 @@ export function InputAddMenu({
   className,
   contextLabel = 'Include context',
   menuAlignOffset = -10,
-  planningIcon: PlanningIcon = Brain,
-  planningLabel = 'Deep thinking',
   referenceLabel = 'Reference materials',
   toolsLabel = 'Tools',
-  planningEnabled,
-  onPlanningEnabledChange,
 }: InputAddMenuProps) {
   const [includeContext, setIncludeContext] = useState(true)
-  const [planningLocal, setPlanningLocal] = useState(false)
   const [webSearch, setWebSearch] = useState(false)
-  // Controlled when the caller passes the toggle; otherwise self-managed.
-  const planningChecked = planningEnabled ?? planningLocal
-  const setPlanning = onPlanningEnabledChange ?? setPlanningLocal
 
   return (
     <InputMenu
@@ -93,12 +77,6 @@ export function InputAddMenu({
         label={contextLabel}
         checked={includeContext}
         onCheckedChange={setIncludeContext}
-      />
-      <InputMenuSwitchItem
-        icon={PlanningIcon}
-        label={planningLabel}
-        checked={planningChecked}
-        onCheckedChange={setPlanning}
       />
       <InputMenuSwitchItem
         icon={Globe}

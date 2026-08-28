@@ -1,9 +1,12 @@
 import { useState, type KeyboardEvent } from 'react'
-import { ArrowUp, BookOpenCheck, GraduationCap } from 'lucide-react'
+import { ArrowUp, GraduationCap } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { InputMenu } from '@/components/InputMenu'
 import { Button } from '@/components/ui/button'
-import { CourseSourceSegmentedControl } from '@/features/home/CourseSourceSegmentedControl'
+import {
+  CourseSourceSegmentedControl,
+  type HomeComposerMode,
+} from '@/features/home/CourseSourceSegmentedControl'
 import { cn } from '@/lib/utils'
 
 // Home input plus button left offset. Negative margin moves it further left.
@@ -28,8 +31,7 @@ export function ChatInput({
   onSend: (text: string, options?: { tool?: 'course_planning' }) => void
 }) {
   const [value, setValue] = useState('')
-  // One-shot Course Planning toggle for the message this input sends.
-  const [coursePlanningEnabled, setCoursePlanningEnabled] = useState(false)
+  const [composerMode, setComposerMode] = useState<HomeComposerMode>('chat')
   const hasContent = value.trim().length > 0
 
   const submit = () => {
@@ -37,9 +39,15 @@ export function ChatInput({
     if (!text) {
       return
     }
-    onSend(text, coursePlanningEnabled ? { tool: 'course_planning' } : undefined)
+    // 视频课程沿用现有 Course Planning 工具；自由课程尚无已交接契约，
+    // 在该功能落地前不发送任何新 tool/字段。
+    onSend(
+      text,
+      composerMode === 'video-course'
+        ? { tool: 'course_planning' }
+        : undefined
+    )
     setValue('')
-    setCoursePlanningEnabled(false)
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -74,13 +82,12 @@ export function ChatInput({
             <InputAddMenu
               contextLabel="Include page context"
               menuAlignOffset={HOME_ADD_MENU_ALIGN_OFFSET}
-              planningIcon={BookOpenCheck}
-              planningLabel="Course Planning"
               referenceLabel="Reference materials"
-              planningEnabled={coursePlanningEnabled}
-              onPlanningEnabledChange={setCoursePlanningEnabled}
             />
-            <CourseSourceSegmentedControl />
+            <CourseSourceSegmentedControl
+              value={composerMode}
+              onValueChange={setComposerMode}
+            />
           </div>
 
           <div className="mb-[-4px] ml-auto mr-[-4px]">

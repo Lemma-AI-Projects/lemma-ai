@@ -1,5 +1,5 @@
 import { type KeyboardEvent } from 'react'
-import { ArrowUp, BookOpenCheck, Square } from 'lucide-react'
+import { ArrowUp, Square } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -21,8 +21,6 @@ export function ConversationInput({
   isStreaming,
   onSend,
   onStop,
-  coursePlanningEnabled = false,
-  onCoursePlanningChange,
 }: {
   className?: string
   value: string
@@ -30,8 +28,6 @@ export function ConversationInput({
   isStreaming: boolean
   onSend: (text: string) => void
   onStop: () => void
-  coursePlanningEnabled?: boolean
-  onCoursePlanningChange?: (enabled: boolean) => void
 }) {
   const hasContent = value.trim().length > 0
 
@@ -80,11 +76,7 @@ export function ConversationInput({
           <InputAddMenu
             contextLabel="Include conversation context"
             menuAlignOffset={CONVERSATION_ADD_MENU_ALIGN_OFFSET}
-            planningIcon={BookOpenCheck}
-            planningLabel="Course Planning"
             referenceLabel="Reference conversation"
-            planningEnabled={coursePlanningEnabled}
-            onPlanningEnabledChange={onCoursePlanningChange}
           />
         </div>
 
