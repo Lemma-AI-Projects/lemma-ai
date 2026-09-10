@@ -1,43 +1,69 @@
-import type { CSSProperties } from 'react'
-import { CourseCenterTabs } from '@/features/course/CourseCenterTabs'
-import { CourseWeeklyProgressCard } from '@/features/course/CourseWeeklyProgressCard'
+import { useMemo } from 'react'
+import { format } from 'date-fns'
+import { GraduationCap } from 'lucide-react'
+import { CourseCenterView } from '@/features/course/CourseCenterView'
+import {
+  useCoursesListQuery,
+  type CourseListItem,
+} from '@/features/course/courseLearningApi'
+import type {
+  CourseCenterCourse,
+  CourseCenterStatus,
+} from '@/features/course/courseCenterTypes'
 
-const COURSE_CENTER_LAYOUT_STYLE = {
-  // 标题与整个 Tab 组共用的左边距；增大向右，减小向左。
-  '--course-center-left-space': '90px',
-  // 页面内容的右侧留白。
-  '--course-center-right-space': '24px',
-  // 标题距页面顶部的距离；增大向下，减小向上。
-  '--course-center-top-space': '72px',
-  // 页面内容的底部留白。
-  '--course-center-bottom-space': '32px',
-  // 标题与 Tab 容器之间的垂直间距；增大时 Tab 向下移动。
-  '--course-center-title-tabs-gap': '20px',
-} as CSSProperties
+// 中性插图底色，与 mock 数据保持一致；不引入品牌色。
+const ILLUSTRATION_TONES = ['bg-zinc-100', 'bg-stone-100', 'bg-slate-100']
+
+function toCourseCenterStatus(status: string): CourseCenterStatus {
+  switch (status) {
+    case 'researching':
+    case 'building':
+      return 'in-progress'
+    case 'ready':
+      return 'completed'
+    default:
+      // intake / failed 等在中心页都当作未开始；失败态由课程详情页表达。
+      return 'not-started'
+  }
+}
+
+function formatAddedAt(updatedAt: string): string {
+  const date = new Date(updatedAt)
+  return Number.isNaN(date.getTime()) ? '—' : format(date, 'yyyy/MM/dd')
+}
+
+// 后端目前只下发 id/title/status/updatedAt：进度与「下一讲」尚无真实来源，
+// 因此这里不伪造，卡片按缺省渲染（进度 0%、省略 UP NEXT 区块）。
+function mapCourseListItem(
+  course: CourseListItem,
+  index: number
+): CourseCenterCourse {
+  return {
+    id: course.id,
+    title: course.title,
+    source: 'AI 生成',
+    addedAt: formatAddedAt(course.updatedAt),
+    progress: 0,
+    status: toCourseCenterStatus(course.status),
+    icon: GraduationCap,
+    tone: ILLUSTRATION_TONES[index % ILLUSTRATION_TONES.length],
+  }
+}
 
 export function CourseCenterPage() {
+  const coursesQuery = useCoursesListQuery()
+  const courses = useMemo(
+    () => (coursesQuery.data ?? []).map(mapCourseListItem),
+    [coursesQuery.data]
+  )
+  const continueCourse = courses.find((course) => course.status === 'in-progress')
+
   return (
-    <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
-      <main className="min-h-full">
-        <div
-          style={COURSE_CENTER_LAYOUT_STYLE}
-          className="flex w-full flex-col pt-[var(--course-center-top-space)] pr-[var(--course-center-right-space)] pb-[var(--course-center-bottom-space)] pl-[var(--course-center-left-space)]"
-        >
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-start">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-[28px] leading-[34px] font-medium text-foreground">
-                课程中心
-              </h1>
-
-              <div className="mt-[var(--course-center-title-tabs-gap)]">
-                <CourseCenterTabs />
-              </div>
-            </div>
-
-            <CourseWeeklyProgressCard className="w-full max-w-[330px] xl:mr-[44px] xl:mt-[64px] xl:w-[330px] xl:shrink-0" />
-          </div>
-        </div>
-      </main>
-    </div>
+    <CourseCenterView
+      courses={courses}
+      isPending={coursesQuery.isPending}
+      isError={coursesQuery.isError}
+      continueCourse={continueCourse}
+    />
   )
 }

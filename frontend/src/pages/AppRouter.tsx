@@ -4,6 +4,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
+import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
@@ -22,6 +23,11 @@ const routes: RouteObject[] = [
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    // 布局评审入口：公开、免登录，只渲染 mock 数据，用于对齐视觉稿。
+    path: '/preview/courses',
+    element: <CourseCenterPreviewPage />,
   },
   {
     element: <RequireAuth />,

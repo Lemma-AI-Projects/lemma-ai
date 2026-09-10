@@ -1,9 +1,8 @@
-import { useState, type CSSProperties } from 'react'
+import type { CSSProperties } from 'react'
 import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import type { CourseCenterTab } from '@/features/course/courseCenterTypes'
 import { cn } from '@/lib/utils'
-
-type CourseCenterTab = 'all' | 'in-progress' | 'completed'
 
 const tabs: Array<{ value: CourseCenterTab; label: string }> = [
   { value: 'all', label: '全部' },
@@ -18,10 +17,19 @@ const COURSE_CENTER_TOOLBAR_STYLE = {
   '--course-center-search-width': '300px',
 } as CSSProperties
 
-export function CourseCenterTabs() {
-  const [activeTab, setActiveTab] = useState<CourseCenterTab>('all')
-  const [searchTerm, setSearchTerm] = useState('')
+export interface CourseCenterTabsProps {
+  activeTab: CourseCenterTab
+  onActiveTabChange: (tab: CourseCenterTab) => void
+  searchTerm: string
+  onSearchTermChange: (term: string) => void
+}
 
+export function CourseCenterTabs({
+  activeTab,
+  onActiveTabChange,
+  searchTerm,
+  onSearchTermChange,
+}: CourseCenterTabsProps) {
   // py-2 控制工具栏上下各 8px 的内部留白。
   return (
     <div
@@ -47,7 +55,7 @@ export function CourseCenterTabs() {
               activeTab === tab.value &&
                 'bg-muted text-foreground hover:bg-muted hover:text-foreground'
             )}
-            onClick={() => setActiveTab(tab.value)}
+            onClick={() => onActiveTabChange(tab.value)}
           >
             {tab.label}
           </Button>
@@ -67,7 +75,7 @@ export function CourseCenterTabs() {
             aria-label="搜索课程"
             placeholder="搜索课程"
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => onSearchTermChange(event.target.value)}
             className="h-[34px] w-full rounded-full border border-zinc-200 bg-background ps-9 pe-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/80 focus:border-zinc-300"
           />
         </div>
