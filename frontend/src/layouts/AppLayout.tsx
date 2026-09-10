@@ -109,6 +109,7 @@ export function AppLayout() {
         <SidebarItem icon={GraduationCap} label="课程中心" to="/courses" />
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
+        <SidebarItem icon={FolderOpen} label="学习空间" to="/learn-spaces" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
         <div
           className={cn(
