@@ -9,6 +9,8 @@ import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
+import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
+import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
@@ -28,6 +30,11 @@ const routes: RouteObject[] = [
     // 布局评审入口：公开、免登录，只渲染 mock 数据，用于对齐视觉稿。
     path: '/preview/courses',
     element: <CourseCenterPreviewPage />,
+  },
+  {
+    // 布局评审入口：公开、免登录，只渲染 mock 数据。
+    path: '/preview/learn-spaces',
+    element: <LearnSpacesPreviewPage />,
   },
   {
     element: <RequireAuth />,
@@ -50,6 +57,11 @@ const routes: RouteObject[] = [
           {
             path: 'knowledge',
             element: <KnowledgeBasePage />,
+          },
+          {
+            // 学习空间总览（UI 改名层：数据层仍为 projects）。
+            path: 'learn-spaces',
+            element: <LearnSpacesPage />,
           },
           {
             path: 'plugins',
