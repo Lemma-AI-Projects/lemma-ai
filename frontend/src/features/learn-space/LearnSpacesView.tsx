@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
 import type { ProjectItem } from '@/features/project/projectApi'
+import { useAppTranslation } from '@/i18n'
 
 export interface LearnSpacesViewProps {
   spaces: ProjectItem[]
@@ -22,6 +23,7 @@ export function LearnSpacesView({
   isPending,
   isError,
 }: LearnSpacesViewProps) {
+  const { t } = useAppTranslation()
   const [createOpen, setCreateOpen] = useState(false)
 
   return (
@@ -30,7 +32,7 @@ export function LearnSpacesView({
         <div className="mb-7 flex items-center justify-between">
           <div className="flex translate-x-2 items-center gap-3">
             <FolderOpen className="size-9 text-foreground" strokeWidth={1.75} />
-            <h1 className="text-2xl font-medium text-foreground">学习空间</h1>
+            <h1 className="text-2xl font-medium text-foreground">{t('learnSpace.title')}</h1>
           </div>
           <Button
             type="button"
@@ -40,7 +42,7 @@ export function LearnSpacesView({
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="size-4" />
-            新建学习空间
+            {t('learnSpace.new')}
           </Button>
         </div>
 
@@ -50,13 +52,13 @@ export function LearnSpacesView({
             <Skeleton className="h-24 w-full" />
           </div>
         ) : isError ? (
-          <p className="py-10 text-center text-sm text-zinc-400">加载失败</p>
+          <p className="py-10 text-center text-sm text-zinc-400">{t('learnSpace.loadFailed')}</p>
         ) : spaces.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-transparent py-14">
             <FolderOpen className="size-8 text-zinc-300" strokeWidth={1.5} />
-            <p className="text-sm text-zinc-400">还没有学习空间</p>
+            <p className="text-sm text-zinc-400">{t('learnSpace.empty')}</p>
             <p className="text-xs text-zinc-400">
-              新建一个空间，把课程、资料与对话收在一处
+              {t('learnSpace.emptyHint')}
             </p>
           </div>
         ) : (

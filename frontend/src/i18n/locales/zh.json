@@ -1,0 +1,78 @@
+{
+  "nav": {
+    "home": "首页",
+    "newChat": "新建对话",
+    "courses": "课程中心",
+    "schedule": "日程",
+    "knowledgeBase": "知识库",
+    "learnSpaces": "学习空间",
+    "plugins": "插件",
+    "sandbox": "Sandbox(调试)",
+    "chats": "对话",
+    "more": "更多",
+    "loadFailed": "加载失败",
+    "newLearnSpace": "新建学习空间"
+  },
+  "auth": {
+    "signInTitle": "登录 Lemma",
+    "signInDesc": "输入邮箱和密码登录你的 Lemma 账号",
+    "email": "邮箱",
+    "password": "密码",
+    "signIn": "登录",
+    "signingIn": "登录中...",
+    "forgotPassword": "忘记密码？",
+    "google": "使用 Google 登录",
+    "noAccount": "还没有账号？",
+    "signUpLink": "注册"
+  },
+  "settings": {
+    "title": "设置",
+    "general": "通用",
+    "account": "账户",
+    "billing": "订阅和使用量",
+    "storage": "存储空间",
+    "memory": "记忆",
+    "personalization": "个性化",
+    "language": "语言",
+    "selectLanguage": "选择语言",
+    "close": "关闭设置"
+  },
+  "learnSpace": {
+    "title": "学习空间",
+    "new": "新建学习空间",
+    "empty": "还没有学习空间",
+    "emptyHint": "新建一个空间，把课程、资料与对话收在一处",
+    "loadFailed": "加载失败"
+  },
+  "course": {
+    "title": "课程中心",
+    "all": "全部",
+    "inProgress": "进行中",
+    "completed": "已完成",
+    "search": "搜索课程",
+    "courseName": "课程名称",
+    "source": "来源",
+    "addedAt": "添加时间",
+    "upNext": "下一讲",
+    "sourceAi": "AI 生成",
+    "sourceUploaded": "上传资料",
+    "empty": "还没有课程，先在对话里生成一门课吧",
+    "noMatch": "没有符合条件的课程",
+    "loadFailed": "课程加载失败",
+    "weekly": "本周",
+    "previousWeek": "上周",
+    "sessionsLearned": "已学 {{count}} 个 session",
+    "weeklyHint": "完成一个 session 后解锁你的 token 里程碑。",
+    "continue": "从上次学到的地方继续",
+    "continueEmpty": "暂无可继续的课程",
+    "progress": "学习进度",
+    "continueHint": "继续学习该课程"
+  },
+  "common": {
+    "close": "关闭",
+    "cancel": "取消",
+    "retry": "重试",
+    "more": "更多",
+    "loadFailed": "加载失败"
+  }
+}

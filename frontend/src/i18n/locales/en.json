@@ -1,0 +1,78 @@
+{
+  "nav": {
+    "home": "Home",
+    "newChat": "New chat",
+    "courses": "Courses",
+    "schedule": "Schedule",
+    "knowledgeBase": "Knowledge Base",
+    "learnSpaces": "Learn Spaces",
+    "plugins": "Plugins",
+    "sandbox": "Sandbox (debug)",
+    "chats": "Chats",
+    "more": "More",
+    "loadFailed": "Failed to load",
+    "newLearnSpace": "New Learn Space"
+  },
+  "auth": {
+    "signInTitle": "Sign in to Lemma",
+    "signInDesc": "Enter your email and password to sign in",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "forgotPassword": "Forgot password?",
+    "google": "Continue with Google",
+    "noAccount": "Don't have an account yet?",
+    "signUpLink": "Sign up"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "account": "Account",
+    "billing": "Billing & Usage",
+    "storage": "Storage",
+    "memory": "Memory",
+    "personalization": "Personalization",
+    "language": "Language",
+    "selectLanguage": "Select language",
+    "close": "Close settings"
+  },
+  "learnSpace": {
+    "title": "Learn Spaces",
+    "new": "New Learn Space",
+    "empty": "No learn spaces yet",
+    "emptyHint": "Create a space to keep courses, sources and chats together",
+    "loadFailed": "Failed to load"
+  },
+  "course": {
+    "title": "Courses",
+    "all": "All",
+    "inProgress": "In progress",
+    "completed": "Completed",
+    "search": "Search courses",
+    "courseName": "Course name",
+    "source": "Source",
+    "addedAt": "Date added",
+    "upNext": "Up next",
+    "sourceAi": "AI generated",
+    "sourceUploaded": "Uploaded",
+    "empty": "No courses yet — start one from a conversation",
+    "noMatch": "No courses match your filters",
+    "loadFailed": "Failed to load courses",
+    "weekly": "This week",
+    "previousWeek": "Last week",
+    "sessionsLearned": "Learned {{count}} sessions",
+    "weeklyHint": "Finish a session to unlock your token milestone.",
+    "continue": "Pick up where you left off",
+    "continueEmpty": "Nothing to continue yet",
+    "progress": "progress",
+    "continueHint": "Continue this course"
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "more": "More",
+    "loadFailed": "Failed to load"
+  }
+}

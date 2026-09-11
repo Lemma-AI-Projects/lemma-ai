@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabaseClient'
+import { useAppTranslation } from '@/i18n'
 
 interface LoginFormProps extends ComponentProps<'div'> {
   onSuccess: () => void
@@ -32,6 +33,7 @@ export function LoginForm({
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { t } = useAppTranslation()
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -57,16 +59,16 @@ export function LoginForm({
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="rounded-[14px] border-[#e5e5e5] text-black">
         <CardHeader>
-          <CardTitle>登录 Lemma</CardTitle>
+          <CardTitle>{t('auth.signInTitle')}</CardTitle>
           <CardDescription className="text-[#737373]">
-            输入邮箱和密码登录你的 Lemma 账号
+            {t('auth.signInDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit}>
             <FieldGroup>
               <Field className="gap-3">
-                <FieldLabel htmlFor="email">邮箱</FieldLabel>
+                <FieldLabel htmlFor="email">{t('auth.email')}</FieldLabel>
                 <Input
                   id="email"
                   type="email"
@@ -80,13 +82,13 @@ export function LoginForm({
               </Field>
               <Field className="gap-3">
                 <div className="flex items-center">
-                  <FieldLabel htmlFor="password">密码</FieldLabel>
+                  <FieldLabel htmlFor="password">{t('auth.password')}</FieldLabel>
                   <a
                     href="#"
                     onClick={(event) => event.preventDefault()}
                     className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                   >
-                    忘记密码？
+                    {t('auth.forgotPassword')}
                   </a>
                 </div>
                 <Input
@@ -106,19 +108,19 @@ export function LoginForm({
                   disabled={isSubmitting}
                   className="rounded-[8px] bg-black text-[#fafafa] hover:bg-black/90"
                 >
-                  {isSubmitting ? '登录中...' : '登录'}
+                  {isSubmitting ? t('auth.signingIn') : t('auth.signIn')}
                 </Button>
                 <Button
                   variant="outline"
                   type="button"
                   className="rounded-[8px] border-[#e5e5e5] bg-white text-black shadow-xs hover:bg-[#f5f5f5] hover:text-black"
                 >
-                  使用 Google 登录
+                  {t('auth.google')}
                 </Button>
                 <FieldDescription className="text-center text-[#737373]">
-                  还没有账号？{' '}
+                  {t('auth.noAccount')}{' '}
                   <a href="#" onClick={(event) => event.preventDefault()}>
-                    注册
+                    {t('auth.signUpLink')}
                   </a>
                 </FieldDescription>
               </Field>

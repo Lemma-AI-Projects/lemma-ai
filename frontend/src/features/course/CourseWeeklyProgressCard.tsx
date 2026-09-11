@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useAppTranslation } from '@/i18n'
 
 type WeekView = 'current' | 'previous'
 
@@ -33,6 +34,7 @@ export interface CourseWeeklyProgressCardProps {
 export function CourseWeeklyProgressCard({
   className,
 }: CourseWeeklyProgressCardProps) {
+  const { t } = useAppTranslation()
   const [weekView, setWeekView] = useState<WeekView>('current')
   const isCurrentWeek = weekView === 'current'
   const days = isCurrentWeek ? currentWeekDays : previousWeekDays
@@ -49,10 +51,10 @@ export function CourseWeeklyProgressCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[12px] leading-4 font-medium text-zinc-500">
-            {isCurrentWeek ? '本周' : '上周'}
+            {isCurrentWeek ? t('course.weekly') : t('course.previousWeek')}
           </p>
           <h2 className="mt-1 text-[20px] leading-6 font-semibold tracking-[-0.02em]">
-            已学 {sessionCount} 个 session
+            {t('course.sessionsLearned', { count: sessionCount })}
           </h2>
         </div>
 
@@ -83,12 +85,12 @@ export function CourseWeeklyProgressCard({
       </div>
 
       <p className="mt-1.5 max-w-[250px] text-[12.5px] leading-[18px] text-zinc-400">
-        完成一个 session 后解锁你的 token 里程碑。
+        {t('course.weeklyHint')}
       </p>
 
       <div
         className="mt-3.5 grid grid-cols-7 gap-1.5"
-        aria-label={isCurrentWeek ? '本周学习天数' : '上周学习天数'}
+        aria-label={isCurrentWeek ? t('course.weekly') : t('course.previousWeek')}
       >
         {days.map((item) => (
           <div

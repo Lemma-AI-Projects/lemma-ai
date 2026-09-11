@@ -10,6 +10,8 @@ import type {
   CourseCenterCourse,
   CourseCenterStatus,
 } from '@/features/course/courseCenterTypes'
+import { useAppTranslation } from '@/i18n'
+import type { TranslationKey } from '@/i18n/keys'
 
 // 中性插图底色，与 mock 数据保持一致；不引入品牌色。
 const ILLUSTRATION_TONES = ['bg-zinc-100', 'bg-stone-100', 'bg-slate-100']
@@ -36,12 +38,13 @@ function formatAddedAt(updatedAt: string): string {
 // 因此这里不伪造，卡片按缺省渲染（进度 0%、省略 UP NEXT 区块）。
 function mapCourseListItem(
   course: CourseListItem,
-  index: number
+  index: number,
+  t: (key: TranslationKey) => string
 ): CourseCenterCourse {
   return {
     id: course.id,
     title: course.title,
-    source: 'AI 生成',
+    source: t('course.sourceAi'),
     addedAt: formatAddedAt(course.updatedAt),
     progress: 0,
     status: toCourseCenterStatus(course.status),
@@ -51,10 +54,13 @@ function mapCourseListItem(
 }
 
 export function CourseCenterPage() {
+  const { t } = useAppTranslation()
   const coursesQuery = useCoursesListQuery()
   const courses = useMemo(
-    () => (coursesQuery.data ?? []).map(mapCourseListItem),
-    [coursesQuery.data]
+    () => (coursesQuery.data ?? []).map((course, index) =>
+      mapCourseListItem(course, index, t)
+    ),
+    [coursesQuery.data, t]
   )
   const continueCourse = courses.find((course) => course.status === 'in-progress')
 

@@ -9,6 +9,7 @@ import type {
   CourseCenterCourse,
   CourseCenterTab,
 } from '@/features/course/courseCenterTypes'
+import { useAppTranslation } from '@/i18n'
 
 const COURSE_CENTER_LAYOUT_STYLE = {
   // 标题与整个 Tab 组共用的左边距；增大向右，减小向左。
@@ -52,6 +53,7 @@ export function CourseCenterView({
   isError,
   continueCourse,
 }: CourseCenterViewProps) {
+  const { t } = useAppTranslation()
   const [activeTab, setActiveTab] = useState<CourseCenterTab>('all')
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -72,7 +74,7 @@ export function CourseCenterView({
           <div className="flex flex-col gap-8 xl:flex-row xl:items-start">
             <div className="min-w-0 flex-1">
               <h1 className="text-[28px] leading-[34px] font-medium text-foreground">
-                课程中心
+                {t('course.title')}
               </h1>
 
               <div className="mt-[var(--course-center-title-tabs-gap)]">
@@ -93,7 +95,7 @@ export function CourseCenterView({
                   </>
                 ) : isError ? (
                   <div className="rounded-[14px] border border-zinc-200 bg-white px-4 py-8 text-center text-[13px] text-zinc-400">
-                    课程加载失败
+                    {t('course.loadFailed')}
                   </div>
                 ) : visibleCourses.length > 0 ? (
                   visibleCourses.map((course, index) => (
@@ -106,8 +108,8 @@ export function CourseCenterView({
                 ) : (
                   <div className="rounded-[14px] border border-zinc-200 bg-white px-4 py-10 text-center text-[13px] text-zinc-400">
                     {hasNoCourseAtAll
-                      ? '还没有课程，先在对话里生成一门课吧'
-                      : '没有符合条件的课程'}
+                      ? t('course.empty')
+                      : t('course.noMatch')}
                   </div>
                 )}
               </div>

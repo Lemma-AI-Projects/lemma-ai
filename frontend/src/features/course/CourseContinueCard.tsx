@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { useAppTranslation } from '@/i18n'
 
 export interface ContinueCourse {
   id: string
@@ -22,12 +23,13 @@ export function CourseContinueCard({
   isPending,
   isError,
 }: CourseContinueCardProps) {
+  const { t } = useAppTranslation()
   const navigate = useNavigate()
 
   return (
     <section aria-label="继续学习" className={cn('min-w-0', className)}>
       <p className="text-[12px] leading-4 font-medium text-zinc-500">
-        从上次学到的地方继续
+        {t('course.continue')}
       </p>
 
       <div className="mt-2">
@@ -38,7 +40,7 @@ export function CourseContinueCard({
           </div>
         ) : isError ? (
           <div className="rounded-[14px] border border-zinc-200 px-3 py-4 text-[12.5px] text-zinc-400">
-            课程加载失败
+            {t('course.loadFailed')}
           </div>
         ) : course ? (
           <Button
@@ -52,13 +54,13 @@ export function CourseContinueCard({
             </span>
             <span className="mt-0.5 block w-full truncate text-[12px] leading-4 font-normal text-zinc-400">
               {course.nextLectureTitle
-                ? `下一讲：${course.nextLectureTitle}`
-                : '继续学习该课程'}
+                ? `${t('course.upNext')}：${course.nextLectureTitle}`
+                : t('course.continueHint')}
             </span>
           </Button>
         ) : (
           <div className="rounded-[14px] border border-zinc-200 px-3 py-4 text-[12.5px] text-zinc-400">
-            暂无可继续的课程
+            {t('course.continueEmpty')}
           </div>
         )}
       </div>

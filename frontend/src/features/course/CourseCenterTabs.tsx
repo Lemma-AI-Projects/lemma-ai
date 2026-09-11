@@ -2,13 +2,19 @@ import type { CSSProperties } from 'react'
 import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { CourseCenterTab } from '@/features/course/courseCenterTypes'
+import type { TranslationKey } from '@/i18n/keys'
 import { cn } from '@/lib/utils'
+import { useAppTranslation } from '@/i18n'
 
-const tabs: Array<{ value: CourseCenterTab; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'in-progress', label: '进行中' },
-  { value: 'completed', label: '已完成' },
-]
+function courseCenterTabs(
+  t: (key: TranslationKey) => string
+): Array<{ value: CourseCenterTab; label: string }> {
+  return [
+    { value: 'all', label: t('course.all') },
+    { value: 'in-progress', label: t('course.inProgress') },
+    { value: 'completed', label: t('course.completed') },
+  ]
+}
 
 const COURSE_CENTER_TOOLBAR_STYLE = {
   // 搜索框与 Tab 组的水平间距；增大时搜索框向右移动。
@@ -30,6 +36,8 @@ export function CourseCenterTabs({
   searchTerm,
   onSearchTermChange,
 }: CourseCenterTabsProps) {
+  const { t } = useAppTranslation()
+  const tabs = courseCenterTabs(t)
   // py-2 控制工具栏上下各 8px 的内部留白。
   return (
     <div
@@ -72,8 +80,8 @@ export function CourseCenterTabs({
             id="course-center-search-input"
             type="text"
             autoComplete="off"
-            aria-label="搜索课程"
-            placeholder="搜索课程"
+            aria-label={t('course.search')}
+            placeholder={t('course.search')}
             value={searchTerm}
             onChange={(event) => onSearchTermChange(event.target.value)}
             className="h-[34px] w-full rounded-full border border-zinc-200 bg-background ps-9 pe-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/80 focus:border-zinc-300"

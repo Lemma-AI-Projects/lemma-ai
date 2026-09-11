@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import type { CourseCenterCourse } from '@/features/course/courseCenterTypes'
+import { useAppTranslation } from '@/i18n'
 
 function MetaItem({ label, value }: { label: string; value: string }) {
   return (
@@ -25,6 +26,7 @@ export function CourseListCard({
   course,
   illustrationPosition = 'left',
 }: CourseListCardProps) {
+  const { t } = useAppTranslation()
   const { id, title, source, addedAt, progress, upNext, icon: Icon, tone } = course
 
   const illustration = (
@@ -41,22 +43,22 @@ export function CourseListCard({
   const info = (
     <div className="flex min-w-0 flex-1 flex-col self-stretch">
       <p className="text-[11px] leading-4 font-medium tracking-[0.06em] text-zinc-400">
-        课程名称
+        {t('course.courseName')}
       </p>
       <h3 className="mt-1 truncate text-[17px] leading-6 font-semibold text-zinc-900">
         {title}
       </h3>
 
       <div className="mt-2 flex flex-wrap gap-x-10 gap-y-1.5">
-        <MetaItem label="来源" value={source} />
-        <MetaItem label="添加时间" value={addedAt} />
+        <MetaItem label={t('course.source')} value={source} />
+        <MetaItem label={t('course.addedAt')} value={addedAt} />
       </div>
 
       <div className="mt-auto flex items-center gap-3 pt-3.5">
         <div
           className="h-[3px] flex-1 overflow-hidden rounded-full bg-zinc-200"
           role="progressbar"
-          aria-label={`${title} 学习进度`}
+          aria-label={`${title} ${t('course.progress')}`}
           aria-valuenow={progress}
           aria-valuemin={0}
           aria-valuemax={100}
@@ -106,7 +108,7 @@ export function CourseListCard({
 
             <div className="hidden w-[240px] shrink-0 flex-col justify-center px-5 lg:flex">
               <p className="text-[11px] leading-4 font-medium tracking-[0.06em] text-zinc-400">
-                下一讲
+                {t('course.upNext')}
               </p>
               <span className="mt-1.5 inline-flex w-fit items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[12px] leading-4 font-medium text-zinc-700">
                 {upNext.label}

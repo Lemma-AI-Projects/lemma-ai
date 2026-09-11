@@ -16,6 +16,8 @@ import { HomeSettingsAccountPage } from './HomeSettingsAccountPage'
 import { HomeSettingsBillingPage } from './HomeSettingsBillingPage'
 import { HomeSettingsGeneralPage } from './HomeSettingsGeneralPage'
 import { HomeSettingsStoragePage } from './HomeSettingsStoragePage'
+import type { TranslationKey } from '@/i18n/keys'
+import { useAppTranslation } from '@/i18n'
 
 export type HomeSettingsTab =
   | 'general'
@@ -31,14 +33,22 @@ interface HomeSettingsTabItem {
   icon: LucideIcon
 }
 
-const homeSettingsTabs: HomeSettingsTabItem[] = [
-  { value: 'general', label: '通用', icon: Settings2 },
-  { value: 'account', label: '账户', icon: CircleUserRound },
-  { value: 'billing', label: '订阅和使用量', icon: CreditCard },
-  { value: 'storage', label: '存储空间', icon: HardDrive },
-  { value: 'memory', label: '记忆', icon: Brain },
-  { value: 'personalization', label: '个性化', icon: Palette },
-]
+function homeSettingsTabs(
+  t: (key: TranslationKey) => string
+): HomeSettingsTabItem[] {
+  return [
+    { value: 'general', label: t('settings.general'), icon: Settings2 },
+    { value: 'account', label: t('settings.account'), icon: CircleUserRound },
+    { value: 'billing', label: t('settings.billing'), icon: CreditCard },
+    { value: 'storage', label: t('settings.storage'), icon: HardDrive },
+    { value: 'memory', label: t('settings.memory'), icon: Brain },
+    {
+      value: 'personalization',
+      label: t('settings.personalization'),
+      icon: Palette,
+    },
+  ]
+}
 
 interface HomeSettingsDialogProps {
   account: CurrentUser | undefined
@@ -77,6 +87,9 @@ export function HomeSettingsDialog({
   onOpenChange,
   defaultTab = 'general',
 }: HomeSettingsDialogProps) {
+  const { t } = useAppTranslation()
+  const tabs = homeSettingsTabs(t)
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -85,7 +98,7 @@ export function HomeSettingsDialog({
           aria-describedby={undefined}
           className={settingsDialogContentClassName}
         >
-          <DialogPrimitive.Title className="sr-only">设置</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t('settings.title')}</DialogPrimitive.Title>
 
           <TabsPrimitive.Root
             key={`${open}-${defaultTab}`}
@@ -95,17 +108,17 @@ export function HomeSettingsDialog({
           >
             <div className={settingsNavClassName}>
               <DialogPrimitive.Close
-                aria-label="关闭设置"
+                aria-label={t('settings.close')}
                 className={settingsNavCloseButtonClassName}
               >
                 <X className="size-5" />
               </DialogPrimitive.Close>
 
               <TabsPrimitive.List
-                aria-label="设置分类"
+                aria-label={t('settings.title')}
                 className="flex gap-1 max-md:items-center md:mt-1 md:flex-col md:gap-0.5"
               >
-                {homeSettingsTabs.map((tab) => {
+                {tabs.map((tab) => {
                   const Icon = tab.icon
 
                   return (
@@ -125,7 +138,7 @@ export function HomeSettingsDialog({
               </TabsPrimitive.List>
             </div>
 
-            {homeSettingsTabs.map((tab) => (
+            {tabs.map((tab) => (
               <TabsPrimitive.Content
                 key={tab.value}
                 value={tab.value}
