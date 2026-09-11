@@ -4,11 +4,11 @@ import {
   Check,
   ChevronRight,
   CircleHelp,
+  Coins,
   LogOut,
   Palette,
   Plus,
   Settings,
-  Sparkles,
   UserRound,
 } from 'lucide-react'
 import {
@@ -27,10 +27,12 @@ import {
   useCurrentUser,
 } from '@/features/auth/useCurrentUser'
 import { useAuth } from '@/features/auth/useAuth'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabaseClient'
 import { currentUserAccountId, userAccounts } from '@/mock/userAccounts'
 
 export function HomeUserMenu() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { session } = useAuth()
   const { data: currentUser } = useCurrentUser()
@@ -177,9 +179,9 @@ export function HomeUserMenu() {
         <ActionMenuSeparator />
 
         <ActionMenuItem
-          label="升级套餐"
-          icon={Sparkles}
-          onSelect={() => handleAction('Upgrade plan')}
+          label="Credits"
+          icon={Coins}
+          onSelect={() => navigate('/credits')}
         />
         <ActionMenuItem
           label="个性化"

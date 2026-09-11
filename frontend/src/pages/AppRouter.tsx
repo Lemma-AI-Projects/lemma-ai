@@ -6,6 +6,8 @@ import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
 import { CoursePage } from '@/pages/CoursePage'
+import { CreditsPage } from '@/pages/CreditsPage'
+import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
@@ -37,6 +39,11 @@ const routes: RouteObject[] = [
     element: <LearnSpacesPreviewPage />,
   },
   {
+    // 布局评审入口：公开、免登录，只渲染 mock 数据。
+    path: '/preview/credits',
+    element: <CreditsPreviewPage />,
+  },
+  {
     element: <RequireAuth />,
     children: [
       {
@@ -62,6 +69,11 @@ const routes: RouteObject[] = [
             // 学习空间总览（UI 改名层：数据层仍为 projects）。
             path: 'learn-spaces',
             element: <LearnSpacesPage />,
+          },
+          {
+            // Credits 充值：入口在头像菜单，侧栏不出现。
+            path: 'credits',
+            element: <CreditsPage />,
           },
           {
             path: 'plugins',

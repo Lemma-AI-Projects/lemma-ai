@@ -74,5 +74,57 @@
     "retry": "Retry",
     "more": "More",
     "loadFailed": "Failed to load"
+  },
+  "credits": {
+    "eyebrow": "Credits",
+    "title": "Power up your learning",
+    "subtitle": "One-time credits, use as you go and they never expire. Payments are handled securely by Stripe / PayPal.",
+    "balance": "Balance",
+    "success": "Recharged — +{{count}} credits added",
+    "notReady": "Payments are not connected yet. The page is ready and goes live once the backend is wired up.",
+    "footer": "USD · payments and refunds by Stripe / PayPal · one-time purchase, no auto-renewal",
+    "popular": "Most popular",
+    "bestValue": "Best value",
+    "perCredit": "≈ {{value}}¢ / credit",
+    "pack": {
+      "starter": {
+        "tagline": "Light start",
+        "perks": [
+          "500 credits",
+          "Standard model quota",
+          "Community support"
+        ]
+      },
+      "pro": {
+        "tagline": "Most popular",
+        "perks": [
+          "1,200 credits",
+          "Priority inference",
+          "Enhanced video parsing",
+          "Priority support"
+        ]
+      },
+      "max": {
+        "tagline": "Heavy use",
+        "perks": [
+          "4,000 credits",
+          "Everything in Pro",
+          "Batch tasks",
+          "Dedicated channel"
+        ]
+      }
+    },
+    "paypal": {
+      "notReady": "· connecting",
+      "loading": "Loading PayPal…",
+      "sdkFailed": "PayPal SDK failed to load",
+      "incomplete": "Payment did not complete. Please retry or contact support."
+    },
+    "stripe": {
+      "pay": "Pay by card",
+      "redirecting": "Redirecting…",
+      "sessionFailed": "Could not create the checkout session: {{message}}",
+      "sessionFailedRetry": "Could not create the checkout session, please retry"
+    }
   }
 }
