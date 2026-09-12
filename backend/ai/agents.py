@@ -7,7 +7,8 @@ keeping prompt ownership out of the framework.
 
 Two families: text/video agents output str (chat/ask_video); the course agents
 bind a pydantic output_type for structured generation (client.generate). The
-output types live in ai/coursegen/types.py (types-only import, no cycle).
+output types live in ai/coursegen/types.py and ai/free_course/types.py
+(types-only imports, no cycle).
 """
 
 from dataclasses import dataclass
@@ -23,6 +24,14 @@ from ai.coursegen.types import (
     VideoSelection,
 )
 from ai.errors import UnsupportedCapabilityError
+from ai.free_course.types import (
+    AnswerFeedback,
+    LearningGap,
+    LearningIntent,
+    LearningMap,
+    Lesson,
+    LessonBlueprint,
+)
 from ai.types import AIUseCase
 
 
@@ -87,6 +96,15 @@ course_outline_agent = _build_structured_agent(CourseOutline)
 chapter_query_agent = _build_structured_agent(ChapterQueries)
 video_select_agent = _build_structured_agent(VideoSelection)
 
+# Free-Course: one structured agent per pipeline step, each with its own output
+# shape, so a step's schema cannot leak into another step's prompt.
+free_course_intake_agent = _build_structured_agent(LearningIntent)
+free_course_map_agent = _build_structured_agent(LearningMap)
+free_course_gap_agent = _build_structured_agent(LearningGap)
+free_course_blueprint_agent = _build_structured_agent(LessonBlueprint)
+free_course_lesson_agent = _build_structured_agent(Lesson)
+free_course_feedback_agent = _build_structured_agent(AnswerFeedback)
+
 _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_INTAKE: course_intake_agent,
     AIUseCase.TOPIC_SEARCH: topic_search_agent,
@@ -94,6 +112,12 @@ _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_OUTLINE: course_outline_agent,
     AIUseCase.CHAPTER_QUERY: chapter_query_agent,
     AIUseCase.VIDEO_SELECT: video_select_agent,
+    AIUseCase.FREE_COURSE_INTAKE: free_course_intake_agent,
+    AIUseCase.FREE_COURSE_MAP: free_course_map_agent,
+    AIUseCase.FREE_COURSE_GAP: free_course_gap_agent,
+    AIUseCase.FREE_COURSE_BLUEPRINT: free_course_blueprint_agent,
+    AIUseCase.FREE_COURSE_LESSON: free_course_lesson_agent,
+    AIUseCase.FREE_COURSE_FEEDBACK: free_course_feedback_agent,
 }
 
 

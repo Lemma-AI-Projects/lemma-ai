@@ -52,6 +52,18 @@ class AIFallbackExhausted(AIError):
     code = "ai_fallback_exhausted"
 
 
+class FreeCourseError(AIError):
+    """A Free-Course product failed validation (spec §17: 宁少勿凑).
+
+    Raised when the model's structured output parses but is not a usable course
+    — no real units, a lesson without objects, an assessment without an answer.
+    Terminal by design: the pipeline marks that step failed rather than
+    persisting something the learner cannot learn from.
+    """
+
+    code = "free_course_invalid"
+
+
 # Transient failures worth an automatic retry: timeouts (incl. the gateway's
 # ~60s stream cutoff mapped below) and rate limits. Provider VERDICTS (4xx —
 # e.g. the 1M-token cap 400) stay `ai_provider_error` and are terminal.

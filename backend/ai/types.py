@@ -46,6 +46,17 @@ class AIUseCase(StrEnum):
     # learning-oriented Markdown summary, streamed (gemini_video + reasoning) and
     # cached. Distinct prompt from VIDEO_SUMMARY (study notes, not a recap).
     COURSE_OVERVIEW = "course_overview"
+    # Free-Course: 自由课程 mode — a course generated from an intent alone, with
+    # no video supply involved. One use case per pipeline step, so the routing
+    # table can point them at different models later (spec §14: the generation
+    # strategy must stay replaceable).
+    FREE_COURSE_INTAKE = "free_course_intake"
+    FREE_COURSE_MAP = "free_course_map"
+    FREE_COURSE_GAP = "free_course_gap"
+    FREE_COURSE_BLUEPRINT = "free_course_blueprint"
+    FREE_COURSE_LESSON = "free_course_lesson"
+    # Learner-facing feedback on one answer (客观题本地判定 + LLM 反馈).
+    FREE_COURSE_FEEDBACK = "free_course_feedback"
 
 
 class VideoInputKind(StrEnum):
