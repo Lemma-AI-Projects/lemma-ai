@@ -21,10 +21,14 @@ logger = logging.getLogger(__name__)
 # Channels proven by scripts/validate_ai_channels.py.
 # probes 1-2 passed 2026-06-10 (text); probes 3-6 passed 2026-06-10 (video,
 # native + framework engines both green — merge verdict: framework optional).
+# deepseek text probes passed 2026-08-23 against a real key (deepseek-chat and
+# deepseek-reasoner both green, usage complete) — see
+# planning/其他/lemma-ai-deepseek-provider-plan.md §10.
 _TESTED_CHANNELS = {
     ("aihubmix", "openai_compatible"),
     ("openrouter", "openrouter"),
     ("aihubmix", "gemini_video"),
+    ("deepseek", "openai_compatible"),
 }
 # Known but not yet probed. Allowed in the table with a startup warning until
 # the probe verdict moves them up (终稿 5.1 配置纪律).
@@ -33,6 +37,7 @@ _UNTESTED_CHANNELS: set[tuple[str, str]] = set()
 _PLATFORM_API_KEYS = {
     "aihubmix": "AIHUBMIX_API_KEY",
     "openrouter": "OPENROUTER_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
 }
 
 
@@ -91,4 +96,6 @@ def validate_routes() -> None:
             if env_name == "AIHUBMIX_API_KEY" and not settings.aihubmix_api_key:
                 raise AIConfigError(f"route {use_case} needs {env_name} to be set")
             if env_name == "OPENROUTER_API_KEY" and not settings.openrouter_api_key:
+                raise AIConfigError(f"route {use_case} needs {env_name} to be set")
+            if env_name == "DEEPSEEK_API_KEY" and not settings.deepseek_api_key:
                 raise AIConfigError(f"route {use_case} needs {env_name} to be set")

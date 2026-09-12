@@ -117,6 +117,12 @@ class Settings(BaseSettings):
     aihubmix_api_key: str
     aihubmix_openai_base_url: str = "https://aihubmix.com/v1"
     aihubmix_gemini_base_url: str = "https://aihubmix.com/gemini"
+    # DeepSeek API — an OpenAI-compatible *cost tier* for TEXT use cases only
+    # (no vision/video). Empty by default so a deployment without a key still
+    # boots; it only becomes reachable once a deepseek route is added to
+    # AI_ROUTES_JSON. See planning/其他/lemma-ai-deepseek-provider-plan.md.
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com"
     ai_default_timeout_seconds: float = 30
     # native | pydantic_ai — stays native until probes 3-6 all pass (终稿 8.2).
     ai_video_engine: str = "native"
