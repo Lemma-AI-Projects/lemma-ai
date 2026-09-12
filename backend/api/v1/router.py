@@ -8,6 +8,7 @@ from api.v1 import (
     credits,
     graphs,
     health,
+    lti,
     overview,
     payments,
     projects,
@@ -25,6 +26,7 @@ api_router.include_router(courses.router)
 api_router.include_router(companion.router)
 api_router.include_router(overview.router)
 api_router.include_router(graphs.router)
+api_router.include_router(lti.router)
 api_router.include_router(credits.router)
 api_router.include_router(payments.router)
 api_router.include_router(webhooks.router)

@@ -221,6 +221,20 @@ class Settings(BaseSettings):
         """True when the active mode's client id + secret are both present."""
         return bool(self.paypal_client_id and self.paypal_client_secret)
 
+    # --- LTI 1.3 tool (LMS roster integration) ---
+    # Public base URL of this backend, used to build the tool's own launch and
+    # JWKS URLs that we hand to the LMS during registration.
+    lti_tool_base_url: str = "http://localhost:8000"
+    # Our signing key for outbound LTI messages (NRPS / AGS client assertions).
+    # PEM, newline-escaped; empty means those outbound calls are unavailable,
+    # which does NOT affect verifying incoming launches.
+    lti_tool_private_key: str = ""
+    lti_tool_kid: str = "lemma-lti-1"
+    # Lifetime of the OIDC state/nonce pair minted at login initiation.
+    lti_state_ttl_seconds: int = 600
+    # Clock skew tolerated when validating a platform's id_token.
+    lti_jwt_leeway_seconds: int = 60
+
     @property
     def stripe_ready(self) -> bool:
         """Stripe is not wired up on this branch — always False, so the frontend

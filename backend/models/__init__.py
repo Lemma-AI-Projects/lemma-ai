@@ -11,6 +11,14 @@ from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
 from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.profile import Profile
+from models.roster import (
+    ClassGroup,
+    Enrollment,
+    ExternalIdentity,
+    Organization,
+    RosterIntegration,
+    RosterSyncRun,
+)
 from models.project import Project
 from models.provider_usage_log import ProviderUsageLog
 
@@ -30,7 +38,13 @@ __all__ = [
     "CreditLedger",
     "Payment",
     "PaymentWebhookEvent",
+    "ClassGroup",
+    "Enrollment",
+    "ExternalIdentity",
+    "Organization",
     "Profile",
+    "RosterIntegration",
+    "RosterSyncRun",
     "Project",
     "ProviderUsageLog",
 ]
