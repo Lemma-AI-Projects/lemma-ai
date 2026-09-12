@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { FolderOpen, Plus } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
@@ -24,6 +24,7 @@ export function LearnSpacesView({
   isError,
 }: LearnSpacesViewProps) {
   const { t } = useAppTranslation()
+  const navigate = useNavigate()
   const [createOpen, setCreateOpen] = useState(false)
 
   return (
@@ -66,7 +67,7 @@ export function LearnSpacesView({
             {spaces.map((item) => (
               <Link
                 key={item.id}
-                to={`/project/${item.id}`}
+                to={`/learn-spaces/${item.id}`}
                 className="group flex items-center gap-3 rounded-lg border border-zinc-200/80 bg-zinc-50 px-4 py-5 transition-colors hover:bg-zinc-100"
               >
                 <FolderOpen
@@ -82,7 +83,21 @@ export function LearnSpacesView({
         )}
       </div>
 
-      <CreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateProjectDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        copy={{
+          title: t('learnSpace.createTitle'),
+          nameLabel: t('learnSpace.createName'),
+          namePlaceholder: t('learnSpace.createNamePlaceholder'),
+          info: t('learnSpace.createInfo'),
+          submit: t('learnSpace.createSubmit'),
+          pending: t('learnSpace.creating'),
+          failed: t('learnSpace.createFailed'),
+        }}
+        // 创建成功即进入该空间的工作台（参考稿的「创建成功 → 进界面」）。
+        onCreated={(project) => navigate(`/learn-spaces/${project.id}`)}
+      />
     </div>
   )
 }

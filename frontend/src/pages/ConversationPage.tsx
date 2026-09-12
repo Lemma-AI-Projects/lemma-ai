@@ -93,8 +93,14 @@ export function ConversationPage() {
     return [...historyTurns, ...liveTurns]
   }, [id, messagesQuery.data, chat.liveMessages])
 
+  // 从学习空间工作台进来的新会话：location.state 带 projectId。发送时带上即可 ——
+  // useConversationChat 只在「还没有会话 id」的首条消息上把它发给后端，
+  // 已有会话时后端忽略该字段（见 useConversationChat.send 的注释）。
+  const carriedProjectId = (location.state as ConversationLocationState | null)
+    ?.projectId
+
   const handleSend = (text: string) => {
-    chat.send(text)
+    chat.send(text, { projectId: carriedProjectId })
   }
 
   const isBusy = chat.status === 'submitted' || chat.status === 'streaming'

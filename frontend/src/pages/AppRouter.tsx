@@ -13,6 +13,8 @@ import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
+import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
+import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
@@ -39,6 +41,11 @@ const routes: RouteObject[] = [
     element: <LearnSpacesPreviewPage />,
   },
   {
+    // 布局评审入口：学习空间工作台（全屏画布），mock 数据。
+    path: '/preview/learn-space',
+    element: <LearnSpaceWorkspacePreviewPage />,
+  },
+  {
     // 布局评审入口：公开、免登录，只渲染 mock 数据。
     path: '/preview/credits',
     element: <CreditsPreviewPage />,
@@ -46,6 +53,12 @@ const routes: RouteObject[] = [
   {
     element: <RequireAuth />,
     children: [
+      {
+        // 学习空间工作台：全屏白色画布 + 自带顶栏，参考稿里没有侧栏，
+        // 所以这条路由不套 AppLayout。
+        path: 'learn-spaces/:id',
+        element: <LearnSpaceWorkspacePage />,
+      },
       {
         element: <AppLayout />,
         children: [
