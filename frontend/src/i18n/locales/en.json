@@ -35,7 +35,18 @@
     "personalization": "Personalization",
     "language": "Language",
     "selectLanguage": "Select language",
-    "close": "Close settings"
+    "close": "Close settings",
+    "featureDefaults": "Feature Defaults",
+    "featureDefaultsDesc": "Set default states for new conversations",
+    "enablePlugins": "Enable plugins",
+    "enableWebSearch": "Enable web search",
+    "enableMemory": "Enable memory",
+    "enableDeepThinking": "Enable deep thinking",
+    "notifications": "Notifications",
+    "notificationsDesc": "Manage your notification preferences",
+    "enableNotifications": "Enable notifications",
+    "dailyReminder": "Daily study reminder",
+    "reminderTime": "Reminder time"
   },
   "learnSpace": {
     "title": "Learn Spaces",

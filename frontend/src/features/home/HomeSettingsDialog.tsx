@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { HomeSettingsAccountPage } from './HomeSettingsAccountPage'
 import { HomeSettingsBillingPage } from './HomeSettingsBillingPage'
 import { HomeSettingsGeneralPage } from './HomeSettingsGeneralPage'
+import { HomeSettingsPersonalizationPage } from './HomeSettingsPersonalizationPage'
 import { HomeSettingsStoragePage } from './HomeSettingsStoragePage'
 import type { TranslationKey } from '@/i18n/keys'
 import { useAppTranslation } from '@/i18n'
@@ -152,10 +153,14 @@ export function HomeSettingsDialog({
                 )}
                 {tab.value === 'general' && <HomeSettingsGeneralPage />}
                 {tab.value === 'storage' && <HomeSettingsStoragePage />}
+                {tab.value === 'personalization' && (
+                  <HomeSettingsPersonalizationPage />
+                )}
                 {tab.value !== 'account' &&
                   tab.value !== 'billing' &&
                   tab.value !== 'general' &&
-                  tab.value !== 'storage' && (
+                  tab.value !== 'storage' &&
+                  tab.value !== 'personalization' && (
                     <h2 className="text-lg font-normal text-zinc-900">
                       {tab.label}
                     </h2>

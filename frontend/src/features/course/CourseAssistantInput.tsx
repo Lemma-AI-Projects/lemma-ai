@@ -23,6 +23,7 @@ import {
   InputMenuSub,
   InputMenuSwitchItem,
 } from '@/components/InputMenu'
+import { useFeatureDefaults } from '@/hooks/useFeatureDefaults'
 import { CourseAssistantIconButton } from './CourseAssistantIconButton'
 
 export function CourseAssistantInput({
@@ -44,9 +45,10 @@ export function CourseAssistantInput({
   placeholder?: string
   value: string
 }) {
+  const [featureDefaults] = useFeatureDefaults()
   const [includeContext, setIncludeContext] = useState(true)
-  const [deepThinking, setDeepThinking] = useState(false)
-  const [webSearch, setWebSearch] = useState(false)
+  const [deepThinking, setDeepThinking] = useState(featureDefaults.deepThinking)
+  const [webSearch, setWebSearch] = useState(featureDefaults.webSearch)
   const hasContent = value.trim().length > 0
   const canSend = hasContent && !disabled && !isStreaming
 

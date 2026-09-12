@@ -20,6 +20,7 @@ import {
   InputMenuSub,
   InputMenuSwitchItem,
 } from '@/components/InputMenu'
+import { useFeatureDefaults } from '@/hooks/useFeatureDefaults'
 
 interface InputAddMenuProps {
   className?: string
@@ -45,8 +46,9 @@ export function InputAddMenu({
   referenceLabel = 'Reference materials',
   toolsLabel = 'Tools',
 }: InputAddMenuProps) {
+  const [featureDefaults] = useFeatureDefaults()
   const [includeContext, setIncludeContext] = useState(true)
-  const [webSearch, setWebSearch] = useState(false)
+  const [webSearch, setWebSearch] = useState(featureDefaults.webSearch)
 
   return (
     <InputMenu

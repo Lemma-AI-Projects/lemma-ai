@@ -35,7 +35,18 @@
     "personalization": "个性化",
     "language": "语言",
     "selectLanguage": "选择语言",
-    "close": "关闭设置"
+    "close": "关闭设置",
+    "featureDefaults": "功能默认值",
+    "featureDefaultsDesc": "设置新对话的默认开关状态",
+    "enablePlugins": "默认启用插件",
+    "enableWebSearch": "默认启用联网搜索",
+    "enableMemory": "默认启用记忆",
+    "enableDeepThinking": "默认启用深度思考",
+    "notifications": "通知提醒",
+    "notificationsDesc": "管理你的通知偏好",
+    "enableNotifications": "启用通知",
+    "dailyReminder": "每日学习提醒",
+    "reminderTime": "提醒时间"
   },
   "learnSpace": {
     "title": "学习空间",
