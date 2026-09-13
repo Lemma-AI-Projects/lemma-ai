@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from api.v1 import (
+    calendar,
     chat,
     companion,
     conversations,
@@ -32,3 +33,4 @@ api_router.include_router(lti.router)
 api_router.include_router(credits.router)
 api_router.include_router(payments.router)
 api_router.include_router(webhooks.router)
+api_router.include_router(calendar.router)

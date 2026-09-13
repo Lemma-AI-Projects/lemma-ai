@@ -2,6 +2,7 @@
 
 from models.ai_conversation import AiConversation, AiMessage
 from models.ai_usage_log import AiUsageLog
+from models.calendar import CalendarConnection, SyncedEvent
 from models.chapter_gemini_file import ChapterGeminiFile
 from models.chapter_overview import ChapterOverview
 from models.chapter_video_asset import ChapterVideoAsset
@@ -27,6 +28,8 @@ __all__ = [
     "AiConversation",
     "AiMessage",
     "AiUsageLog",
+    "CalendarConnection",
+    "SyncedEvent",
     "ChapterGeminiFile",
     "ChapterOverview",
     "ChapterVideoAsset",

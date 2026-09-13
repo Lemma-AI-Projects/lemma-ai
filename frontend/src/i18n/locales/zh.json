@@ -222,5 +222,30 @@
     "chat": "问任何关于这节课的问题…",
     "freeCourse": "说一个你想学的主题，我来搭建课程",
     "videoCourse": "想为哪个主题找视频课程？"
+  },
+  "calendar": {
+    "title": "日历同步",
+    "connectGoogle": "同步 Google 日历",
+    "connectGoogleDesc": "导入并同步 Google 日历中的事件",
+    "connectApple": "同步 Apple 日历",
+    "connectAppleDesc": "导入并同步 iCloud 日历中的事件",
+    "googleDescription": "连接你的 Google 日历以与 Lemma 同步事件。",
+    "googleInstructions": "你将被重定向到 Google 进行授权。你可以随时在 Google 账户设置中撤销访问权限。",
+    "continueToGoogle": "前往 Google",
+    "appleDescription": "使用 App 专用密码连接你的 iCloud 日历。",
+    "appleInstructions": "请前往 appleid.apple.com 的「登录与安全」>「App 专用密码」生成一个专用密码。你的 Apple ID 密码无法使用。",
+    "icloudEmail": "iCloud 邮箱",
+    "appSpecificPassword": "App 专用密码",
+    "discoveringCalendars": "正在发现日历...",
+    "selectCalendar": "选择要同步的日历",
+    "noCalendarsFound": "未找到日历，请检查你的凭据。",
+    "connect": "连接",
+    "connecting": "连接中...",
+    "syncNow": "立即同步",
+    "syncing": "同步中...",
+    "disconnect": "断开连接",
+    "confirmDisconnect": "断开此日历？已同步的事件将保留在你的日程中。",
+    "lastSync": "上次同步",
+    "neverSynced": "从未同步"
   }
 }

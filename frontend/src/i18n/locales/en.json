@@ -222,5 +222,30 @@
     "chat": "Ask anything about this lesson…",
     "freeCourse": "Tell me what you want to learn — I will build the course",
     "videoCourse": "Which topic should the video course cover?"
+  },
+  "calendar": {
+    "title": "Calendar Sync",
+    "connectGoogle": "Sync with Google Calendar",
+    "connectGoogleDesc": "Import and sync events from your Google Calendar",
+    "connectApple": "Sync with Apple Calendar",
+    "connectAppleDesc": "Import and sync events from your iCloud Calendar",
+    "googleDescription": "Connect your Google Calendar to sync events with Lemma.",
+    "googleInstructions": "You'll be redirected to Google to authorize access to your calendar. You can revoke access at any time from your Google account settings.",
+    "continueToGoogle": "Continue to Google",
+    "appleDescription": "Connect your iCloud Calendar using an app-specific password.",
+    "appleInstructions": "Generate an app-specific password at appleid.apple.com under Sign-In and Security > App-Specific Passwords. Your regular Apple ID password will not work.",
+    "icloudEmail": "iCloud email",
+    "appSpecificPassword": "App-specific password",
+    "discoveringCalendars": "Discovering calendars...",
+    "selectCalendar": "Select a calendar to sync",
+    "noCalendarsFound": "No calendars found. Please check your credentials.",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "syncNow": "Sync now",
+    "syncing": "Syncing...",
+    "disconnect": "Disconnect",
+    "confirmDisconnect": "Disconnect this calendar? Synced events will remain in your schedule.",
+    "lastSync": "Last synced",
+    "neverSynced": "Never synced"
   }
 }

@@ -26,6 +26,7 @@ celery_app = Celery(
         "tasks.chapter_gemini_ingest",
         "tasks.course_materialize",
         "tasks.video_cleanup",
+        "tasks.calendar_sync",
     ],
 )
 
@@ -48,6 +49,10 @@ celery_app.conf.update(
         "cleanup-expired-video-assets": {
             "task": "video.cleanup_expired",
             "schedule": crontab(hour=3, minute=0),
+        },
+        "calendar-sync-hourly": {
+            "task": "calendar.sync_all",
+            "schedule": crontab(minute=0),
         },
     },
 )

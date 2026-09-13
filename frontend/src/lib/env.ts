@@ -22,4 +22,6 @@ export const env = {
   // Optional on purpose: only the Desmos graph card needs it, so a missing key
   // must not brick the whole app at boot — the card surfaces the error instead.
   desmosApiKey: (import.meta.env.VITE_DESMOS_API_KEY ?? '') as string,
+  // Calendar sync: Google OAuth redirect URI (frontend origin + /auth/google/callback)
+  googleRedirectUri: `${window.location.origin}/auth/google/callback`,
 }
