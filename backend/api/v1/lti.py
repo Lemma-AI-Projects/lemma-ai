@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.database import get_db
-from schemas.roster import LaunchResponse
 from services.roster import lti as lti_service
 from services.roster.lti import LtiError
 
@@ -53,15 +52,19 @@ async def lti_login(
     return RedirectResponse(redirect_url, status_code=302)
 
 
-@router.post("/launch", response_model=LaunchResponse)
+@router.post("/launch")
 async def lti_launch(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> LaunchResponse:
-    """Step 2: verify the platform's id_token and resolve it to a Lemma user.
+) -> RedirectResponse:
+    """Step 2: verify the platform's id_token, provision the user on first
+    launch, and hand the browser a Supabase session.
 
-    The form body is parsed by hand: LTI uses form_post, and pulling in
-    python-multipart for two fields is not worth the extra dependency.
+    LTI launches are browser form_posts, so this endpoint finishes by
+    redirecting to a one-time Supabase passwordless sign-in link, which then
+    forwards the user into the Lemma frontend already authenticated. The form
+    body is parsed by hand: LTI uses form_post, and pulling in python-multipart
+    for two fields is not worth the extra dependency.
     """
     form = parse_qs((await request.body()).decode("utf-8"))
     id_token = (form.get("id_token") or [""])[0]
@@ -97,26 +100,21 @@ async def lti_launch(
         raise HTTPException(status_code=401, detail="invalid_lti_launch") from exc
 
     try:
-        user_id, class_id, role = await lti_service.apply_launch(
-            db, integration, claims
-        )
+        await lti_service.apply_launch(db, integration, claims)
     except LtiError as exc:
-        # A verified launch from a person we cannot map yet (no Lemma account
-        # and, in particular, no way to provision a Supabase auth user). Loud
-        # and typed rather than silently creating a half-user.
-        if "provisioning_required" in str(exc):
-            raise HTTPException(
-                status_code=409, detail="profile_provisioning_required"
-            ) from exc
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        msg = str(exc)
+        if "lti_email_required" in msg:
+            # A launch we cannot provision: tell the LMS/teacher what's missing.
+            raise HTTPException(status_code=409, detail="lti_email_required") from exc
+        if "supabase" in msg:
+            # Upstream auth failure — not the launch's fault, surface as 502.
+            raise HTTPException(status_code=502, detail="lti_provisioning_failed") from exc
+        raise HTTPException(status_code=400, detail=msg) from exc
     await db.commit()
 
-    return LaunchResponse(
-        user_id=user_id,
-        class_id=class_id,
-        role=role,
-        display_name=claims.display_name,
-        context_title=claims.context_title,
+    # Hand the browser a Supabase session and send it into the app.
+    return await lti_service.issue_session_redirect(
+        claims.email, settings.lti_redirect_target
     )
 
 

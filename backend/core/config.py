@@ -234,6 +234,16 @@ class Settings(BaseSettings):
     lti_state_ttl_seconds: int = 600
     # Clock skew tolerated when validating a platform's id_token.
     lti_jwt_leeway_seconds: int = 60
+    # Where an LMS-launched user lands *in the frontend* after we hand off a
+    # Supabase session. Must be an origin Supabase trusts as a redirect target,
+    # and must be where supabase-js is initialised (so detectSessionInUrl picks
+    # the session up). Defaults to the backend base + /home; override with the
+    # real frontend origin (e.g. http://localhost:5173/home).
+    lti_landing_url: str = ""
+
+    @property
+    def lti_redirect_target(self) -> str:
+        return self.lti_landing_url or f"{self.lti_tool_base_url.rstrip('/')}/home"
 
     @property
     def stripe_ready(self) -> bool:

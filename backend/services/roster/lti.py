@@ -18,6 +18,8 @@ JWT verification deliberately uses the same PyJWT stack as Supabase token
 validation (core/security.py) rather than a second JOSE dependency.
 """
 
+import asyncio
+import hashlib
 import logging
 import secrets
 import time
@@ -28,6 +30,7 @@ from urllib.parse import urlencode
 import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from supabase import create_client
 
 from core.config import settings
 from models.profile import Profile
@@ -334,15 +337,13 @@ async def apply_launch(
 
 
 async def _resolve_profile(db: AsyncSession, claims: LaunchClaims) -> Profile:
-    """Find the Lemma account these claims belong to.
+    """Find the Lemma account these claims belong to, provisioning on first launch.
 
-    Email is used only as a *hint* for an existing account; the identity row's
-    key stays (provider, sub), so a changed email never forks the account.
-
-    A brand-new person is a deliberate dead end for now: profiles.id is a FK to
-    auth.users, so creating one requires provisioning through the Supabase admin
-    API. That is the next slice; until it lands we refuse loudly instead of
-    writing a row that cannot authenticate.
+    Email is only a *hint* for an existing account; the identity row's key stays
+    (provider, sub), so a changed email never forks the account. A brand-new
+    person gets a Supabase auth user + Profile created via the Admin API (service
+    role key). LTI launches without an email cannot be provisioned — Supabase
+    auth requires one — so we reject loudly instead of writing a half-user.
     """
     if claims.email:
         existing = await db.scalar(
@@ -350,9 +351,101 @@ async def _resolve_profile(db: AsyncSession, claims: LaunchClaims) -> Profile:
         )
         if existing is not None:
             return existing
+        return await provision_lms_user(db, claims)
     raise LtiError(
-        "profile_provisioning_required: no Lemma account for this LMS user yet"
+        "lti_email_required: this launch carried no email, cannot provision a Lemma account"
     )
+
+
+# ── Supabase admin client (server-side only) ──────────────────────────────────
+_admin_client = None
+
+
+def _supabase_admin():
+    """Cached Supabase client authenticated with the service-role key.
+
+    This key can bypass RLS and manage auth users — it must NEVER reach the
+    browser. We only use it here, server-side, to provision an LMS user and to
+    mint a passwordless sign-in link.
+    """
+    global _admin_client
+    if _admin_client is None:
+        if not settings.supabase_service_role_key:
+            raise LtiError(
+                "supabase_service_role_key not configured; cannot provision LMS users"
+            )
+        _admin_client = create_client(
+            settings.supabase_url, settings.supabase_service_role_key
+        )
+    return _admin_client
+
+
+def _avatar_color(claims: LaunchClaims) -> str:
+    """Deterministic, non-null avatar colour (Profile.avatar_color is NOT NULL)."""
+    seed = (claims.email or claims.subject or claims.display_name or "lemma").encode()
+    return f"#{hashlib.sha256(seed).hexdigest()[:6]}"
+
+
+async def provision_lms_user(db: AsyncSession, claims: LaunchClaims) -> Profile:
+    """Create the Supabase auth user + Lemma Profile for a first-time LMS user.
+
+    The Profile.id IS the Supabase auth user id, so we create the auth user
+    first, then the profile row that points at it. The external identity and
+    enrolment are written by apply_launch after this returns.
+    """
+    admin = _supabase_admin()
+    try:
+        auth_user = await asyncio.to_thread(
+            lambda: admin.auth.admin.create_user(
+                {
+                    "email": claims.email,
+                    "email_confirm": True,
+                    "user_metadata": {"full_name": claims.display_name or claims.email},
+                }
+            )
+        )
+    except Exception as exc:  # noqa: BLE001 — surface as a rejected launch
+        raise LtiError(f"supabase user provisioning failed: {exc}") from exc
+
+    user_id = uuid.UUID(auth_user.user.id)
+    profile = Profile(
+        id=user_id,
+        email=claims.email,
+        nickname=claims.display_name,
+        avatar_color=_avatar_color(claims),
+    )
+    db.add(profile)
+    await db.flush()
+    return profile
+
+
+async def issue_session_redirect(email: str, redirect_to: str) -> "RedirectResponse":
+    """Hand a browser a Supabase session via a one-time passwordless sign-in link.
+
+    We generate a magic-link action_link for the (already provisioned) user and
+    redirect the browser to it. Supabase redeems the link, sets the session, and
+    forwards to `redirect_to`. The frontend's supabase-js (detectSessionInUrl, on
+    by default) picks the session up with no frontend code changes.
+    """
+    from fastapi.responses import RedirectResponse
+
+    admin = _supabase_admin()
+    try:
+        link = await asyncio.to_thread(
+            lambda: admin.auth.admin.generate_link(
+                {"type": "magiclink", "email": email, "redirect_to": redirect_to}
+            )
+        )
+    except Exception as exc:  # noqa: BLE001 — surface as a rejected launch
+        raise LtiError(f"supabase sign-in link failed: {exc}") from exc
+
+    # The SDK returns a model; older callers/shape may hand back a dict.
+    action_link = getattr(link, "action_link", None)
+    if not action_link and isinstance(link, dict):
+        action_link = (link.get("action_link") or (link.get("properties") or {}).get("action_link"))
+    if not action_link:
+        raise LtiError("supabase generate_link returned no action_link")
+    return RedirectResponse(action_link, status_code=302)
 
 
 async def find_integration(

@@ -212,21 +212,53 @@ async def main() -> int:
             except LtiError as exc:
                 check(True, f"{label}（{str(exc)[:44]}）")
 
-        # ── 5. an unknown person is refused, not half-created ────────────────
+        # ── 5. a brand-new person is provisioned on first launch ────────────
+        # This needs the real Supabase Admin API (to create the auth.user that
+        # profiles.id points at). If it's unreachable, skip rather than fail.
         state5, nonce5 = lti_service.mint_state()
+        new_email = f"smoke-stranger-{uuid.uuid4()}@example.com"
         token5 = sign(
             private_key, nonce=nonce5, sub="smoke-stranger-1",
-            email=f"stranger-{uuid.uuid4()}@example.com", roles=learner_role,
+            email=new_email, roles=learner_role,
         )
         claims5 = lti_service.verify_launch(token5, integration, nonce=nonce5)
+        uid5: uuid.UUID | None = None
         try:
-            await lti_service.apply_launch(db, integration, claims5)
-            check(False, "未知用户应被拒绝（需要 Supabase 侧建号）")
-        except LtiError as exc:
-            check(
-                "provisioning_required" in str(exc),
-                f"未知用户被明确拒绝而不是建半个账号（{str(exc)[:40]}）",
+            uid5, cid5, _ = await lti_service.apply_launch(db, integration, claims5)
+            await db.flush()
+            check(uid5 != profile.id, "陌生用户被新建独立账号（不复用既有）")
+            check(uid5 != user_id, "陌生学生与 smoke-student-1 账号不同")
+            ident5 = await db.scalar(
+                select(ExternalIdentity).where(
+                    ExternalIdentity.external_user_id == "smoke-stranger-1"
+                )
             )
+            check(
+                ident5 is not None and ident5.user_id == uid5,
+                "陌生用户的外部身份已落库并指向新账号",
+            )
+            # Replaying must resolve to the SAME new account, not a second one.
+            state5b, nonce5b = lti_service.mint_state()
+            token5b = sign(
+                private_key, nonce=nonce5b, sub="smoke-stranger-1",
+                email=new_email, roles=learner_role,
+            )
+            claims5b = lti_service.verify_launch(token5b, integration, nonce=nonce5b)
+            uid5b, _, _ = await lti_service.apply_launch(db, integration, claims5b)
+            await db.flush()
+            check(uid5b == uid5, "陌生用户重放解析到同一新建账号（幂等）")
+        except LtiError as exc:
+            if "supabase" in str(exc):
+                print("SKIP: live Supabase admin unreachable — provisioning path not exercised")
+            else:
+                raise
+        finally:
+            # Remove the dev auth user we just created (Profile row is rolled back below).
+            if uid5 is not None:
+                try:
+                    lti_service._supabase_admin().auth.admin.delete_user(str(uid5))
+                except Exception as exc:  # noqa: BLE001
+                    print(f"WARN: failed to delete smoke auth user {uid5}: {exc}")
 
         # ── 6. state cannot be replayed ──────────────────────────────────────
         try:

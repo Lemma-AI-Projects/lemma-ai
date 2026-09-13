@@ -11,12 +11,13 @@ class _CamelModel(BaseModel):
 
 
 class LaunchResponse(_CamelModel):
-    """Result of a verified LTI launch.
+    """Legacy contract for a verified LTI launch.
 
-    No session token is minted here yet: handing out a Lemma session for an LMS
-    user is a separate, security-sensitive step (Supabase admin provisioning),
-    so this endpoint reports what it resolved instead of pretending to log
-    anyone in.
+    NOTE: `/api/v1/lti/launch` no longer returns this. A launch now provisions
+    the LMS user (Supabase admin) and responds with a 302 to a one-time
+    Supabase passwordless sign-in link, handing the browser a real session. This
+    model is retained only for any out-of-band callers that previously decoded
+    the JSON response.
     """
 
     user_id: uuid.UUID
