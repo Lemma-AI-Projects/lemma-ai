@@ -21,6 +21,7 @@ from schemas.free_course import (
     FreeCourseDetailOut,
     FreeLessonContentOut,
     FreeLessonOut,
+    FreeLessonRefOut,
     FreeUnitOut,
     LearningObjectOut,
     LessonBlueprintOut,
@@ -253,12 +254,47 @@ async def get_lesson_content(
     if chapter is None:
         return None
     objects = await _load_objects(db, chapter_id=chapter.id)
+    next_ref = await _next_lesson_ref(
+        db, course_id=course_id, chapter_id=chapter.id
+    )
     return FreeLessonContentOut(
         chapter_id=chapter.id,
         title=chapter.title,
         objective=chapter.objective or "",
         objects=[_to_read_object(obj) for obj in objects],
+        next=next_ref,
     )
+
+
+async def _next_lesson_ref(
+    db: AsyncSession, *, course_id: uuid.UUID, chapter_id: uuid.UUID
+) -> FreeLessonRefOut | None:
+    """The lesson after this one, walking the map's own order (unit then lesson).
+
+    Reads through the same relationships get_detail uses (both carry an explicit
+    order_by), so "next" here and the order shown in the blueprint can never
+    disagree. Returns None on the last lesson, which is how the runtime knows the
+    course is finished.
+    """
+    result = await db.execute(
+        select(Course)
+        .where(Course.id == course_id)
+        .options(selectinload(Course.units).selectinload(CourseUnit.chapters))
+    )
+    course = result.scalar_one_or_none()
+    if course is None:
+        return None
+    ordered = [
+        chapter for unit in course.units for chapter in unit.chapters
+    ]
+    for index, candidate in enumerate(ordered):
+        if candidate.id != chapter_id:
+            continue
+        following = ordered[index + 1] if index + 1 < len(ordered) else None
+        if following is None:
+            return None
+        return FreeLessonRefOut(chapter_id=following.id, title=following.title)
+    return None
 
 
 async def submit_observation(

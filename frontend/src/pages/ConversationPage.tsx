@@ -11,14 +11,15 @@ import { useProjectsQuery } from '@/features/project/projectApi'
 import { isNotFoundError } from '@/lib/apiUtils'
 import { createConversationTurns } from '@/features/conversation/createConversationTurns'
 import { useConversationChat } from '@/features/conversation/useConversationChat'
+import type { ConversationComposerTool } from '@/features/conversation/types'
 
 interface ConversationLocationState {
   initialMessage?: string
   messageKey?: string
   /** 项目页发起的新会话：直接诞生在该项目里。 */
   projectId?: string
-  /** 首页选择“视频课程”后带入：本条消息走 Course Planning 工具回合。 */
-  tool?: 'course_planning'
+  /** 首页选择“自由课程 / 视频课程”后带入：本条消息走对应的工具回合。 */
+  tool?: ConversationComposerTool
 }
 
 // 模块级防重：StrictMode 双挂载与重渲染下，同一条首页带入的消息只发送一次

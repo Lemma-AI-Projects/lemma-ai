@@ -49,6 +49,31 @@ export function ConversationFreeCourseTool({ courseId }: { courseId: string }) {
     )
   }
 
+  if (stage.status === 'failed') {
+    return (
+      <div
+        data-slot="free-course-tool"
+        data-stage="failed"
+        className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5 dark:border-zinc-800"
+      >
+        <div className="flex items-start gap-2 text-sm text-destructive">
+          <CircleAlert className="mt-0.5 size-4 shrink-0" />
+          <span>{errorMessage ?? t('freeCourse.buildFailed')}</span>
+        </div>
+        <div className="-mx-1 -mb-1 mt-4 flex items-center justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-[33px] rounded-full px-[12.5px] text-[14px] font-normal border-zinc-300 bg-transparent text-zinc-800 hover:bg-zinc-100"
+            onClick={retry}
+          >
+            {t('freeCourse.retry')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       data-slot="free-course-tool"

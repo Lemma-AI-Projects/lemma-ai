@@ -149,8 +149,15 @@
       "submit": "Submit",
       "correct": "Correct",
       "partial": "Partly correct",
-      "incorrect": "Not quite"
-    }
+      "incorrect": "Not quite",
+      "answerPlaceholder": "Write your answer in your own words…",
+      "upNext": "Up next",
+      "next": "Next lesson",
+      "completed": "You have reached the end of this course."
+    },
+    "buildFailed": "The course could not be generated. Please try again.",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
   },
   "common": {
     "close": "Close",
@@ -210,5 +217,10 @@
       "sessionFailed": "Could not create the checkout session: {{message}}",
       "sessionFailedRetry": "Could not create the checkout session, please retry"
     }
+  },
+  "composer": {
+    "chat": "Ask anything about this lesson…",
+    "freeCourse": "Tell me what you want to learn — I will build the course",
+    "videoCourse": "Which topic should the video course cover?"
   }
 }

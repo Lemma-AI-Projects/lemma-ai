@@ -117,6 +117,13 @@ class LearningObjectOut(BaseModel):
     hint: str | None = None
 
 
+class FreeLessonRefOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    chapter_id: uuid.UUID
+    title: str
+
+
 class FreeLessonContentOut(BaseModel):
     model_config = ConfigDict(**_ALIAS)
 
@@ -124,6 +131,10 @@ class FreeLessonContentOut(BaseModel):
     title: str
     objective: str
     objects: list[LearningObjectOut] = Field(default_factory=list)
+    # The lesson that follows this one in the course's own order (spec §8's
+    # "continue"), or None on the last lesson. Computed here rather than in the
+    # client so the map order stays the single source of truth for what is next.
+    next: FreeLessonRefOut | None = None
 
 
 class ObservationIn(BaseModel):

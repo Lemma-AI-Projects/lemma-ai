@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/radio-group'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { Textarea } from '@/components/ui/textarea'
+import { AssistantMarkdown } from '@/features/conversation/markdown'
 import { cn } from '@/lib/utils'
 import { useAppTranslation } from '@/i18n'
 import {
@@ -21,18 +23,20 @@ import type {
 } from './types'
 
 // In-lesson runtime (screen 5). Each content object renders as a section:
-// explanation/example are prose; practice/assessment are answerable and grade
-// round-trips to the backend — every answer turns into an observation row, and
-// the returned verdict/feedback/hint renders right here (拍板5: local grade for
-// objective items + LLM feedback). "下一节" is derived from the map order by the
-// backend lesson read; reaching the end yields a course-complete state.
+// explanation/example are Markdown prose; practice/assessment are answerable —
+// items with options are graded locally against the option ids, items without
+// them submit free text and the model judges — and the returned
+// verdict/feedback/hint renders right here (拍板5). Every answer also becomes an
+// observation row. The footer offers the next lesson, which the backend derives
+// from the map order; the last lesson ends with a completion line.
 
 type LessonMode = 'study' | 'feedback'
 
 interface AnswerState {
   mode: LessonMode
   feedback: FreeAnswerFeedback | null
-  submittedOptionId: string | null
+  /** What the learner submitted: an option id, or their free text. */
+  submittedAnswer: string | null
 }
 
 function objectKindLabel(
@@ -109,6 +113,29 @@ export function FreeCourseLessonView() {
               <LessonSection key={object.id} object={object} courseId={id} chapterId={chapterId} />
             ))
           )}
+
+          <footer className="mt-1 flex items-center justify-between gap-3 border-t border-zinc-200/80 pt-5 dark:border-zinc-800">
+            {lesson.next ? (
+              <>
+                <p className="min-w-0 flex-1 truncate text-[13px] leading-5 text-zinc-400 dark:text-zinc-500">
+                  {t('freeCourse.lesson.upNext')} · {lesson.next.title}
+                </p>
+                <Button
+                  type="button"
+                  className={primaryActionClassName}
+                  onClick={() =>
+                    navigate(`/free-course/${id}/lesson/${lesson.next?.chapterId}`)
+                  }
+                >
+                  {t('freeCourse.lesson.next')}
+                </Button>
+              </>
+            ) : (
+              <p className="text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+                {t('freeCourse.lesson.completed')}
+              </p>
+            )}
+          </footer>
         </div>
       </div>
     </div>
@@ -126,8 +153,10 @@ function LessonSection({
 }) {
   const { t } = useAppTranslation()
   const isAnswerable = object.kind === 'practice' || object.kind === 'assessment'
-  const answerable =
-    isAnswerable && object.options.length > 0 && Boolean(courseId && chapterId)
+  // Every generated lesson carries open questions, so an item is answerable
+  // whenever the runtime can reach the backend — requiring options here used to
+  // hide the open ones behind a section with no input at all.
+  const answerable = isAnswerable && Boolean(courseId && chapterId)
 
   return (
     <section
@@ -149,12 +178,19 @@ function LessonSection({
       </header>
 
       {object.body ? (
-        <p className="mt-3 text-[15px] leading-7 text-zinc-800 dark:text-zinc-200">
+        // Lesson bodies are Markdown by contract (the writer prompt asks for
+        // formulas and lists), so they render through the same Markdown layer as
+        // assistant messages — with inline `$...$` math on, because a lesson in
+        // any subject is full of it and `$$`-only would leave it garbled.
+        <AssistantMarkdown
+          inlineMath
+          className="mt-3 text-[15px] leading-7 text-zinc-800 dark:text-zinc-200"
+        >
           {object.body}
-        </p>
+        </AssistantMarkdown>
       ) : null}
 
-      {isAnswerable && object.options.length > 0 && courseId && chapterId ? (
+      {answerable && courseId && chapterId ? (
         <AnswerableObject
           object={object}
           courseId={courseId}
@@ -185,20 +221,31 @@ function AnswerableObject({
   const [answer, setAnswer] = useState<AnswerState>({
     mode: 'study',
     feedback: null,
-    submittedOptionId: null,
+    submittedAnswer: null,
   })
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
+  const [text, setText] = useState('')
+
+  // Items with options are graded locally against the option ids; items without
+  // them are judged by the model, so they submit free text instead. The
+  // confidence field is deliberately not sent: nobody asked the learner to rate
+  // it, and a fabricated value would poison the observation history.
+  const isOpen = object.options.length === 0
+  const trimmedText = text.trim()
+  const canSubmit = isOpen ? trimmedText.length > 0 : Boolean(selectedOptionId)
 
   const handleSubmit = () => {
-    if (!selectedOptionId || submit.isPending) return
+    if (!canSubmit || submit.isPending) return
     submit.mutate(
-      { objectId: object.id, optionId: selectedOptionId, confidence: 3 },
+      isOpen
+        ? { objectId: object.id, text: trimmedText }
+        : { objectId: object.id, optionId: selectedOptionId },
       {
         onSuccess: (feedback) => {
           setAnswer({
             mode: 'feedback',
             feedback,
-            submittedOptionId: selectedOptionId,
+            submittedAnswer: isOpen ? trimmedText : selectedOptionId,
           })
         },
       }
@@ -209,27 +256,38 @@ function AnswerableObject({
 
   return (
     <div className="mt-4">
-      <RadioGroup
-        value={selectedOptionId ?? ''}
-        onValueChange={(optionId) => setSelectedOptionId(optionId)}
-        disabled={hasAnswered || submit.isPending}
-        className="grid gap-2.5"
-        aria-label={object.title}
-      >
-        {object.options.map((option) => (
-          <AnswerOption
-            key={option.id}
-            option={option}
-            isSubmitted={answer.submittedOptionId === option.id}
-          />
-        ))}
-      </RadioGroup>
+      {isOpen ? (
+        <Textarea
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          disabled={hasAnswered || submit.isPending}
+          placeholder={t('freeCourse.lesson.answerPlaceholder')}
+          aria-label={object.title}
+          className="min-h-[96px] rounded-[12px] border-zinc-200 px-3.5 py-2.5 text-[15px] leading-6 shadow-none focus-visible:border-zinc-400 focus-visible:ring-0 dark:border-zinc-700 dark:bg-transparent"
+        />
+      ) : (
+        <RadioGroup
+          value={selectedOptionId ?? ''}
+          onValueChange={(optionId) => setSelectedOptionId(optionId)}
+          disabled={hasAnswered || submit.isPending}
+          className="grid gap-2.5"
+          aria-label={object.title}
+        >
+          {object.options.map((option) => (
+            <AnswerOption
+              key={option.id}
+              option={option}
+              isSubmitted={answer.submittedAnswer === option.id}
+            />
+          ))}
+        </RadioGroup>
+      )}
 
       {!hasAnswered ? (
         <div className="mt-4 flex justify-end">
           <Button
             type="button"
-            disabled={!selectedOptionId || submit.isPending}
+            disabled={!canSubmit || submit.isPending}
             className={primaryActionClassName}
             onClick={handleSubmit}
           >

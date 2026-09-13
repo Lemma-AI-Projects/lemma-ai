@@ -11,6 +11,7 @@ export type FreeCoursePlannerStage =
   | { status: 'loading' }
   | { status: 'building'; courseId: string; intent: string }
   | { status: 'ready'; course: FreeCourseDetail }
+  | { status: 'failed' }
 
 export interface FreeCoursePlannerView {
   stage: FreeCoursePlannerStage
@@ -43,7 +44,10 @@ export function useFreeCoursePlanner(courseId: string | undefined): FreeCoursePl
 
   const status = detail?.status
 
-  const building = Boolean(detail && status !== 'ready')
+  // `failed` is terminal, not a build in progress: re-opening the stream on it
+  // would spin forever behind a spinner (and re-run a generation the backend
+  // already gave up on).
+  const building = Boolean(detail && status !== 'ready' && status !== 'failed')
   const isBuilding = building || detailQuery.isLoading
 
   useEffect(() => {
@@ -90,8 +94,14 @@ export function useFreeCoursePlanner(courseId: string | undefined): FreeCoursePl
   let stage: FreeCoursePlannerStage
   if (detail && status === 'ready') {
     stage = { status: 'ready', course: detail }
-  } else if (detail && status !== 'failed') {
+  } else if (detail && status === 'failed') {
+    stage = { status: 'failed' }
+  } else if (detail) {
     stage = { status: 'building', courseId: courseId ?? detail.id, intent: detail.title }
+  } else if (detailQuery.isError) {
+    // The detail read itself failed (not a build failure): without this the card
+    // would show the skeleton forever.
+    stage = { status: 'failed' }
   } else {
     stage = { status: 'loading' }
   }

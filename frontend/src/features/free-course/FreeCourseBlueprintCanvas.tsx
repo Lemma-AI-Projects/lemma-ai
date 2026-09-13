@@ -1,12 +1,15 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAppTranslation } from '@/i18n'
 
-// Lightweight point-canvas primitive for the free-course blueprint (decision
-// D1-a: a parallel instance, visually-same-but-independent from the learn-space
-// WorkspaceCanvas — staged forward so it never touches 0ab5f433). Drag the empty
-// canvas to pan; the zoom buttons re-scale; node positions are absolute in world
-// coordinates and the whole layer scales via `transform: scale`.
+// Lightweight point-canvas primitive for the free-course blueprint. Drag the
+// empty canvas to pan; node positions are absolute in world coordinates and the
+// whole layer scales via `transform: scale`.
+//
+// This duplicates the learn-space WorkspaceCanvas (drag + zoom + transform).
+// Merging the two into one shared primitive is decided and tracked as A1 in
+// planning/PENDING.md — until that lands, keep the two behaviours in sync by
+// hand rather than letting this file drift further.
 //
 // P2 renders it read-only; P3 adds editing on the same primitive.
 
@@ -55,9 +58,14 @@ export function FreeCourseBlueprintCanvas({
     moved: boolean
   } | null>(null)
 
-  // Keep the latest pan readable inside the drag closure without re-binding.
+  // Keep the latest pan readable inside the pointer handlers without re-binding
+  // them. Synced in an effect, not during render: writing a ref while rendering
+  // is not allowed (react-compiler flags it) and the drag only reads this on
+  // pointerdown, i.e. after the sync has run.
   const panRef = useRef(pan)
-  panRef.current = pan
+  useEffect(() => {
+    panRef.current = pan
+  }, [pan])
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return

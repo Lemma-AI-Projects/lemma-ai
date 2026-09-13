@@ -46,9 +46,11 @@ class ChatRequest(BaseModel):
     project_id: uuid.UUID | None = None
     # Deterministic, client-triggered tool for THIS turn (the input-menu
     # toggle). None -> a plain text turn. "course_planning" -> the turn streams
-    # a short intro then attaches a course-planning card. Adding a tool here is
-    # how new conversation tools (quiz/flashcards) are dispatched later.
-    tool: Literal["course_planning"] | None = None
+    # a short intro then attaches a course-planning card. "free_course" ->
+    # creates a free-course shell and attaches its build card, which drives the
+    # generation itself. Adding a tool here is how new conversation tools
+    # (quiz/flashcards) are dispatched later.
+    tool: Literal["course_planning", "free_course"] | None = None
     messages: list[ChatMessageIn] = Field(min_length=1, max_length=1)
 
     @field_validator("messages")

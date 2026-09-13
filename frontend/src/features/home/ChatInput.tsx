@@ -3,10 +3,12 @@ import { ArrowUp, BrainCircuit, Globe2, Puzzle } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { InputMenu } from '@/components/InputMenu'
 import { Button } from '@/components/ui/button'
+import type { ConversationComposerTool } from '@/features/conversation/types'
 import {
   CourseSourceSegmentedControl,
   type HomeComposerMode,
 } from '@/features/home/CourseSourceSegmentedControl'
+import { useAppTranslation } from '@/i18n'
 import { cn } from '@/lib/utils'
 
 // Home input plus button left offset. Negative margin moves it further left.
@@ -23,30 +25,42 @@ const HOME_ADD_MENU_ALIGN_OFFSET = -14
 const HOME_INPUT_CHIN_CLASS_NAME =
   'relative z-0 -mt-[22px] flex h-[62px] items-center gap-1.5 rounded-b-[22px] bg-zinc-100 px-3.5 pt-[22px]'
 
+// Which tool each composer mode starts. `chat` starts none: it is a plain turn.
+// Kept next to the placeholder map so a mode can never gain a tool without also
+// saying what it expects in the box.
+const COMPOSER_MODE_TOOL: Record<HomeComposerMode, ConversationComposerTool | null> =
+  {
+    'free-course': 'free_course',
+    'video-course': 'course_planning',
+    chat: null,
+  }
+
+const COMPOSER_MODE_PLACEHOLDER = {
+  'free-course': 'composer.freeCourse',
+  'video-course': 'composer.videoCourse',
+  chat: 'composer.chat',
+} as const
+
 export function ChatInput({
   className,
   onSend,
 }: {
   className?: string
-  onSend: (text: string, options?: { tool?: 'course_planning' }) => void
+  onSend: (text: string, options?: { tool?: ConversationComposerTool }) => void
 }) {
+  const { t } = useAppTranslation()
   const [value, setValue] = useState('')
   const [composerMode, setComposerMode] = useState<HomeComposerMode>('chat')
   const hasContent = value.trim().length > 0
+  const composerTool = COMPOSER_MODE_TOOL[composerMode]
 
   const submit = () => {
     const text = value.trim()
     if (!text) {
       return
     }
-    // 视频课程沿用现有 Course Planning 工具；自由课程尚无已交接契约，
-    // 在该功能落地前不发送任何新 tool/字段。
-    onSend(
-      text,
-      composerMode === 'video-course'
-        ? { tool: 'course_planning' }
-        : undefined
-    )
+    // The mode picks the tool; the backend turns it into the matching card.
+    onSend(text, composerTool ? { tool: composerTool } : undefined)
     setValue('')
   }
 
@@ -62,7 +76,7 @@ export function ChatInput({
     <div className={cn('relative', className)}>
       <div className="relative z-10 flex flex-col rounded-[22px] border border-zinc-200 bg-white">
         <textarea
-          placeholder="Ask anything about this lesson..."
+          placeholder={t(COMPOSER_MODE_PLACEHOLDER[composerMode])}
           rows={1}
           value={value}
           onChange={(e) => setValue(e.target.value)}

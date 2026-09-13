@@ -11,7 +11,8 @@
 - 总共 5 到 8 个对象：1 到 3 个 explanation，0 到 2 个 example，其余是练习与小测。
 - practice 2 到 4 个、assessment 1 到 2 个。**不要用同一道题换个数字凑数**，也不要把一道题拆成「（续）」「（再续）」多份：练习之间要考察不同侧面，小测一道题就够。多了只会稀释。
 - 至少 1 个 explanation，至少 1 个 practice 或 assessment。
-- 每个对象都要有 title（一句话说明这个对象要做什么）和 body（Markdown 正文，可用公式、列表、代码块）。
+- 每个对象都要有 title（一句话说明这个对象要做什么）和 body（Markdown 正文，可用列表、代码块）。
+- 公式：行内用单个美元符 `$...$`（如 `$f(x)$`），单独成行的用双美元符 `$$...$$`。两种都支持，不要写成 `\( \)` 或 `\[ \]`。
 - concept 写该对象对应的核心概念（短语）；difficulty 取 intro / core / advanced 之一。
 - practice 与 assessment 必须带 payload：
   - 选择题/判断题：options 给 2 到 4 个（id 用 a/b/c/d），answer 给正确选项 id。

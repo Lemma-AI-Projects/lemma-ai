@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, ArrowRight, Minus, Plus } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,13 @@ const UNIT_COL_GAP = 236
 const LESSON_ROW_GAP = 118
 const UNIT_TOP = 16
 const LESSON_TOP = 96
+
+// Zoom lives with the host, like the learn space top bar: the canvas is a
+// controlled view and the controls are just a caller. Same 50-200% / 10% step
+// clamp so the two canvases do not teach different gestures.
+const ZOOM_MIN = 50
+const ZOOM_MAX = 200
+const ZOOM_STEP = 10
 
 function layoutBlueprint(units: FreeUnit[]): FreeCourseBlueprintNode[] {
   const nodes: FreeCourseBlueprintNode[] = []
@@ -58,6 +65,7 @@ export function FreeCourseBlueprintView() {
   const navigate = useNavigate()
   const { t } = useAppTranslation()
   const detailQuery = useFreeCourseDetail(id)
+  const [zoom, setZoom] = useState(100)
 
   const nodes = useMemo(
     () => layoutBlueprint(detailQuery.data?.units ?? []),
@@ -109,16 +117,43 @@ export function FreeCourseBlueprintView() {
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 p-6">
+      <div className="relative min-h-0 flex-1 p-6">
         <FreeCourseBlueprintCanvas
           nodes={nodes}
-          zoom={100}
+          zoom={zoom}
           className="h-full"
         />
+
+        {/* Zoom cluster (screen 4's bottom-right control). Disabled at the
+            clamp ends rather than silently doing nothing. */}
+        <div className="absolute right-9 bottom-9 flex flex-col overflow-hidden rounded-full border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+          <button
+            type="button"
+            onClick={() => setZoom((value) => Math.min(ZOOM_MAX, value + ZOOM_STEP))}
+            disabled={zoom >= ZOOM_MAX}
+            aria-label={t('freeCourse.zoomIn')}
+            className={zoomButtonClassName}
+          >
+            <Plus className="size-3.5" />
+          </button>
+          <span className="h-px bg-zinc-200 dark:bg-zinc-700" />
+          <button
+            type="button"
+            onClick={() => setZoom((value) => Math.max(ZOOM_MIN, value - ZOOM_STEP))}
+            disabled={zoom <= ZOOM_MIN}
+            aria-label={t('freeCourse.zoomOut')}
+            className={zoomButtonClassName}
+          >
+            <Minus className="size-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   )
 }
+
+const zoomButtonClassName =
+  'flex size-8 items-center justify-center text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
 
 const secondaryActionClassName =
   'h-[33px] rounded-full px-[12.5px] text-[13.5px] font-normal border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-100'

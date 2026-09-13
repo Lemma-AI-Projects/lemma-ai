@@ -70,11 +70,18 @@ export interface FreeLearningObject {
   hint: string | null
 }
 
+export interface FreeLessonRef {
+  chapterId: string
+  title: string
+}
+
 export interface FreeLessonContent {
   chapterId: string
   title: string
   objective: string
   objects: FreeLearningObject[]
+  /** Next lesson in the course's own order; null on the last one. */
+  next: FreeLessonRef | null
 }
 
 // The `step` frame of /build/stream (camelCase on the wire).

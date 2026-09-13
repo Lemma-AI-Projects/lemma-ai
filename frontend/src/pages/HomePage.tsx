@@ -4,6 +4,7 @@ import { ActionChip } from '@/components/ActionChip'
 import { CircularProgress } from '@/components/CircularProgress'
 import { Button } from '@/components/ui/button'
 import { ChatInput } from '@/features/home/ChatInput'
+import type { ConversationComposerTool } from '@/features/conversation/types'
 import { HomeUserMenu } from '@/features/home/HomeUserMenu'
 import { suggestions } from '@/mock/homeSuggestions'
 
@@ -11,9 +12,12 @@ export function HomePage() {
   const navigate = useNavigate()
 
   // 首页发送 → 进入新会话态的 chat 页并自动发出这条消息，
-  // 对话创建（采纳预生成 id）由 chat 页的流式链路完成。Course Planning 开关
-  // 经 location.state 带入，由 chat 页在首条消息上走工具回合。
-  const handleSend = (text: string, options?: { tool?: 'course_planning' }) => {
+  // 对话创建（采纳预生成 id）由 chat 页的流式链路完成。课程开关
+  // 经 location.state 带入，由 chat 页在首条消息上走对应的工具回合。
+  const handleSend = (
+    text: string,
+    options?: { tool?: ConversationComposerTool }
+  ) => {
     navigate('/chat', {
       state: {
         initialMessage: text,

@@ -149,8 +149,15 @@
       "submit": "提交",
       "correct": "回答正确",
       "partial": "部分正确",
-      "incorrect": "回答有误"
-    }
+      "incorrect": "回答有误",
+      "answerPlaceholder": "用你自己的话写下来…",
+      "upNext": "下一节",
+      "next": "继续下一节",
+      "completed": "这门课的课程内容到这里就结束了。"
+    },
+    "buildFailed": "课程生成失败，请重试。",
+    "zoomIn": "放大",
+    "zoomOut": "缩小"
   },
   "common": {
     "close": "关闭",
@@ -210,5 +217,10 @@
       "sessionFailed": "创建支付会话失败：{{message}}",
       "sessionFailedRetry": "创建支付会话失败，请重试"
     }
+  },
+  "composer": {
+    "chat": "问任何关于这节课的问题…",
+    "freeCourse": "说一个你想学的主题，我来搭建课程",
+    "videoCourse": "想为哪个主题找视频课程？"
   }
 }

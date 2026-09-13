@@ -62,6 +62,15 @@ export type ConversationToolRef =
   | { type: 'desmos_graph'; graphId: string }
   | { type: 'desmos_3d_graph'; graphId: string }
 
+// The tools a composer may START, i.e. the ones a person picks from the input
+// menu. The graph refs are emitted by the model and never chosen here, so they
+// are deliberately excluded. Derived from the union above so that adding a tool
+// cannot leave the composer's option type behind.
+export type ConversationComposerTool = Extract<
+  ConversationToolRef,
+  { type: 'course_planning' | 'free_course' }
+>['type']
+
 // A tool block is a thin REFERENCE: which tool sits in this turn and which
 // resource it drives. The card hydrates its own live data from that id, so the
 // same block renders identically live and on history reload. `tool.type`

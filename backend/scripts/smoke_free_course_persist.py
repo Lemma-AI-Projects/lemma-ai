@@ -180,6 +180,23 @@ async def main() -> int:
             f"(objective {len(objective_objects)} / open {len(open_objects)})"
         )
 
+        # The runtime's "continue": the lesson read must name the lesson after
+        # this one in the course's own order, and it must be the lesson
+        # get_detail lists next (both walk unit -> lesson, so they cannot
+        # disagree about what comes next).
+        report.check(
+            lesson.next is not None,
+            "lesson read has no `next` although this is a multi-lesson course",
+        )
+        if lesson.next is not None:
+            ordered = [c.id for u in detail.units for c in u.lessons]
+            position = ordered.index(chapter_id)
+            report.check(
+                lesson.next.chapter_id == ordered[position + 1],
+                "`next` is not the following lesson in map order",
+            )
+            print(f"  next lesson: {lesson.next.title}")
+
         # answers never leak to the client via the read schema
         async with AsyncSessionLocal() as db:
             rows = (await db.execute(

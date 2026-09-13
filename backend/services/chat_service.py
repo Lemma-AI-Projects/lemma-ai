@@ -6,10 +6,12 @@ SSE response starts (it travels in the X-Conversation-Id header):
     prepare_turn()  -> create-or-load the conversation, rebuild history
     run_turn()      -> dispatch on the request's tool: plain text or a tool turn
 
-A plain turn (stream_turn) just streams the model. A tool turn (currently only
-stream_course_planning_turn) streams a short AI intro, runs the tool's own
-service, then attaches a tool card via one `tool` chunk — same conversation
-resolution, SSE protocol and persistence as a plain turn, only the body differs.
+A plain turn (stream_turn) just streams the model. A tool turn streams whatever
+that tool needs and then attaches a card via one `tool` chunk — same
+conversation resolution, SSE protocol and persistence as a plain turn, only the
+body differs. Two exist: stream_course_planning_turn (video course: AI intro +
+questionnaire) and stream_free_course_turn (free course: a shell and its build
+card, no model call at all).
 
 Persistence rule (拍板 2026-06-11): the user+assistant pair is written once
 the first token has been emitted — partial answers from a stop/error are kept
@@ -36,6 +38,7 @@ from services import (
     conversation_service,
     conversation_tool_service,
     course_planning_service,
+    free_course_service,
     project_service,
 )
 
@@ -218,7 +221,71 @@ def run_turn(
     API layer wraps it straight into the SSE response."""
     if tool == "course_planning":
         return stream_course_planning_turn(context, user)
+    if tool == "free_course":
+        return stream_free_course_turn(context, user)
     return stream_turn(context)
+
+
+async def stream_free_course_turn(
+    context: TurnContext, user: CurrentUser
+) -> AsyncIterator[AIChunk]:
+    """Free-Course tool turn: create the shell, attach the card, done.
+
+    Deliberately has no intro prose and no model call. The reference flow is
+    "say what you want to learn, then watch the structure appear", and the
+    card's step block is that surface — a chatty paragraph above it would only
+    delay the thing the learner is waiting for. The card starts the build
+    itself via /free-courses/{id}/build/stream.
+
+    The turn still persists (with an empty assistant body and the tool ref), so
+    reloading the conversation rebuilds the card and, because the course row
+    already exists, the build resumes instead of being lost.
+    """
+    # A new conversation isn't in the DB yet, so the course links through the
+    # message's tool_json reference; the FK would be violated pre-persist.
+    free_conversation_id = (
+        None if context.new_conversation_title else context.conversation_id
+    )
+    async with AsyncSessionLocal() as db:
+        course = await free_course_service.create_free_course(
+            db,
+            user_id=context.user_id,
+            intent=context.user_content,
+            conversation_id=free_conversation_id,
+        )
+    course_id = course.id
+    tool_ref: dict[str, Any] = {"type": "free_course", "courseId": str(course_id)}
+    persist_task: asyncio.Task[Any] | None = None
+
+    def ensure_persist_scheduled() -> None:
+        # No intro means no "first token" gate: the card IS the turn's output,
+        # so the write is scheduled as soon as it is about to be announced.
+        # Losing it would strand an orphan shell the learner can never reach.
+        nonlocal persist_task
+        if persist_task is None:
+            persist_task = aio.spawn_protected(
+                conversation_service.persist_turn(
+                    conversation_id=context.conversation_id,
+                    user_id=context.user_id,
+                    new_conversation_title=context.new_conversation_title,
+                    new_conversation_project_id=context.new_conversation_project_id,
+                    user_content=context.user_content,
+                    user_sent_at=context.user_sent_at,
+                    assistant_content="",
+                    raw_parts=None,
+                    tool_ref=tool_ref,
+                )
+            )
+
+    try:
+        yield AIChunk(kind="tool", tool=tool_ref)
+        ensure_persist_scheduled()
+        yield AIChunk(kind="done")
+    finally:
+        ensure_persist_scheduled()
+        if persist_task is not None and not persist_task.done():
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.shield(persist_task)
 
 
 async def stream_course_planning_turn(
