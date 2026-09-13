@@ -6,6 +6,7 @@ from api.v1 import (
     conversations,
     courses,
     credits,
+    free_courses,
     graphs,
     health,
     lti,
@@ -23,6 +24,7 @@ api_router.include_router(chat.router)
 api_router.include_router(conversations.router)
 api_router.include_router(projects.router)
 api_router.include_router(courses.router)
+api_router.include_router(free_courses.router)
 api_router.include_router(companion.router)
 api_router.include_router(overview.router)
 api_router.include_router(graphs.router)

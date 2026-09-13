@@ -9,6 +9,7 @@ from models.course import Course, CourseChapter, CourseUnit
 from models.course_candidate import ChapterVideoCandidate
 from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
+from models.free_course import CourseLessonObject, CourseLessonObservation
 from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.profile import Profile
 from models.roster import (
@@ -32,6 +33,8 @@ __all__ = [
     "ChapterVideoCandidate",
     "Course",
     "CourseChapter",
+    "CourseLessonObject",
+    "CourseLessonObservation",
     "CourseSearchCandidate",
     "CourseUnit",
     "DesmosGraph",

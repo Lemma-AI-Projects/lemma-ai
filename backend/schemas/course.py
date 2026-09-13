@@ -110,6 +110,11 @@ class CourseDetailOut(CourseOutlineOut):
     # the course moved to `failed`).
     questionnaire_ready: bool = False
 
+    # `video` | `free` — shares courses table with free-course, so the client
+    # must branch on this before rendering (a free course must never reach the
+    # video player). Defaults to exhaustively routing older rows as video.
+    mode: str = "video"
+
 
 class CourseListItemOut(BaseModel):
     model_config = ConfigDict(
@@ -120,6 +125,9 @@ class CourseListItemOut(BaseModel):
     title: str
     status: str
     updated_at: datetime
+    # `video` | `free` — lets the course-center list badge and branch routing by
+    # mode, so a free course is never sent to the video detail page.
+    mode: str = "video"
 
 
 class BuildProgressEvent(BaseModel):
