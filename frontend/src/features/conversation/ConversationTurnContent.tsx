@@ -2,6 +2,7 @@ import { DesmosGraphCard } from '@/features/desmos/DesmosGraphCard'
 import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
 import { ConversationCourseTool } from './ConversationCourseTool'
+import { ConversationFreeCourseTool } from '@/features/free-course/ConversationFreeCourseTool'
 import { ConversationReasoning } from './ConversationReasoning'
 import type { ConversationTurn as ConversationTurnData, ConversationTurnBlock } from './types'
 
@@ -39,6 +40,11 @@ function renderBlock(block: ConversationTurnBlock) {
     block.tool.type === 'desmos_3d_graph'
   ) {
     return <DesmosGraphCard key={block.id} graphId={block.tool.graphId} />
+  }
+  if (block.tool.type === 'free_course') {
+    return (
+      <ConversationFreeCourseTool key={block.id} courseId={block.tool.courseId} />
+    )
   }
   return <ConversationCourseTool key={block.id} courseId={block.tool.courseId} />
 }

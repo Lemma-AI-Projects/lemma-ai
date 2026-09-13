@@ -58,6 +58,7 @@ export interface ConversationToolUnit {
 // `tool` event and ai_messages.tool_json). `type` discriminates the tool.
 export type ConversationToolRef =
   | { type: 'course_planning'; courseId: string }
+  | { type: 'free_course'; courseId: string }
   | { type: 'desmos_graph'; graphId: string }
   | { type: 'desmos_3d_graph'; graphId: string }
 

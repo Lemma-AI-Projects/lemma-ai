@@ -110,6 +110,48 @@
     "progress": "学习进度",
     "continueHint": "继续学习该课程"
   },
+  "freeCourse": {
+    "badge": "自由课程",
+    "loading": "正在加载课程…",
+    "loadFailed": "加载课程失败",
+    "backToCourses": "返回课程中心",
+    "readyHint": "自由课程已生成，确认蓝图后即可进入第一课。",
+    "openBlueprint": "查看蓝图并生成第一课",
+    "retry": "重试",
+    "blueprintTitle": "学习蓝图",
+    "generateFirstLesson": "生成第一课",
+    "enterFirstLesson": "开始学习",
+    "viewBlueprint": "查看蓝图",
+    "lessons": "课",
+    "units": "单元",
+    "back": "返回",
+    "blueprintCanvasLabel": "课程蓝图画布",
+    "resetView": "重置视图",
+    "zoom": "缩放 {{zoom}}%",
+    "step": {
+      "intent": "理解学习意图",
+      "map": "构建学习地图",
+      "path": "规划学习路径",
+      "blueprint": "设计教学蓝图",
+      "content": "生成第一节课"
+    },
+    "object": {
+      "explanation": "讲解",
+      "example": "示例",
+      "practice": "练习",
+      "assessment": "小测"
+    },
+    "lesson": {
+      "loading": "正在加载课时…",
+      "loadFailed": "加载课时失败",
+      "empty": "本节还没有内容。",
+      "submitting": "判分中…",
+      "submit": "提交",
+      "correct": "回答正确",
+      "partial": "部分正确",
+      "incorrect": "回答有误"
+    }
+  },
   "common": {
     "close": "关闭",
     "cancel": "取消",

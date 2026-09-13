@@ -50,6 +50,7 @@ function mapCourseListItem(
     status: toCourseCenterStatus(course.status),
     icon: GraduationCap,
     tone: ILLUSTRATION_TONES[index % ILLUSTRATION_TONES.length],
+    mode: course.mode,
   }
 }
 

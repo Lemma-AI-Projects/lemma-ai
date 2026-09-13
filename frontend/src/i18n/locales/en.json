@@ -110,6 +110,48 @@
     "progress": "progress",
     "continueHint": "Continue this course"
   },
+  "freeCourse": {
+    "badge": "Free course",
+    "loading": "Loading course...",
+    "loadFailed": "Failed to load this course",
+    "backToCourses": "Back to courses",
+    "readyHint": "Your free course is ready — confirm the blueprint to start the first lesson.",
+    "openBlueprint": "Open blueprint & start first lesson",
+    "retry": "Retry",
+    "blueprintTitle": "Learning blueprint",
+    "generateFirstLesson": "Start first lesson",
+    "enterFirstLesson": "Start learning",
+    "viewBlueprint": "Review blueprint",
+    "lessons": "lessons",
+    "units": "units",
+    "back": "Back",
+    "blueprintCanvasLabel": "Course blueprint canvas",
+    "resetView": "Reset view",
+    "zoom": "Zoom {{zoom}}%",
+    "step": {
+      "intent": "Understand intent",
+      "map": "Build learning map",
+      "path": "Plan learning path",
+      "blueprint": "Design blueprint",
+      "content": "Generate first lesson"
+    },
+    "object": {
+      "explanation": "Explanation",
+      "example": "Example",
+      "practice": "Practice",
+      "assessment": "Mini-quiz"
+    },
+    "lesson": {
+      "loading": "Loading lesson...",
+      "loadFailed": "Failed to load this lesson",
+      "empty": "This lesson has no content yet.",
+      "submitting": "Checking...",
+      "submit": "Submit",
+      "correct": "Correct",
+      "partial": "Partly correct",
+      "incorrect": "Not quite"
+    }
+  },
   "common": {
     "close": "Close",
     "cancel": "Cancel",

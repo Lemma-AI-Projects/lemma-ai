@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Ellipsis, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ActionMenu, ActionMenuItem } from '@/components/ActionMenu'
 import { Button } from '@/components/ui/button'
@@ -74,8 +74,18 @@ function historyEndsWithLiveMessages(
 export function CoursePage() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const courseQuery = useLearningCourseQuery(id)
+
+  // mode 守卫: a free course must never reach the video player. As soon as the
+  // detail lands with mode === 'free', redirect to the free-course namespace
+  // before any resource (generate lesson video, companion chat) is fetched.
+  useEffect(() => {
+    if (courseQuery.data?.mode === 'free' && id) {
+      navigate(`/free-course/${id}`, { replace: true })
+    }
+  }, [courseQuery.data?.mode, id, navigate])
   // Bridge the real course tree onto the existing course-page contract; only the
   // chapter video is backend-backed this step (see courseLearningApi adapter).
   const course = useMemo(

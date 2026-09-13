@@ -14,11 +14,14 @@ import type {
 
 // --- wire types (contract truth: backend schemas/course.py, camelCase) ---
 
+export type CourseMode = 'video' | 'free'
+
 export interface CourseListItem {
   id: string
   title: string
   status: string
   updatedAt: string
+  mode: CourseMode
 }
 
 export interface LearningChapter {
@@ -43,6 +46,7 @@ export interface LearningCourse {
   progress: number
   units: LearningUnit[]
   questionnaireReady: boolean
+  mode: CourseMode
 }
 
 export type ChapterVideoStatus = 'ready' | 'downloading' | 'failed'

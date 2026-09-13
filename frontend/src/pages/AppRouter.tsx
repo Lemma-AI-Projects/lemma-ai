@@ -8,6 +8,9 @@ import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { CreditsPage } from '@/pages/CreditsPage'
 import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
+import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBlueprintView'
+import { FreeCourseDetailView } from '@/features/free-course/FreeCourseDetailView'
+import { FreeCourseLessonView } from '@/features/free-course/FreeCourseLessonView'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
@@ -106,6 +109,18 @@ const routes: RouteObject[] = [
           {
             path: 'course/:id',
             element: <CoursePage />,
+          },
+          {
+            path: 'free-course/:id',
+            element: <FreeCourseDetailView />,
+          },
+          {
+            path: 'free-course/:id/blueprint',
+            element: <FreeCourseBlueprintView />,
+          },
+          {
+            path: 'free-course/:id/lesson/:chapterId',
+            element: <FreeCourseLessonView />,
           },
           {
             path: 'project/:id',

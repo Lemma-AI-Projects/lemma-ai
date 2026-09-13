@@ -27,7 +27,10 @@ export function CourseListCard({
   illustrationPosition = 'left',
 }: CourseListCardProps) {
   const { t } = useAppTranslation()
-  const { id, title, source, addedAt, progress, upNext, icon: Icon, tone } = course
+  const { id, title, source, addedAt, progress, upNext, icon: Icon, tone, mode } = course
+  const courseHref =
+    mode === 'free' ? `/free-course/${id}` : `/course/${id}`
+  const isFree = mode === 'free'
 
   const illustration = (
     <div
@@ -48,6 +51,11 @@ export function CourseListCard({
       <h3 className="mt-1 truncate text-[17px] leading-6 font-semibold text-zinc-900">
         {title}
       </h3>
+      {isFree ? (
+        <span className="mt-1.5 inline-flex w-fit items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] leading-4 font-medium text-zinc-600">
+          {t('freeCourse.badge')}
+        </span>
+      ) : null}
 
       <div className="mt-2 flex flex-wrap gap-x-10 gap-y-1.5">
         <MetaItem label={t('course.source')} value={source} />
@@ -79,7 +87,7 @@ export function CourseListCard({
 
   return (
     <Link
-      to={`/course/${id}`}
+      to={courseHref}
       className="group block rounded-[14px] border border-zinc-200 bg-white no-underline transition-shadow duration-200 hover:border-zinc-300 hover:shadow-[0_2px_8px_rgba(0,0,0,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50"
     >
       <div className="flex items-stretch">

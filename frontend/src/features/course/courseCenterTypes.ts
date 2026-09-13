@@ -29,4 +29,6 @@ export interface CourseCenterCourse {
   icon: LucideIcon
   /** 插图块配色类（保持中性，不引入品牌色） */
   tone: string
+  /** `free` 表示自由课程（与视频课分流：点击进 /free-course/:id） */
+  mode?: 'video' | 'free'
 }
