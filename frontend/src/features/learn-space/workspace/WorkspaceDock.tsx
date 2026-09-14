@@ -7,6 +7,9 @@ import { WORKSPACE_DOCK_SLOT } from './workspaceStyles'
 export interface WorkspaceDockProps {
   /** 「指挥室」：在当前空间里开一段新对话。 */
   onCommandRoom: () => void
+  /** 「庇护所」：左侧板块抽屉。 */
+  isShelterOpen: boolean
+  onToggleShelter: () => void
   isConversationOpen: boolean
   onToggleConversation: () => void
   className?: string
@@ -15,12 +18,14 @@ export interface WorkspaceDockProps {
 /**
  * 画布底部的悬浮 dock。
  *
- * 参考稿里有四个等宽槽位：command room（+）、shelter（≡）、windows layout、
- * pending。后三个的行为还没定义，所以按禁用态渲染 —— 形状与参考稿一致，
- * 但不会出现「点了没反应」的假按钮。
+ * 参考稿里有四个槽位：command room（+）、shelter（≡）、windows layout、
+ * pending。shelter 已实装为左侧板块抽屉；后两个行为未定义，按禁用态渲染 ——
+ * 形状与参考稿一致，不会出现「点了没反应」的假按钮。
  */
 export function WorkspaceDock({
   onCommandRoom,
+  isShelterOpen,
+  onToggleShelter,
   isConversationOpen,
   onToggleConversation,
   className,
@@ -45,11 +50,18 @@ export function WorkspaceDock({
 
         <button
           type="button"
-          disabled
+          onClick={onToggleShelter}
+          aria-pressed={isShelterOpen}
           aria-label={t('workspace.shelter')}
-          className={WORKSPACE_DOCK_SLOT}
+          title={t('workspace.shelter')}
+          className={cn(
+            WORKSPACE_DOCK_SLOT,
+            isShelterOpen
+              ? 'bg-zinc-900 text-white hover:bg-zinc-800'
+              : 'hover:bg-zinc-200 hover:text-zinc-900'
+          )}
         >
-          <AlignLeft className="size-5 text-zinc-400" />
+          <AlignLeft className="size-5" />
         </button>
 
         {/* windows layout / pending：位置先占住，行为待定义。 */}

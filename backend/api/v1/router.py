@@ -12,6 +12,7 @@ from api.v1 import (
     health,
     lti,
     overview,
+    pages,
     payments,
     projects,
     users,
@@ -26,6 +27,7 @@ api_router.include_router(conversations.router)
 api_router.include_router(projects.router)
 api_router.include_router(courses.router)
 api_router.include_router(free_courses.router)
+api_router.include_router(pages.router)
 api_router.include_router(companion.router)
 api_router.include_router(overview.router)
 api_router.include_router(graphs.router)

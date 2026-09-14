@@ -35,12 +35,15 @@ export function LearnSpaceWorkspacePreviewPage() {
 
   return (
     <LearnSpaceWorkspace
+      projectId="preview"
       spaceName="线性代数 · 第 12 讲"
       nodes={previewNodes}
       onClose={() => navigate('/preview/learn-spaces')}
       onStartConversation={handleStartConversation}
       onNewConversation={() => navigate('/chat')}
       onOpenNode={handleOpenNode}
+      // 预览态未登录，抽屉取不到数据 → 空态；不开编辑器路由。
+      onOpenPage={() => {}}
     />
   )
 }

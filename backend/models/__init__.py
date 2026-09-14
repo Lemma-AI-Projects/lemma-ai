@@ -10,6 +10,7 @@ from models.course import Course, CourseChapter, CourseUnit
 from models.course_candidate import ChapterVideoCandidate
 from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
+from models.doc import Block, Page
 from models.free_course import CourseLessonObject, CourseLessonObservation
 from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.profile import Profile
@@ -28,6 +29,7 @@ __all__ = [
     "AiConversation",
     "AiMessage",
     "AiUsageLog",
+    "Block",
     "CalendarConnection",
     "SyncedEvent",
     "ChapterGeminiFile",
@@ -48,6 +50,7 @@ __all__ = [
     "Enrollment",
     "ExternalIdentity",
     "Organization",
+    "Page",
     "Profile",
     "RosterIntegration",
     "RosterSyncRun",

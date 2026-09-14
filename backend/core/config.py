@@ -154,6 +154,14 @@ class Settings(BaseSettings):
     apify_api_token: str = ""
     search_routes_json: str = _DEFAULT_SEARCH_ROUTES_JSON
 
+    # --- Doc layer (pages/blocks, see planning/kb-doc-layer-execution-plan.md) ---
+    # Both default False so the app boots the doc layer read-only: the pages/blocks
+    # API stays behind DOC_FULL_API_ENABLED until the alembic migration is applied,
+    # and the TipTap editor behind DOC_EDITOR_ENABLED until its own work lands.
+    # No brand-new write surface should be reachable before the tables exist.
+    doc_full_api_enabled: bool = False
+    doc_editor_enabled: bool = False
+
     # --- Course video assets (Supabase Storage) ---
     # Two credentials by design (see core/storage.py): the service-role key
     # signs short-lived playback URLs; the S3 access keys authorize boto3

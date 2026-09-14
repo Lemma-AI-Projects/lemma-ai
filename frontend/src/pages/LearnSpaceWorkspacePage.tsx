@@ -79,6 +79,14 @@ export function LearnSpaceWorkspacePage() {
     [navigate]
   )
 
+  // 从 shelter 抽屉进一块板：编辑器路由（P0.4 实装，P0.3 先落地骨头导航）。
+  const handleOpenPage = useCallback(
+    (pageId: string) => {
+      navigate(`/learn-spaces/${id}/docs/${pageId}`)
+    },
+    [id, navigate]
+  )
+
   let errorText: string | undefined
   if (projectQuery.isError) {
     errorText = isNotFoundError(projectQuery.error)
@@ -90,6 +98,7 @@ export function LearnSpaceWorkspacePage() {
 
   return (
     <LearnSpaceWorkspace
+      projectId={id as string}
       spaceName={projectQuery.data?.name ?? ''}
       isNameLoading={projectQuery.isPending}
       nodes={nodes}
@@ -99,6 +108,7 @@ export function LearnSpaceWorkspacePage() {
       onStartConversation={handleStartConversation}
       onNewConversation={handleNewConversation}
       onOpenNode={handleOpenNode}
+      onOpenPage={handleOpenPage}
     />
   )
 }

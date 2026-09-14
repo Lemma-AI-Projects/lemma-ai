@@ -5,10 +5,11 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
-import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
 import { CoursePage } from '@/pages/CoursePage'
+import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
 import { CreditsPage } from '@/pages/CreditsPage'
 import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
+import { DocEditorView } from '@/features/docs/DocEditorView'
 import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBlueprintView'
 import { FreeCourseDetailView } from '@/features/free-course/FreeCourseDetailView'
 import { FreeCourseLessonView } from '@/features/free-course/FreeCourseLessonView'
@@ -66,6 +67,11 @@ const routes: RouteObject[] = [
         // 所以这条路由不套 AppLayout。
         path: 'learn-spaces/:id',
         element: <LearnSpaceWorkspacePage />,
+      },
+      {
+        // 文档编辑器：同样全屏沉浸布局（P0.3 为骨架，P0.4 实装块编辑）。
+        path: 'learn-spaces/:id/docs/:pageId',
+        element: <DocEditorView />,
       },
       {
         element: <AppLayout />,
