@@ -87,6 +87,9 @@ class Course(Base):
     # Questionnaire + answers + derived profile, kept together as one JSON blob
     # (阶段一 product data, never queried by column).
     intake_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # Free-course per-course tunable projections (volume/depth/focus/pace), kept
+    # as one JSONB blob. Nullable: un-tuned courses fall back to persona defaults.
+    tuning_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
