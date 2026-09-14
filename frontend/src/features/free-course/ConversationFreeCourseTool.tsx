@@ -1,10 +1,12 @@
-import { Check, CircleAlert } from 'lucide-react'
+import { CircleAlert } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { useAppTranslation } from '@/i18n'
 import { ConversationToolCardSkeleton } from '@/features/conversation/ConversationToolSkeleton'
+import { BuildStepIcon } from './BuildStepIcon'
+import { buildStepLabel } from './buildStepLabels'
 import { useFreeCoursePlanner } from './useFreeCoursePlanner'
 import type { FreeBuildStepKey, FreeBuildProgress, FreeBuildStepState } from './types'
 import { freeBuildStepOrder } from './types'
@@ -110,53 +112,6 @@ export function ConversationFreeCourseTool({ courseId }: { courseId: string }) {
       </div>
     </div>
   )
-}
-
-function stepLabel(
-  t: ReturnType<typeof useAppTranslation>['t'],
-  step: FreeBuildStepKey
-): string {
-  switch (step) {
-    case 'intent':
-      return t('freeCourse.step.intent')
-    case 'map':
-      return t('freeCourse.step.map')
-    case 'path':
-      return t('freeCourse.step.path')
-    case 'blueprint':
-      return t('freeCourse.step.blueprint')
-    case 'content':
-      return t('freeCourse.step.content')
-  }
-}
-
-function stepIcon({
-  status,
-  isRunning,
-}: {
-  status: FreeBuildStepState['status']
-  isRunning: boolean
-}) {
-  if (status === 'done') {
-    return (
-      <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-white">
-        <Check className="size-2.5" strokeWidth={3} />
-      </span>
-    )
-  }
-  if (status === 'failed') {
-    return (
-      <CircleAlert className="size-4 shrink-0 text-destructive" />
-    )
-  }
-  if (status === 'running' || (status === 'pending' && isRunning)) {
-    return (
-      <span className="flex size-4 shrink-0 items-center justify-center">
-        <Spinner className="size-[13px] text-zinc-900" />
-      </span>
-    )
-  }
-  return <span className="size-1.5 shrink-0 rounded-full bg-zinc-300" />
 }
 
 /** One finished step's sub-product: intent chips for step 1, the unit tree for
@@ -286,15 +241,12 @@ function FreeCourseBuildSteps({
       {freeBuildStepOrder.map((step, index) => {
         const state: FreeBuildStepState =
           progress?.[step] ?? { status: index === 0 ? 'running' : 'pending', detail: null, payload: null }
-        const lbl = stepLabel(t, step)
+        const lbl = buildStepLabel(t, step)
         return (
           <section key={step}>
             <div className="flex min-h-9 items-start gap-2.5 py-1.5">
               <span className="mt-1 flex size-4 shrink-0 items-center justify-center">
-                {stepIcon({
-                  status: state.status,
-                  isRunning,
-                })}
+                <BuildStepIcon status={state.status} isRunning={isRunning} />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] leading-6 font-medium text-zinc-800 dark:text-zinc-100">

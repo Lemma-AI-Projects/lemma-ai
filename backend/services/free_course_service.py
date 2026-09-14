@@ -13,7 +13,16 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ai.free_course.types import LearningObject, Lesson, ObjectPayload
+from ai.free_course.types import (
+    LearningIntent,
+    LearningMap,
+    LearningObject,
+    Lesson,
+    MapLesson,
+    MapUnit,
+    ObjectPayload,
+    PathStep,
+)
 from models.course import Course, CourseChapter, CourseUnit
 from models.free_course import CourseLessonObject, CourseLessonObservation
 from schemas.free_course import (
@@ -193,16 +202,107 @@ async def persist_lesson(
     await db.commit()
 
 
-async def get_detail(
+async def count_objects(db: AsyncSession, *, chapter_id: uuid.UUID) -> int:
+    """How many content objects this chapter has (0 = not generated yet)."""
+    return int(
+        (
+            await db.execute(
+                select(func.count(CourseLessonObject.id)).where(
+                    CourseLessonObject.chapter_id == chapter_id
+                )
+            )
+        ).scalar_one()
+        or 0
+    )
+
+
+async def get_owned_course_tree(
     db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID
-) -> FreeCourseDetailOut | None:
-    """Owned tree read: units -> lessons with objective, blueprint, has_content."""
+) -> Course | None:
+    """Owned course with its unit/chapter tree eager-loaded, ordered.
+
+    The tree IS the map (spec §15), so anything that has to reason about
+    structure — a late lesson generation, an edit — reads it in one query
+    instead of walking lazy relations per unit.
+    """
     result = await db.execute(
         select(Course)
         .where(Course.id == course_id, Course.user_id == user_id)
         .options(selectinload(Course.units).selectinload(CourseUnit.chapters))
     )
-    course = result.scalar_one_or_none()
+    return result.scalar_one_or_none()
+
+
+def map_from_tree(course: Course) -> LearningMap:
+    """Rebuild the LearningMap from the persisted tree.
+
+    A lesson generated after the build must read the map from the database, not
+    from the build's stored output: editing the blueprint rewrites the tree, and
+    the tree is what the learner actually sees. Metadata that has no column of
+    its own (audience / summary) comes from intake_json, where persist_map put
+    it.
+    """
+    meta = (course.intake_json or {}).get("map", {})
+    return LearningMap(
+        title=meta.get("title") or course.title,
+        audience=meta.get("audience") or "",
+        summary=meta.get("summary") or "",
+        units=[
+            MapUnit(
+                title=unit.title,
+                objective=unit_objective(unit) or "",
+                lessons=[
+                    MapLesson(title=chapter.title, objective=chapter.objective or "")
+                    for chapter in unit.chapters
+                ],
+            )
+            for unit in course.units
+        ],
+    )
+
+
+def intent_from_course(course: Course) -> LearningIntent:
+    """The intent the course was built from.
+
+    Falls back to a minimal one built from the course's own topic for courses
+    created before the intent was persisted — it never invents fields that were
+    not captured.
+    """
+    stored = (course.intake_json or {}).get("intent")
+    if stored:
+        return LearningIntent.model_validate(stored)
+    return LearningIntent(
+        raw_request=course.topic, topic=course.topic, outcome=course.topic
+    )
+
+
+def step_for_chapter(course: Course, chapter: CourseChapter) -> PathStep:
+    """Where this lesson sits in the map — what the writer needs to place it.
+
+    `status` is always "unknown": the lesson is one we are about to teach, and
+    claiming the learner already knows it would be a lie the writer would act on.
+    """
+    unit = next(
+        (
+            candidate
+            for candidate in course.units
+            if any(item.id == chapter.id for item in candidate.chapters)
+        ),
+        None,
+    )
+    return PathStep(
+        unit_title=unit.title if unit is not None else "",
+        lesson_title=chapter.title,
+        objective=chapter.objective or "",
+        status="unknown",
+    )
+
+
+async def get_detail(
+    db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID
+) -> FreeCourseDetailOut | None:
+    """Owned tree read: units -> lessons with objective, blueprint, has_content."""
+    course = await get_owned_course_tree(db, user_id=user_id, course_id=course_id)
     if course is None:
         return None
     content = await _content_counts(db, course_id=course.id)

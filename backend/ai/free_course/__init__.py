@@ -57,7 +57,6 @@ if TYPE_CHECKING:  # names for type checkers without a runtime import
         FreeCourseEvent,
         FreeCoursePipeline,
         generate,
-        plan_lesson,
     )
     from ai.free_course.sources import (
         LearnerInputSource,
@@ -81,7 +80,6 @@ _LAZY_EXPORTS = {
     "FreeCourseEvent": "ai.free_course.pipeline",
     "FreeCoursePipeline": "ai.free_course.pipeline",
     "generate": "ai.free_course.pipeline",
-    "plan_lesson": "ai.free_course.pipeline",
     "LearnerStateProvider": "ai.free_course.learner_state",
     "BasicLearnerStateProvider": "ai.free_course.learner_state",
     "NullLearnerStateProvider": "ai.free_course.learner_state",

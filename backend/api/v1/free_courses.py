@@ -110,6 +110,33 @@ async def get_lesson(
     return lesson
 
 
+@router.get("/{course_id}/chapters/{chapter_id}/lesson/stream")
+async def stream_lesson_generation(
+    course_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    force: bool = False,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> StreamingResponse:
+    """Generate this lesson's content, streaming the two steps.
+
+    A build only writes the lesson the path starts at, so every other lesson in
+    the map arrives here the first time it is opened. Idempotent unless `force`.
+    """
+    async with AsyncSessionLocal() as db:
+        owned = await free_course_service.get_owned_course(
+            db, user_id=current_user.id, course_id=course_id
+        )
+    if owned is None:
+        raise _NOT_FOUND
+    return StreamingResponse(
+        free_course_events.stream_free_course_lesson(
+            current_user.id, course_id, chapter_id, force=force
+        ),
+        media_type="text/event-stream",
+        headers=_SSE_HEADERS,
+    )
+
+
 @router.post(
     "/{course_id}/chapters/{chapter_id}/observations",
     response_model=AnswerFeedbackOut,

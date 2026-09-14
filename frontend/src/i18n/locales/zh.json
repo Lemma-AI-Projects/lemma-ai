@@ -153,7 +153,9 @@
       "answerPlaceholder": "用你自己的话写下来…",
       "upNext": "下一节",
       "next": "继续下一节",
-      "completed": "这门课的课程内容到这里就结束了。"
+      "completed": "这门课的课程内容到这里就结束了。",
+      "generating": "正在写这节课",
+      "generateFailed": "这节课生成失败，请重试。"
     },
     "buildFailed": "课程生成失败，请重试。",
     "zoomIn": "放大",

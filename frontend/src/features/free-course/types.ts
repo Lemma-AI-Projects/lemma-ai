@@ -119,6 +119,18 @@ export interface FreeBuildStepState {
 
 export type FreeBuildProgress = Record<FreeBuildStepKey, FreeBuildStepState>
 
+// Generating ONE lesson (the tail of the build, run on its own) emits a subset
+// of the same steps with the same frame shape — but a progress map of its own,
+// because a total record over all five keys would claim steps that never run.
+export type FreeLessonStepKey = 'blueprint' | 'content'
+
+export const freeLessonStepOrder: readonly FreeLessonStepKey[] = [
+  'blueprint',
+  'content',
+]
+
+export type FreeLessonProgress = Record<FreeLessonStepKey, FreeBuildStepState>
+
 export interface FreeAnswerFeedback {
   verdict: 'correct' | 'partial' | 'incorrect'
   feedback: string

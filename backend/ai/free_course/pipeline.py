@@ -52,28 +52,6 @@ class FreeCourseEvent(BaseModel):
     error_message: str | None = None
 
 
-async def plan_lesson(
-    learning_map: LearningMap,
-    step: PathStep,
-    *,
-    learner_state: LearnerState | None = None,
-    material: SourceMaterial | None = None,
-    user_id: str | None = None,
-) -> tuple[LessonBlueprint, Lesson]:
-    """Blueprint then content for one lesson.
-
-    Used when regenerating or refining a lesson (the initial build calls the two
-    steps separately so the progress block can show them as distinct steps). The
-    invariant it protects is the same on every path: the writer only ever sees a
-    blueprint.
-    """
-    blueprint = await design_blueprint(
-        learning_map, step, learner_state=learner_state, user_id=user_id
-    )
-    lesson = await generate_lesson(blueprint, material=material, user_id=user_id)
-    return blueprint, lesson
-
-
 class FreeCoursePipeline:
     """Runs the five steps once and keeps the product for the caller.
 

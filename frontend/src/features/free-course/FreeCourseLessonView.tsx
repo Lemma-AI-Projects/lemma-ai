@@ -12,15 +12,21 @@ import { Textarea } from '@/components/ui/textarea'
 import { AssistantMarkdown } from '@/features/conversation/markdown'
 import { cn } from '@/lib/utils'
 import { useAppTranslation } from '@/i18n'
+import { BuildStepIcon } from './BuildStepIcon'
+import { buildStepLabel } from './buildStepLabels'
 import {
   useFreeLesson,
   useSubmitFreeObservation,
 } from './freeCourseApi'
+import { useFreeLessonGeneration } from './useFreeLessonGeneration'
 import type {
   FreeAnswerFeedback,
   FreeLearningObject,
+  FreeLessonContent,
+  FreeLessonProgress,
   FreePracticeOption,
 } from './types'
+import { freeLessonStepOrder } from './types'
 
 // In-lesson runtime (screen 5). Each content object renders as a section:
 // explanation/example are Markdown prose; practice/assessment are answerable —
@@ -102,42 +108,168 @@ export function FreeCourseLessonView() {
         </div>
       </header>
 
-      <div className="scrollbar-fade min-h-0 flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto flex w-full max-w-[680px] flex-col gap-5">
-          {lesson.objects.length === 0 ? (
-            <p className="py-16 text-center text-sm text-zinc-400">
-              {t('freeCourse.lesson.empty')}
-            </p>
-          ) : (
-            lesson.objects.map((object) => (
-              <LessonSection key={object.id} object={object} courseId={id} chapterId={chapterId} />
-            ))
-          )}
+      <LessonRuntime
+        courseId={id}
+        chapterId={chapterId}
+        lesson={lesson}
+        onOpenLesson={(nextChapterId) =>
+          navigate(`/free-course/${id}/lesson/${nextChapterId}`)
+        }
+      />
+    </div>
+  )
+}
 
-          <footer className="mt-1 flex items-center justify-between gap-3 border-t border-zinc-200/80 pt-5 dark:border-zinc-800">
-            {lesson.next ? (
-              <>
-                <p className="min-w-0 flex-1 truncate text-[13px] leading-5 text-zinc-400 dark:text-zinc-500">
-                  {t('freeCourse.lesson.upNext')} · {lesson.next.title}
+/**
+ * Split out so the generation hook lives below the query's loading/error
+ * guards — a hook cannot be called after an early return, and this component
+ * only mounts once a lesson (possibly still empty) actually exists.
+ */
+function LessonRuntime({
+  courseId,
+  chapterId,
+  lesson,
+  onOpenLesson,
+}: {
+  courseId?: string
+  chapterId?: string
+  lesson: FreeLessonContent
+  onOpenLesson: (chapterId: string) => void
+}) {
+  const { t } = useAppTranslation()
+  const hasContent = lesson.objects.length > 0
+  const generation = useFreeLessonGeneration(courseId, chapterId, {
+    enabled: !hasContent,
+  })
+
+  return (
+    <div className="scrollbar-fade min-h-0 flex-1 overflow-y-auto px-6 py-6">
+      <div className="mx-auto flex w-full max-w-[680px] flex-col gap-5">
+        {hasContent ? (
+          <>
+            {lesson.objects.map((object) => (
+              <LessonSection
+                key={object.id}
+                object={object}
+                courseId={courseId}
+                chapterId={chapterId}
+              />
+            ))}
+
+            <footer className="mt-1 flex items-center justify-between gap-3 border-t border-zinc-200/80 pt-5 dark:border-zinc-800">
+              {lesson.next ? (
+                <>
+                  <p className="min-w-0 flex-1 truncate text-[13px] leading-5 text-zinc-400 dark:text-zinc-500">
+                    {t('freeCourse.lesson.upNext')} · {lesson.next.title}
+                  </p>
+                  <Button
+                    type="button"
+                    className={primaryActionClassName}
+                    onClick={() => {
+                      const next = lesson.next?.chapterId
+                      if (next) onOpenLesson(next)
+                    }}
+                  >
+                    {t('freeCourse.lesson.next')}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+                  {t('freeCourse.lesson.completed')}
                 </p>
-                <Button
-                  type="button"
-                  className={primaryActionClassName}
-                  onClick={() =>
-                    navigate(`/free-course/${id}/lesson/${lesson.next?.chapterId}`)
-                  }
-                >
-                  {t('freeCourse.lesson.next')}
-                </Button>
-              </>
-            ) : (
-              <p className="text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
-                {t('freeCourse.lesson.completed')}
-              </p>
-            )}
-          </footer>
-        </div>
+              )}
+            </footer>
+          </>
+        ) : (
+          <LessonGenerationState
+            progress={generation.progress}
+            isGenerating={generation.isGenerating}
+            errorMessage={generation.errorMessage}
+            onRetry={generation.retry}
+          />
+        )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * A lesson without content is the normal first visit to any lesson after the
+ * first, and it is generated in place — so this state is progress, not an
+ * error. It only becomes an error when the generation actually fails.
+ */
+function LessonGenerationState({
+  progress,
+  isGenerating,
+  errorMessage,
+  onRetry,
+}: {
+  progress: FreeLessonProgress | null
+  isGenerating: boolean
+  errorMessage: string | null
+  onRetry: () => void
+}) {
+  const { t } = useAppTranslation()
+
+  if (errorMessage) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-14 text-center">
+        <p className="text-sm text-destructive">
+          {errorMessage || t('freeCourse.lesson.generateFailed')}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-[33px] rounded-full border-zinc-300 bg-transparent px-[12.5px] text-[14px] font-normal text-zinc-800 hover:bg-zinc-100"
+          onClick={onRetry}
+        >
+          {t('freeCourse.retry')}
+        </Button>
+      </div>
+    )
+  }
+
+  if (!isGenerating && !progress) {
+    return (
+      <p className="py-16 text-center text-sm text-zinc-400">
+        {t('freeCourse.lesson.empty')}
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-col py-10">
+      <p className="mb-3 flex items-center gap-2 text-[15px] leading-6 font-medium text-zinc-800 dark:text-zinc-100">
+        <Spinner className="size-4" />
+        {t('freeCourse.lesson.generating')}
+      </p>
+      {freeLessonStepOrder.map((step, index) => {
+        const state = progress?.[step] ?? {
+          status: index === 0 ? 'running' : 'pending',
+          detail: null,
+          payload: null,
+        }
+        return (
+          <div key={step} className="flex min-h-9 items-start gap-2.5 py-1.5">
+            <span className="mt-1 flex size-4 shrink-0 items-center justify-center">
+              <BuildStepIcon
+                status={state.status}
+                isRunning={isGenerating}
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] leading-6 font-medium text-zinc-800 dark:text-zinc-100">
+                {buildStepLabel(t, step)}
+              </p>
+              {state.detail ? (
+                <p className="mt-0.5 text-[12.5px] leading-5 text-zinc-400 dark:text-zinc-500">
+                  {state.detail}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

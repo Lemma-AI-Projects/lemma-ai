@@ -153,7 +153,9 @@
       "answerPlaceholder": "Write your answer in your own words…",
       "upNext": "Up next",
       "next": "Next lesson",
-      "completed": "You have reached the end of this course."
+      "completed": "You have reached the end of this course.",
+      "generating": "Writing this lesson",
+      "generateFailed": "Could not generate this lesson. Please try again."
     },
     "buildFailed": "The course could not be generated. Please try again.",
     "zoomIn": "Zoom in",
