@@ -165,12 +165,18 @@ class AnswerFeedbackOut(BaseModel):
     is_correct: bool | None = None
 
 
+class CourseTuningOptionOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+    value: str
+    label: str
+
+
 class CourseTuningQuestionOut(BaseModel):
     model_config = ConfigDict(**_ALIAS)
 
     key: str  # course_volume|depth|focus|pace
     title: str  # 体量/深度/侧重/节奏
-    options: list[dict] = Field(default_factory=list)  # [{value,label}]
+    options: list[CourseTuningOptionOut] = Field(default_factory=list)
 
 
 class CourseTuningStartOut(BaseModel):
@@ -187,4 +193,4 @@ class CourseTuningIn(BaseModel):
     depth: Depth | None = None
     focus: Focus | None = None
     pace: Pace | None = None
-    skip: bool = False
+    skip: bool = Field(default=False, strict=True)

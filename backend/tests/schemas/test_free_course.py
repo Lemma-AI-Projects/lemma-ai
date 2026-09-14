@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from schemas.free_course import (
     CourseTuningIn,
+    CourseTuningOptionOut,
     CourseTuningQuestionOut,
     CourseTuningStartOut,
 )
@@ -40,6 +41,22 @@ class TestCourseTuningQuestionOut:
     def test_options_default_to_empty_list(self) -> None:
         q = CourseTuningQuestionOut(key="course_volume", title="体量")
         assert q.options == []
+
+    def test_rejects_invalid_option_shape(self) -> None:
+        q = CourseTuningQuestionOut(
+            key="course_volume",
+            title="体量",
+            options=[{"value": "quick_scan", "label": "轻量速览"}],
+        )
+        assert q.options == [
+            CourseTuningOptionOut(value="quick_scan", label="轻量速览")
+        ]
+        with pytest.raises(ValidationError):
+            CourseTuningQuestionOut(
+                key="course_volume",
+                title="体量",
+                options=[{"value": "quick_scan"}],
+            )
 
 
 class TestCourseTuningStartOut:
