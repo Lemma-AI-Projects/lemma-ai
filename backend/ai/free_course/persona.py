@@ -14,7 +14,7 @@ Reading order for a fresh maintainer: :class:`UserProfile` (the shape) ->
 (the dumb stub) -> :func:`describe` (how it renders for a prompt).
 """
 
-from typing import Literal, Protocol
+from typing import Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
@@ -44,6 +44,7 @@ class UserProfile(BaseModel):
     pace: Pace = "moderate"
 
 
+@runtime_checkable
 class PersonaProvider(Protocol):
     """One method. Richer providers add inputs, not call sites."""
 
