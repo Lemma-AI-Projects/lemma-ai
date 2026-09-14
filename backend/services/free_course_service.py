@@ -8,6 +8,7 @@ back here to land each step.
 """
 
 import uuid
+from typing import Any
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,6 +90,40 @@ async def finalize_course(
         course.status = status
         course.search_status = "searched"
         await db.commit()
+
+
+async def get_course_tuning(
+    db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID
+) -> dict[str, Any] | None:
+    """The persisted questionnaire answer, or None while the course is unanswered.
+
+    None is how phase 1 (ask the questionnaire) is told apart from phase 2 (run
+    the build with an answer). Ownership still filters the read, so not-yours and
+    not-there are both None.
+    """
+    course = await get_owned_course(db, user_id=user_id, course_id=course_id)
+    return course.tuning_json if course is not None else None
+
+
+async def set_course_tuning(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    course_id: uuid.UUID,
+    tuning: dict,
+) -> FreeCourseDetailOut | None:
+    """Persist the questionnaire answer and return the updated detail.
+
+    Returns None on not-owner/not-found. The stored map is exactly what phase 2
+    merges over the inferred persona, so the learner's choices land in the prompts
+    and nowhere else (tuning is a per-course projection, not the persona).
+    """
+    course = await get_owned_course(db, user_id=user_id, course_id=course_id)
+    if course is None:
+        return None
+    course.tuning_json = tuning
+    await db.commit()
+    return await get_detail(db, user_id=user_id, course_id=course_id)
 
 
 async def persist_intent(

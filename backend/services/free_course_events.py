@@ -23,21 +23,77 @@ from ai.errors import AIError, FreeCourseError
 from ai.free_course.blueprint import design_blueprint
 from ai.free_course.content import generate_lesson
 from ai.free_course.learner_state import BasicLearnerStateProvider
+from ai.free_course.path import assess_gap, build_path
+from ai.free_course.persona import PromptInferredPersonaProvider
 from ai.free_course.pipeline import FreeCourseEvent, FreeCoursePipeline
 from ai.free_course.sources import collect_sources, default_sources
 from ai.free_course.types import Lesson
 from core.database import AsyncSessionLocal
 from models.course import Course, CourseChapter, CourseUnit
 from models.free_course import CourseLessonObservation, CourseLessonObject
-from schemas.free_course import FreeCourseStepEventOut
+from schemas.free_course import (
+    CourseTuningOptionOut,
+    CourseTuningQuestionOut,
+    CourseTuningStartOut,
+    FreeCourseStepEventOut,
+)
 from services import free_course_service
 
 logger = logging.getLogger("lemma.services.free_course_events")
+
+# One shared infer-by-prompt stub for the whole build. It consumes only the
+# intent (never writes), so swapping in a real persona provider later is a
+# one-line change with zero impact on the events layer.
+_persona_provider = PromptInferredPersonaProvider()
 
 
 def to_sse(event: str, data: dict[str, Any]) -> str:
     """Lemma SSE frame (same shape as ai/streaming and course_organize_events)."""
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+# The pre-blueprint questionnaire: how the learner tunes this one course's
+# volume/depth/focus/pace. Labels are Chinese here; the frontend swaps them via
+# i18n. Values are the UserProfile dims phase 2 merges over the inferred persona.
+_QUESTION_SET = [
+    CourseTuningQuestionOut(
+        key="course_volume",
+        title="课程体量",
+        options=[
+            CourseTuningOptionOut(value="quick_scan", label="快速扫描"),
+            CourseTuningOptionOut(value="standard", label="标准"),
+            CourseTuningOptionOut(value="systematic", label="系统深入"),
+        ],
+    ),
+    CourseTuningQuestionOut(
+        key="depth",
+        title="讲解深度",
+        options=[
+            CourseTuningOptionOut(value="intuition", label="直觉理解"),
+            CourseTuningOptionOut(value="derivation", label="推导细节"),
+            CourseTuningOptionOut(value="advanced", label="进阶深入"),
+        ],
+    ),
+    CourseTuningQuestionOut(
+        key="focus",
+        title="内容侧重",
+        options=[
+            CourseTuningOptionOut(value="concepts", label="概念"),
+            CourseTuningOptionOut(value="examples", label="实例"),
+            CourseTuningOptionOut(value="applied", label="应用"),
+            CourseTuningOptionOut(value="theory", label="理论"),
+        ],
+    ),
+    CourseTuningQuestionOut(
+        key="pace",
+        title="学习节奏",
+        options=[
+            CourseTuningOptionOut(value="relaxed", label="宽松"),
+            CourseTuningOptionOut(value="moderate", label="适中"),
+            CourseTuningOptionOut(value="intensive", label="紧凑"),
+        ],
+    ),
+]
 
 
 async def stream_free_course_lesson(
@@ -196,9 +252,40 @@ def _error(code: str, message: str) -> str:
 async def stream_free_course_build(
     user_id: uuid.UUID, course_id: uuid.UUID, request: str
 ) -> AsyncIterator[str]:
+    """Run the build, asking the questionnaire exactly when it is needed.
+
+    A course has two build phases split by the pre-blueprint questionnaire.
+    Until its answer is stored (``course.tuning_json``), phase 1 derives
+    ``intent -> map -> path`` then stops to ask. Once an answer lands, phase 2
+    resumes from the persisted map: it merges the tuning over the inferred persona
+    and runs ``blueprint -> content`` to a finished course.
+    """
+    async with AsyncSessionLocal() as db:
+        tuning = await free_course_service.get_course_tuning(
+            db, course_id=course_id, user_id=user_id
+        )
+    if tuning is None:
+        async for frame in _stream_build_phase1(user_id, course_id, request):
+            yield frame
+    else:
+        async for frame in _stream_build_phase2(user_id, course_id):
+            yield frame
+
+
+async def _stream_build_phase1(
+    user_id: uuid.UUID, course_id: uuid.UUID, request: str
+) -> AsyncIterator[str]:
+    """Phase 1: ''intent -> map -> path'', then ask the questionnaire.
+
+    The pipeline runs with ``stop_at="path"`` so nothing after the path executes:
+    intent/map persist as they land, then instead of a ``done`` the stream emits a
+    ``questionnaire`` frame and ends. The course stays ``building`` on purpose —
+    the learner's answer decides how phase 2 writes it.
+    """
     observed = await _observed_attempts(user_id=user_id, course_id=course_id)
     pipeline = FreeCoursePipeline(
-        learner_state_provider=BasicLearnerStateProvider(observed_attempts=observed)
+        learner_state_provider=BasicLearnerStateProvider(observed_attempts=observed),
+        stop_at="path",
     )
     target_chapter_id: uuid.UUID | None = None
 
@@ -231,6 +318,144 @@ async def stream_free_course_build(
             )
             return
         yield to_sse("step", _frame(step).model_dump(by_alias=True, mode="json"))
+
+    # Path reached and the pipeline stopped cleanly: its intent is populated, so
+    # the questionnaire can present the inferred defaults. No `done` here.
+    if pipeline.intent is None:
+        yield _error("free_course_failed", "课程意图解析失败")
+        return
+    profile = await _persona_provider.get(
+        user_id=str(user_id), intent=pipeline.intent
+    )
+    yield to_sse(
+        "questionnaire",
+        CourseTuningStartOut(
+            defaults=profile.model_dump(by_alias=True, mode="json"),
+            questions=_QUESTION_SET,
+        ).model_dump(by_alias=True, mode="json"),
+    )
+
+
+async def _stream_build_phase2(
+    user_id: uuid.UUID, course_id: uuid.UUID
+) -> AsyncIterator[str]:
+    """Phase 2: ''blueprint -> content'' for the starting lesson, then finish.
+
+    Runs the same model pair as a lesson generation, but after the questionnaire:
+    the stored tuning is merged over the inferred persona so the learner's choices
+    reach the writing prompts. The starting lesson is located the same way the
+    full build did it — assess the gap, build the path, take ``next_lesson_title``.
+    Any listed-regeneration path (editing) lives in the C phase, not here.
+    """
+    async with AsyncSessionLocal() as db:
+        course = await free_course_service.get_owned_course_tree(
+            db, user_id=user_id, course_id=course_id
+        )
+        if course is None:
+            yield _error("not_found", "课程不存在")
+            return
+        tuning_dims = course.tuning_json or {}
+        learning_map = free_course_service.map_from_tree(course)
+        intent = free_course_service.intent_from_course(course)
+
+    observed = await _observed_attempts(user_id=user_id, course_id=course_id)
+    learner_state = await BasicLearnerStateProvider(
+        observed_attempts=observed
+    ).get(user_id=str(user_id), intent=intent)
+    profile = await _persona_provider.get(user_id=str(user_id), intent=intent)
+    if tuning_dims:
+        overrides = {
+            key: tuning_dims[key]
+            for key in ("course_volume", "depth", "focus", "pace")
+            if tuning_dims.get(key)
+        }
+        if overrides:
+            profile = profile.model_copy(update=overrides)
+    material = await collect_sources(intent, default_sources())
+
+    gap = await assess_gap(
+        learning_map, learner_state=learner_state, user_id=str(user_id)
+    )
+    path = build_path(learning_map, gap, intent=intent)
+    if path.next_lesson_title is None:
+        yield _error("free_course_error", "path has no lesson to start from")
+        return
+    chapter = next(
+        (
+            item
+            for unit in course.units
+            for item in unit.chapters
+            if item.title == path.next_lesson_title
+        ),
+        None,
+    )
+    if chapter is None:
+        yield _error("free_course_error", "path.next_lesson_title is not a map lesson")
+        return
+    step = free_course_service.step_for_chapter(course, chapter)
+
+    yield to_sse(
+        "step",
+        FreeCourseStepEventOut(step="blueprint", status="started").model_dump(
+            by_alias=True, mode="json"
+        ),
+    )
+    try:
+        blueprint = await design_blueprint(
+            learning_map, step, learner_state=learner_state,
+            user_id=str(user_id), tuning=profile,
+        )
+    except (FreeCourseError, AIError) as exc:
+        yield _error(getattr(exc, "code", "free_course_error"), str(exc))
+        return
+    yield to_sse(
+        "step",
+        FreeCourseStepEventOut(
+            step="blueprint",
+            status="finished",
+            detail=f"{len(blueprint.sequence)} 个教学环节",
+        ).model_dump(by_alias=True, mode="json"),
+    )
+
+    yield to_sse(
+        "step",
+        FreeCourseStepEventOut(step="content", status="started").model_dump(
+            by_alias=True, mode="json"
+        ),
+    )
+    try:
+        lesson = await generate_lesson(
+            blueprint, material=material, user_id=str(user_id), tuning=profile
+        )
+    except (FreeCourseError, AIError) as exc:
+        yield _error(getattr(exc, "code", "free_course_error"), str(exc))
+        return
+    yield to_sse(
+        "step",
+        FreeCourseStepEventOut(
+            step="content",
+            status="finished",
+            detail=_content_summary(lesson),
+        ).model_dump(by_alias=True, mode="json"),
+    )
+
+    try:
+        async with AsyncSessionLocal() as db:
+            stored = await db.get(CourseChapter, chapter.id)
+            if stored is None:
+                yield _error("not_found", "这节课已不存在")
+                return
+            await free_course_service.persist_blueprint(
+                db, stored, blueprint.model_dump(mode="json")
+            )
+            await free_course_service.persist_lesson(db, stored, lesson)
+            await free_course_service.finalize_course(
+                db, course_id=course_id, status="ready"
+            )
+    except Exception:  # noqa: BLE001 — a storage failure must end loudly
+        logger.exception("free-course persist failed for %s", course_id)
+        yield _error("persist_failed", "课程数据保存失败")
+        return
 
     async with AsyncSessionLocal() as db:
         detail = await free_course_service.get_detail(

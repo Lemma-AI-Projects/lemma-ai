@@ -18,6 +18,7 @@ from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from schemas.free_course import (
     AnswerFeedbackOut,
+    CourseTuningIn,
     FreeCourseCreateIn,
     FreeCourseCreateOut,
     FreeCourseDetailOut,
@@ -91,6 +92,39 @@ async def stream_free_course_build(
         media_type="text/event-stream",
         headers=_SSE_HEADERS,
     )
+
+
+@router.post("/{course_id}/tuning", response_model=FreeCourseDetailOut)
+async def set_free_course_tuning(
+    course_id: uuid.UUID,
+    payload: CourseTuningIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> FreeCourseDetailOut:
+    """Persist the learner's pre-blueprint tuning for this course.
+
+    ``skip`` marks the questionnaire as answered so ``build/stream`` resumes into
+    phase 2 (with the learner's dims left as None -> the inferred persona stands).
+    Otherwise the four chosen dims are stored and merged over the persona on the
+    next build stream.
+    """
+    if payload.skip:
+        tuning: dict = {"course_volume": None, "depth": None,
+                        "focus": None, "pace": None, "skip": True}
+    else:
+        tuning = {
+            "course_volume": payload.volume,
+            "depth": payload.depth,
+            "focus": payload.focus,
+            "pace": payload.pace,
+            "skip": False,
+        }
+    result = await free_course_service.set_course_tuning(
+        db, course_id=course_id, user_id=current_user.id, tuning=tuning
+    )
+    if result is None:
+        raise _NOT_FOUND
+    return result
 
 
 @router.get(

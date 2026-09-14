@@ -9,6 +9,7 @@ than shipped broken.
 
 from ai.client import ai_client
 from ai.errors import FreeCourseError
+from ai.free_course.persona import UserProfile, describe as describe_profile
 from ai.free_course.render import render_blueprint
 from ai.free_course.sources import SourceMaterial
 from ai.free_course.types import (
@@ -30,11 +31,18 @@ async def generate_lesson(
     *,
     material: SourceMaterial | None = None,
     user_id: str | None = None,
+    tuning: UserProfile | None = None,
 ) -> Lesson:
     prompt = (
         f"课程蓝图：\n{render_blueprint(blueprint)}\n\n"
         f"可用资料：\n{(material or SourceMaterial()).to_prompt_block()}"
     )
+    if tuning is not None:
+        prompt += "\n\n" + describe_profile(tuning)
+        prompt += (
+            f"\n讲解节奏：{tuning.pace}（宽松=分步舒缓、适中=常规、紧凑=快节奏）；"
+            f"推导深度：{tuning.depth}。请据此控制叙述篇幅与推导细节。"
+        )
     lesson = await ai_client.generate(
         AIUseCase.FREE_COURSE_LESSON, prompt, Lesson, user_id=user_id
     )
