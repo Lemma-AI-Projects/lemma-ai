@@ -37,6 +37,11 @@ from ai.free_course.types import (
 
 StepName = Literal["intent", "map", "path", "blueprint", "content", "done"]
 
+# Where the build may stop. Free-Course can pause after `path` (before the
+# blueprint) when a course still needs an answer to its pre-blueprint
+# questionnaire; `all` runs the full build.
+StopAt = Literal["all", "path"]
+
 
 class FreeCourseEvent(BaseModel):
     """One step of the build, for the progress block in the conversation."""
@@ -65,11 +70,13 @@ class FreeCoursePipeline:
         *,
         learner_state_provider: LearnerStateProvider | None = None,
         sources: list[Source] | None = None,
+        stop_at: StopAt = "all",
     ) -> None:
         self._learner_state_provider = (
             learner_state_provider or NullLearnerStateProvider()
         )
         self._sources = sources if sources is not None else default_sources()
+        self._stop_at = stop_at
         self.product: CourseProduct | None = None
         self.intent: LearningIntent | None = None
         self.learning_map: LearningMap | None = None
@@ -136,6 +143,13 @@ class FreeCoursePipeline:
             detail=f"从「{path.next_lesson_title}」开始",
             payload=path.model_dump(mode="json"),
         )
+
+        # Optional checkpoint: pause after the path so the blueprint only runs
+        # after the learner answers the pre-blueprint questionnaire (phase 2).
+        # `self.intent` and `self.learning_map` stay populated for that resume.
+        if self._stop_at == "path":
+            self.product = None
+            return
 
         target = next(
             (
