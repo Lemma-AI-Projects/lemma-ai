@@ -13,6 +13,8 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from ai.free_course.persona import CourseVolume, Depth, Focus, Pace
+
 _ALIAS = dict(
     alias_generator=to_camel, populate_by_name=True
 )
@@ -161,3 +163,28 @@ class AnswerFeedbackOut(BaseModel):
     feedback: str
     hint: str | None = None
     is_correct: bool | None = None
+
+
+class CourseTuningQuestionOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    key: str  # course_volume|depth|focus|pace
+    title: str  # 体量/深度/侧重/节奏
+    options: list[dict] = Field(default_factory=list)  # [{value,label}]
+
+
+class CourseTuningStartOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    defaults: dict  # UserProfile.model_dump(by_alias=True)
+    questions: list[CourseTuningQuestionOut] = Field(default_factory=list)
+
+
+class CourseTuningIn(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    volume: CourseVolume | None = None
+    depth: Depth | None = None
+    focus: Focus | None = None
+    pace: Pace | None = None
+    skip: bool = False
