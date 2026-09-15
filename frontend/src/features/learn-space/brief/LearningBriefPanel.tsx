@@ -1,0 +1,321 @@
+import type { ReactNode } from 'react'
+import { ArrowRight, RotateCw, X } from 'lucide-react'
+
+import { useAppTranslation } from '@/i18n'
+import { cn } from '@/lib/utils'
+import type {
+  LearningBrief,
+  LearningBriefNextStep,
+} from './types'
+
+export interface LearningBriefPanelProps {
+  /**
+   * `undefined` = 板块未启用（不渲染，dock 槽位保持占位）；
+   * `null` = 读取中；对象 = 有数据。
+   */
+  brief: LearningBrief | null | undefined
+  onClose: () => void
+  /** 打开「接下来」里的某一步：有 `href` 进课，有 `prompt` 则在当前空间开一段对话。 */
+  onOpenStep: (step: LearningBriefNextStep) => void
+  /** 「还没有课程」空态里的入口：在当前空间开一段对话（复用指挥室那条链路）。 */
+  onStartConversation: () => void
+  /** 手动重算。未接后端时不给 → 刷新按钮不渲染（不做点了没反应的按钮）。 */
+  onRefresh?: () => void
+  isRefreshing?: boolean
+  className?: string
+}
+
+/**
+ * Learning Brief：Learn Space 左侧的学习状态摘要板块。
+ *
+ * 两条规则决定了它的形态，不是装饰：
+ * 1. **事实类来自数据库，判断类只允许在证据范围内总结，且允许整段缺席。**
+ *    没有证据的段落直接不渲染 —— 所以「数据少」表现为「Brief 短」，
+ *    而不是「Brief 在编」。
+ * 2. **不量化。** `LearningBrief` 里没有任何数值字段，这里也没有
+ *    progress bar / 百分比 / 评分；想显示也没东西可显示。
+ */
+export function LearningBriefPanel({
+  brief,
+  onClose,
+  onOpenStep,
+  onStartConversation,
+  onRefresh,
+  isRefreshing,
+  className,
+}: LearningBriefPanelProps) {
+  const { t, i18n } = useAppTranslation()
+
+  // 板块未启用（undefined）：连外壳都不渲染 —— 调用方不需要再包一层判断，
+  // 也不会在画布上留下一块空白的左侧栏。
+  if (brief === undefined) return null
+
+  const isEmptyBrief =
+    brief != null &&
+    !brief.doing?.length &&
+    !brief.alreadyHave?.length &&
+    !brief.developing?.length &&
+    !brief.mainObstacle
+
+  return (
+    <aside
+      aria-label={t('workspace.briefTitle')}
+      className={cn(
+        'flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-background',
+        className
+      )}
+    >
+      <header className="flex h-11 shrink-0 items-center justify-between pl-5 pr-2">
+        <h2 className="text-sm font-medium text-foreground">
+          {t('workspace.briefTitle')}
+        </h2>
+        <div className="flex items-center">
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              aria-label={t('workspace.briefRefresh')}
+              title={t('workspace.briefRefresh')}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-foreground/10 disabled:cursor-default disabled:text-zinc-300"
+            >
+              <RotateCw className={cn('size-4', isRefreshing && 'animate-spin')} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('workspace.briefClose')}
+            title={t('workspace.briefClose')}
+            className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-foreground/10"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      </header>
+
+      <div className="min-h-0 flex-1 scrollbar-fade overflow-y-auto px-5 pb-5">
+        {brief === null ? (
+          <BriefSkeleton />
+        ) : brief ? (
+          <>
+            <GoalBlock brief={brief} />
+
+            {brief.doing?.length ? (
+              <BriefSection title={t('workspace.briefDoing')}>
+                <BriefBullets items={brief.doing} />
+              </BriefSection>
+            ) : null}
+
+            {brief.alreadyHave?.length ? (
+              <BriefSection title={t('workspace.briefAlreadyHave')}>
+                <BriefBullets items={brief.alreadyHave} />
+              </BriefSection>
+            ) : null}
+
+            {brief.developing?.length ? (
+              <BriefSection title={t('workspace.briefDeveloping')}>
+                <BriefBullets items={brief.developing} />
+              </BriefSection>
+            ) : null}
+
+            {brief.mainObstacle ? (
+              <BriefSection title={t('workspace.briefObstacle')}>
+                <p className="border-l-2 border-zinc-300 pl-3 text-[13px] leading-5 text-zinc-800">
+                  {brief.mainObstacle}
+                </p>
+              </BriefSection>
+            ) : null}
+
+            <BriefSection title={t('workspace.briefNext')}>
+              {brief.nextSteps.length > 0 ? (
+                <div className="space-y-1.5">
+                  {brief.nextSteps.map((step, index) => (
+                    <BriefStepRow
+                      key={step.id}
+                      step={step}
+                      isPrimary={index === 0}
+                      onOpen={() => onOpenStep(step)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-zinc-300 px-3 py-4 text-center">
+                  <p className="text-[13px] leading-5 text-zinc-500">
+                    {t('workspace.briefNextEmpty')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onStartConversation}
+                    className="mt-2.5 inline-flex h-8 items-center rounded-full bg-foreground px-3.5 text-[13px] font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-foreground/20"
+                  >
+                    {t('workspace.briefNextEmptyAction')}
+                  </button>
+                </div>
+              )}
+            </BriefSection>
+
+            {/* 诚实边界：判断类四段全缺席时，明确说明是因为证据还少，而不是「一切正常」。 */}
+            {isEmptyBrief && (
+              <p className="mt-5 text-xs leading-5 text-zinc-400">
+                {t('workspace.briefThinHint')}
+              </p>
+            )}
+
+            {brief.generatedAt && (
+              <p className="mt-5 text-xs text-zinc-400">
+                {t('workspace.briefUpdatedAt', {
+                  time: formatBriefTime(brief.generatedAt, i18n.language),
+                })}
+              </p>
+            )}
+          </>
+        ) : null}
+      </div>
+    </aside>
+  )
+}
+
+function GoalBlock({ brief }: { brief: LearningBrief }) {
+  const { t } = useAppTranslation()
+
+  if (!brief.goal) {
+    return (
+      <div className="rounded-xl border border-dashed border-zinc-300 px-3 py-2.5">
+        <p className="text-[11px] font-medium tracking-wide text-zinc-400 uppercase">
+          {t('workspace.briefGoal')}
+        </p>
+        <p className="mt-1 text-[13px] leading-5 text-zinc-500">
+          {t('workspace.briefGoalEmpty')}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl bg-zinc-50 px-3 py-2.5">
+      <p className="text-[11px] font-medium tracking-wide text-zinc-400 uppercase">
+        {t('workspace.briefGoal')}
+      </p>
+      <p className="mt-1 text-[13px] leading-5 text-zinc-900">{brief.goal}</p>
+      {brief.isGoalInferred && (
+        <p className="mt-1.5 text-[11px] leading-4 text-zinc-400">
+          {t('workspace.briefGoalInferred')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function BriefSection({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <section className="mt-5">
+      <h3 className="text-[11px] font-medium tracking-wide text-zinc-400 uppercase">
+        {title}
+      </h3>
+      <div className="mt-2">{children}</div>
+    </section>
+  )
+}
+
+function BriefBullets({ items }: { items: string[] }) {
+  return (
+    <ul className="space-y-1.5">
+      {items.map((item) => (
+        <li key={item} className="flex gap-2">
+          <span
+            aria-hidden
+            className="mt-[7px] size-1 shrink-0 rounded-full bg-zinc-300"
+          />
+          <span className="min-w-0 text-[13px] leading-5 text-zinc-800">
+            {item}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function BriefStepRow({
+  step,
+  isPrimary,
+  onOpen,
+}: {
+  step: LearningBriefNextStep
+  isPrimary: boolean
+  onOpen: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        'group flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-[3px]',
+        isPrimary
+          ? 'bg-foreground text-background hover:opacity-90 focus-visible:ring-foreground/20'
+          : 'border border-zinc-200/80 hover:border-zinc-300 hover:bg-zinc-50 focus-visible:ring-foreground/10'
+      )}
+    >
+      <span className="min-w-0 flex-1">
+        {/* 两行而不是一行截断：标题就是这一步的全部信息，砍掉就只剩个残句。 */}
+        <span
+          className={cn(
+            'line-clamp-2 text-[13px] font-medium',
+            isPrimary ? 'text-background' : 'text-zinc-900'
+          )}
+        >
+          {step.title}
+        </span>
+        {step.reason && (
+          <span
+            className={cn(
+              'mt-0.5 block truncate text-xs',
+              isPrimary ? 'text-background/70' : 'text-zinc-400'
+            )}
+          >
+            {step.reason}
+          </span>
+        )}
+      </span>
+      <ArrowRight
+        className={cn(
+          'size-4 shrink-0 transition-colors',
+          isPrimary
+            ? 'text-background/80'
+            : 'text-zinc-300 group-hover:text-zinc-600'
+        )}
+      />
+    </button>
+  )
+}
+
+function BriefSkeleton() {
+  return (
+    <div className="space-y-3 pt-1">
+      <div className="h-16 animate-pulse rounded-xl bg-muted" />
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="h-4 animate-pulse rounded-md bg-muted"
+          style={{ opacity: 1 - i * 0.2 }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/** 只用于「更新于」，不是学习度量。用界面语言而不是系统语言，否则切到英文还会显示中文时制。 */
+function formatBriefTime(iso: string, language: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat(language, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+}

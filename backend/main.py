@@ -33,6 +33,9 @@ app = FastAPI(title="Lemma AI Backend", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    # 回环地址任意端口放行。只写死 `http://localhost:5173` 时，用 `127.0.0.1:5173`
+    # 或换个端口打开前端 → 预检 400 → 前端只报「创建失败，请重试」，看不出是 CORS。
+    allow_origin_regex=settings.cors_origin_regex or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

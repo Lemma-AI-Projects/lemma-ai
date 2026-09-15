@@ -1,4 +1,4 @@
-import { AlignLeft, MessageCircle, Plus } from 'lucide-react'
+import { AlignLeft, ClipboardList, MessageCircle, Plus } from 'lucide-react'
 
 import { useAppTranslation } from '@/i18n'
 import { cn } from '@/lib/utils'
@@ -10,6 +10,13 @@ export interface WorkspaceDockProps {
   /** 「庇护所」：左侧板块抽屉。 */
   isShelterOpen: boolean
   onToggleShelter: () => void
+  /**
+   * Learning Brief 是否可用。false 时该槽位退回占位 —— 板块没数据就没有开关，
+   * 不做「点了没反应」的按钮。
+   */
+  isBriefAvailable: boolean
+  isBriefOpen: boolean
+  onToggleBrief: () => void
   isConversationOpen: boolean
   onToggleConversation: () => void
   className?: string
@@ -18,14 +25,17 @@ export interface WorkspaceDockProps {
 /**
  * 画布底部的悬浮 dock。
  *
- * 参考稿里有四个槽位：command room（+）、shelter（≡）、windows layout、
- * pending。shelter 已实装为左侧板块抽屉；后两个行为未定义，按禁用态渲染 ——
- * 形状与参考稿一致，不会出现「点了没反应」的假按钮。
+ * 参考稿里有四个槽位：command room（+）、shelter（≡）、learning brief、
+ * pending。shelter 是左侧板块抽屉，brief 是左侧学习状态摘要（与 shelter 互斥）；
+ * 最后一个行为未定义，按占位渲染 —— 形状与参考稿一致。
  */
 export function WorkspaceDock({
   onCommandRoom,
   isShelterOpen,
   onToggleShelter,
+  isBriefAvailable,
+  isBriefOpen,
+  onToggleBrief,
   isConversationOpen,
   onToggleConversation,
   className,
@@ -64,8 +74,27 @@ export function WorkspaceDock({
           <AlignLeft className="size-5" />
         </button>
 
-        {/* windows layout / pending：位置先占住，行为待定义。 */}
-        <div aria-hidden className={WORKSPACE_DOCK_SLOT} />
+        {isBriefAvailable ? (
+          <button
+            type="button"
+            onClick={onToggleBrief}
+            aria-pressed={isBriefOpen}
+            aria-label={t('workspace.briefTitle')}
+            title={t('workspace.briefTitle')}
+            className={cn(
+              WORKSPACE_DOCK_SLOT,
+              isBriefOpen
+                ? 'bg-zinc-900 text-white hover:bg-zinc-800'
+                : 'hover:bg-zinc-200 hover:text-zinc-900'
+            )}
+          >
+            <ClipboardList className="size-5" />
+          </button>
+        ) : (
+          <div aria-hidden className={WORKSPACE_DOCK_SLOT} />
+        )}
+
+        {/* pending：位置先占住，行为待定义。 */}
         <div aria-hidden className={WORKSPACE_DOCK_SLOT} />
       </div>
 

@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check:i18n": "node scripts/check-i18n-keys.mjs"
+    "check:i18n": "node scripts/check-i18n-keys.mjs",
+    "check:brief": "node scripts/ssr-check-brief.mjs",
+    "check:import": "node scripts/ssr-check-import.mjs"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.7",

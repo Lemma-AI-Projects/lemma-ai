@@ -38,6 +38,11 @@ interface ShelterDrawerProps {
   onClose: () => void
   /** 点进一块板：交给路由 `/learn-spaces/:id/docs/:pageId`。 */
   onOpenPage: (pageId: string) => void
+  /**
+   * 「导入」入口。**不给就保持禁用** —— 导入还没接后端时，
+   * 一个点开却什么都做不了的向导，比一个禁用按钮更糟。
+   */
+  onImport?: () => void
   className?: string
 }
 
@@ -72,6 +77,7 @@ export function ShelterDrawer({
   projectId,
   onClose,
   onOpenPage,
+  onImport,
   className,
 }: ShelterDrawerProps) {
   const { t } = useAppTranslation()
@@ -199,10 +205,16 @@ export function ShelterDrawer({
         </button>
         <button
           type="button"
-          disabled
+          onClick={onImport}
+          disabled={!onImport}
           aria-label={t('workspace.shelterImport')}
           title={t('workspace.shelterImport')}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-muted-foreground transition-colors disabled:cursor-default disabled:text-zinc-400"
+          className={cn(
+            'flex size-8 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-muted-foreground transition-colors',
+            onImport
+              ? 'hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-foreground/10 focus-visible:outline-none'
+              : 'disabled:cursor-default disabled:text-zinc-400'
+          )}
         >
           <Upload className="size-4" />
         </button>

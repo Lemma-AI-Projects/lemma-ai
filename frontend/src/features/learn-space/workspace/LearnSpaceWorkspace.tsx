@@ -2,6 +2,11 @@ import { useCallback, useState } from 'react'
 
 import type { CurrentUser } from '@/features/auth/useCurrentUser'
 import { ShelterDrawer } from '@/features/docs/ShelterDrawer'
+import { LearningBriefPanel } from '@/features/learn-space/brief/LearningBriefPanel'
+import type {
+  LearningBrief,
+  LearningBriefNextStep,
+} from '@/features/learn-space/brief/types'
 import { HomeSettingsDialog } from '@/features/home/HomeSettingsDialog'
 import { ConversationPanel } from './ConversationPanel'
 import { WorkspaceCanvas } from './WorkspaceCanvas'
@@ -31,14 +36,29 @@ export interface LearnSpaceWorkspaceProps {
   onOpenNode: (node: WorkspaceNode) => void
   /** 从 shelter 抽屉进一块板。 */
   onOpenPage: (pageId: string) => void
+  /** 从 shelter 抽屉进导入向导；不给则抽屉里的「导入」保持禁用。 */
+  onImport?: () => void
+  /**
+   * Learning Brief 数据。`undefined` = 板块未启用（dock 槽位退回占位、面板不出现）；
+   * `null` = 读取中（面板先出骨架）；对象 = 有数据。默认打开。
+   */
+  brief?: LearningBrief | null
+  /** 打开「接下来」里的某一步。 */
+  onOpenBriefStep?: (step: LearningBriefNextStep) => void
+  /** 手动重算；未接后端时不传，刷新按钮不渲染。 */
+  onRefreshBrief?: () => void
+  isBriefRefreshing?: boolean
 }
 
 /**
- * 学习空间工作台：全屏白色画布 + 顶部悬浮工具条 + 右侧对话面板 + 底部 dock。
+ * 学习空间工作台：全屏白色画布 + 顶部悬浮工具条 + 底部 dock，
+ * 左侧是板块抽屉 / Learning Brief，右侧是对话面板。
  *
  * 布局对齐参考稿：工具条与画布同属左侧一列，右侧面板与工具条顶端齐平、
- * 占满整列高度。侧栏在这里不出现（该路由不套 AppLayout）。shelter 抽屉在左侧，
- * 与右侧对话面板对称，二者可同时点开。
+ * 占满整列高度。侧栏在这里不出现（该路由不套 AppLayout）。
+ *
+ * 左侧只留一个位置：shelter（空间里有什么）与 Brief（我学到哪了）互斥 ——
+ * 两个都开会把画布挤成中间一条，而它们回答的是同一类问题（「这个空间里有什么」）。
  */
 export function LearnSpaceWorkspace({
   projectId,
@@ -52,9 +72,19 @@ export function LearnSpaceWorkspace({
   onNewConversation,
   onOpenNode,
   onOpenPage,
+  onImport,
+  brief,
+  onOpenBriefStep,
+  onRefreshBrief,
+  isBriefRefreshing,
 }: LearnSpaceWorkspaceProps) {
   const [zoom, setZoom] = useState(ZOOM_RESET)
   const [isShelterOpen, setIsShelterOpen] = useState(false)
+  // Brief 默认打开，但**用户手动关过之后以用户为准**。
+  // 不能把默认值钉死在挂载那一刻：数据是异步来的（undefined → null → 对象），
+  // 若用 useState(brief !== undefined) 初始化，接上后端后板块永远不会出现。
+  const [briefOpenChoice, setBriefOpenChoice] = useState<boolean | null>(null)
+  const isBriefOpen = briefOpenChoice ?? brief !== undefined
   const [isConversationOpen, setIsConversationOpen] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
@@ -71,10 +101,17 @@ export function LearnSpaceWorkspace({
     () => setIsConversationOpen((current) => !current),
     []
   )
-  const handleToggleShelter = useCallback(
-    () => setIsShelterOpen((current) => !current),
-    []
-  )
+  // 左右两个左侧板块互斥（同一位置回答同一类问题）。
+  // Brief 未启用时不动它的选择 —— 否则会把「默认打开」一起关掉。
+  const handleToggleShelter = useCallback(() => {
+    setIsShelterOpen((current) => !current)
+    if (brief !== undefined) setBriefOpenChoice(false)
+  }, [brief])
+  const handleToggleBrief = useCallback(() => {
+    setBriefOpenChoice(!isBriefOpen)
+    setIsShelterOpen(false)
+  }, [isBriefOpen])
+  const handleCloseBrief = useCallback(() => setBriefOpenChoice(false), [])
 
   return (
     <div className="h-screen w-screen bg-zinc-100 p-2 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
@@ -84,6 +121,18 @@ export function LearnSpaceWorkspace({
             projectId={projectId}
             onClose={() => setIsShelterOpen(false)}
             onOpenPage={onOpenPage}
+            onImport={onImport}
+          />
+        )}
+
+        {isBriefOpen && brief !== undefined && (
+          <LearningBriefPanel
+            brief={brief}
+            onClose={handleCloseBrief}
+            onOpenStep={(step) => onOpenBriefStep?.(step)}
+            onStartConversation={onNewConversation}
+            onRefresh={onRefreshBrief}
+            isRefreshing={isBriefRefreshing}
           />
         )}
 
@@ -119,6 +168,9 @@ export function LearnSpaceWorkspace({
               onCommandRoom={onNewConversation}
               isShelterOpen={isShelterOpen}
               onToggleShelter={handleToggleShelter}
+              isBriefAvailable={brief !== undefined}
+              isBriefOpen={isBriefOpen}
+              onToggleBrief={handleToggleBrief}
               isConversationOpen={isConversationOpen}
               onToggleConversation={handleToggleConversation}
             />
