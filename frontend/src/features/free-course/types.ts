@@ -137,3 +137,59 @@ export interface FreeAnswerFeedback {
   hint: string | null
   isCorrect: boolean | null
 }
+
+// Pre-blueprint questionnaire: the learner tunes this one course's volume /
+// depth / focus / pace. Wire shape of CourseTuningStartOut (camelCase); the
+// four dims map 1:1 onto UserProfile, which is where `defaults` comes from.
+export interface CourseTuningOption {
+  value: string
+  label: string
+}
+
+export interface CourseTuningQuestion {
+  key: string
+  title: string
+  options: CourseTuningOption[]
+}
+
+export interface CourseTuningStart {
+  defaults: Record<string, unknown>
+  questions: CourseTuningQuestion[]
+}
+
+// The POST /tuning payload: either the four chosen dims, or skip=true to run
+// with the inferred persona as-is.
+export interface CourseTuningSubmit {
+  volume?: string | null
+  depth?: string | null
+  focus?: string | null
+  pace?: string | null
+  skip?: boolean
+}
+
+// What a build/stream run hands back. In phase 1 the course is not built yet:
+// the stream stops at the questionnaire instead of `done`.
+export type FreeCourseStreamResult =
+  | { outcome: 'done'; course: FreeCourseDetail }
+  | { outcome: 'questionnaire'; offer: CourseTuningStart }
+// --- Blueprint edit (全量编辑) -------------------------------------------
+//
+// 载荷是**声明式的完整期望树**：没回传的节点 = 要删。`id` 为 null/undefined = 新增。
+// `title` 传空串会被后端 400（`min_length=1`），所以前端在提交前挡一道。
+
+export interface FreeLessonEdit {
+  id: string | null
+  title: string
+  /** 全量语义：不回传就等于清空，所以必须把原值带回来。 */
+  objective: string | null
+}
+
+export interface FreeUnitEdit {
+  id: string | null
+  title: string
+  lessons: FreeLessonEdit[]
+}
+
+export interface FreeCourseTreeEdit {
+  units: FreeUnitEdit[]
+}

@@ -22,6 +22,8 @@
     "signingIn": "登录中...",
     "forgotPassword": "忘记密码？",
     "google": "使用 Google 登录",
+    "github": "使用 GitHub 登录",
+    "orContinueWithEmail": "或使用邮箱继续",
     "noAccount": "还没有账号？",
     "signUpLink": "注册"
   },
@@ -101,6 +103,21 @@
     "shelterBack": "返回工作台",
     "shelterEditorPlaceholder": "块编辑将在下一步实装",
     "toggleConversation": "对话面板",
+    "briefTitle": "学习简报",
+    "briefClose": "关闭学习简报",
+    "briefRefresh": "重新生成",
+    "briefGoal": "学习目标",
+    "briefGoalEmpty": "还没有设置学习目标",
+    "briefGoalInferred": "根据本空间的课程推断",
+    "briefDoing": "你正在做",
+    "briefAlreadyHave": "你已经具备",
+    "briefDeveloping": "正在形成",
+    "briefObstacle": "目前的主要障碍",
+    "briefNext": "接下来",
+    "briefNextEmpty": "这个空间还没有课程 —— 先聊一聊你想学什么。",
+    "briefNextEmptyAction": "开一段对话",
+    "briefThinHint": "这个空间里的内容还很少。聊一聊、记几笔，或者建一门课，简报就会有内容。",
+    "briefUpdatedAt": "更新于 {{time}}",
     "notFound": "空间不存在或已删除",
     "loadFailed": "空间加载失败"
   },
@@ -176,6 +193,72 @@
       "generateFailed": "这节课生成失败，请重试。"
     },
     "buildFailed": "课程生成失败，请重试。",
+    "structure": {
+      "title": "课程结构",
+      "summary": "{{units}} 单元 · {{lessons}} 课",
+      "lessonCount": "{{count}} 课",
+      "expand": "展开全部",
+      "collapse": "收起",
+      "empty": "结构还没生成",
+      "edit": "编辑",
+      "editingTitle": "编辑课程结构",
+      "unitTitlePlaceholder": "单元标题",
+      "unitTitleLabel": "第 {{index}} 个单元的标题",
+      "lessonTitlePlaceholder": "课节标题",
+      "lessonTitleLabel": "第 {{unit}} 单元第 {{index}} 节课的标题",
+      "addLesson": "加一节",
+      "addUnit": "加一个单元",
+      "removeUnit": "删除这个单元",
+      "removeLesson": "删除这节课",
+      "confirmRemove": "删除",
+      "cancel": "取消",
+      "save": "保存",
+      "saving": "保存中…",
+      "needTitle": "标题不能为空。",
+      "needLesson": "至少保留一节课。",
+      "duplicateUnitTitle": "单元标题不能重复。",
+      "duplicateLessonTitle": "同一个单元里的课节标题不能重复。",
+      "saveFailed": "保存失败，请重试。",
+      "deleteBlocked": "这几节已经有内容或答题记录，不能删除：{{lessons}}",
+      "moveUp": "上移",
+      "moveDown": "下移"
+    },
+    "tuning": {
+        "title": "调整课程设置",
+        "subtitle": "这是刚拟好的课程结构。下面几项决定内容怎么写。",
+        "answerActive": "正在生成…",
+        "confirm": "开始生成课程",
+        "skip": "用推荐设置，直接开始",
+        "questionTitle": {
+            "course_volume": "课程体量",
+            "depth": "讲解深度",
+            "focus": "内容侧重",
+            "pace": "学习节奏"
+        },
+        "optionLabel": {
+            "course_volume": {
+                "quick_scan": "快速扫描",
+                "standard": "标准",
+                "systematic": "系统深入"
+            },
+            "depth": {
+                "intuition": "直觉理解",
+                "derivation": "推导细节",
+                "advanced": "进阶深入"
+            },
+            "focus": {
+                "concepts": "概念",
+                "examples": "实例",
+                "applied": "应用",
+                "theory": "理论"
+            },
+            "pace": {
+                "relaxed": "宽松",
+                "moderate": "适中",
+                "intensive": "紧凑"
+            }
+        }
+    },
     "zoomIn": "放大",
     "zoomOut": "缩小"
   },
@@ -267,5 +350,40 @@
     "confirmDisconnect": "断开此日历？已同步的事件将保留在你的日程中。",
     "lastSync": "上次同步",
     "neverSynced": "从未同步"
+  },
+  "import": {
+    "title": "导入资料",
+    "stepsLabel": "导入步骤",
+    "stepSource": "选择来源",
+    "stepContent": "选择内容",
+    "stepDestination": "选择空间",
+    "stepResult": "完成",
+    "sourceTitle": "从哪里导入？",
+    "contentTitle": "要导入哪些？",
+    "destinationTitle": "导入到哪个空间？",
+    "resultTitle": "导入完成",
+    "sourceObsidian": "Obsidian",
+    "sourceObsidianHint": "vault 打包成 .zip",
+    "sourceFolder": "本地文件夹",
+    "sourceFolderHint": "Markdown 笔记",
+    "sourceNotion": "Notion",
+    "sourceNotionHint": "授权后挑选页面",
+    "sourceNotionBadge": "需授权",
+    "contentSearch": "搜索文件或文件夹",
+    "contentClearSearch": "清除搜索",
+    "contentSelectAll": "全选",
+    "contentClearAll": "取消全选",
+    "contentSelected": "已选 {{files}} 个文件 · {{folders}} 个文件夹",
+    "contentEmpty": "没有匹配的文件或文件夹",
+    "contentExpand": "展开",
+    "contentCollapse": "收起",
+    "destinationHint": "导入的内容会成为这个空间里的「资料」板块。",
+    "resultSource": "来源",
+    "resultContent": "内容",
+    "resultDestination": "落点",
+    "resultNote": "笔记会转成可编辑的块；Wikilink 会指向同一空间里的同名板块。",
+    "back": "上一步",
+    "continue": "继续",
+    "done": "完成"
   }
 }

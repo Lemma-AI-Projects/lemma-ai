@@ -1,15 +1,31 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { useFreeCourseDetail } from './freeCourseApi'
+import { postFreeCourseTuning, useFreeCourseDetail } from './freeCourseApi'
 import {
   FreeCourseStreamError,
   streamFreeCourseBuild,
 } from './streamFreeCourseBuild'
-import type { FreeBuildProgress, FreeCourseDetail } from './types'
+import type {
+  CourseTuningStart,
+  CourseTuningSubmit,
+  FreeBuildProgress,
+  FreeCourseDetail,
+} from './types'
 
 export type FreeCoursePlannerStage =
   | { status: 'loading' }
   | { status: 'building'; courseId: string; intent: string }
+  /**
+   * 暂停态：phase 1（intent→map→path）已落库，等问卷决定 phase 2 怎么写。
+   * **带上 `course`** —— 此刻树已经在库里，正是「先看蓝图、再决定生成什么」的时机；
+   * 让消费方重新 fetch 一次是白费一趟（detail 查询本来就在跑）。
+   */
+  | {
+      status: 'tuning'
+      courseId: string
+      offer: CourseTuningStart
+      course: FreeCourseDetail
+    }
   | { status: 'ready'; course: FreeCourseDetail }
   | { status: 'failed' }
 
@@ -21,6 +37,14 @@ export interface FreeCoursePlannerView {
   errorMessage: string | null
   /** Re-run the build after a transient failure. */
   retry: () => void
+  tuningOffer: CourseTuningStart | null
+  submitTuning: (answers: CourseTuningSubmit) => Promise<void>
+  skipTuning: () => Promise<void>
+  /**
+   * `detail` 正在重新取。暂停态刚出现时 detail 可能还是 phase 1 之前的旧值
+   * （流结束后才 refetch），此时**「还没取到」不能显示成「没有结构」**。
+   */
+  isDetailFetching: boolean
 }
 
 /**
@@ -38,6 +62,8 @@ export function useFreeCoursePlanner(courseId: string | undefined): FreeCoursePl
   })
   const detail = detailQuery.data
   const [buildProgress, setBuildProgress] = useState<FreeBuildProgress | null>(null)
+  const buildProgressRef = useRef<FreeBuildProgress | null>(null)
+  const [tuningOffer, setTuningOffer] = useState<CourseTuningStart | null>(null)
   const [streamError, setStreamError] = useState<string | null>(null)
   const [retryToken, setRetryToken] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
@@ -63,8 +89,17 @@ export function useFreeCoursePlanner(courseId: string | undefined): FreeCoursePl
       courseId,
       intent: detail?.title ?? '',
       signal: controller.signal,
-      onStep: (progress) => setBuildProgress(progress),
+      initialProgress: buildProgressRef.current ?? undefined,
+      onStep: (progress) => {
+        buildProgressRef.current = progress
+        setBuildProgress(progress)
+      },
     })
+      .then((result) => {
+        if (result.outcome === 'questionnaire') {
+          setTuningOffer(result.offer)
+        }
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted) {
           return
@@ -87,15 +122,48 @@ export function useFreeCoursePlanner(courseId: string | undefined): FreeCoursePl
   }, [courseId, building, detail?.title, retryToken])
 
   const retry = () => {
+    buildProgressRef.current = null
     setBuildProgress(null)
     setRetryToken((current) => current + 1)
   }
+
+  const submitTuning = useCallback(
+    async (answers: CourseTuningSubmit) => {
+      const targetId = courseId ?? detail?.id
+      if (!targetId) return
+      setStreamError(null)
+      await postFreeCourseTuning(targetId, answers)
+      setTuningOffer(null)
+      setRetryToken((current) => current + 1)
+    },
+    [courseId, detail?.id]
+  )
+
+  const skipTuning = useCallback(
+    () => submitTuning({ skip: true }),
+    [submitTuning]
+  )
 
   let stage: FreeCoursePlannerStage
   if (detail && status === 'ready') {
     stage = { status: 'ready', course: detail }
   } else if (detail && status === 'failed') {
     stage = { status: 'failed' }
+  } else if (tuningOffer) {
+    // 暂停态要带上树。detail 万一还没回来（流刚结束、refetch 在途），
+    // 退回 loading/failed —— **不能当成 building**，那会重新开一次流。
+    if (detail) {
+      stage = {
+        status: 'tuning',
+        courseId: courseId ?? detail.id,
+        offer: tuningOffer,
+        course: detail,
+      }
+    } else if (detailQuery.isError) {
+      stage = { status: 'failed' }
+    } else {
+      stage = { status: 'loading' }
+    }
   } else if (detail) {
     stage = { status: 'building', courseId: courseId ?? detail.id, intent: detail.title }
   } else if (detailQuery.isError) {
@@ -112,5 +180,9 @@ export function useFreeCoursePlanner(courseId: string | undefined): FreeCoursePl
     isBuilding,
     errorMessage: streamError,
     retry,
+    tuningOffer,
+    submitTuning,
+    skipTuning,
+    isDetailFetching: detailQuery.isFetching,
   }
 }

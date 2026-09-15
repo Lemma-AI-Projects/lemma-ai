@@ -22,6 +22,8 @@
     "signingIn": "Signing in...",
     "forgotPassword": "Forgot password?",
     "google": "Continue with Google",
+    "github": "Continue with GitHub",
+    "orContinueWithEmail": "or continue with email",
     "noAccount": "Don't have an account yet?",
     "signUpLink": "Sign up"
   },
@@ -101,6 +103,21 @@
     "shelterBack": "Back to workspace",
     "shelterEditorPlaceholder": "Block editing ships next",
     "toggleConversation": "Conversation panel",
+    "briefTitle": "Learning brief",
+    "briefClose": "Close learning brief",
+    "briefRefresh": "Refresh brief",
+    "briefGoal": "Goal",
+    "briefGoalEmpty": "No goal set yet",
+    "briefGoalInferred": "Inferred from this space's course",
+    "briefDoing": "What you're doing",
+    "briefAlreadyHave": "What you already have",
+    "briefDeveloping": "Taking shape right now",
+    "briefObstacle": "Main obstacle right now",
+    "briefNext": "Next up",
+    "briefNextEmpty": "No course in this space yet — start by talking about what you want to learn.",
+    "briefNextEmptyAction": "Start a conversation",
+    "briefThinHint": "There isn't enough here yet. Chat, jot a note, or build a course, and this brief will fill in.",
+    "briefUpdatedAt": "Updated {{time}}",
     "notFound": "This space no longer exists",
     "loadFailed": "Failed to load this space"
   },
@@ -176,6 +193,72 @@
       "generateFailed": "Could not generate this lesson. Please try again."
     },
     "buildFailed": "The course could not be generated. Please try again.",
+    "structure": {
+      "title": "Course structure",
+      "summary": "{{units}} units · {{lessons}} lessons",
+      "lessonCount": "{{count}} lessons",
+      "expand": "Show all",
+      "collapse": "Collapse",
+      "empty": "Structure not generated yet",
+      "edit": "Edit",
+      "editingTitle": "Edit course structure",
+      "unitTitlePlaceholder": "Unit title",
+      "unitTitleLabel": "Title of unit {{index}}",
+      "lessonTitlePlaceholder": "Lesson title",
+      "lessonTitleLabel": "Title of lesson {{index}} in unit {{unit}}",
+      "addLesson": "Add lesson",
+      "addUnit": "Add unit",
+      "removeUnit": "Remove this unit",
+      "removeLesson": "Remove this lesson",
+      "confirmRemove": "Remove",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "needTitle": "Titles cannot be empty.",
+      "needLesson": "Keep at least one lesson.",
+      "duplicateUnitTitle": "Unit titles must be unique.",
+      "duplicateLessonTitle": "Lesson titles must be unique within a unit.",
+      "saveFailed": "Could not save. Please try again.",
+      "deleteBlocked": "These lessons already have content or answers and cannot be removed: {{lessons}}",
+      "moveUp": "Move up",
+      "moveDown": "Move down"
+    },
+    "tuning": {
+        "title": "Tune your course",
+        "subtitle": "This is the structure we just drafted. The choices below shape how the content is written.",
+        "answerActive": "Generating…",
+        "confirm": "Start generating",
+        "skip": "Use my recommended settings",
+        "questionTitle": {
+            "course_volume": "Course size",
+            "depth": "Depth",
+            "focus": "Focus",
+            "pace": "Pace"
+        },
+        "optionLabel": {
+            "course_volume": {
+                "quick_scan": "Quick scan",
+                "standard": "Standard",
+                "systematic": "Systematic"
+            },
+            "depth": {
+                "intuition": "Intuition",
+                "derivation": "Derivation",
+                "advanced": "Advanced"
+            },
+            "focus": {
+                "concepts": "Concepts",
+                "examples": "Examples",
+                "applied": "Applied",
+                "theory": "Theory"
+            },
+            "pace": {
+                "relaxed": "Relaxed",
+                "moderate": "Moderate",
+                "intensive": "Intensive"
+            }
+        }
+    },
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out"
   },
@@ -267,5 +350,40 @@
     "confirmDisconnect": "Disconnect this calendar? Synced events will remain in your schedule.",
     "lastSync": "Last synced",
     "neverSynced": "Never synced"
+  },
+  "import": {
+    "title": "Import notes",
+    "stepsLabel": "Import steps",
+    "stepSource": "Source",
+    "stepContent": "Content",
+    "stepDestination": "Space",
+    "stepResult": "Done",
+    "sourceTitle": "Where are you importing from?",
+    "contentTitle": "What should come over?",
+    "destinationTitle": "Which space should it land in?",
+    "resultTitle": "Import complete",
+    "sourceObsidian": "Obsidian",
+    "sourceObsidianHint": "A vault zipped as .zip",
+    "sourceFolder": "Local folder",
+    "sourceFolderHint": "Markdown notes",
+    "sourceNotion": "Notion",
+    "sourceNotionHint": "Pick pages after signing in",
+    "sourceNotionBadge": "Sign-in",
+    "contentSearch": "Search files and folders",
+    "contentClearSearch": "Clear search",
+    "contentSelectAll": "Select all",
+    "contentClearAll": "Clear all",
+    "contentSelected": "{{files}} files · {{folders}} folders selected",
+    "contentEmpty": "Nothing matches",
+    "contentExpand": "Expand",
+    "contentCollapse": "Collapse",
+    "destinationHint": "Imported notes become \u201cSources\u201d in this space.",
+    "resultSource": "From",
+    "resultContent": "Content",
+    "resultDestination": "Into",
+    "resultNote": "Notes become editable blocks. Wikilinks point to same-named boards inside the same space.",
+    "back": "Back",
+    "continue": "Continue",
+    "done": "Done"
   }
 }

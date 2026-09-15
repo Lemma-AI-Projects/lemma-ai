@@ -7,8 +7,13 @@ import { useAppTranslation } from '@/i18n'
 import { ConversationToolCardSkeleton } from '@/features/conversation/ConversationToolSkeleton'
 import { BuildStepIcon } from './BuildStepIcon'
 import { buildStepLabel } from './buildStepLabels'
+import { FreeCourseTuningCard } from './FreeCourseTuningCard'
 import { useFreeCoursePlanner } from './useFreeCoursePlanner'
-import type { FreeBuildStepKey, FreeBuildProgress, FreeBuildStepState } from './types'
+import type {
+  FreeBuildStepKey,
+  FreeBuildProgress,
+  FreeBuildStepState,
+} from './types'
 import { freeBuildStepOrder } from './types'
 
 // Binds a free-course tool block (just a courseId) to its live build progress
@@ -18,11 +23,31 @@ import { freeBuildStepOrder } from './types'
 export function ConversationFreeCourseTool({ courseId }: { courseId: string }) {
   const navigate = useNavigate()
   const { t } = useAppTranslation()
-  const { stage, buildProgress, isBuilding, errorMessage, retry } =
-    useFreeCoursePlanner(courseId)
+  const {
+    stage,
+    buildProgress,
+    isBuilding,
+    errorMessage,
+    retry,
+    submitTuning,
+    skipTuning,
+    isDetailFetching,
+  } = useFreeCoursePlanner(courseId)
 
   if (stage.status === 'loading' && !buildProgress) {
     return <ConversationToolCardSkeleton />
+  }
+
+  if (stage.status === 'tuning') {
+    return (
+      <FreeCourseTuningCard
+        offer={stage.offer}
+        course={stage.course}
+        isCourseLoading={isDetailFetching}
+        onSubmit={submitTuning}
+        onSkip={skipTuning}
+      />
+    )
   }
 
   if (stage.status === 'ready') {

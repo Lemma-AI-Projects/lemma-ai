@@ -76,6 +76,19 @@ export async function submitFreeObservation(
   return data
 }
 
+export async function postFreeCourseTuning(
+  courseId: string,
+  tuning: import('./types').CourseTuningSubmit
+): Promise<FreeCourseDetail> {
+  const { data } = await signOutOn401(
+    apiClient.post<FreeCourseDetail>(
+      `/api/v1/free-courses/${courseId}/tuning`,
+      tuning
+    )
+  )
+  return data
+}
+
 export function useFreeCourseDetail(
   courseId: string | undefined,
   options?: { enabled?: boolean }
@@ -114,6 +127,36 @@ export function useSubmitFreeObservation(
       void queryClient.invalidateQueries({
         queryKey: freeLessonQueryKey(courseId, chapterId),
       })
+    },
+  })
+}
+export async function editFreeCourseTree(
+  courseId: string,
+  payload: import('./types').FreeCourseTreeEdit
+): Promise<FreeCourseDetail> {
+  const { data } = await signOutOn401(
+    apiClient.patch<FreeCourseDetail>(
+      `/api/v1/free-courses/${courseId}/tree`,
+      payload
+    )
+  )
+  return data
+}
+
+/**
+ * 蓝图编辑写回。
+ *
+ * `onSuccess` 直接把响应写进 detail 缓存：响应就是编辑后的树，再 refetch 一次是白跑。
+ * 这不只是省一趟 —— 暂停点的 phase 2 是**从库里读树**的，所以缓存里的树必须与库一致，
+ * 否则用户会看到"我改的没生效"。
+ */
+export function useEditFreeCourseTree(courseId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: import('./types').FreeCourseTreeEdit) =>
+      editFreeCourseTree(courseId, payload),
+    onSuccess: (course) => {
+      queryClient.setQueryData(freeCourseDetailQueryKey(courseId), course)
     },
   })
 }
