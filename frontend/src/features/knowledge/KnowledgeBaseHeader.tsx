@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button'
 interface KnowledgeBaseHeaderProps {
   searchTerm: string
   onSearchTermChange: (value: string) => void
+  onFilesSelected: (files: FileList) => void
 }
 
 export function KnowledgeBaseHeader({
   searchTerm,
   onSearchTermChange,
+  onFilesSelected,
 }: KnowledgeBaseHeaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -46,7 +48,13 @@ export function KnowledgeBaseHeader({
             tabIndex={-1}
             type="file"
             className="sr-only"
-            onChange={() => console.log('TODO: upload knowledge files')}
+            onChange={(event) => {
+              if (event.target.files && event.target.files.length > 0) {
+                onFilesSelected(event.target.files)
+              }
+              // 重置，确保重复选择同一文件也会再次触发 onChange
+              event.target.value = ''
+            }}
           />
           <Button
             type="button"

@@ -1,6 +1,10 @@
 import { Search } from 'lucide-react'
 
-export function KnowledgeBaseEmptyState() {
+export function KnowledgeBaseEmptyState({
+  title = '未找到文件',
+}: {
+  title?: string
+}) {
   return (
     <div className="mt-6">
       <div className="relative flex min-h-[321px] w-full items-center justify-center rounded-[28px] px-6 py-6 transition-colors sm:px-[106px]">
@@ -26,7 +30,7 @@ export function KnowledgeBaseEmptyState() {
         <div className="flex flex-col items-center gap-4 text-center">
           <Search className="size-8 text-foreground" />
           <div className="text-[16px] font-medium leading-6 text-foreground">
-            未找到文件
+            {title}
           </div>
         </div>
       </div>

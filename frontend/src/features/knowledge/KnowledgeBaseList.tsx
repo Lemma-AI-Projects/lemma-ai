@@ -1,6 +1,6 @@
 import { ArrowDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { KnowledgeBaseItem } from './getKnowledgeBaseItems'
+import type { KnowledgeBaseFolder, KnowledgeBaseItem } from './getKnowledgeBaseItems'
 import { KnowledgeBaseEmptyState } from './KnowledgeBaseEmptyState'
 import { KnowledgeBaseItemMenu } from './KnowledgeBaseItemMenu'
 
@@ -47,11 +47,21 @@ export function KnowledgeBaseList({
   selectedItemIds,
   onToggleItem,
   onToggleAllVisible,
+  onViewItem,
+  onDownloadItem,
+  folders,
+  onMoveItem,
+  emptyTitle,
 }: {
   items: KnowledgeBaseItem[]
   selectedItemIds: string[]
   onToggleItem: (itemId: string) => void
   onToggleAllVisible: () => void
+  onViewItem: (item: KnowledgeBaseItem) => void
+  onDownloadItem: (item: KnowledgeBaseItem) => void
+  folders: KnowledgeBaseFolder[]
+  onMoveItem: (itemId: string, folderId: string | null) => void
+  emptyTitle?: string
 }) {
   const allVisibleSelected =
     items.length > 0 && items.every((item) => selectedItemIds.includes(item.id))
@@ -62,7 +72,7 @@ export function KnowledgeBaseList({
   if (items.length === 0) {
     return (
       <div className="mt-0 flex min-h-0 flex-1 flex-col">
-        <KnowledgeBaseEmptyState />
+        <KnowledgeBaseEmptyState title={emptyTitle} />
       </div>
     )
   }
@@ -163,13 +173,36 @@ export function KnowledgeBaseList({
                     className="relative z-10 flex min-w-0 items-center gap-3 ps-4 text-start outline-none"
                   >
                     <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-zinc-200 bg-background">
-                      <Icon className={cn('size-5', item.iconColor)} />
+                      {item.previewUrl ? (
+                        item.previewKind === 'video' ? (
+                          <video
+                            src={item.previewUrl}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={item.previewUrl}
+                            alt={item.displayName}
+                            className="size-full object-cover"
+                          />
+                        )
+                      ) : (
+                        <Icon className={cn('size-5', item.iconColor)} />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1 overflow-hidden">
                       <div className="flex min-w-0 items-center gap-2">
                         <button
                           type="button"
-                          className="block w-full min-w-0 truncate border-0 bg-transparent p-0 text-start text-[14px] leading-[18px] text-foreground"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            onViewItem(item)
+                          }}
+                          className="block w-full min-w-0 truncate border-0 bg-transparent p-0 text-start text-[14px] leading-[18px] text-foreground hover:underline"
                         >
                           {item.fileName}
                         </button>
@@ -205,6 +238,11 @@ export function KnowledgeBaseList({
                     <KnowledgeBaseItemMenu
                       itemId={item.id}
                       fileName={item.fileName}
+                      folders={folders}
+                      currentFolderId={item.folderId}
+                      onView={() => onViewItem(item)}
+                      onDownload={() => onDownloadItem(item)}
+                      onMove={(folderId) => onMoveItem(item.id, folderId)}
                     />
                   </div>
                 </div>
