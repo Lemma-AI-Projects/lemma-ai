@@ -29,7 +29,21 @@ export function LearnSpacesView({
 
   return (
     <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
-      <div className="mx-auto flex min-h-full w-full max-w-[48rem] flex-col px-6 py-[8%]">
+      <div className="relative z-10 mx-auto flex min-h-full w-full max-w-[48rem] flex-col px-6 py-[8%]">
+        {/* 装饰性点阵背景：极淡、不响应指针、置于内容之下并用椭圆蒙版柔和淡出 */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgba(24,24,27,0.05) 1px, transparent 0)',
+            backgroundSize: '24px 24px',
+            maskImage:
+              'radial-gradient(ellipse 80% 70% at 50% 25%, #000 40%, transparent 100%)',
+            WebkitMaskImage:
+              'radial-gradient(ellipse 80% 70% at 50% 25%, #000 40%, transparent 100%)',
+          }}
+        />
         <div className="mb-7 flex items-center justify-between">
           <div className="flex translate-x-2 items-center gap-3">
             <FolderOpen className="size-9 text-foreground" strokeWidth={1.75} />
