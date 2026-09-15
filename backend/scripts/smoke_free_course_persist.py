@@ -100,8 +100,8 @@ async def main() -> int:
             course_id = course.id
         print(f"created shell: {course_id}")
 
-        print("\n-- build/stream --")
-        frames = [
+        print("\n-- build/stream · phase 1 (intent→map→path → questionnaire) --")
+        phase1 = [
             *(
                 await parse_frames(
                     free_course_events.stream_free_course_build(
@@ -110,33 +110,106 @@ async def main() -> int:
                 )
             )
         ]
-        for name, data in frames:
+        for name, data in phase1:
             step = data.get("step", "")
             status = data.get("status", "")
-            print(f"  [{name}] {step:<9} {status:<8}{data.get('detail') or ''}")
+            extra = (
+                data.get("detail")
+                or data.get("message")
+                or data.get("code")
+                or ""
+            )
+            print(f"  [{name}] {step:<9} {status:<8}{extra}")
 
-        # 1. SSE order: the five steps round-trip, each started then finished,
-        #    and the terminal `done` frame carries the built course.
-        step_frames = [
-            (d["step"], d["status"]) for n, d in frames if n == "step"
+        # 1. Phase 1 stops at the questionnaire: intent/map/path each start+finish,
+        #    a `questionnaire` frame presents the tuning offer, and there is NO
+        #    `done` yet — the course stays `building` until the answer lands.
+        step_frames1 = [
+            (d["step"], d["status"]) for n, d in phase1 if n == "step"
         ]
-        expected = [
-            ("intent", "started"), ("intent", "finished"),
-            ("map", "started"), ("map", "finished"),
-            ("path", "started"), ("path", "finished"),
+        expected_step1 = (
+            [("intent", "started"), ("intent", "finished")]
+            + [("map", "started"), ("map", "finished")]
+            + [("path", "started"), ("path", "finished")]
+        )
+        report.check(
+            step_frames1 == expected_step1,
+            f"phase1 step order mismatch: {step_frames1}",
+        )
+        questionnaire = [d for n, d in phase1 if n == "questionnaire"]
+        report.check(len(questionnaire) == 1, "phase1 did not ask the questionnaire")
+        if questionnaire:
+            offer = questionnaire[-1]
+            keys = {q.get("key") for q in offer.get("questions", [])}
+            report.check(
+                keys == {"course_volume", "depth", "focus", "pace"},
+                f"questionnaire dims mismatch: {keys}",
+            )
+        report.check(
+            not any(n == "done" for n, _ in phase1),
+            "phase1 emitted `done` before the questionnaire was answered",
+        )
+
+        # The tree already landed during phase 1 (persist_map) — read it to pick
+        # the has_content target for the per-lesson checks.
+        async with AsyncSessionLocal() as db:
+            detail = await free_course_service.get_detail(
+                db, user_id=user_id, course_id=course_id
+            )
+        report.check(detail is not None, "get_detail returned None")
+        report.check(detail is not None and detail.mode == "free", "mode is not free")
+        report.check(detail is not None and len(detail.units) >= 1, "no units persisted")
+
+        print("\n-- answer questionnaire → phase 2 (blueprint→content→done) --")
+        async with AsyncSessionLocal() as db:
+            await free_course_service.set_course_tuning(
+                db,
+                user_id=user_id,
+                course_id=course_id,
+                tuning={
+                    "course_volume": "standard",
+                    "depth": "derivation",
+                    "focus": "examples",
+                    "pace": "moderate",
+                },
+            )
+        phase2 = [
+            *(
+                await parse_frames(
+                    free_course_events.stream_free_course_build(
+                        user_id, course_id, INTENT
+                    )
+                )
+            )
+        ]
+        for name, data in phase2:
+            step = data.get("step", "")
+            status = data.get("status", "")
+            extra = (
+                data.get("detail")
+                or data.get("message")
+                or data.get("code")
+                or ""
+            )
+            print(f"  [{name}] {step:<9} {status:<8}{extra}")
+
+        # 2. Phase 2 runs blueprint→content to a `done` that carries the built detail.
+        step_frames2 = [
+            (d["step"], d["status"]) for n, d in phase2 if n == "step"
+        ]
+        expected_step2 = [
             ("blueprint", "started"), ("blueprint", "finished"),
             ("content", "started"), ("content", "finished"),
-            ("done", "finished"),
         ]
         report.check(
-            step_frames == expected,
-            f"sse step order mismatch: {step_frames}",
+            step_frames2 == expected_step2,
+            f"phase2 step order mismatch: {step_frames2}",
         )
-        terminal = [d for n, d in frames if n == "done"]
-        report.check(bool(terminal), "missing terminal `done` frame")
+        terminal = [d for n, d in phase2 if n == "done"]
+        report.check(bool(terminal), "missing terminal `done` frame in phase2")
         detail_wire = terminal[-1] if terminal else {}
 
-        # 2. Persist: detail reads mode=free + a real tree with objectives.
+        # 3. Persist: detail reads mode=free + a real tree with objectives.
         async with AsyncSessionLocal() as db:
             detail = await free_course_service.get_detail(
                 db, user_id=user_id, course_id=course_id
