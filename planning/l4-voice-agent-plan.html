@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>L4 实时双向语音层 — 调研与实施计划（最低耦合）</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#0f141b; --line:#1f2937;
+    --zinc:#e5e7eb; --zinc-dim:#9ca3af; --zinc-faint:#6b7280;
+    --accent:#4c6694; --accent-soft:#edf4ff; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--zinc);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.7;font-size:15px}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 24px 80px}
+  h1{font-size:28px;margin:0 0 6px;letter-spacing:.3px}
+  h2{font-size:20px;margin:38px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h3{font-size:16px;margin:24px 0 8px;color:var(--zinc)}
+  .sub{color:var(--zinc-faint);font-size:13px;margin-bottom:8px}
+  .lead{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;margin:18px 0}
+  .lead b{color:#fff}
+  .tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;margin-right:6px}
+  .t-ok{background:rgba(52,211,153,.14);color:var(--ok)}
+  .t-warn{background:rgba(251,191,36,.14);color:var(--warn)}
+  .t-bad{background:rgba(248,113,113,.14);color:var(--bad)}
+  .t-acc{background:var(--accent-soft);color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--zinc-dim);font-weight:600}
+  tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+  code{background:#0a0e13;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px;color:#cbd5e1}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin:16px 0}
+  .kv{display:grid;grid-template-columns:160px 1fr;gap:6px 14px;font-size:14px}
+  .kv div:nth-child(odd){color:var(--zinc-faint)}
+  svg{display:block;width:100%;height:auto;background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius);margin:16px 0}
+  .note{font-size:13px;color:var(--zinc-dim);border-left:3px solid var(--accent);padding:6px 12px;margin:12px 0;background:rgba(76,102,148,.07)}
+  ul{margin:8px 0 8px 2px;padding-left:20px}
+  li{margin:5px 0}
+  .pill{font-size:12px;color:var(--zinc-faint)}
+  footer{margin-top:50px;color:var(--zinc-faint);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>L4 实时双向语音层 — 调研与实施计划</h1>
+<div class="sub">Lemma AI · 最低耦合方案 · 2026-09-13 · 仅调研与规划，未开工</div>
+
+<div class="lead">
+<b>人话结论：</b>L4（学生随时插话、agent 随时接、像打电话一样的口语家教）不是把 L2+L3 拼起来，而是整条链路要压到实时全双工。
+2026 年业界有两条路线：<b>端到端语音模型</b>（GPT-4o Realtime / Gemini Live，模型自己听自己说）和
+<b>级联流水线</b>（STT→LLM→TTS，各段可换）。对咱们最划算、耦合最低的选择是<b>级联 + 复用现有大脑</b>——
+语音只是包在现有 <code>AIClient</code> 外面的一层 I/O 壳，现有文本管线一行都不用改。
+</div>
+
+<h2>1. 调研：2026 年 L4 两条技术路线</h2>
+
+<table>
+<tr><th>维度</th><th>端到端语音模型</th><th>级联流水线（推荐）</th></tr>
+<tr>
+<td><b>代表</b></td>
+<td>GPT-4o Realtime、Gemini Live、Moshi、Hume EVI、NVIDIA PersonaPlex、字节 Seeduplex</td>
+<td>LiveKit / Vapi / Pipecat +（Deepgram/Speechmatics 做 STT）+（Cartesia/ElevenLabs/Azure/Gemini 做 TTS）+ 任意 LLM</td>
+</tr>
+<tr>
+<td><b>怎么工作</b></td>
+<td>单一语音模型音频进、音频出；转写/思考/发声都在模型内部，原生处理打断(barge-in)</td>
+<td>麦克风音频→STT 转文字→咱们现有 LLM 生成→TTS 合成语音→播放；三段串行可并行流水</td>
+</tr>
+<tr>
+<td><b>延迟</b></td>
+<td>首包 200–500ms（GPT-4o 实测 232–320ms 均值；Gemini 2.5 Flash Native 0.63s）</td>
+<td>最佳组合（Cartesia+TTS+Groq Whisper+Cerebras）≈300ms；平均生产栈 600–1000ms；压到 &lt;600ms 才自然</td>
+</tr>
+<tr>
+<td><b>成本 / 分钟</b></td>
+<td>GPT-4o Realtime ≈ $2–4；Gemini Live ≈ $0.5–2</td>
+<td>≈ $0.10–0.30（自选组件，远低于端到端）</td>
+</tr>
+<tr>
+<td><b>能否复用咱们的大脑</b></td>
+<td><span class="tag t-bad">不能</span> LLM 被厂商锁死，课程上下文/掌握度注入只能靠 system prompt / 转写，工具调用不成熟</td>
+<td><span class="tag t-ok">能</span> LLM 段就是现有 <code>AIClient.stream_chat(COURSE_COMPANION)</code>，路由/回退/计费/上下文全复用</td>
+</tr>
+<tr>
+<td><b>可审计 / 可调试</b></td>
+<td><span class="tag t-warn">弱</span> 无中间文本，日志只能看音频；合规与排错困难</td>
+<td><span class="tag t-ok">强</span> 三段各自有文本边界（转写/回复/合成输入），天然留痕</td>
+</tr>
+<tr>
+<td><b>打断(barge-in)</b></td>
+<td>模型原生处理，质量好</td>
+<td>需自建 VAD + TTS 急停 + LLM 取消（&lt;150ms 总预算），工程量大但可控</td>
+</tr>
+<tr>
+<td><b>对语言学习的关键影响</b></td>
+<td>发音/口音评测(L3)无法介入；换音色/换语言受限</td>
+<td>STT 可选多语种抗口音（Whisper/Speechmatics）；TTS 可精调目标语言发音；L3 发音评测以后能直接挂在同一链路</td>
+</tr>
+</table>
+
+<div class="note">
+<b>为什么推荐级联而不是端到端？</b> 三个理由叠在同一选择上：①<b>耦合最低</b>——大脑（现有 LLM 网关、课程上下文、掌握度注入）原封不动复用，语音只是边缘 I/O；
+②<b>最便宜</b>——端到端是级联的 10–40 倍单价，对创业团队不友好；③<b>课程接地</b>——agent 必须始终基于课程材料说话，端到端模型会把它变成"通用聊天嗓"，丢掉咱们的研究内核。
+端到端适合"纯陪伴/客服"，不适合" grounded tutor"。
+</div>
+
+<h2>2. 耦合分析：复用 vs 隔离矩阵</h2>
+<p class="sub">这是本计划的核心。绿色=直接复用、零改动；蓝色=新增但共享；红色=新增且隔离。</p>
+
+<table>
+<tr><th>现有组件</th><th>是否复用</th><th>说明 / 耦合处理</th></tr>
+<tr>
+<td><code>ai/client.py</code> · <code>AIClient</code> 门面</td><td><span class="tag t-ok">复用·零改</span></td>
+<td>voice 通过公开接口 <code>stream_chat(AIUseCase.COURSE_COMPANION, messages)</code> 调大脑；不碰 <code>stream_tool_chat</code>（其有 native video 硬约束，且语音不需要视频工具）</td>
+</tr>
+<tr>
+<td><code>ai/routing.py</code> · 路由与优先级回退</td><td><span class="tag t-ok">复用·零改</span></td>
+<td>LLM 段沿用现有 AiHubMix/OpenRouter/DeepSeek 回退铁律</td>
+</tr>
+<tr>
+<td><code>ai/usage.py</code> · 计费 ledger</td><td><span class="tag t-ok">复用·零改</span></td>
+<td>语音会话的 LLM token 自动入同一账本；STT/TTS 用量走适配器各自上报</td>
+</tr>
+<tr>
+<td><code>ai/prompts/registry.py</code> · 提示渲染</td>
+<td><span class="tag t-ok">复用·零改</span></td>
+<td>Voice 用同一套 <code>render_system_prompt</code></td>
+</tr>
+<tr>
+<td><code>conversation_service.persist_turn</code> · 会话落库</td><td><span class="tag t-ok">复用·零改</span></td>
+<td>语音转写与文本回复复用同一 <code>ai_conversation</code> schema，历史不分裂</td>
+</tr>
+<tr>
+<td><code>build_agent_context()</code> · 课程/掌握度上下文</td><td><span class="tag t-acc">新增·共享</span></td>
+<td>当前伴学/概述<b>根本没有</b>课程上下文与掌握度注入（仅静态提示+章节视频）。建议新建此函数，<b>文本伴学与语音共同消费</b>，消除将来两套各拼各的漂移风险。文本侧可后续平滑迁移，不破坏现有行为</td>
+</tr>
+<tr>
+<td><code>ai_video_engine</code> 全局开关</td><td><span class="tag t-ok">不动</span></td>
+<td>语音走纯文本 LLM 路由，不触发 native video 约束；<code>AIUseCase</code> 枚举<b>无需新增</b></td>
+</tr>
+<tr>
+<td>传输层（SSE/HTTP）</td><td><span class="tag t-bad">新增·隔离</span></td>
+<td>全双工需 WebSocket；新增独立端点 <code>/ws/voice/session</code>，与现有 SSE 文本流并存、互不影响</td>
+</tr>
+<tr>
+<td>STT / TTS / VAD(barge-in)</td><td><span class="tag t-bad">新增·隔离</span></td>
+<td>全部藏在 <code>voice/adapters/</code> 接口后，换厂商不动会话逻辑</td>
+</tr>
+<tr>
+<td>前端语音 UI</td>
+<td><span class="tag t-bad">新增·隔离</span></td>
+<td>独立 <code>features/voice/</code> 组件（麦克风采集 + 播放 + 开关），不侵入 CoursePage 文本聊天</td>
+</tr>
+</table>
+
+<div class="note"><b>一句话耦合目标：</b> 现有 <code>backend/api/v1/{overview,companion,chat}.py</code> 与 <code>ai/client.py</code> 零改动；voice 作为平行模块，只通过 <code>AIClient</code> 的公开文本接口和 <code>persist_turn</code> 两个"门"接入。把"大脑"当黑盒，把"嗓子和耳朵"当可插拔外设。</div>
+
+<h2>3. 推荐架构：级联 + 大脑复用</h2>
+
+<svg viewBox="0 0 680 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="L4 语音层架构图">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#6b7280"/>
+    </marker>
+    <style>
+      .box{fill:#121821;stroke:#2b3645;stroke-width:1.4}
+      .boxR{fill:#0f1a13;stroke:#2f6b4f;stroke-width:1.4;stroke-dasharray:5 4}
+      .boxN{fill:#16121f;stroke:#5b49e9;stroke-width:1.4;stroke-dasharray:5 4}
+      .lbl{fill:#e5e7eb;font:600 13px -apple-system,Segoe UI,sans-serif}
+      .sm{fill:#9ca3af;font:11px -apple-system,Segoe UI,sans-serif}
+      .acc{fill:#7fa6e0;font:600 12px -apple-system,Segoe UI,sans-serif}
+      .edge{fill:#0b0f14;stroke:#1f2937;stroke-width:1.2}
+    </style>
+  </defs>
+
+  <!-- Client -->
+  <rect class="box" x="20" y="30" width="150" height="78" rx="10"/>
+  <text class="lbl" x="95" y="58" text-anchor="middle">浏览器客户端</text>
+  <text class="sm" x="95" y="78" text-anchor="middle">getUserMedia 采麦</text>
+  <text class="sm" x="95" y="94" text-anchor="middle">WebAudio 播放</text>
+
+  <!-- WebSocket -->
+  <text class="acc" x="200" y="20" text-anchor="middle">WebSocket (wss) · 音频帧双向</text>
+  <line x1="170" y1="69" x2="250" y2="69" stroke="#4c6694" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Voice Gateway -->
+  <rect class="box" x="250" y="20" width="410" height="220" rx="12"/>
+  <text class="lbl" x="455" y="42" text-anchor="middle">语音网关（新增 · 隔离模块）</text>
+
+  <rect class="edge" x="268" y="56" width="120" height="40" rx="8"/>
+  <text class="sm" x="328" y="72" text-anchor="middle">音频入缓冲</text>
+  <text class="sm" x="328" y="88" text-anchor="middle">+ VAD/打断控制器</text>
+
+  <rect class="edge" x="268" y="104" width="120" height="34" rx="8"/>
+  <text class="sm" x="328" y="125" text-anchor="middle">STT 适配器</text>
+
+  <rect class="edge" x="268" y="150" width="120" height="34" rx="8"/>
+  <text class="sm" x="328" y="171" text-anchor="middle">TTS 适配器</text>
+
+  <rect class="edge" x="268" y="192" width="120" height="34" rx="8"/>
+  <text class="sm" x="328" y="213" text-anchor="middle">音频出队列</text>
+
+  <rect class="boxN" x="410" y="104" width="100" height="78" rx="8"/>
+  <text class="sm" x="460" y="124" text-anchor="middle">LLM 桥</text>
+  <text class="sm" x="460" y="142" text-anchor="middle">调现有</text>
+  <text class="sm" x="460" y="158" text-anchor="middle">stream_chat</text>
+  <text class="sm" x="460" y="174" text-anchor="middle">(COURSE_</text>
+  <text class="sm" x="460" y="188" text-anchor="middle">COMPANION)</text>
+
+  <line x1="388" y1="121" x2="408" y2="143" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="460" y1="182" x2="460" y2="184" />
+  <line x1="510" y1="143" x2="528" y2="143" stroke="#6b7280" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="328" y1="121" x2="266" y2="121" stroke="#6b7280" stroke-width="1.2"/>
+  <line x1="328" y1="167" x2="266" y2="167" stroke="#6b7280" stroke-width="1.2"/>
+
+  <!-- REUSED zone -->
+  <rect class="boxR" x="540" y="40" width="120" height="180" rx="12"/>
+  <text class="acc" x="600" y="62" text-anchor="middle">复用·零改</text>
+  <text class="sm" x="600" y="84" text-anchor="middle">AIClient 门面</text>
+  <text class="sm" x="600" y="102" text-anchor="middle">routing 回退</text>
+  <text class="sm" x="600" y="120" text-anchor="middle">usage ledger</text>
+  <text class="sm" x="600" y="138" text-anchor="middle">prompts 渲染</text>
+  <text class="sm" x="600" y="156" text-anchor="middle">persist_turn</text>
+  <text class="sm" x="600" y="176" text-anchor="middle">Supabase 鉴权</text>
+  <text class="sm" x="600" y="196" text-anchor="middle">auth.users</text>
+
+  <line x1="510" y1="143" x2="540" y2="120" stroke="#2f6b4f" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Shared context -->
+  <rect class="boxN" x="250" y="256" width="200" height="46" rx="10"/>
+  <text class="sm" x="350" y="278" text-anchor="middle">build_agent_context()（新增·共享）</text>
+  <text class="sm" x="350" y="294" text-anchor="middle">课程大纲 / 目标 / 掌握度 / 章节</text>
+  <line x1="350" y1="256" x2="460" y2="182" stroke="#5b49e9" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+
+  <!-- Vendors outside -->
+  <rect class="box" x="250" y="330" width="410" height="110" rx="12"/>
+  <text class="lbl" x="455" y="352" text-anchor="middle">外部厂商（适配器背后，可替换）</text>
+  <rect class="edge" x="268" y="364" width="120" height="34" rx="8"/>
+  <text class="sm" x="328" y="385" text-anchor="middle">STT: Deepgram</text>
+  <rect class="edge" x="404" y="364" width="120" height="34" rx="8"/>
+  <text class="sm" x="464" y="385" text-anchor="middle">TTS: Cartesia</text>
+  <rect class="edge" x="540" y="364" width="100" height="34" rx="8"/>
+  <text class="sm" x="590" y="385" text-anchor="middle">VAD: Silero</text>
+  <text class="sm" x="455" y="424" text-anchor="middle">备选：Whisper / Speechmatics / ElevenLabs / Azure / Gemini TTS</text>
+  <line x1="328" y1="138" x2="328" y2="364" stroke="#6b7280" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="328" y1="184" x2="328" y2="364" stroke="#6b7280" stroke-width="1.2"/>
+  <line x1="328" y1="167" x2="464" y2="364" stroke="#6b7280" stroke-width="1.2" marker-end="url(#arr)"/>
+</svg>
+
+<div class="panel" style="border-left:4px solid #5b49e9;background:#f6f7ff;">
+<h3 style="margin:0 0 8px;">关键决策修正：区域感知路由（2026-09-13 更新）</h3>
+<p>用户面向<strong>全球</strong>，故不再"默认国内栈"。正确架构 = <strong>区域感知语音 I/O + 中国可控大脑（region-aware voice I/O, China-controlled brain）</strong>：</p>
+<ul>
+<li><b>大脑永远在中国主体</b>：LLM 推理（基于课程上下文 + 掌握度）走现有 AiHubMix→Gemini / OpenRouter / DeepSeek 网关，战略 IP 零改动、永不出境。</li>
+<li><b>语音 I/O 按用户区域路由</b>：中国用户 → 火山 / 阿里（数据留境内）；美 / 欧 / 全球用户 → Deepgram + Cartesia（外语口音最强、就近延迟最低）。VAD = 本地 Silero 全局通用。</li>
+<li><b>红线仍满足</b>：掌握度 / 学习者档案 / 课程 = 战略数据留中国主体 PG / Supabase；语音音频为临时 I/O，海外 API 属"阳光出海"（合法商用），非"泡澡式出海"（设壳公司规避监管）。</li>
+<li><b>出海合规作业</b>：若音频跨境持久化 → 数据出境评估；技术进出口申报；与海外厂签 DPA。尽量 ephemeral 不落盘以降低负担。</li>
+<li><b>开发现实</b>：本机 OpenRouter 曾 403，美国 API 开发期或不可达 → P0 先用国内栈验证管线，生产按 region 配置翻转（适配器已隔离，切换 = 配置）。</li>
+</ul>
+</div>
+
+<h2>4. 模块与文件规划</h2>
+
+<div class="panel">
+<div class="kv">
+<div>后端新增</div>
+<div><code>backend/voice/transport.py</code> — WebSocket 端点 <code>/ws/voice/session</code>（独立于 SSE）<br>
+<code>backend/voice/session.py</code> — <code>VoiceSession</code> 编排：收音频→STT→建上下文→调 <code>stream_chat</code>→TTS→出音频；管理轮次与打断<br>
+<code>backend/voice/adapters/stt.py</code> · <code>tts.py</code> · <code>vad.py</code> — 可插拔接口 + 厂商实现<br>
+<code>backend/voice/barge_in.py</code> — VAD + 急停 + LLM 取消（&lt;150ms 预算）</div>
+
+<div>后端新增(共享)</div>
+<div><code>backend/ai/context.py::build_agent_context(course_id,user_id,chapter_id)</code> — 文本伴学与语音共用；消除上下文漂移</div>
+
+<div>前端新增</div>
+<div><code>frontend/src/features/voice/VoiceSession.ts</code> — WebSocket 客户端 + 麦/播放<br>
+<code>frontend/src/features/voice/useVoiceSession.ts</code> — 状态机（connecting|listening|speaking|interrupted|error）<br>
+<code>frontend/src/features/voice/VoiceButton.tsx</code> — 悬浮麦克风按钮（不侵入 CoursePage）</div>
+
+<div>后端零改动</div>
+<div><code>ai/client.py</code> · <code>ai/routing.py</code> · <code>ai/usage.py</code> · <code>ai/prompts/*</code> · <code>conversation_service.py</code> · <code>api/v1/{overview,companion,chat}.py</code></div>
+
+<div>配置新增</div>
+<div><code>VOICE_STT_PROVIDER</code> / <code>VOICE_TTS_PROVIDER</code> / <code>VOICE_ENABLED(默认 False)</code> — 沿用现有开关门控风格，未启用不影响现有链路</div>
+</div>
+</div>
+
+<h2>5. 分阶段里程碑（计划，尚未开工）</h2>
+<table>
+<tr><th>阶段</th><th>目标</th><th>关键产出</th><th>估时</th></tr>
+<tr><td><b>P0 Spike</b></td><td>验证 WebSocket 双向音频 + 一次"回声/ mock LLM"往返</td><td>打通传输与音频 I/O，证明 &lt;300ms 帧回路</td><td>1 周</td></tr>
+<tr><td><b>P1 大脑复用</b></td><td><code>VoiceSession</code> 调现有 <code>stream_chat(COURSE_COMPANION)</code></td><td>语音进→文字答→语音出，无打断</td><td>1 周</td></tr>
+<tr><td><b>P2 打断</b></td><td>VAD + TTS 急停 + LLM 取消</td><td>学生中途插话，agent 干净让出话权</td><td>1–2 周</td></tr>
+<tr><td><b>P3 接地</b></td><td><code>build_agent_context</code> 共享，注入课程材料/掌握度</td><td>语音 agent 基于课程说话，与文本伴学一致</td><td>1 周</td></tr>
+<tr><td><b>P4 落库与可观测</b></td><td>复用 <code>persist_turn</code>；延迟/用量遥测</td><td>语音会话进统一历史；延迟仪表盘</td><td>1 周</td></tr>
+<tr><td><b>P5 打磨</b></td><td>backchannel（嗯哼）、韵律、移动端、AEC 回声消除</td><td>接近真人语感</td><td>持续</td></tr>
+</table>
+
+<h2>6. 待你拍板的开放决策</h2>
+<ul>
+<li><b>路线确认</b>：级联（推荐，复用大脑/省钱）还是端到端（GPT-4o Realtime/Gemini Live，体验上限高但锁厂商、贵 10–40×）？</li>
+<li><b>STT 首选型</b>：Deepgram Nova-3（快、抗噪）vs Whisper（自建、隐私）vs Speechmatics（抗口音最强）——语言学习者口音多，建议 Speechmatics/Whisper 保底。</li>
+<li><b>TTS 首选型</b>：Cartesia Sonic 2（40ms TTFB，最快）vs ElevenLabs（最自然）vs Azure/Gemini（多语种发音准、便宜）。</li>
+<li><b>是否把 P3 的 <code>build_agent_context</code> 一并返哺文本伴学</b>：建议做，但属于对现有 companion 的小幅重构，需你点头再动。</li>
+<li><b>语言范围</b>：先支持哪门目标语言？影响 STT/TTS 厂商与音色库。</li>
+<li><b>区域路由策略</b>：全球用户 → 按用户所在区域切 STT/TTS 厂商（中国 = 火山 / 阿里，海外 = Deepgram / Cartesia），由 <code>VOICE_REGION</code> 配置驱动；大脑恒定中国主体。</li>
+<li><b>是否持久化语音录音</b>：供跟读回放 / 发音复盘则须走数据出境评估；若 ephemeral 不落盘则合规负担最低。需你定。</li>
+</ul>
+
+<h2>7. 风险登记表</h2>
+<table>
+<tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+<tr><td>级联延迟叠加，体感卡顿</td><td><span class="tag t-warn">中</span></td><td>流式 STT 部分结果预喂 LLM；TTS 分句边生成边播；区域就近部署</td></tr>
+<tr><td>打断误触发（把思考停顿当插话）</td><td><span class="tag t-warn">中</span></td><td>VAD 三层（能量+声纹+最短时长门）；用 LiveKit TurnDetector/SmartTurn 类语义端点</td></tr>
+<tr><td>回声/串音（agent 自己的声音被当输入）</td><td><span class="tag t-warn">中</span></td><td>软件 AEC；服务端 VAD 只在"agent 静音期"才允许触发</td></tr>
+<tr><td>学习者重口音导致 ASR 错、答非所问</td><td><span class="tag t-bad">高</span></td><td>选多语种强鲁棒 ASR；UX 兜底"没听清，能重复吗"</td></tr>
+<tr><td>成本失控（长会话）</td><td><span class="tag t-warn">中</span></td><td>沿用 <code>usage.py</code> ledger；设每分钟单价护栏与封顶</td></tr>
+<tr><td>与现有 native video 约束冲突</td><td><span class="tag t-ok">低</span></td><td>语音走纯文本 <code>COURSE_COMPANION</code> 路由，不触发 <code>ai_video_engine</code></td></tr>
+</table>
+
+<footer>
+调研来源：2026 年语音 Agent 架构公开资料（OpenAI Realtime / Gemini Live / Moshi / LiveKit / Deepgram / Cartesia / Pipecat / Vapi 等）+ lemma-ai 代码现状探查。
+本文件为规划文档，不含任何代码改动。耦合目标：现有文本管线零侵入，语音为平行隔离模块。
+</footer>
+
+</div>
+</body>
+</html>
