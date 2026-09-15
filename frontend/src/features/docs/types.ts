@@ -30,3 +30,12 @@ export interface DocBlock {
   content: Record<string, unknown>
   meta?: Record<string, unknown> | null
 }
+
+/** Block write payload (POST/PUT to API). id is null for new blocks. */
+export interface BlockIn {
+  id: string | null
+  type: string
+  position: number
+  content: Record<string, unknown>
+  meta?: Record<string, unknown> | null
+}

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '@/lib/apiClient'
 import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
-import type { DocPage, PageKind } from './types'
+import type { BlockIn, DocBlock, DocPage, PageKind } from './types'
 
 export const pagesQueryKey = (projectId: string) =>
   ['doc', 'pages', projectId] as const
@@ -101,6 +101,74 @@ export function useDeletePageMutation(projectId: string) {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: pagesQueryKey(projectId) })
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Blocks (editor read/write)
+// ---------------------------------------------------------------------------
+
+export const pageBlocksQueryKey = (pageId: string) =>
+  ['doc', 'blocks', pageId] as const
+
+interface PageBlocksResponse {
+  id: string
+  projectId: string
+  title: string
+  kind: string
+  updatedAt: string
+  blocks: DocBlock[]
+}
+
+async function getPageBlocks(pageId: string): Promise<PageBlocksResponse> {
+  const { data } = await signOutOn401(
+    apiClient.get<PageBlocksResponse>(`/api/v1/pages/${pageId}/blocks`)
+  )
+  return data
+}
+
+/** Fetch ordered blocks for a page (the editor's content source). */
+export function usePageBlocksQuery(pageId: string | undefined) {
+  return useQuery({
+    queryKey: pageBlocksQueryKey(pageId ?? 'none'),
+    queryFn: () => getPageBlocks(pageId as string),
+    enabled: Boolean(pageId),
+    retry: retryUnlessClientError,
+  })
+}
+
+interface SaveBlocksVariables {
+  pageId: string
+  blocks: BlockIn[]
+  updatedAt: string
+}
+
+async function savePageBlocks(
+  pageId: string,
+  blocks: BlockIn[],
+  updatedAt: string
+): Promise<PageBlocksResponse> {
+  const { data } = await signOutOn401(
+    apiClient.put<PageBlocksResponse>(`/api/v1/pages/${pageId}/blocks`, {
+      blocks,
+      updatedAt,
+    })
+  )
+  return data
+}
+
+/** Save blocks atomically (PUT). Throws on 409 stale version. */
+export function useSavePageBlocksMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ pageId, blocks, updatedAt }: SaveBlocksVariables) =>
+      savePageBlocks(pageId, blocks, updatedAt),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({
+        queryKey: pageBlocksQueryKey(data.id),
+      })
     },
   })
 }

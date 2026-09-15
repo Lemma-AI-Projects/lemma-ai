@@ -1,22 +1,54 @@
 import { ArrowLeft } from 'lucide-react'
+import { useCallback, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import {
-  usePageQuery,
-} from '@/features/docs/docApi'
+import { usePageQuery, usePageBlocksQuery, useSavePageBlocksMutation } from '@/features/docs/docApi'
+import { DocEditor } from '@/features/docs/DocEditor'
 import { useAppTranslation } from '@/i18n'
+import type { BlockIn } from './types'
 
-/**
- * 文档编辑器占位页（P0.4 骨架）。
- *
- * P0.3 只落地「从 shelter 抽屉可导航到这里」的骨头：读板块标题、给一个返回
- * 工作台的入口。块级编辑（TipTap + 保存流）在 P0.4 实装，门控 doc_editor_enabled。
- */
 export function DocEditorView() {
   const { id, pageId } = useParams<{ id: string; pageId: string }>()
   const navigate = useNavigate()
   const { t } = useAppTranslation()
+
   const pageQuery = usePageQuery(pageId)
+  const blocksQuery = usePageBlocksQuery(pageId)
+  const saveBlocks = useSavePageBlocksMutation()
+
+  const [conflict, setConflict] = useState(false)
+
+  const handleSave = useCallback(
+    (blocks: BlockIn[]) => {
+      if (!pageQuery.data || !pageId) return
+      setConflict(false)
+      saveBlocks.mutate(
+        {
+          pageId,
+          blocks,
+          updatedAt: pageQuery.data.updatedAt,
+        },
+        {
+          onError: (error: unknown) => {
+            const axiosError = error as { response?: { status?: number } }
+            if (axiosError?.response?.status === 409) {
+              setConflict(true)
+            }
+          },
+          onSuccess: (data) => {
+            pageQuery.data.updatedAt = data.updatedAt
+          },
+        }
+      )
+    },
+    [pageId, pageQuery.data, saveBlocks]
+  )
+
+  const handleReload = useCallback(() => {
+    setConflict(false)
+    pageQuery.refetch()
+    blocksQuery.refetch()
+  }, [pageQuery, blocksQuery])
 
   return (
     <div className="h-screen w-screen bg-zinc-50 text-zinc-950">
@@ -34,16 +66,44 @@ export function DocEditorView() {
           <h1 className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">
             {pageQuery.data?.title ?? '…'}
           </h1>
-          <span className="text-xs text-zinc-400">
-            {t('workspace.shelterEditorPlaceholder')}
-          </span>
         </div>
 
-        <div className="flex min-h-0 flex-1 items-center justify-center">
-          <p className="text-sm text-zinc-400">
-            {t('workspace.shelterEditorPlaceholder')}
-          </p>
-        </div>
+        {conflict && (
+          <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 text-sm text-amber-700">
+            <span>This page was modified by another session.</span>
+            <button
+              type="button"
+              onClick={handleReload}
+              className="font-medium underline hover:text-amber-900"
+            >
+              Reload
+            </button>
+          </div>
+        )}
+
+        {blocksQuery.isPending ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="space-y-3">
+              <div className="h-4 w-48 animate-pulse rounded bg-zinc-200" />
+              <div className="h-4 w-36 animate-pulse rounded bg-zinc-200" />
+              <div className="h-4 w-44 animate-pulse rounded bg-zinc-200" />
+            </div>
+          </div>
+        ) : blocksQuery.isError ? (
+          <div className="flex flex-1 items-center justify-center text-sm text-zinc-400">
+            <div className="text-center">
+              <p>Document API unavailable.</p>
+              <p className="mt-1 text-xs text-zinc-300">
+                Enable DOC_FULL_API_ENABLED in backend/.env
+              </p>
+            </div>
+          </div>
+        ) : (
+          <DocEditor
+            initialBlocks={blocksQuery.data?.blocks ?? []}
+            onSave={handleSave}
+          />
+        )}
       </div>
     </div>
   )
