@@ -10,7 +10,7 @@ back here to land each step.
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,6 +28,7 @@ from models.course import Course, CourseChapter, CourseUnit
 from models.free_course import CourseLessonObject, CourseLessonObservation
 from schemas.free_course import (
     AnswerFeedbackOut,
+    CourseTreeEditIn,
     FreeCourseDetailOut,
     FreeLessonContentOut,
     FreeLessonOut,
@@ -178,6 +179,63 @@ async def persist_map(db: AsyncSession, course: Course, map: dict) -> None:
     await db.commit()
 
 
+class LessonLookupMissing(Exception):
+    """按标题找不到——调用方必须显式处理，不许静默跳过。"""
+
+    def __init__(self, *, unit_title: str | None, lesson_title: str) -> None:
+        self.unit_title = unit_title
+        self.lesson_title = lesson_title
+        super().__init__(f"no lesson named {lesson_title!r} (unit={unit_title!r})")
+
+
+class LessonLookupAmbiguous(Exception):
+    """同一课程/单元下有多节课同名 —— 按标题定位不再唯一，**不能猜**。
+
+    这是「编辑允许改名」之后才可能出现的情形，也是这套标题定位真正的风险：
+    猜错就是往别人的课上写蓝图，而且不报错。
+    """
+
+    def __init__(
+        self, *, unit_title: str | None, lesson_title: str, count: int
+    ) -> None:
+        self.unit_title = unit_title
+        self.lesson_title = lesson_title
+        self.count = count
+        super().__init__(
+            f"ambiguous lesson {lesson_title!r} (unit={unit_title!r}): {count} matches"
+        )
+
+
+def resolve_chapter_by_titles(
+    course: Course, *, unit_title: str | None, lesson_title: str
+) -> CourseChapter:
+    """在**已加载**的树上按标题找唯一一节课。
+
+    AI 层（`LearningMap` / `PathStep`）本来就只带标题 —— 那是要喂给模型的形状，
+    不该塞 id 进去。所以标题定位会长期存在，那就必须让它**宁可报错也不猜**：
+
+    - 找不到 → `LessonLookupMissing`
+    - 找到多节同名 → `LessonLookupAmbiguous`
+
+    改名前这几乎不可能触发；改名一上线就变成真实路径。原实现用 `next(..., None)`
+    静默取第一条，等于"悄悄写错课"。
+    """
+    candidates = [
+        chapter
+        for unit in course.units
+        if unit_title is None or unit.title == unit_title
+        for chapter in unit.chapters
+        if chapter.title == lesson_title
+    ]
+    if not candidates:
+        raise LessonLookupMissing(unit_title=unit_title, lesson_title=lesson_title)
+    if len(candidates) > 1:
+        raise LessonLookupAmbiguous(
+            unit_title=unit_title, lesson_title=lesson_title, count=len(candidates)
+        )
+    return candidates[0]
+
+
 async def find_lesson_chapter(
     db: AsyncSession,
     *,
@@ -185,16 +243,37 @@ async def find_lesson_chapter(
     unit_title: str,
     lesson_title: str,
 ) -> CourseChapter | None:
-    result = await db.execute(
-        select(CourseChapter)
-        .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
-        .where(
-            CourseUnit.course_id == course_id,
-            CourseUnit.title == unit_title,
-            CourseChapter.title == lesson_title,
+    """按 (单元标题, 课节标题) 定位一节课（查库版）。
+
+    - 找不到 → None —— **调用方必须显式处理**（原调用点 `if chapter is not None`
+      直接跳过，是"蓝图步报成功、其实什么都没存"的静默失败）
+    - 多节同名 → 抛 `LessonLookupAmbiguous`。原实现 `scalar_one_or_none()` 遇多行
+      会抛 SQLAlchemy 的 `MultipleResultsFound`，表现成 500；这里换成有语义的领域错误。
+    """
+    rows = (
+        (
+            await db.execute(
+                select(CourseChapter)
+                .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
+                .where(
+                    CourseUnit.course_id == course_id,
+                    CourseUnit.title == unit_title,
+                    CourseChapter.title == lesson_title,
+                )
+                # 只需要知道「是不是唯一」，多出来的不用取
+                .limit(2)
+            )
         )
+        .scalars()
+        .all()
     )
-    return result.scalar_one_or_none()
+    if not rows:
+        return None
+    if len(rows) > 1:
+        raise LessonLookupAmbiguous(
+            unit_title=unit_title, lesson_title=lesson_title, count=len(rows)
+        )
+    return rows[0]
 
 
 async def persist_blueprint(
@@ -586,3 +665,171 @@ def unit_objective(unit: CourseUnit) -> str | None:
         if chapter.objective:
             return chapter.objective
     return None
+
+# --- Blueprint edit (全量编辑) -------------------------------------------
+
+
+class TreeEditInvalid(Exception):
+    """载荷本身不合法：引用了不属于本课的 id，或把树删空了。"""
+
+
+class TreeEditConflict(Exception):
+    """编辑会丢弃已有产物（课时正文 / 学习者作答）—— 拒绝，绝不静默删用户数据。"""
+
+    def __init__(self, *, lesson_titles: list[str]) -> None:
+        self.lesson_titles = lesson_titles
+        super().__init__(
+            "refusing to delete lessons that already have content or answers: "
+            f"{lesson_titles}"
+        )
+
+
+async def _lessons_with_learner_data(
+    db: AsyncSession, chapter_ids: list[uuid.UUID]
+) -> list[str]:
+    """这些章节里，哪些已经有生成内容（因而也有作答）。
+
+    只需要查 `course_lesson_objects`：作答挂在 object 上，且有
+    `ON DELETE CASCADE` —— 所以「有 object」必然涵盖「有 observation」。
+    """
+    if not chapter_ids:
+        return []
+    result = await db.execute(
+        select(CourseChapter.title)
+        .where(
+            CourseChapter.id.in_(chapter_ids),
+            exists().where(CourseLessonObject.chapter_id == CourseChapter.id),
+        )
+        .order_by(CourseChapter.order_index)
+    )
+    return list(result.scalars())
+
+
+async def apply_tree_edit(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    course_id: uuid.UUID,
+    payload: CourseTreeEditIn,
+) -> FreeCourseDetailOut | None:
+    """把蓝图编辑写回 unit/chapter 树，**按 id 增量 diff**。
+
+    为什么不复用 `persist_map`：那个是全删全建（`delete(CourseUnit)` + flush），
+    而级联链是
+
+        course_units → course_chapters → course_lesson_objects → course_lesson_observations
+
+    两级 `ON DELETE CASCADE`。走它等于**删掉已生成的课时正文和学习者的全部作答**，
+    章节 id 也会重生成（已发出的课时链接全 404）。所以这里只动真正变了的行。
+
+    返回值 None = 不是你的课或不存在（照旧 404）。载荷问题抛 `TreeEditInvalid`，
+    会丢数据抛 `TreeEditConflict` —— 调用方翻译成 400 / 409，不一概 500。
+    """
+    course = await get_owned_course_tree(
+        db, user_id=user_id, course_id=course_id
+    )
+    if course is None:
+        return None
+
+    existing_units = {unit.id: unit for unit in course.units}
+    existing_chapters = {
+        chapter.id: chapter
+        for unit in course.units
+        for chapter in unit.chapters
+    }
+
+    # 1. 认不出的 id 直接拒 —— 不做"忽略陌生 id"这种静默行为。
+    #    静默忽略的后果是用户以为改了、其实没改，而且下一轮 diff 会把它当新增。
+    for unit_in in payload.units:
+        if unit_in.id is not None and unit_in.id not in existing_units:
+            raise TreeEditInvalid(f"unit {unit_in.id} is not part of this course")
+        for lesson_in in unit_in.lessons:
+            if lesson_in.id is not None and lesson_in.id not in existing_chapters:
+                raise TreeEditInvalid(
+                    f"lesson {lesson_in.id} is not part of this course"
+                )
+
+    # 2. 树不能被删空。空树走到 phase 2 会以
+    #    "path has no lesson to start from" 收场 —— 与其让用户卡在暂停点，
+    #    不如在写回这一步就说清。
+    if not any(unit.lessons for unit in payload.units):
+        raise TreeEditInvalid("a course must keep at least one lesson")
+
+    keep_chapter_ids = {
+        lesson.id
+        for unit_in in payload.units
+        for lesson in unit_in.lessons
+        if lesson.id is not None
+    }
+    doomed = [
+        chapter.id
+        for chapter_id, chapter in existing_chapters.items()
+        if chapter_id not in keep_chapter_ids
+    ]
+    if doomed:
+        # 3. 删之前先看会不会丢东西。暂停点上这里是空的（内容还没生成），
+        #    所以主路径天然通过；一旦课程已经生成，就会挡住 —— 这正是要的。
+        blocking = await _lessons_with_learner_data(db, doomed)
+        if blocking:
+            raise TreeEditConflict(lesson_titles=blocking)
+
+    # 4. 就地更新 + 新增（先做，让「课节在单元间移动」的 unit_id 落库）
+    #
+    # `kept_unit_ids` 收的是**落库后真实存在的 id**，不是载荷里带的 id ——
+    # 新增单元的 id 是这里 flush 出来的，载荷里根本没有它。
+    # 第一版就是拿载荷里的 id 去算「要删哪些」，结果**把自己刚建的单元删了**，
+    # 而且因为单元被 CASCADE，它下面的新课节也一起没了（smoke 抓到的）。
+    kept_unit_ids: set[uuid.UUID] = set()
+    for unit_index, unit_in in enumerate(payload.units):
+        if unit_in.id is None:
+            unit = CourseUnit(
+                course_id=course.id,
+                order_index=unit_index,
+                title=unit_in.title,
+                status="not_started",
+            )
+            db.add(unit)
+            await db.flush()
+        else:
+            unit = existing_units[unit_in.id]
+            unit.title = unit_in.title
+            unit.order_index = unit_index
+        kept_unit_ids.add(unit.id)
+
+        for lesson_index, lesson_in in enumerate(unit_in.lessons):
+            if lesson_in.id is None:
+                db.add(
+                    CourseChapter(
+                        unit_id=unit.id,
+                        order_index=lesson_index,
+                        title=lesson_in.title,
+                        objective=lesson_in.objective,
+                        status="not_started",
+                    )
+                )
+            else:
+                chapter = existing_chapters[lesson_in.id]
+                chapter.title = lesson_in.title
+                chapter.objective = lesson_in.objective
+                chapter.order_index = lesson_index
+                # 课节可以换单元（拖到别的单元下面）。
+                chapter.unit_id = unit.id
+    await db.flush()
+
+    # 5. 删除放在最后，且**先课节后单元**：先删单元的话会被 CASCADE 带走
+    #    刚被移到别的单元下的课节。
+    if doomed:
+        await db.execute(delete(CourseChapter).where(CourseChapter.id.in_(doomed)))
+    if kept_unit_ids:
+        await db.execute(
+            delete(CourseUnit).where(
+                CourseUnit.course_id == course.id,
+                CourseUnit.id.notin_(kept_unit_ids),
+            )
+        )
+    else:
+        await db.execute(delete(CourseUnit).where(CourseUnit.course_id == course.id))
+
+    course.updated_at = func.now()
+    await db.commit()
+    return await get_detail(db, user_id=user_id, course_id=course_id)

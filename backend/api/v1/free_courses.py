@@ -18,6 +18,7 @@ from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from schemas.free_course import (
     AnswerFeedbackOut,
+    CourseTreeEditIn,
     CourseTuningIn,
     FreeCourseCreateIn,
     FreeCourseCreateOut,
@@ -122,6 +123,44 @@ async def set_free_course_tuning(
     result = await free_course_service.set_course_tuning(
         db, course_id=course_id, user_id=current_user.id, tuning=tuning
     )
+    if result is None:
+        raise _NOT_FOUND
+    return result
+
+
+@router.patch("/{course_id}/tree", response_model=FreeCourseDetailOut)
+async def edit_free_course_tree(
+    course_id: uuid.UUID,
+    payload: CourseTreeEditIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> FreeCourseDetailOut:
+    """蓝图全量编辑：把期望的单元/课节树**按 id 增量写回**。
+
+    编辑的主场景是**暂停点**（phase 1 跑完、phase 2 还没跑）——
+    那一刻内容还没生成，所以改结构天然零破坏性，而且 phase 2 是从库里重读树的，
+    改完直接生效，不需要另通知谁。
+
+    已生成的课程也能调，但只要这次改动会丢掉课时正文或学习者作答，
+    一律 409 拒绝：接口自己守住"不静默删用户数据"这条线，
+    不指望调用方记得传对参数。
+    """
+    try:
+        result = await free_course_service.apply_tree_edit(
+            db, user_id=current_user.id, course_id=course_id, payload=payload
+        )
+    except free_course_service.TreeEditInvalid as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+    except free_course_service.TreeEditConflict as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "lesson_has_content",
+                "lessons": exc.lesson_titles,
+            },
+        ) from exc
     if result is None:
         raise _NOT_FOUND
     return result

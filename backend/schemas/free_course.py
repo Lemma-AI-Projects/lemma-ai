@@ -194,3 +194,36 @@ class CourseTuningIn(BaseModel):
     focus: Focus | None = None
     pace: Pace | None = None
     skip: bool = Field(default=False, strict=True)
+
+
+# --- Blueprint edit (全量编辑) -------------------------------------------
+#
+# 载荷是**声明式的完整期望树**，不是一串 op：
+# 编辑本来就要以整棵树为单位才安全（增删改排一次算清），
+# 而且 op 序列会让"用户改了 A 又改回来"变成两条要按序执行的操作，更难对齐。
+#
+# `id` 为 None = 新增（后端生成 id）。**已存在节点的 id 必须原样回传** ——
+# 后端按 id 做增量 diff，认不出的 id 一律拒绝（不做"忽略陌生 id"这种静默行为）。
+# 语义是「全量覆盖」：没回传的节点 = 要删；`objective` 传 None = 清空。
+
+
+class CourseLessonEditIn(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    id: uuid.UUID | None = None
+    title: str = Field(min_length=1, max_length=200)
+    objective: str | None = None
+
+
+class CourseUnitEditIn(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    id: uuid.UUID | None = None
+    title: str = Field(min_length=1, max_length=200)
+    lessons: list[CourseLessonEditIn] = Field(default_factory=list)
+
+
+class CourseTreeEditIn(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    units: list[CourseUnitEditIn] = Field(default_factory=list)

@@ -380,17 +380,20 @@ async def _stream_build_phase2(
     if path.next_lesson_title is None:
         yield _error("free_course_error", "path has no lesson to start from")
         return
-    chapter = next(
-        (
-            item
-            for unit in course.units
-            for item in unit.chapters
-            if item.title == path.next_lesson_title
-        ),
-        None,
-    )
-    if chapter is None:
+    # 按标题定位起点课。**宁可报错也不猜** —— 原名 `next(..., None)` 在同名课节时
+    # 会静默取第一条，等于"把内容写进别人的课"。编辑功能允许改名后这是真实路径。
+    try:
+        chapter = free_course_service.resolve_chapter_by_titles(
+            course, unit_title=None, lesson_title=path.next_lesson_title
+        )
+    except free_course_service.LessonLookupMissing:
         yield _error("free_course_error", "path.next_lesson_title is not a map lesson")
+        return
+    except free_course_service.LessonLookupAmbiguous:
+        yield _error(
+            "free_course_error",
+            "课程里有多个同名课节，无法确定从哪一节开始，请先把重名的改掉",
+        )
         return
     step = free_course_service.step_for_chapter(course, chapter)
 
@@ -500,9 +503,16 @@ async def _persist_step(
         chapter = await free_course_service.find_lesson_chapter(
             db, course_id=course_id, unit_title=unit_title, lesson_title=lesson_title
         )
-        if chapter is not None:
-            await free_course_service.persist_blueprint(db, chapter, step.payload)
-            target_chapter_id = chapter.id
+        # 找不到就抛，**不要** `if chapter is not None` 静默跳过。
+        # 跳过会让 blueprint 步对外报「完成」而库里什么都没写 —— 这是最难查的一类失败：
+        # 课程看起来建好了，只是每节课的蓝图永远空着。外层 except 会把它变成
+        # `persist_failed` 并把课程标成 failed，这才是应该发生的事。
+        if chapter is None:
+            raise free_course_service.LessonLookupMissing(
+                unit_title=unit_title, lesson_title=lesson_title
+            )
+        await free_course_service.persist_blueprint(db, chapter, step.payload)
+        target_chapter_id = chapter.id
     elif step.step == "content" and step.status == "finished":
         if target_chapter_id is not None and pipeline.lesson is not None:
             chapter = await db.get(CourseChapter, target_chapter_id)
