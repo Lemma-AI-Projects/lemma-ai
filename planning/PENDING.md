@@ -108,10 +108,12 @@
 
 ---
 
-## E. L4 实时双向语音层（已调研 · 等拍板 · 未开工）
+## E. L4 实时双向语音层（P0 Spike 已落地 · 2026-09-15）
 
-> 计划文档：`planning/l4-voice-agent-plan.html`（2026-09-13 起草，含架构 SVG / 复用 vs 隔离矩阵 / P0–P5 里程碑 / 风险表）。代码零改动，纯规划。
+> 计划文档：`planning/l4-voice-agent-plan.html`（2026-09-13 起草，含架构 SVG / 复用 vs 隔离矩阵 / P0–P5 里程碑 / 风险表）。
+> 决策收口（re-discuss 2026-09-15）：延迟不急、先跑起来、耦合最低 → **P0 = PTT 半双工 + 单厂商（火山）+ 零新传输层/零 VAD/零区域抽象**；全双工/流式预缓冲/区域路由推 v2。
 > 耦合目标：现有文本管线零侵入，语音为平行隔离模块 `backend/voice/` + 前端 `features/voice/`；`VOICE_ENABLED` 默认 False。
+> **已落地 P0 Spike（main-v2 工作树，未提交）**：`backend/voice/`（providers/volc STT+TTS+HMAC 签名、service 编排 STT→ai_client.chat(COURSE_COMPANION)→TTS、ffmpeg 转码 webm→wav）、`api/v1/voice.py`（POST /voice/turn，原始 body，绕过 python-multipart）、`frontend/src/features/voice/VoiceChat.tsx`（按住说话）+ `/voice` 路由 + 侧栏入口；前后端均按 `*_VOICE_ENABLED` 闸门。待真实火山 key 做 live 校验（签名 scope/cluster/音色名可能微调）。
 
 ### E-已拍板（架构定调）
 
@@ -121,14 +123,20 @@
 | E2 | **区域感知语音 I/O + 中国可控大脑** | 同上 §3 修正框 | 2026-09-13 21:00 | 用户面向全球 → 推翻旧"默认国内栈"。大脑永远跑中国主体网关（AiHubMix→Gemini / OpenRouter / DeepSeek）；语音 I/O 按用户区域路由：中国→火山/阿里，海外→Deepgram/Cartesia；VAD=本地 Silero |
 | E3 | **LLM 段零新 API** | 同上 §3 | 2026-09-13 | 不引新依赖；不用 Deepgram unified Voice Agent API（那是端到端路线，会替换咱们的大脑） |
 | E4 | **红线满足判定** | 同上 §3 修正框 | 2026-09-13 21:00 | 掌握度/档案/课程留中国主体 PG/Supabase 永不出境；语音音频为临时 I/O，海外 API 属"阳光出海"（合法商用）非"泡澡式出海"（设壳规避监管） |
+| E8 | **首跑版本 = 按键说话(PTT)半双工 + 单厂商，不堆延迟工程** | 本回合 re-discuss（2026-09-15） | 2026-09-15 18:5x | 用户拍板：延迟不急、**先跑起来、耦合最低**。→ P0 Spike 不做 WebSocket/WebRTC、不做 Silero VAD、不建区域多厂商抽象（YAGNI）；浏览器 MediaRecorder 录音 → 单厂商 STT → 复用现有 `stream_chat` → 单厂商 TTS → `<audio>` 播放，全程走现有 HTTP/SSE。全双工+流式预缓冲+区域路由留 v2 |
 
-### E-待拍板（2 项，决定后才能进 P0 Spike）
+### E-待拍板（仅剩 1 项，P0 默认 ephemeral 已可开工）
 
 | # | 待定 | 影响 |
 |---|---|---|
-| E5 | **是否持久化语音录音**（ephemeral 实时不落盘 vs 存储供跟读回放/发音复盘） | 存储 → 触发数据出境评估 + 技术进出口申报 + 与海外厂签 DPA；ephemeral → 合规负担最低。**需你定** |
-| E6 | **首版目标语言范围** | 决定 STT/TTS 厂商与音色库第一选择，也决定 P0 spike 用哪家 key 做最小往返 |
-| E7 | **`VOICE_REGION` 厂商映射细则** | 中国=火山/阿里、海外=Deepgram/Cartesia，由配置翻转（适配器已隔离，切换=配置）。开发期本机 OpenRouter 曾 403，美国 API 或不可达 → P0 先国内栈验证管线 |
+| E5 | **是否持久化语音录音**（ephemeral 实时不落盘 vs 存储供跟读回放/发音复盘） | 存储 → 触发数据出境评估 + 技术进出口申报 + 与海外厂签 DPA；ephemeral → 合规负担最低。**P0 Spike 默认 ephemeral（不落盘），本项只影响 v2 要不要回放** |
+
+### E-已拍板（补充，2026-09-15 re-discuss 收口）
+
+| # | 事项 | 拍板 |
+|---|---|---|
+| E6 | **首跑厂商 = 火山引擎（字节）**；v1 交互 = 按键说话(PTT)半双工 | 源码语音侧为零（无 STT/TTS/voice 模块/无 env key），从零加第一家。火山一个厂商同时给 STT+TTS、一把 key 打通，中文最优、国内合规、REST 简单，最贴合 E8 单厂商先行+耦合最低。PTT 半双工 → 零 WebSocket/WebRTC、零 Silero VAD，最快跑起来 |
+| E7 | **`VOICE_REGION` 厂商映射细则** | 推迟到 v2 全双工阶段（E8 已移出 P0 关键路径） |
 
 > 旁证（代码现状）：仓库源码层零 WebSocket/音频设施（全 SSE 单向）；伴学/概述"大脑"当前**无课程上下文/掌握度注入**（`stream_chat` 走静态提示+章节视频）——P3 的 `build_agent_context` 共享函数可顺带补此债，文本伴学也能白捡。
 

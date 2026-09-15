@@ -9,6 +9,7 @@ import {
   LibraryBig,
   ListTree,
   Menu,
+  Mic,
   Puzzle,
   SquarePen,
 } from 'lucide-react'
@@ -126,6 +127,7 @@ export function AppLayout() {
           to="/learn-spaces"
         />
         <SidebarItem icon={Puzzle} label={t('nav.plugins')} to="/plugins" />
+        <SidebarItem icon={Mic} label={t('nav.voice')} to="/voice" />
         <div
           className={cn(
             'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',

@@ -9,6 +9,7 @@ import { CoursePage } from '@/pages/CoursePage'
 import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
 import { CreditsPage } from '@/pages/CreditsPage'
 import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
+import { FreeCourseTuningPreviewPage } from '@/pages/FreeCourseTuningPreviewPage'
 import { DocEditorView } from '@/features/docs/DocEditorView'
 import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBlueprintView'
 import { FreeCourseDetailView } from '@/features/free-course/FreeCourseDetailView'
@@ -18,6 +19,7 @@ import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
+import { VoicePage } from '@/pages/VoicePage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
 import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -56,6 +58,11 @@ const routes: RouteObject[] = [
     element: <CreditsPreviewPage />,
   },
   {
+    // 布局评审入口：暂停点卡片（蓝图 + 调参问卷），mock 数据。
+    path: '/preview/free-course-tuning',
+    element: <FreeCourseTuningPreviewPage />,
+  },
+  {
     element: <RequireAuth />,
     children: [
       {
@@ -91,6 +98,10 @@ const routes: RouteObject[] = [
           {
             path: 'knowledge',
             element: <KnowledgeBasePage />,
+          },
+          {
+            path: 'voice',
+            element: <VoicePage />,
           },
           {
             // 学习空间总览（UI 改名层：数据层仍为 projects）。

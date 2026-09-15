@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from core.config import settings
+
 from api.v1 import (
     calendar,
     chat,
@@ -16,6 +18,7 @@ from api.v1 import (
     payments,
     projects,
     users,
+    voice,
     webhooks,
 )
 
@@ -36,3 +39,8 @@ api_router.include_router(credits.router)
 api_router.include_router(payments.router)
 api_router.include_router(webhooks.router)
 api_router.include_router(calendar.router)
+
+# Voice (L4 spoken agent) — only mounted when explicitly enabled, so it adds
+# zero routes / attack surface when off.
+if settings.voice_enabled:
+    api_router.include_router(voice.router)

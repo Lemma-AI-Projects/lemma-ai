@@ -106,6 +106,16 @@ class Settings(BaseSettings):
 
     api_v1_prefix: str = "/api/v1"
     cors_origins: str = "http://localhost:5173"
+    # 回环地址一律放行（任意端口）。
+    #
+    # 为什么不能只靠 cors_origins 的精确匹配：本地打开前端时 host 可能是
+    # `localhost` 也可能是 `127.0.0.1`（两个不同的 Origin），端口也可能被 vite
+    # 自己挑走（5173 被占就换一个）。任何一条对不上，**整站 API 会在预检阶段被
+    # 挡掉** —— 而前端只会显示「XX 失败，请重试」，看不出是 CORS，极难定位。
+    #
+    # 安全面：只放行回环地址，且本服务用 Bearer token（不用 cookie 做认证），
+    # 不存在「恶意站点借用用户 cookie」这类 CSRF 场景。
+    cors_origin_regex: str = r"^http://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$"
 
     supabase_url: str
     supabase_jwt_audience: str = "authenticated"
@@ -248,6 +258,22 @@ class Settings(BaseSettings):
     # the session up). Defaults to the backend base + /home; override with the
     # real frontend origin (e.g. http://localhost:5173/home).
     lti_landing_url: str = ""
+
+    # --- Voice (L4 real-time spoken agent, P0 spike) ---
+    # Everything defaults to empty/False so the app boots without any voice key.
+    # The whole `backend/voice/` surface is only mounted when `voice_enabled`
+    # is True (see api/v1/router.py) — zero new attack surface when off.
+    # First provider is Volcengine (字节火山): one vendor covers both STT + TTS.
+    voice_enabled: bool = False
+    volc_app_id: str = ""
+    volc_access_key: str = ""
+    volc_secret_key: str = ""
+    # Volcengine openspeech resource token (separate from the access/secret
+    # keys — it authenticates the *app resource* and lives in the request body).
+    volc_app_token: str = ""
+    # Volcengine TTS voice type (音色). "zh_female_qingxin" is a clean Mandarin
+    # female voice; swap for a male/child voice later via config.
+    volc_tts_voice_type: str = "zh_female_qingxin"
 
     @property
     def lti_redirect_target(self) -> str:
