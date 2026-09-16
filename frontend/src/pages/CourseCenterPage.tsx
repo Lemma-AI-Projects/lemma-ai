@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { CourseCenterCourseCard } from '@/features/course/CourseCenterCourseCard'
 import { CourseCenterTabs } from '@/features/course/CourseCenterTabs'
 import { CourseWeeklyProgressCard } from '@/features/course/CourseWeeklyProgressCard'
 
@@ -23,14 +24,15 @@ export function CourseCenterPage() {
           style={COURSE_CENTER_LAYOUT_STYLE}
           className="flex w-full flex-col pt-[var(--course-center-top-space)] pr-[var(--course-center-right-space)] pb-[var(--course-center-bottom-space)] pl-[var(--course-center-left-space)]"
         >
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-start">
-            <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-8 xl:flex-row xl:items-stretch">
+            <div className="flex min-w-0 flex-1 flex-col">
               <h1 className="text-[28px] leading-[34px] font-medium text-foreground">
                 课程中心
               </h1>
 
-              <div className="mt-[var(--course-center-title-tabs-gap)]">
+              <div className="mt-[var(--course-center-title-tabs-gap)] flex w-full max-w-[644px] flex-1 flex-col">
                 <CourseCenterTabs />
+                <CourseCenterCourseCard className="mt-2 min-h-[160px] flex-1" />
               </div>
             </div>
 
