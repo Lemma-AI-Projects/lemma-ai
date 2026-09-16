@@ -201,7 +201,7 @@
       "expand": "Show all",
       "collapse": "Collapse",
       "empty": "Structure not generated yet",
-      "edit": "Edit",
+      "edit": "I want to change the blueprint",
       "editingTitle": "Edit course structure",
       "unitTitlePlaceholder": "Unit title",
       "unitTitleLabel": "Title of unit {{index}}",
@@ -227,8 +227,9 @@
     "tuning": {
         "title": "Tune your course",
         "subtitle": "This is the structure we just drafted. The choices below shape how the content is written.",
+        "currentChips": "Will be generated with:",
         "answerActive": "Generating…",
-        "confirm": "Start generating",
+        "confirm": "Continue with this",
         "skip": "Use my recommended settings",
         "questionTitle": {
             "course_volume": "Course size",

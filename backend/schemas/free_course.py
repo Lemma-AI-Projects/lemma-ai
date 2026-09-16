@@ -90,6 +90,9 @@ class FreeCourseDetailOut(BaseModel):
     audience: str | None = None
     summary: str | None = None
     intent: dict | None = None
+    # 问卷答案（course_volume/depth/focus/pace + skip）。没答过是 None ——
+    # 前端据此决定要不要显示「按什么生成」的 chips，而不是渲染一排空标签。
+    tuning: dict | None = None
     units: list[FreeUnitOut] = Field(default_factory=list)
 
 

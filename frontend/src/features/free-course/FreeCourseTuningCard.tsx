@@ -9,6 +9,7 @@ import { useAppTranslation } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { FreeCourseBlueprintEditor } from './FreeCourseBlueprintEditor'
 import { FreeCourseBlueprintTree } from './FreeCourseBlueprintTree'
+import { FreeCourseDepthChips } from './FreeCourseDepthChips'
 import type {
   CourseTuningQuestion,
   CourseTuningStart,
@@ -146,7 +147,18 @@ export function FreeCourseTuningCard({
         </div>
       )}
 
-      <div className="-mx-1 -mb-1 mt-6 flex items-center justify-between gap-3">
+      {/*
+        把当前选择收成一行芯片放在**按钮上方**：上面的单选是"输入"，这里是"小计"。
+        它跟着单选实时变，所以用户在点「就这样继续」之前能确认一眼 ——
+        「我到底让它按什么设置生成」。
+      */}
+      <FreeCourseDepthChips
+        dims={answers}
+        label={t('freeCourse.tuning.currentChips')}
+        className="mt-6"
+      />
+
+      <div className="-mx-1 -mb-1 mt-4 flex items-center justify-between gap-3">
         <Button
           type="button"
           disabled={submitting}

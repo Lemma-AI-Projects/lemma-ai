@@ -8,6 +8,7 @@ import { useAppTranslation } from '@/i18n'
 import {
   useFreeCourseDetail,
 } from './freeCourseApi'
+import { FreeCourseDepthChips } from './FreeCourseDepthChips'
 import {
   FreeCourseBlueprintCanvas,
   type FreeCourseBlueprintNode,
@@ -82,6 +83,10 @@ export function FreeCourseBlueprintView() {
 
   const course = detailQuery.data
   const firstLessonHref = firstLesson(course.id, course.units)
+  const lessonTotal = course.units.reduce(
+    (sum, unit) => sum + unit.lessons.length,
+    0
+  )
 
   return (
     <div className="flex h-full flex-col">
@@ -96,12 +101,38 @@ export function FreeCourseBlueprintView() {
           <ArrowLeft className="size-4" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[17px] font-semibold leading-6 text-zinc-900 dark:text-zinc-100">
-            {course.title}
-          </h1>
-          <p className="truncate text-[12px] leading-4 text-zinc-400 dark:text-zinc-500">
-            {t('freeCourse.blueprintTitle')}
-          </p>
+          <div className="flex items-center gap-2">
+            <h1 className="truncate text-[17px] font-semibold leading-6 text-zinc-900 dark:text-zinc-100">
+              {course.title}
+            </h1>
+            {/*
+              规模徽章：参考稿里标题旁边就挂着"几节课"。不是装饰 ——
+              用户在这一屏要判断的正是"这个量对不对"，先把数字给他。
+            */}
+            {lessonTotal > 0 && (
+              <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-[1px] text-[11.5px] leading-5 tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                {t('freeCourse.structure.summary', {
+                  units: course.units.length,
+                  lessons: lessonTotal,
+                })}
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
+            <p className="truncate text-[12px] leading-4 text-zinc-400 dark:text-zinc-500">
+              {t('freeCourse.blueprintTitle')}
+            </p>
+            {course.audience && (
+              <p className="truncate text-[12px] leading-4 text-zinc-400 dark:text-zinc-500">
+                · {course.audience}
+              </p>
+            )}
+          </div>
+          {/*
+            已落库的问卷答案。这一屏才真正需要它 —— 生成完之后，用户
+            没有别的地方能想起"我当初让它按什么深度/体量生成"。
+          */}
+          <FreeCourseDepthChips dims={course.tuning} className="mt-1.5" />
         </div>
         <div className="flex items-center gap-2">
           <Button

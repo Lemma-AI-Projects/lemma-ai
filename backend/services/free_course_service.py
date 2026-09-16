@@ -452,6 +452,9 @@ async def get_detail(
         audience=map_meta.get("audience"),
         summary=map_meta.get("summary"),
         intent=intent,
+        # 问卷答案。蓝图页要显示「这课是按什么体量/深度生成的」—— 那本来就是用户
+        # 自己选的，藏起来只会让人忘了自己选过什么。
+        tuning=course.tuning_json,
         units=units,
     )
 

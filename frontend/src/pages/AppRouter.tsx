@@ -9,6 +9,7 @@ import { CoursePage } from '@/pages/CoursePage'
 import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
 import { CreditsPage } from '@/pages/CreditsPage'
 import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
+import { FreeCourseBlueprintPreviewPage } from '@/pages/FreeCourseBlueprintPreviewPage'
 import { FreeCourseTuningPreviewPage } from '@/pages/FreeCourseTuningPreviewPage'
 import { DocEditorView } from '@/features/docs/DocEditorView'
 import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBlueprintView'
@@ -61,6 +62,12 @@ const routes: RouteObject[] = [
     // 布局评审入口：暂停点卡片（蓝图 + 调参问卷），mock 数据。
     path: '/preview/free-course-tuning',
     element: <FreeCourseTuningPreviewPage />,
+  },
+  {
+    // 布局评审入口：生成后的蓝图页（规模徽章 + 受众 + 设置芯片），mock 数据。
+    // 路径里的 :id 要在 URL 上写 preview，预览页就是按这个 key 灌的 mock。
+    path: '/preview/free-course-blueprint/:id',
+    element: <FreeCourseBlueprintPreviewPage />,
   },
   {
     element: <RequireAuth />,

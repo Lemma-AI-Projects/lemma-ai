@@ -13,6 +13,34 @@ interface TipTapNode {
   text?: string
 }
 
+// DocBlock.content 是 Record<string, unknown>，取值一律显式收窄。
+// 别用 `?? ''`：`unknown ?? ''` 的类型是 `{} | string` 而不是 `string`，
+// 塞给 TipTap 的 JSONContent 直接编译不过 —— 而且 TS 只报第一个不合法的联合成员，
+// 把同文件里其它几处一样的错一起藏住了（构建就是被这里卡住的）。
+function str(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function num(value: unknown, fallback: number): number {
+  return typeof value === 'number' ? value : fallback
+}
+
+/**
+ * 把一个节点子树里的**全部**文字拼起来。
+ *
+ * 为什么不能取 `content?.[0]?.text`：TipTap 里**带格式的文字会被拆成多个 text 节点** ——
+ * `hello **world**` 存成 `[{text:'hello '},{text:'world',marks:[bold]}]`。
+ * 只取第 0 个，用户看到的加粗部分在保存时就悄悄没了，刷新才发现。
+ * 这里保证「一个字都不丢」；**格式（marks）后端的块模型是纯文本，暂不入库**。
+ */
+function flattenNodes(nodes: TipTapNode[] | undefined): string {
+  return (nodes ?? [])
+    .map((node) =>
+      typeof node.text === 'string' ? node.text : flattenNodes(node.content)
+    )
+    .join('')
+}
+
 /** Convert backend DocBlock[] → TipTap JSON doc. */
 function blocksToTipTap(blocks: DocBlock[]) {
   const content = blocks.map((b) => {
@@ -20,8 +48,8 @@ function blocksToTipTap(blocks: DocBlock[]) {
       case 'heading':
         return {
           type: 'heading',
-          attrs: { level: b.content.level ?? 1 },
-          content: [{ type: 'text', text: b.content.text ?? '' }],
+          attrs: { level: num(b.content.level, 1) },
+          content: [{ type: 'text', text: str(b.content.text) }],
         }
       case 'list': {
         const items = (b.content.items ?? []) as string[]
@@ -48,8 +76,8 @@ function blocksToTipTap(blocks: DocBlock[]) {
       case 'code':
         return {
           type: 'codeBlock',
-          attrs: { language: b.content.language ?? null },
-          content: [{ type: 'text', text: b.content.code ?? '' }],
+          attrs: { language: str(b.content.language) || null },
+          content: [{ type: 'text', text: str(b.content.code) }],
         }
       case 'quote':
         return {
@@ -57,7 +85,7 @@ function blocksToTipTap(blocks: DocBlock[]) {
           content: [
             {
               type: 'paragraph',
-              content: [{ type: 'text', text: b.content.text ?? '' }],
+              content: [{ type: 'text', text: str(b.content.text) }],
             },
           ],
         }
@@ -67,18 +95,18 @@ function blocksToTipTap(blocks: DocBlock[]) {
         return {
           type: 'image',
           attrs: {
-            src: b.content.src ?? '',
-            alt: b.content.alt ?? '',
+            src: str(b.content.src),
+            alt: str(b.content.alt),
           },
         }
       case 'paragraph':
-      default:
+      default: {
+        const text = str(b.content.text)
         return {
           type: 'paragraph',
-          content: b.content.text
-            ? [{ type: 'text', text: b.content.text }]
-            : [],
+          content: text ? [{ type: 'text', text }] : [],
         }
+      }
     }
   })
   return { type: 'doc', content }
@@ -99,8 +127,8 @@ function tipTapToBlocks(editorJSON: { content?: TipTapNode[] }): BlockIn[] {
           id: null,
           type: 'heading',
           content: {
-            text: node.content?.[0]?.text ?? '',
-            level: node.attrs?.level ?? 1,
+            text: flattenNodes(node.content),
+            level: num(node.attrs?.level, 1),
           },
         })
         break
@@ -111,9 +139,7 @@ function tipTapToBlocks(editorJSON: { content?: TipTapNode[] }): BlockIn[] {
           id: null,
           type: 'list',
           content: {
-            items: (node.content ?? []).map(
-              (li) => li.content?.[0]?.content?.[0]?.text ?? ''
-            ),
+            items: (node.content ?? []).map((li) => flattenNodes(li.content)),
             ordered: node.type === 'orderedList',
           },
         })
@@ -125,8 +151,8 @@ function tipTapToBlocks(editorJSON: { content?: TipTapNode[] }): BlockIn[] {
           type: 'todo',
           content: {
             items: (node.content ?? []).map((ti) => ({
-              text: ti.content?.[0]?.content?.[0]?.text ?? '',
-              checked: (ti.attrs?.checked as boolean) ?? false,
+              text: flattenNodes(ti.content),
+              checked: ti.attrs?.checked === true,
             })),
           },
         })
@@ -137,8 +163,8 @@ function tipTapToBlocks(editorJSON: { content?: TipTapNode[] }): BlockIn[] {
           id: null,
           type: 'code',
           content: {
-            code: node.content?.[0]?.text ?? '',
-            language: node.attrs?.language ?? null,
+            code: flattenNodes(node.content),
+            language: str(node.attrs?.language) || null,
           },
         })
         break
@@ -148,7 +174,11 @@ function tipTapToBlocks(editorJSON: { content?: TipTapNode[] }): BlockIn[] {
           id: null,
           type: 'quote',
           content: {
-            text: node.content?.[0]?.content?.[0]?.text ?? '',
+            // 引用块里的多个段落用换行拼回去：后端 text 是单个字符串，
+            // 直接 join('') 会把两段粘成一句，读起来就变了。
+            text: (node.content ?? [])
+              .map((paragraph) => flattenNodes(paragraph.content))
+              .join('\n'),
           },
         })
         break
@@ -160,7 +190,10 @@ function tipTapToBlocks(editorJSON: { content?: TipTapNode[] }): BlockIn[] {
           ...base,
           id: null,
           type: 'image',
-          content: { src: node.attrs?.src ?? '', alt: node.attrs?.alt ?? '' },
+          content: {
+            src: str(node.attrs?.src),
+            alt: str(node.attrs?.alt),
+          },
         })
         break
       case 'paragraph':
@@ -169,7 +202,7 @@ function tipTapToBlocks(editorJSON: { content?: TipTapNode[] }): BlockIn[] {
           ...base,
           id: null,
           type: 'paragraph',
-          content: { text: node.content?.[0]?.text ?? '' },
+          content: { text: flattenNodes(node.content) },
         })
         break
     }

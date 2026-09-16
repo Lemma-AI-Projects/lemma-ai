@@ -248,6 +248,16 @@ export function KnowledgeBasePage() {
           </div>
         </div>
 
+        {/*
+          演示态必须对用户可见 —— 上传走的是 URL.createObjectURL + 组件 state，
+          刷新就没了。代码注释里写了「演示」不够：用户看不到，就会以为文件真的存上了。
+        */}
+        <div className="mx-auto w-full max-w-[810px] px-4">
+          <p className="mt-3 text-[12px] leading-5 text-zinc-400">
+            演示版：上传与文件夹只保存在当前页面，刷新后会恢复成示例数据。接入后端后不再如此。
+          </p>
+        </div>
+
         <div className="mx-auto flex h-full w-full max-w-[810px] flex-col px-4 pb-8">
           {view === 'grid' ? (
             <KnowledgeBaseGrid

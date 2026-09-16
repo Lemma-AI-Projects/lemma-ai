@@ -169,7 +169,7 @@ class Settings(BaseSettings):
     # API stays behind DOC_FULL_API_ENABLED until the alembic migration is applied,
     # and the TipTap editor behind DOC_EDITOR_ENABLED until its own work lands.
     # No brand-new write surface should be reachable before the tables exist.
-    doc_full_api_enabled: bool = False
+    doc_full_api_enabled: bool = True
     doc_editor_enabled: bool = False
 
     # --- Course video assets (Supabase Storage) ---

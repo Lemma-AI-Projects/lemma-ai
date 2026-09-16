@@ -45,6 +45,8 @@ export interface FreeCourseDetail {
   audience: string | null
   summary: string | null
   intent: FreeCourseIntent | null
+  /** 问卷答案（course_volume/depth/focus/pace + skip）。没答过是 null。 */
+  tuning: Record<string, unknown> | null
   units: FreeUnit[]
 }
 

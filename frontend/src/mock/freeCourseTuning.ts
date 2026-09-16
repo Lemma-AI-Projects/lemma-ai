@@ -70,6 +70,14 @@ export const tuningCourseMock: FreeCourseDetail = {
   audience: '有一点微积分基础、想把线代真正搞懂的人',
   summary: '从一个具体的几何问题出发，把向量、矩阵、特征值的直觉和推导串起来。',
   intent: { topic: '线性代数', level: '入门', goal: '能自己推导特征值' },
+  // 蓝图页要显示「按什么设置生成」——这里给一份答过问卷的样子。
+  tuning: {
+    course_volume: 'standard',
+    depth: 'intuition',
+    focus: 'examples',
+    pace: 'moderate',
+    skip: false,
+  },
   units: [
     {
       id: 'u1',

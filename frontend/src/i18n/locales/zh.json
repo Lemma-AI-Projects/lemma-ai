@@ -201,7 +201,7 @@
       "expand": "展开全部",
       "collapse": "收起",
       "empty": "结构还没生成",
-      "edit": "编辑",
+      "edit": "我想改蓝图",
       "editingTitle": "编辑课程结构",
       "unitTitlePlaceholder": "单元标题",
       "unitTitleLabel": "第 {{index}} 个单元的标题",
@@ -227,8 +227,9 @@
     "tuning": {
         "title": "调整课程设置",
         "subtitle": "这是刚拟好的课程结构。下面几项决定内容怎么写。",
+        "currentChips": "将按这些设置生成：",
         "answerActive": "正在生成…",
-        "confirm": "开始生成课程",
+        "confirm": "就这样继续",
         "skip": "用推荐设置，直接开始",
         "questionTitle": {
             "course_volume": "课程体量",
