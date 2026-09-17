@@ -1,10 +1,13 @@
 import { Pin, Share2, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CircularProgress } from '@/components/CircularProgress'
 import { useCoursesListQuery } from '@/features/course/courseLearningApi'
 import { cn } from '@/lib/utils'
 
 export function CourseCenterCourseCard({ className }: { className?: string }) {
+  const navigate = useNavigate()
   const coursesQuery = useCoursesListQuery()
   const course = coursesQuery.data?.[0]
   const quickStartCourse = coursesQuery.data?.find(
@@ -40,6 +43,18 @@ export function CourseCenterCourseCard({ className }: { className?: string }) {
         )}
       </div>
 
+      <Button
+        type="button"
+        variant="ghost"
+        disabled={!quickStartCourse}
+        onClick={() => {
+          if (quickStartCourse) navigate(`/course/${quickStartCourse.id}`)
+        }}
+        className="absolute right-4 bottom-[43px] h-8 rounded-full border border-zinc-300 bg-transparent px-3 text-[13px] font-medium text-zinc-600 hover:border-zinc-400 hover:bg-transparent hover:text-zinc-900"
+      >
+        前往课堂
+      </Button>
+
       <div className="absolute top-6 right-[calc(25%+16px)] left-[204px]">
         <p className="text-[12px] leading-4 font-medium text-zinc-400">
           课程名称
@@ -55,6 +70,25 @@ export function CourseCenterCourseCard({ className }: { className?: string }) {
             {course?.title ?? '暂无课程'}
           </h2>
         )}
+        <div className="mt-3 flex gap-2">
+          <span className="flex h-6 items-center gap-[4px] rounded-full border border-zinc-300 pr-2 pl-[3px]">
+            <CircularProgress value={60} size={15} strokeWidth={2.5} />
+            <span className="-translate-y-[0.1px] whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">
+              学习进度
+            </span>
+          </span>
+          <span className="flex h-6 items-center gap-[4px] rounded-full border border-zinc-300 pr-2 pl-[3px]">
+            <CircularProgress
+              value={35}
+              size={15}
+              strokeWidth={2.5}
+              progressColor="#eab308"
+            />
+            <span className="-translate-y-[0.1px] whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">
+              测验进度
+            </span>
+          </span>
+        </div>
       </div>
 
       <div className="absolute right-[calc(25%+16px)] bottom-12 left-[204px] grid grid-cols-2 gap-4">
