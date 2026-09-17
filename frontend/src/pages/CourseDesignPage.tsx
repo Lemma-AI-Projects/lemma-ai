@@ -1,7 +1,15 @@
 import { Fragment, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  CircleCheckBig,
+  PencilLine,
+  Play,
+  RotateCcw,
+} from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { BacklogStatusIcon } from '@/components/BacklogStatusIcon'
 import { CircularProgress } from '@/components/CircularProgress'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +41,88 @@ const courseUnits = [
 
 const UNIT_PROGRESS_COLOR = '#eab308'
 
+// 左侧主区域：展开的单元带卡片，未展开的单元只保留圆环占位
+type CourseUnitModule = {
+  id: string
+  label: string
+  progress: number
+  card?: {
+    title: string
+    summary: string
+    points?: {
+      title: string
+      completed: boolean
+      // 综合评估这类条目只提供单个「进入练习」入口
+      practiceOnly?: boolean
+    }[]
+  }
+}
+
+const courseUnitModules: CourseUnitModule[] = [
+  {
+    id: 'limits',
+    label: '1',
+    progress: 100,
+    card: {
+      title: '第一单元：函数极限与连续性',
+      summary:
+        '从数列极限认识“无限接近”，再到函数极限与连续性的基本概念和定理。',
+      points: [
+        { title: '数列极限与收敛判别', completed: true },
+        { title: '函数极限的定义与四则运算', completed: true },
+        { title: '连续性与间断点分类', completed: false },
+      ],
+    },
+  },
+  {
+    id: 'derivatives',
+    label: '2',
+    progress: 60,
+    card: {
+      title: '第二单元：导数与微分',
+      summary:
+        '从平均变化率走到瞬时变化率，理解导数的定义、几何意义与基本运算方法。',
+      points: [
+        { title: '导数的定义与几何意义', completed: true },
+        { title: '基本求导法则与复合函数求导', completed: false },
+        { title: '微分及其在近似计算中的应用', completed: false },
+      ],
+    },
+  },
+  {
+    id: 'mean-value',
+    label: '3',
+    progress: 25,
+    card: {
+      title: '第三单元：微分中值定理与应用',
+      summary:
+        '用中值定理连接导数与函数整体性质，进而处理单调性、极值与凹凸性问题。',
+      points: [
+        { title: '罗尔定理与拉格朗日中值定理', completed: false },
+        { title: '洛必达法则与未定式求极限', completed: false },
+        { title: '单调性、极值与曲线的凹凸性', completed: false },
+      ],
+    },
+  },
+  {
+    id: 'assessment',
+    label: '4',
+    progress: 0,
+    card: {
+      title: '综合评估：极限与分析基础',
+      summary:
+        '对前三个单元做一次整体检验：极限计算、连续性判断、导数与中值定理的综合运用，用一套贯通题目定位薄弱环节。',
+      points: [
+        {
+          title: '单元 1 综合评估：极限与分析基础',
+          completed: false,
+          practiceOnly: true,
+        },
+      ],
+    },
+  },
+]
+
 function ProgressCircleButton({
   label,
   progress,
@@ -62,6 +152,66 @@ function ProgressCircleButton({
   )
 }
 
+function UnitCard({ card }: { card: NonNullable<CourseUnitModule['card']> }) {
+  return (
+    <div className="min-w-0 flex-1 rounded-2xl border border-zinc-200 p-5">
+      <h3 className="text-[17px] leading-6 font-semibold text-zinc-900">
+        {card.title}
+      </h3>
+      <p className="mt-2 text-[15px] leading-[24px] font-normal text-zinc-600">
+        {card.summary}
+      </p>
+      {card.points && (
+      <div className="mt-6 flex flex-col gap-6">
+        {card.points.map((point) => (
+          <div
+            key={point.title}
+            className="flex items-center justify-between gap-3"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex size-4 shrink-0 items-center justify-center">
+                {point.completed ? (
+                  <CircleCheckBig className="size-4 text-zinc-950" />
+                ) : (
+                  <BacklogStatusIcon />
+                )}
+              </span>
+              <p className="min-w-0 text-[16px] leading-6 font-normal text-zinc-800">
+                {point.title}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {!point.practiceOnly && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 rounded-full border border-zinc-300 bg-transparent px-3 text-[13px] text-zinc-600 hover:border-zinc-400 hover:bg-transparent hover:text-zinc-900"
+                >
+                  {point.completed ? (
+                    <RotateCcw className="size-3.5" />
+                  ) : (
+                    <Play className="size-3.5" />
+                  )}
+                  {point.completed ? '重新学习' : '学习'}
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 rounded-full border border-zinc-300 bg-transparent px-3 text-[13px] text-zinc-600 hover:border-zinc-400 hover:bg-transparent hover:text-zinc-900"
+              >
+                <PencilLine className="size-3.5" />
+                {point.practiceOnly ? '进入练习' : '练习'}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      )}
+    </div>
+  )
+}
+
 export function CourseDesignPage() {
   const [activeTab, setActiveTab] = useState<CourseTab>('章节')
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
@@ -75,6 +225,39 @@ export function CourseDesignPage() {
 
   return (
     <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
+      {/* 与右侧灰色圆角矩形同一 top，两者顶边对齐 */}
+      <div className="absolute top-20 left-26 max-w-[670px]">
+        <h2 className="text-2xl leading-8 font-medium text-zinc-900">
+          第一章：函数极限与连续性
+        </h2>
+        <p className="mt-3 text-[16px] leading-[26px] font-normal text-zinc-600">
+          本单元先用数列极限建立“无限接近”的直观，再过渡到函数极限的严格定义，掌握
+          极限的四则运算、夹逼准则与两个重要极限。随后讨论连续性与间断点的分类，理解
+          闭区间上连续函数的性质，为后续导数与积分的学习打下基础。
+        </p>
+        <div className="mt-8 flex flex-col">
+          {courseUnitModules.map((unit, index) => {
+            const hasNextUnit = index < courseUnitModules.length - 1
+
+            return (
+              <div
+                key={unit.id}
+                className={cn('relative flex gap-5', hasNextUnit && 'pb-10')}
+              >
+                {/* 竖线对齐 32px 按钮的圆心，沿卡片左侧连到下一个单元 */}
+                {hasNextUnit && (
+                  <div className="absolute top-10 bottom-0 left-4 w-px -translate-x-1/2 bg-zinc-300" />
+                )}
+                <ProgressCircleButton
+                  label={unit.label}
+                  progress={unit.progress}
+                />
+                {unit.card && <UnitCard card={unit.card} />}
+              </div>
+            )
+          })}
+        </div>
+      </div>
       <div className="absolute top-20 right-26 w-60">
         <div className="size-60 rounded-2xl bg-zinc-200" />
         <h1 className="mt-5 text-center text-xl font-bold text-zinc-900">
