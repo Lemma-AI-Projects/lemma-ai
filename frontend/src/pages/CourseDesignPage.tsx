@@ -15,24 +15,37 @@ const COURSE_DESCRIPTION =
 const COLLAPSED_DESCRIPTION_LENGTH = 61
 
 const courseChapters = [
-  { id: 'limits', title: '函数极限与连续性', progress: 100 },
-  { id: 'derivatives', title: '导数与微分', progress: 60 },
-  { id: 'mean-value', title: '微分中值定理', progress: 25 },
-  { id: 'indefinite-integral', title: '不定积分', progress: 0 },
-  { id: 'definite-integral', title: '定积分及其应用', progress: 0 },
+  { id: 'limits', label: '1', title: '函数极限与连续性', progress: 100 },
+  { id: 'derivatives', label: '2', title: '导数与微分', progress: 60 },
+  { id: 'mean-value', label: '3', title: '微分中值定理', progress: 25 },
+  { id: 'indefinite-integral', label: '4', title: '不定积分', progress: 0 },
+  { id: 'definite-integral', label: '5', title: '定积分及其应用', progress: 0 },
 ]
 
-function ChapterProgressButton({
-  index,
+// 测试 Tab：粒度下沉到章节内的小节，编号为「章.节」
+const courseUnits = [
+  { id: 'sequence-limit', label: '1.1', title: '数列与函数极限', progress: 100 },
+  { id: 'continuity', label: '1.2', title: '连续性与间断点', progress: 70 },
+  { id: 'derivative-def', label: '2.1', title: '导数的定义', progress: 40 },
+  { id: 'derivative-rules', label: '2.2', title: '求导法则', progress: 0 },
+  { id: 'lagrange', label: '3.1', title: '拉格朗日中值定理', progress: 0 },
+]
+
+const UNIT_PROGRESS_COLOR = '#eab308'
+
+function ProgressCircleButton({
+  label,
   progress,
+  progressColor,
 }: {
-  index: number
+  label: string
   progress: number
+  progressColor?: string
 }) {
   return (
     <Button
       variant="ghost"
-      aria-label={`第 ${index} 章学习进度`}
+      aria-label={`${label} 学习进度`}
       className="relative size-8 rounded-full p-0"
     >
       {/* size-8 必须保留：Button 会把无 size- 类的 svg 压到 16x16，
@@ -41,9 +54,10 @@ function ChapterProgressButton({
         value={progress}
         size={32}
         strokeWidth={2.5}
+        progressColor={progressColor}
         className="pointer-events-none absolute inset-0 size-8"
       />
-      <span className="text-[13px] font-medium text-zinc-700">{index}</span>
+      <span className="text-[13px] font-medium text-zinc-700">{label}</span>
     </Button>
   )
 }
@@ -52,6 +66,12 @@ export function CourseDesignPage() {
   const [activeTab, setActiveTab] = useState<CourseTab>('章节')
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const [activeChapterId, setActiveChapterId] = useState(courseChapters[0].id)
+  const [activeUnitId, setActiveUnitId] = useState(courseUnits[0].id)
+
+  const isChapterTab = activeTab === '章节'
+  const items = isChapterTab ? courseChapters : courseUnits
+  const activeItemId = isChapterTab ? activeChapterId : activeUnitId
+  const setActiveItemId = isChapterTab ? setActiveChapterId : setActiveUnitId
 
   return (
     <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
@@ -97,28 +117,29 @@ export function CourseDesignPage() {
           ))}
         </div>
         <div className="mt-6 flex flex-col">
-          {courseChapters.map((chapter, index) => (
-            <Fragment key={chapter.id}>
+          {items.map((item, index) => (
+            <Fragment key={item.id}>
               {/* 竖线对齐 32px 按钮的圆心 */}
               {index > 0 && (
                 <div className="ml-4 h-6 w-px -translate-x-1/2 bg-zinc-300" />
               )}
               <div className="flex items-center gap-3">
-                <ChapterProgressButton
-                  index={index + 1}
-                  progress={chapter.progress}
+                <ProgressCircleButton
+                  label={item.label}
+                  progress={item.progress}
+                  progressColor={isChapterTab ? undefined : UNIT_PROGRESS_COLOR}
                 />
                 <button
                   type="button"
-                  onClick={() => setActiveChapterId(chapter.id)}
+                  onClick={() => setActiveItemId(item.id)}
                   className={cn(
                     'min-w-0 flex-1 -translate-y-px rounded-full px-3 text-left text-[15px] leading-8 font-normal transition-colors',
-                    activeChapterId === chapter.id
+                    activeItemId === item.id
                       ? 'bg-zinc-200/55 text-zinc-900'
                       : 'text-zinc-800 hover:bg-zinc-200/30'
                   )}
                 >
-                  {chapter.title}
+                  {item.title}
                 </button>
               </div>
             </Fragment>
