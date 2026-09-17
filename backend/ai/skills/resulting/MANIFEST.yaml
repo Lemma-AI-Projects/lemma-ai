@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Resulting
+slug: resulting
+order: 8
+type: cognitive-protocol
+formation: Falsify
+tagline: "Use when reviewing a past decision, running a retrospective, or…"
+summary: >
+  Use when reviewing a past decision, running a retrospective, or judging whether a choice was good — after the outcome is known. Forces decision quality and outcome quality to be scored separately. Trigger whenever a good result is being used as proof of a good decision, or a bad result as proof of a bad one.
+grounding:
+  - "Annie Duke, *Thinking in Bets*"
+  - "Fischhoff on hindsight bias"
+  - "Taleb on narrative fallacy and the survivorship of lucky fools."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - decision-quality
+  - outcomes
+  - debiasing

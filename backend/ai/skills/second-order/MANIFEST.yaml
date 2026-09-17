@@ -1,0 +1,22 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Second-Order
+slug: second-order
+order: 17
+type: cognitive-protocol
+formation: Single
+tagline: "Use when evaluating an action that affects other agents who will…"
+summary: >
+  Use when evaluating an action that affects other agents who will react — pricing changes, policy changes, incentives, competitive moves, rule changes. Forces you to model the reactions, and the reactions to the reactions. Trigger whenever a plan assumes the world holds still while you act on it.
+grounding:
+  - "Schelling on strategic interaction"
+  - "Merton on the unintended consequences of purposive action"
+  - "Goodhart's Law on metrics"
+  - "Howard Marks on \"second-level thinking\"."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - second-order
+  - systems
+  - consequences

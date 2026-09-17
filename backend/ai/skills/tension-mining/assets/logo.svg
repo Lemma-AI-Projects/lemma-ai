@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <style>
+      .ink { fill: none; stroke: #000; stroke-linecap: round; stroke-linejoin: round; }
+      .fill { fill: #000; }
+    </style>
+  </defs>
+
+  <!-- Horizontal stroke - brush starts fast, tapers naturally -->
+  <path class="ink" stroke-width="5.5" d="
+    M 22 60
+    C 45 53, 85 47, 135 48
+    C 155 49, 168 52, 172 56
+    C 175 60, 170 62, 158 60
+    C 138 57, 98 52, 68 53
+    C 48 54, 30 57, 22 62
+  "/>
+
+  <!-- Vertical stroke - brush pressure changes, slight wobble like real hand -->
+  <path class="ink" stroke-width="5" d="
+    M 98 52
+    C 97 78, 95 110, 91 140
+    C 88 158, 84 172, 80 180
+    C 77 186, 74 188, 72 186
+    C 70 184, 71 180, 74 176
+  "/>
+
+  <!-- Ink pooling at bottom -->
+  <ellipse class="fill" cx="73" cy="185" rx="3.5" ry="2.5"/>
+
+  <!-- Small ink splatter dots -->
+  <circle class="fill" cx="174" cy="62" r="1.5"/>
+  <circle class="fill" cx="28" cy="64" r="1"/>
+  <circle class="fill" cx="82" cy="172" r="0.8"/>
+
+  <!-- Tiny starter mark - like brush touching paper first -->
+  <path class="ink" stroke-width="2" d="
+    M 22 62
+    C 20 60, 19 57, 21 55
+    C 23 53, 24 56, 23 59
+  "/>
+</svg>

@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Disconfirmation Hunt
+slug: disconfirmation-hunt
+order: 10
+type: cognitive-protocol
+formation: Evidence
+tagline: "Use when you have a hypothesis, theory, or belief you're trying to…"
+summary: >
+  Use when you have a hypothesis, theory, or belief you're trying to support with evidence. Forces you to hunt for what would kill it, not just what confirms it. Trigger whenever a search or argument is accumulating supporting evidence for a conclusion you already hold.
+grounding:
+  - "Popper on falsifiability"
+  - "John Platt, *Strong Inference* (1964) — design the observation that could refute"
+  - "Wason's 2-4-6 task — the human default is to test for confirmation."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - disconfirmation
+  - falsification
+  - evidence

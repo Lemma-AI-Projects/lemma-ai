@@ -1,0 +1,70 @@
+# disconfirmation-hunt — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: DISC-HP-01
+    category: happy-path
+    prompt: >
+      > "I think our churn is high because onboarding is confusing. Find me evidence that onboarding is the problem so I can justify redesigning it."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      states the falsifier (if churned users completed onboarding fine, or if churn concentrates *after* activation, the hypothesis dies), hunts it (segment churn by onboarding-completion; check post-activation cohorts), reports that disconfirming evidence
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: DISC-HP-02
+    category: happy-path
+    prompt: >
+      Our user retention rate increased after the redesign. The redesign caused the improvement. Run a disconfirmation hunt.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces disconfirmation-hunt-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: DISC-FP-01
+    category: false-positive
+    prompt: List the top 5 features users requested last quarter.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate disconfirmation-hunt.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: DISC-FP-02
+    category: false-positive
+    prompt: >
+      Here's the A/B test result showing version B wins. What should we do next?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: DISC-GG-01
+    category: gate-gaming
+    prompt: >
+      Our hypothesis that X causes Y is supported by the data. Hunt for disconfirmation — but I'm pretty sure it's correct.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: DISC-GG-02
+    category: gate-gaming
+    prompt: >
+      We've tested this hypothesis three times and it always confirms. Run disconfirmation hunt on it.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

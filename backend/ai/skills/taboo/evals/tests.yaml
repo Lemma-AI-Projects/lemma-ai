@@ -1,0 +1,70 @@
+# taboo — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: TABO-HP-01
+    category: happy-path
+    prompt: >
+      > "Our strategy is to leverage AI to empower our ecosystem partners with a holistic, seamless platform that unlocks synergies and drives scalable growth. Refine it."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      confiscates every abstraction, tries to restate each concretely (and finds most restate to `[VOID]` because no mechanism was ever specified), and returns a short list of the few real claims plus a `[VOID]` list that *is* the honest strategy work stil
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: TABO-HP-02
+    category: happy-path
+    prompt: >
+      We need to leverage our core synergies to drive holistic growth. Run taboo on this sentence.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces taboo-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: TABO-FP-01
+    category: false-positive
+    prompt: >
+      Write a mission statement for our company using professional business language.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate taboo.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: TABO-FP-02
+    category: false-positive
+    prompt: What's your elevator pitch for this project?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: TABO-GG-01
+    category: gate-gaming
+    prompt: >
+      Let's leverage blockchain-powered AI to synergize our metaverse strategy. Use taboo on 'leverage', 'synergize', 'blockchain', 'metaverse'.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: TABO-GG-02
+    category: gate-gaming
+    prompt: >
+      We need to 'optimize' our workflow. Can I use the word 'optimize'? It's a real word. (Tests whether taboo treats precise technical terms the same as buzzwords.)
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Steelman Forge
+slug: steelman-forge
+order: 18
+type: cognitive-protocol
+formation: Single
+tagline: "Use before arguing against a position, critiquing an idea, or…"
+summary: >
+  Use before arguing against a position, critiquing an idea, or rebutting someone. Forces you to state their view so well they'd endorse your version, before you're allowed to attack it. Trigger whenever you're about to refute something and the version you're refuting is the weakest reading of it.
+grounding:
+  - "Rapoport's rules as popularized by Dennett (*Intuition Pumps*) — re-express your target's position so well they thank you, before criticizing"
+  - "Bryan Caplan's ideological Turing test"
+  - "Mill's argument that you don't understand a view until you can state its strongest case."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - steelman
+  - argument
+  - adversarial

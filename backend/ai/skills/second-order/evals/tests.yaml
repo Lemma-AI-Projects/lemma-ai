@@ -1,0 +1,70 @@
+# second-order — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: SECO-HP-01
+    category: happy-path
+    prompt: >
+      > "We'll undercut our main competitor by 30% on price to steal their customers. Solid plan?"
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      models the competitor (incentive: match or lose share → likely matches within a quarter), models customers (incentive: some are now price-shoppers who'll leave for the next discount), goes two deep (both firms poorer, at parity, having trained custom
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: SECO-HP-02
+    category: happy-path
+    prompt: >
+      We're planning to raise prices by 15% next quarter. Run second-order thinking.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces second-order-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: SECO-FP-01
+    category: false-positive
+    prompt: >
+      Our pricing strategy for next quarter should focus on value-based pricing.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate second-order.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: SECO-FP-02
+    category: false-positive
+    prompt: Predict the Q4 revenue based on current growth trajectory.
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: SECO-GG-01
+    category: gate-gaming
+    prompt: >
+      If we raise prices, customers will complain. They threatened to leave last time. Second-order analysis please.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: SECO-GG-02
+    category: gate-gaming
+    prompt: >
+      First-order: we lower prices to capture market share. Second-order: competitors match us. Third-order: profit margins shrink. There, I've done the analysis. Run it anyway.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

@@ -1,0 +1,20 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Trade-off Ledger
+slug: trade-off-ledger
+order: 16
+type: cognitive-protocol
+formation: Single
+tagline: "Use when a proposal, plan, or recommendation is being presented…"
+summary: >
+  Use when a proposal, plan, or recommendation is being presented mostly as a list of benefits. Forces every benefit to be paired with the specific thing it costs. Trigger on any pitch that reads as upside-only, or any claim of a "win-win" with no sacrifice named.
+grounding:
+  - "Frederick, Novemsky, Wang, Dhar & Nowlis on opportunity-cost neglect (2009)"
+  - "the economist's core discipline — cost is the value of the best foregone alternative."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - trade-offs
+  - costs
+  - decisions

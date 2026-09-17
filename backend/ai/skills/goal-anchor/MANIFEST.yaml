@@ -1,0 +1,20 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Goal Anchor
+slug: goal-anchor
+order: 21
+type: cognitive-protocol
+formation: AI-native
+tagline: "Use in long, multi-step, or agentic tasks where the original…"
+summary: >
+  Use in long, multi-step, or agentic tasks where the original objective can quietly drift as sub-goals spawn sub-goals. Forces periodic re-grounding against the literal original goal. Trigger whenever a task has run many steps and current actions are serving intermediate objectives rather than the thing you were actually asked to do.
+grounding:
+  - "The specification-gaming and goal-misgeneralization literature in AI safety — agents optimizing proxies that diverge from intended objectives"
+  - "the general problem of instrumental sub-goals detaching from terminal goals in long-horizon planning."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - goal-drift
+  - llm
+  - agent

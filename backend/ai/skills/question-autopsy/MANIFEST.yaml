@@ -1,0 +1,22 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Question Autopsy
+slug: question-autopsy
+order: 14
+type: cognitive-protocol
+formation: Single
+tagline: "Use before answering a question that smuggles in hidden premises or…"
+summary: >
+  Use before answering a question that smuggles in hidden premises or false constraints — especially "how do I do X" questions where X may be the wrong thing to do. Forces the question to be interrogated before it is answered. Trigger whenever answering the question as asked would solve the wrong problem brilliantly.
+grounding:
+  - "Getzels & Csikszentmihalyi on problem-finding as the mark of expertise"
+  - "Wittgenstein — some questions are dissolved, not answered"
+  - "Goldratt's Theory of Constraints"
+  - "Duncker on functional fixedness."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - questioning
+  - reframing
+  - clarification

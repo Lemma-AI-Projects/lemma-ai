@@ -1,0 +1,22 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Decomposer
+slug: decomposer
+order: 1
+type: cognitive-protocol
+tagline: Surface the unknown unknowns
+summary: >
+  A five-step protocol that turns "I don't know what I don't know"
+  into actionable known unknowns. The core is cognitive honesty
+  plus actionability, not a pretty breakdown.
+grounding:
+  - Kahneman (System 1 / System 2)
+  - Cynefin (ordered vs complex)
+gate: anti-cheat hard gates
+entry: SKILL.md
+assets:
+  references: references/
+  adapters: adapters/
+tags:
+  - unknown-unknowns
+  - decomposition
+  - cognitive-honesty

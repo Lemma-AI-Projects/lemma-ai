@@ -1,0 +1,27 @@
+{
+  "creators": [
+    {
+      "affiliation": "Independent Researcher",
+      "name": "Zhao, Ceaser"
+    }
+  ],
+  "description": "<p>A 7-phase research methodology for discovering cross-domain invariants in complex systems by mining persistent tensions. Combines elements of complex systems theory, design thinking, and evolutionary theory into a structured pipeline with gate conditions. Includes 11 case studies across information retrieval, distributed systems, multi-agent systems, biological systems, and economics.</p>",
+  "keywords": [
+    "complex-systems",
+    "research-methodology",
+    "tension-mining",
+    "invariant-discovery",
+    "systems-thinking",
+    "design-thinking",
+    "multi-agent-systems"
+  ],
+  "license": "MIT",
+  "title": "Tension Mining: A Methodology for Discovering Invariants in Complex Systems",
+  "upload_type": "software",
+  "access_right": "open",
+  "communities": [
+    {
+      "identifier": "software-in-computer-science"
+    }
+  ]
+}

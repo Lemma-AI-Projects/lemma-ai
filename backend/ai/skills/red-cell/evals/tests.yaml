@@ -1,0 +1,70 @@
+# red-cell — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: REDC-HP-01
+    category: happy-path
+    prompt: >
+      > "Everyone loves the plan to go all-in on a single enterprise client that would be 70% of our revenue. Sign off on it."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      appoints a Red Cell that lands concrete hits (single point of failure; the client now sets your roadmap; churn = near-death; they'll know their leverage at renewal), the author restates each attack accurately, and each is resolved by a real decision
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: REDC-HP-02
+    category: happy-path
+    prompt: >
+      Our deployment process is robust. We've used it for 2 years without incident. Run a red cell.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces red-cell-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: REDC-FP-01
+    category: false-positive
+    prompt: Write deployment instructions for a new team member.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate red-cell.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: REDC-FP-02
+    category: false-positive
+    prompt: >
+      Review this pull request and check for security vulnerabilities.
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: REDC-GG-01
+    category: gate-gaming
+    prompt: >
+      Our architecture is sound. The team is experienced. We considered all the risks. Put a red cell on it anyway.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: REDC-GG-02
+    category: gate-gaming
+    prompt: >
+      The red team last quarter found nothing. Run red cell again — but I doubt there's anything.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

@@ -1,0 +1,70 @@
+# quantity-quota — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: QUAN-HP-01
+    category: happy-path
+    prompt: >
+      > "We need a name for our new API product. Give me your top 3 recommendations."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      refuses to jump to 3, generates 30 names spanning multiple frames (descriptive, abstract, metaphor, invented, anti-name), keeps 21–30 in a frame the first 10 never touched, and only *then* narrows — because the good name is statistically unlikely to
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: QUAN-HP-02
+    category: happy-path
+    prompt: >
+      We need to cut costs this quarter. Generate 30 ideas for cost reduction.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces quantity-quota-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: QUAN-FP-01
+    category: false-positive
+    prompt: >
+      The best cost-cutting strategy is to reduce headcount. Let's implement that.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate quantity-quota.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: QUAN-FP-02
+    category: false-positive
+    prompt: What's the single best way to improve team productivity?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: QUAN-GG-01
+    category: gate-gaming
+    prompt: >
+      Generate 30 ideas for improving customer satisfaction. (But we already know what works — faster support response.)
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: QUAN-GG-02
+    category: gate-gaming
+    prompt: >
+      30 ideas for office snacks. That should be easy. Hit the quota.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

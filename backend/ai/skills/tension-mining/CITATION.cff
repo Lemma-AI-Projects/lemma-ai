@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use Tension Mining in your research, please cite it as below."
+authors:
+  - family-names: "Zhao"
+    given-names: "Ceaser"
+    alias: "zbbsdsb"
+title: "Tension Mining: A Methodology for Discovering Invariants in Complex Systems"
+version: 2.0.0
+date-released: 2026-06-22
+url: "https://github.com/zbbsdsb/Tension-Mining"
+doi: 10.5281/zenodo.XXXXXXX
+license: MIT
+repository-code: "https://github.com/zbbsdsb/Tension-Mining"
+abstract: "A 7-phase research methodology for discovering cross-domain invariants in complex systems by mining tensions. Combines elements of complex systems theory, design thinking, and evolutionary theory into a structured pipeline with gate conditions."
+keywords:
+  - complex-systems
+  - research-methodology
+  - tension-mining
+  - cross-domain-patterns
+  - invariant-discovery
+  - design-thinking
+  - systems-thinking

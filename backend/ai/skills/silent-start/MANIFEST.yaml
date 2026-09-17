@@ -1,0 +1,22 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Silent Start
+slug: silent-start
+order: 13
+type: cognitive-protocol
+formation: Adversarial
+tagline: "Use when multiple agents (or people) will weigh in on the same…"
+summary: >
+  Use when multiple agents (or people) will weigh in on the same question — multi-agent debate, ensemble reasoning, or a group deciding together. Prevents the first voice from anchoring everyone else. Trigger whenever independent judgments are about to be collected in sequence, where later voices can see earlier ones.
+grounding:
+  - "Nominal Group Technique (Delbecq & Van de Ven)"
+  - "Asch conformity"
+  - "Bikhchandani, Hirshleifer & Welch on informational cascades"
+  - "Surowiecki on why crowd wisdom requires *independence*."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - ensembles
+  - information-cascade
+  - multi-agent

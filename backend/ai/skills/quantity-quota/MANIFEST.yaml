@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Quantity Quota
+slug: quantity-quota
+order: 15
+type: cognitive-protocol
+formation: Single
+tagline: "Use when generating options, ideas, solutions, or approaches — before…"
+summary: >
+  Use when generating options, ideas, solutions, or approaches — before evaluating any of them. Forces a quota of genuinely distinct candidates and bans premature judgment. Trigger whenever the first workable idea is starting to monopolize attention.
+grounding:
+  - "Dean Keith Simonton's equal-odds rule — quality of output scales with quantity of output"
+  - "Osborn's brainstorming principle of deferred judgment"
+  - "the generation/evaluation antagonism in creativity research."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - ideation
+  - divergence
+  - quantity

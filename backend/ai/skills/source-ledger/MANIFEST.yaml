@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Source Ledger
+slug: source-ledger
+order: 9
+type: cognitive-protocol
+formation: Evidence
+tagline: "Use when a conclusion rests on a mix of facts, and some of those…"
+summary: >
+  Use when a conclusion rests on a mix of facts, and some of those "facts" may actually be assumptions, hearsay, or inferences wearing the costume of certainty. Forces every load-bearing claim to be tagged by how you know it. Trigger on research summaries, situation assessments, and any output where a hallucination or an unexamined assumption would be costly.
+grounding:
+  - "Richards Heuer, *Psychology of Intelligence Analysis*"
+  - "Analysis of Competing Hypotheses (ACH) — evidence must be sourced and weighed, not assumed."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - evidence
+  - sources
+  - hallucination
+  - claims

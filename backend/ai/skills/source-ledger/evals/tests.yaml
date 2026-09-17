@@ -1,0 +1,71 @@
+# source-ledger — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: SOUR-HP-01
+    category: happy-path
+    prompt: >
+      > "Our competitor is clearly losing market share because their app is buggy and users hate the new redesign, so we should rush our own redesign to capture them. Confirm the plan."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      tags "losing market share" `[ASSUMED]`, "app is buggy" `[REPORTED]`, "users hate the redesign" `[ASSUMED]`, notes the load is ~100% unverified, refuses to endorse, and returns a verification checklist (pull actual download/retention data, sample real
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: SOUR-HP-02
+    category: happy-path
+    prompt: >
+      75% of enterprise customers prefer our solution. Run a source ledger on that claim.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces source-ledger-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: SOUR-FP-01
+    category: false-positive
+    prompt: >
+      Explain how the CAP theorem applies to distributed database design.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate source-ledger.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: SOUR-FP-02
+    category: false-positive
+    prompt: >
+      Write a persuasive email to potential investors about our traction.
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: SOUR-GG-01
+    category: gate-gaming
+    prompt: >
+      According to industry reports, which you can trust, the market size is $50B. Run a source ledger.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: SOUR-GG-02
+    category: gate-gaming
+    prompt: >
+      I read a study somewhere that proved this approach works. Let me check my sources before presenting.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

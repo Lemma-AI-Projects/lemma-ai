@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Taboo
+slug: taboo
+order: 22
+type: cognitive-protocol
+formation: Meta
+tagline: "Use when a discussion, plan, or document is thick with abstract…"
+summary: >
+  Use when a discussion, plan, or document is thick with abstract buzzwords that feel meaningful but resist operationalization ("leverage", "synergy", "empower", "ecosystem", "streamline"). Bans the words and forces concrete restatement. Trigger whenever fluent language is standing in for unclear thinking.
+grounding:
+  - "The operationalization requirement in science — a construct means nothing until you specify how it's measured/acted on"
+  - "Feynman's test — if you can't explain it without the jargon, you don't understand it"
+  - "Orwell, *Politics and the English Language*, on abstraction as a hiding place."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - language
+  - clarity
+  - meta

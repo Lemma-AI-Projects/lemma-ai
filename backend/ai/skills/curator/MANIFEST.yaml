@@ -1,0 +1,20 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Curator
+slug: curator
+order: 23
+type: cognitive-protocol
+formation: Meta
+tagline: "Use before adding a new skill to Fundemetal (or any curated protocol…"
+summary: >
+  Use before adding a new skill to Fundemetal (or any curated protocol library). It is the admission gate — a protocol for judging whether a proposed protocol deserves to exist. Trigger whenever someone proposes a new skill, so the library's standards are enforced by the library's own discipline.
+grounding:
+  - "The discipline of curation as active refusal (the museum keeps most of the collection in storage)"
+  - "the general principle that a filter's value is its false-positive *rejection* rate, not its acceptance rate. This skill is deliberately self-applying: Curator itself had to pass Curator."
+gate: anti-cheat hard gates (G1–G5)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - curation
+  - admission
+  - meta

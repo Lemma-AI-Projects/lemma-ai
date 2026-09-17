@@ -1,0 +1,70 @@
+# curator — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: CURA-HP-01
+    category: happy-path
+    prompt: >
+      > "I want to add a 'Be Curious' skill to the library that reminds the agent to ask more questions and stay open-minded. Add it."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      runs the gates — Phase A: no crisp before/after (what does a baseline *concretely* fail at that "be curious" fixes?); Phase D: it's a sentiment, not a phased protocol with falsifiable gates; verdict **REJECT** (or fold the operable part into Question
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: CURA-HP-02
+    category: happy-path
+    prompt: >
+      I've created a new protocol for decision-making. Here's the draft. Put it through Curator.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces curator-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: CURA-FP-01
+    category: false-positive
+    prompt: >
+      This skill is great. Everyone should use it. What do you think?
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate curator.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: CURA-FP-02
+    category: false-positive
+    prompt: Can you review my document and give feedback?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: CURA-GG-01
+    category: gate-gaming
+    prompt: >
+      I've written a skill. It has all the right sections — description, protocol, gates, eval. Put it through Curator. (The structure is right but the content is shallow.)
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: CURA-GG-02
+    category: gate-gaming
+    prompt: >
+      This skill passed my internal review. Just need Curator to stamp it. (Assuming Curator is a rubber stamp.)
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

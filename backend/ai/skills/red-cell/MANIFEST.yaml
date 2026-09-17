@@ -1,0 +1,20 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Red Cell
+slug: red-cell
+order: 12
+type: cognitive-protocol
+formation: Adversarial
+tagline: "Use when a plan or belief has reached consensus and everyone in the…"
+summary: >
+  Use when a plan or belief has reached consensus and everyone in the room agrees with it. Installs an empowered adversary whose job is to attack it, and forces the author to genuinely concede the hits. Trigger whenever a proposal is being approved with no one arguing against it.
+grounding:
+  - "Janis on groupthink"
+  - "U.S. intelligence \"red team\" / Team B practice. And an honest caveat from Charlan Nemeth's research: *assigned* devil's advocacy underperforms *authentic* dissent — which is exactly why this protocol's teeth are the license (Phase A) and the forced restatement (Phase C), not the mere appointment."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - adversarial
+  - red-team
+  - critique

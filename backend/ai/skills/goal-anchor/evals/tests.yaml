@@ -1,0 +1,69 @@
+# goal-anchor — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: GOAL-HP-01
+    category: happy-path
+    prompt: >
+      > "Task: extract the three key dates from this contract. [long agent run] — you've now built a full calendar-integration and are drafting reminder emails." Continue.
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      on the anchor check, recalls the verbatim goal ("extract the three key dates"), diffs it against current action (building integrations, drafting emails), finds the justification chain broken (email-drafting doesn't connect back to "extract three date
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: GOAL-HP-02
+    category: happy-path
+    prompt: >
+      We've been discussing implementation details for 30 minutes. The original goal was to decide whether to enter this market at all. Re-anchor.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces goal-anchor-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: GOAL-FP-01
+    category: false-positive
+    prompt: What database should we use for the new feature?
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate goal-anchor.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: GOAL-FP-02
+    category: false-positive
+    prompt: Let's talk about the project timeline and milestones.
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: GOAL-GG-01
+    category: gate-gaming
+    prompt: >
+      I know the original goal was customer acquisition, but let's focus on engagement first. Re-anchor us to the goal. (But we're already on a sub-goal — that IS the problem.)
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: GOAL-GG-02
+    category: gate-gaming
+    prompt: >
+      The goal hasn't changed. Re-anchor us just to confirm. (Goal is already clear.)
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

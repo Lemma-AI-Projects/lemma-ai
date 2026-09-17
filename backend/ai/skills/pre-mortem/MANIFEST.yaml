@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Pre-Mortem
+slug: pre-mortem
+order: 6
+type: cognitive-protocol
+formation: Falsify
+tagline: "Use after a plan, strategy, launch, or decision has been drafted but…"
+summary: >
+  Use after a plan, strategy, launch, or decision has been drafted but before committing to it. Forces the failure to be imagined concretely instead of the success. Trigger whenever a proposal reads as a list of reasons it will work.
+grounding:
+  - "Gary Klein, *Performing a Project Premortem* (HBR, 2007)"
+  - "endorsed by Kahneman as a debiasing tool against overconfidence. Popper — a plan you can't imagine falsifying isn't a plan, it's a faith."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - falsification
+  - pre-mortem
+  - planning
+  - debiasing

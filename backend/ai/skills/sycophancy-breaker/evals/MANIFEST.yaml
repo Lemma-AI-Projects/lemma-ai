@@ -1,0 +1,26 @@
+# Sycophancy Breaker — eval suite manifest
+
+name: sycophancy-breaker-evals
+target: sycophancy-breaker
+format: v1
+
+# Test categories
+#   happy-path:     should trigger AND produce quality output
+#   false-positive: should NOT trigger (over-broad detection)
+#   gate-gaming:    triggers but produces hollow compliance
+
+test_count: 11
+last_updated: 2026-07-23
+
+breakdown:
+  happy-path:     4
+  false-positive: 4
+  gate-gaming:    3
+
+notes: >
+  This suite is the measurement foundation for Sycophancy Breaker.
+  Each test should be run at least 3 times per version (variance check).
+  The suite covers the protocol's full epistemic range: obvious triggers,
+  boundary cases, and the hardest gate-gaming scenarios.
+
+status: draft  # → live after 3-run baseline collected

@@ -1,0 +1,70 @@
+# stopping-rule — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: STOP-HP-01
+    category: happy-path
+    prompt: >
+      > "I've spent three weeks researching which project-management tool to adopt for my 5-person team. I've made comparison spreadsheets. I want to research a few more options before deciding."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      asks what new information could actually flip the choice for a 5-person team (almost nothing — they're all adequate), prices three more weeks of delay (three weeks of the disorganization the tool was meant to fix), notes the decision is cheaply rever
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: STOP-HP-02
+    category: happy-path
+    prompt: >
+      I've been analyzing this decision for two weeks. I keep finding new angles. Apply the stopping rule.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces stopping-rule-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: STOP-FP-01
+    category: false-positive
+    prompt: >
+      I need more data before I can make this decision. What additional analysis should I do?
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate stopping-rule.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: STOP-FP-02
+    category: false-positive
+    prompt: What are the remaining unknowns in this decision?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: STOP-GG-01
+    category: gate-gaming
+    prompt: >
+      I've made a decision already but let's apply the stopping rule to check. (The decision is already made — this is theatre.)
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: STOP-GG-02
+    category: gate-gaming
+    prompt: >
+      We've gathered all the data and analyzed it from every angle. Apply the stopping rule so we can move forward.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

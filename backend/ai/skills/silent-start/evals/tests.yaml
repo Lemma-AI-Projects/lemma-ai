@@ -1,0 +1,70 @@
+# silent-start — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: SILE-HP-01
+    category: happy-path
+    prompt: >
+      > "Run a 3-agent panel to decide our database choice. Have them discuss and reach consensus."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      each agent forms a choice with no sight of the others, positions lock, they're revealed lowest-confidence-first, the *disagreements* (one wanted Postgres, one wanted SQLite for the actual scale, one flagged that the requirement was underspecified) be
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: SILE-HP-02
+    category: happy-path
+    prompt: >
+      The team needs to decide on the Q3 roadmap. Everyone has strong opinions. Run a silent start.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces silent-start-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: SILE-FP-01
+    category: false-positive
+    prompt: Let's have a brainstorming session. Who wants to go first?
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate silent-start.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: SILE-FP-02
+    category: false-positive
+    prompt: >
+      I'm curious what the team thinks. Let's discuss openly in the next meeting.
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: SILE-GG-01
+    category: gate-gaming
+    prompt: >
+      Everyone write your thoughts and we'll share. I think the answer is obvious — silent start first.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: SILE-GG-02
+    category: gate-gaming
+    prompt: >
+      I already know what each person thinks. Let's do a silent start just to confirm.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

@@ -1,0 +1,20 @@
+# stopping-rule — eval suite manifest
+
+name: stopping-rule-evals
+target: stopping-rule
+formation: protocol
+format: v1
+
+test_count: 6
+last_updated: 2026-07-23
+
+breakdown:
+  happy-path:     2
+  false-positive: 2
+  gate-gaming:    2
+
+notes: >
+  Generated from SKILL.md eval trap + domain-tailored variants.
+  Each test should be run at least 3 times per version.
+  Triggering (description) and quality (protocol body) are
+  independent optimization loops — never fix both at once.

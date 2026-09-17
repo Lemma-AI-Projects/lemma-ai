@@ -1,0 +1,20 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Great Expectations
+slug: great-expectations
+order: 3
+type: cognitive-protocol
+tagline: Anti-consensus, anti-template planning
+summary: >
+  A disruptive, complete planning engine. Anti-consensus and
+  anti-template, with BANI and integrity gates that force a
+  genuinely original roadmap.
+grounding:
+  - BANI framework
+  - Kahneman (dual-system thinking)
+  - Disruptive Innovation theory
+gate: integrity gates + banned vocabulary
+entry: SKILL.md
+tags:
+  - strategic-planning
+  - anti-consensus
+  - completeness

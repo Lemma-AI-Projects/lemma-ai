@@ -1,0 +1,25 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Tension Mining
+slug: tension-mining
+order: 2
+type: cognitive-protocol
+tagline: Find the force in the system
+summary: >
+  A seven-phase pipeline that mines irreducible tensions from
+  phenomena, distills cross-domain invariants, then works back to
+  mechanisms and algorithms. Find the underlying force first.
+grounding:
+  - Cynefin framework
+  - Complex Systems (emergence, self-organization)
+  - Evolutionary Theory (variation-selection-retention)
+gate: anti-cheat + quality rubric (D1-D5)
+entry: SKILL.md
+assets:
+  examples: examples/
+  templates: templates/
+  references: references/
+  papers: papers/
+tags:
+  - tension
+  - invariant
+  - research-methodology

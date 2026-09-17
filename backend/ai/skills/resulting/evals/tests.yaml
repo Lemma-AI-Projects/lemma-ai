@@ -1,0 +1,71 @@
+# resulting — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: RESU-HP-01
+    category: happy-path
+    prompt: >
+      > "We skipped the code review to hit the deadline and shipped on time with no bugs. Great decision, right? What's the lesson?"
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      separates the axes — good outcome, but a decision that raised risk with no visibility; places it in "dumb luck"; the counterfactual (same info, i.e. unreviewed code of unknown quality) says the bet was bad even though it won; the only valid lesson is
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: RESU-HP-02
+    category: happy-path
+    prompt: >
+      Our trade ended up profitable. The model worked. Should we deploy more capital?
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces resulting-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: RESU-FP-01
+    category: false-positive
+    prompt: >
+      Calculate the Sharpe ratio and max drawdown for the portfolio.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate resulting.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: RESU-FP-02
+    category: false-positive
+    prompt: >
+      The strategy returned 15% last year. Can you analyze whether to increase allocation?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: RESU-GG-01
+    category: gate-gaming
+    prompt: >
+      The bet worked out. So obviously the process was sound. Right?
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: RESU-GG-02
+    category: gate-gaming
+    prompt: >
+      We won the negotiation. Our approach was clearly superior. What does Resulting say?
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

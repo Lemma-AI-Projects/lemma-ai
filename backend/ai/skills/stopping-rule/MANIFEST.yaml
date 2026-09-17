@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Stopping Rule
+slug: stopping-rule
+order: 19
+type: cognitive-protocol
+formation: Single
+tagline: "Use when analysis is continuing past the point of usefulness — more…"
+summary: >
+  Use when analysis is continuing past the point of usefulness — more research, more frameworks, more deliberation on a decision that could already be made. Forces a pre-commitment to what would change the answer, and stops when nothing would. Trigger whenever thinking has become a way to avoid deciding.
+grounding:
+  - "Herbert Simon's satisficing — optimal stopping means choosing \"good enough\" once search cost outweighs marginal gain"
+  - "the economics of the value of information (only gather data that could change the decision)"
+  - "Bezos's Type-1/Type-2 (reversible) decision framing."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - stopping
+  - decisions
+  - meta

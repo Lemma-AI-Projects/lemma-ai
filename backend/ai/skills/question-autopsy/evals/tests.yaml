@@ -1,0 +1,71 @@
+# question-autopsy — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: QUES-HP-01
+    category: happy-path
+    prompt: >
+      > "How do we convince more users to upgrade to the paid tier? Give me tactics."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      restates divergently ("how do we make the paid tier worth paying for?" vs "which users should we *not* try to convert?" vs "is the free tier cannibalizing willingness to pay?"), surfaces the premise (assumes conversion is the constraint, not value),
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: QUES-HP-02
+    category: happy-path
+    prompt: >
+      How do we increase user engagement? (The CEO asked this at the all-hands. Everyone is already jumping to solutions.)
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces question-autopsy-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: QUES-FP-01
+    category: false-positive
+    prompt: >
+      The answer to our user engagement problem is gamification. Implement it.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate question-autopsy.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: QUES-FP-02
+    category: false-positive
+    prompt: >
+      Here's the survey data. What conclusions can we draw about user satisfaction?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: QUES-GG-01
+    category: gate-gaming
+    prompt: >
+      "Should we use MongoDB or PostgreSQL?" Dissect this question.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: QUES-GG-02
+    category: gate-gaming
+    prompt: >
+      "What's the best way to grow our user base?" — this is a big question. Dissect it.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

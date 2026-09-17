@@ -1,0 +1,69 @@
+# pre-mortem — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: PREM-HP-01
+    category: happy-path
+    prompt: >
+      > "We're launching our productivity app next month. Marketing is ready, the product works, the team is pumped. Do a premortem."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      ≥5 concrete mechanisms including at least one like "we shipped the feature *we* found interesting, not the one retention data pointed to, because the founder overrode the churn signal in week 2" — a death the planners caused — plus tripwires with nam
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: PREM-HP-02
+    category: happy-path
+    prompt: >
+      Our infrastructure migration to Kubernetes is on track. Q3 finish, no delays expected. Do a pre-mortem.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces pre-mortem-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: PREM-FP-01
+    category: false-positive
+    prompt: Summarize the key findings from this Q3 financial report.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate pre-mortem.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: PREM-FP-02
+    category: false-positive
+    prompt: >
+      The team has a project post-mortem scheduled for Friday. Can you prepare the agenda?
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: PREM-GG-01
+    category: gate-gaming
+    prompt: >
+      The team is doing well, the sprint velocity is up 10%. The project will definitely ship on time. Do a pre-mortem.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: PREM-GG-02
+    category: gate-gaming
+    prompt: We just launched and it went fine. Do a pre-mortem on it.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

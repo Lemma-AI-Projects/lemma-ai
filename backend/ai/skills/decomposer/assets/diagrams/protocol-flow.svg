@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 900" width="800" height="900">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { fill: #000000; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: 1px; }
+      .subtitle { fill: #666666; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 12px; letter-spacing: 2px; }
+      .step-bg { fill: #ffffff; stroke: #000000; stroke-width: 1; }
+      .step-num { fill: #000000; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
+      .step-title { fill: #000000; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+      .step-desc { fill: #666666; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 11px; }
+      .arrow-line { stroke: #000000; stroke-width: 1; }
+      .arrow-head { fill: #000000; }
+      .zone-light { fill: #ffffff; stroke: #000000; stroke-width: 1; }
+      .zone-mid { fill: #cccccc; stroke: #000000; stroke-width: 1; }
+      .zone-dark { fill: #000000; }
+      .zone-label { fill: #000000; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
+      .zone-desc { fill: #666666; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 8px; }
+      .badge { stroke: #000000; stroke-width: 1; fill: #ffffff; }
+      .badge-text { fill: #000000; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 8px; font-weight: 700; letter-spacing: 1px; }
+      .gate { fill: #ffffff; font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif; font-size: 9px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="800" height="900" />
+
+  <!-- Header -->
+  <text x="400" y="50" class="title" text-anchor="middle">DECOMPOSER PROTOCOL</text>
+  <text x="400" y="72" class="subtitle" text-anchor="middle">A FIVE-STEP COGNITIVE OPERATION PROTOCOL</text>
+
+  <!-- Step 1 - Honesty Fuse -->
+  <rect x="100" y="100" width="600" height="100" class="step-bg" />
+  <rect x="100" y="100" width="600" height="2" fill="#000000" />
+  <text x="120" y="125" class="step-num">STEP 01</text>
+  <text x="120" y="148" class="step-title">HONESTY FUSE</text>
+  <text x="120" y="168" class="step-desc">Before any analysis, state three things: what you can engage with,</text>
+  <text x="120" y="184" class="step-desc">where you are blind, and how this thing most likely dies.</text>
+  <rect x="580" y="110" width="100" height="22" class="badge" />
+  <text x="630" y="125" class="badge-text" text-anchor="middle">HARD GATE</text>
+
+  <!-- Arrow 1->2 -->
+  <line x1="400" y1="200" x2="400" y2="230" class="arrow-line" />
+  <polygon points="400,235 395,228 405,228" class="arrow-head" />
+
+  <!-- Step 2 - Uncertainty Map -->
+  <rect x="100" y="240" width="600" height="120" class="step-bg" />
+  <rect x="100" y="240" width="600" height="2" fill="#cccccc" />
+  <text x="120" y="265" class="step-num">STEP 02</text>
+  <text x="120" y="288" class="step-title">UNCERTAINTY MAPPING</text>
+  <text x="120" y="308" class="step-desc">Classify every element into three zones. Known = Known, Known Unknown,</text>
+  <text x="120" y="324" class="step-desc">Unknown Unknown. If Green exceeds 70%, the map is dishonest.</text>
+
+  <!-- 3 Zones mini display -->
+  <rect x="140" y="338" width="120" height="12" class="zone-light" />
+  <text x="200" y="348" class="zone-label" text-anchor="middle">KNOWN</text>
+  <text x="200" y="360" class="zone-desc" text-anchor="middle">Known-Knowns</text>
+
+  <rect x="280" y="338" width="120" height="12" class="zone-mid" />
+  <text x="340" y="348" class="zone-label" text-anchor="middle">KNOWN UNKNOWN</text>
+  <text x="340" y="360" class="zone-desc" text-anchor="middle">Known-Unknowns</text>
+
+  <rect x="420" y="338" width="120" height="12" class="zone-dark" />
+  <text x="480" y="348" class="zone-label" fill="#ffffff" text-anchor="middle">UNKNOWN UNKNOWN</text>
+  <text x="480" y="360" class="zone-desc" fill="#999999" text-anchor="middle">Unknown-Unknowns</text>
+
+  <!-- Arrow 2->3 -->
+  <line x1="400" y1="370" x2="400" y2="400" class="arrow-line" />
+  <polygon points="400,405 395,398 405,398" class="arrow-head" />
+
+  <!-- Step 3 - Hierarchical Decomposition -->
+  <rect x="100" y="410" width="600" height="100" class="step-bg" />
+  <rect x="100" y="410" width="600" height="2" fill="#cccccc" />
+  <text x="120" y="435" class="step-num">STEP 03</text>
+  <text x="120" y="458" class="step-title">HIERARCHICAL DECOMPOSITION</text>
+  <text x="120" y="478" class="step-desc">Transform the flat map into a cognitive dependency tree. This is NOT</text>
+  <text x="120" y="494" class="step-desc">functional decomposition. Ask: "What must I know before I can know X?"</text>
+
+  <!-- Arrow 3->4 -->
+  <line x1="400" y1="510" x2="400" y2="540" class="arrow-line" />
+  <polygon points="400,545 395,538 405,538" class="arrow-head" />
+
+  <!-- Step 4 - Error Budget -->
+  <rect x="100" y="550" width="600" height="100" class="step-bg" />
+  <rect x="100" y="550" width="600" height="2" fill="#cccccc" />
+  <text x="120" y="575" class="step-num">STEP 04</text>
+  <text x="120" y="598" class="step-title">ERROR BUDGET ASSIGNMENT</text>
+  <text x="120" y="618" class="step-desc">For each node: Confidence (how fast would failure surface?),</text>
+  <text x="120" y="634" class="step-desc">Survival Condition (Alive if / Dead if), Lethality (what dies with it).</text>
+
+  <!-- Arrow 4->5 -->
+  <line x1="400" y1="650" x2="400" y2="680" class="arrow-line" />
+  <polygon points="400,685 395,678 405,678" class="arrow-head" />
+
+  <!-- Step 5 - Anti-Shell Self-Check -->
+  <rect x="100" y="690" width="600" height="100" class="step-bg" />
+  <rect x="100" y="690" width="600" height="2" fill="#000000" />
+  <text x="120" y="715" class="step-num">STEP 05</text>
+  <text x="120" y="738" class="step-title">ANTI-SHELL SELF-CHECK</text>
+  <text x="120" y="758" class="step-desc">Five hard checks: Survival Condition, Jargon, Uncertainty Ratio,</text>
+  <text x="120" y="774" class="step-desc">Honesty, Actionability. If any fails, return to the corresponding step.</text>
+  <rect x="580" y="700" width="100" height="22" class="badge" />
+  <text x="630" y="715" class="badge-text" text-anchor="middle">GATE KEEPER</text>
+
+  <!-- Feedback loop -->
+  <path d="M 720 740 Q 770 740 770 420 Q 770 200 720 200" fill="none" stroke="#000000" stroke-width="1" stroke-dasharray="3,3" />
+  <text x="775" y="470" font-family="'Helvetica Neue', 'Helvetica', 'Arial', sans-serif" font-size="9" fill="#666666" transform="rotate(90, 775, 470)">ITERATE UNTIL ALL CHECKS PASS</text>
+
+  <!-- Bottom metrics: replaced middle dot with SVG circle -->
+  <text x="400" y="830" class="subtitle" text-anchor="middle">TWO METRICS</text>
+  <circle cx="385" cy="828" r="1.5" fill="#000000"/>
+  <circle cx="415" cy="828" r="1.5" fill="#000000"/>
+  <text x="400" y="850" class="zone-desc" text-anchor="middle">"If the output is dishonest, it is worthless.</text>
+  <text x="400" y="865" class="zone-desc" text-anchor="middle">If it is honest but you cannot act on it, it is incomplete. Everything else is noise."</text>
+</svg>

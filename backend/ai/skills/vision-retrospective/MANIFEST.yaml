@@ -1,0 +1,38 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Vision Retrospective
+slug: vision-retrospective
+order: 24
+type: cognitive-protocol
+formation: Build
+tagline: "Turn hollow visions into verifiable execution paths — claim → evidence anchor → backward path."
+summary: >
+  Transform vague, abstract, or adjective-heavy visions into concrete, actionable
+  implementation paths with verifiable acceptance criteria. Vision-Driven
+  Development fails because it moves forward (AI fills the gap with plausible but
+  hollow content); this protocol moves backward — treat the vision as a claim,
+  anchor each claim to observable evidence, then decompose only the anchored
+  claims. A deterministic hollowness scorer (pure stdlib, 0–100) gates Phase 0
+  and re-verifies Phase 4, reporting the input→output score delta as objective
+  proof the plan is no longer hollow.
+grounding:
+  - "Wiggins & McTighe (1998), *Understanding by Design* — Backward Design: start from desired result + evidence of understanding, then design backward. The strongest academic parent of this method."
+  - "IEEE Std 830-1998 — a requirement shall be verifiable and unambiguous; the core quality bar behind the hollowness dimensions."
+  - "Basili & Weiss (1984), Goal-Question-Metric (GQM) — every claim needs a measurable proxy."
+  - "Meyer (1986) Design by Contract; Adzic (2011) Specification by Example / BDD — verification anchors as pre/post conditions."
+  - "Newell & Simon (1972) means-ends analysis — Phase 3 trace: what must exist for the evidence to be producible."
+  - "Klein (2007), *Performing a Project Premortem* (HBR) — Phase 1 inversion ('what would make this fail?')."
+  - "PMI PMBOK Work Breakdown Structure — Epic → Task → Atomic-Step hierarchy."
+  - "Hunt & Thomas, *The Pragmatic Programmer*; Ries (2011) — vertical MVP slice / tracer bullet first."
+  - "Femmer et al. (2017) — NLP-pattern requirement-quality detection for the hollowness scan."
+gate: "anti-cheat hard gates: score gate (hollow input ≥60 → Phase 1 before any plan), anchor gate (claim with no verification anchor is not a requirement), anti-hollow gate (final plan must score ≤35, every atomic step needs a Done-Definition)"
+entry: SKILL.md
+assets:
+  references: references/
+  scripts: scripts/
+  assets: assets/
+tags:
+  - vision
+  - requirements
+  - verification
+  - backward-design
+  - hollowness

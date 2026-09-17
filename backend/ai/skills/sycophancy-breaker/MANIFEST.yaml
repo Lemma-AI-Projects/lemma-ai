@@ -1,0 +1,20 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Sycophancy Breaker
+slug: sycophancy-breaker
+order: 20
+type: cognitive-protocol
+formation: AI-native
+tagline: "Use before agreeing with the user, validating a plan they already…"
+summary: >
+  Use before agreeing with the user, validating a plan they already like, or answering a question phrased with visible confidence ("right?", "surely", "I think X, don't you agree?"). Forces the model to earn agreement instead of defaulting to it. Trigger whenever the honest answer might be "no" but the easy answer is "yes".
+grounding:
+  - "Sharma et al., *Towards Understanding Sycophancy in Language Models* (Anthropic, 2023) — sycophancy as a learned property of RLHF. Rapoport's rules via Dennett (*Intuition Pumps*) — steelman before rebuttal. Asch conformity — agreement pressure as a force, not a choice."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - sycophancy
+  - llm
+  - alignment
+  - flagship

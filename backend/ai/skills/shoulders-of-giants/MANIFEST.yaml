@@ -1,0 +1,28 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Shoulders of Giants
+slug: shoulders-of-giants
+order: 5
+type: cognitive-protocol
+tagline: Reuse code as a sovereignty decision
+summary: >
+  An architect-grade protocol for reusing existing code. It treats dependency
+  selection as a sovereignty decision, not a search task: draw the sovereignty
+  map first, define the problem shape, then prospect, due-diligence, choose a
+  reuse depth, and run a systems review. Six stages, five hard gates.
+grounding:
+  - Wardley Mapping (evolution axis)
+  - Domain-Driven Design (subdomains, anti-corruption layer)
+  - Hyrum's Law
+  - Lindy effect
+  - Software supply-chain security
+gate: >
+  sovereignty declaration must come first; conceptual fit is a veto axis; every
+  reference/encapsulate decision needs a one-sentence escape plan; the final
+  deliverable must include a decision table plus at least one rejected candidate.
+entry: SKILL.md
+assets: {}
+tags:
+  - dependency-selection
+  - architecture
+  - supply-chain
+  - reuse

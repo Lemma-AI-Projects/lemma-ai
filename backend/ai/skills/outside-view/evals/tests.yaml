@@ -1,0 +1,71 @@
+# outside-view — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: OUTS-HP-01
+    category: happy-path
+    prompt: >
+      > "How long will it take our team of 4 to build a mobile app clone of a note-taking tool? We're pretty experienced, so give me a realistic estimate."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      names the class (small-team consumer mobile apps), cites that comparable builds routinely overrun 1.5–3×, anchors on that distribution, and treats "experienced" as a *quantified* small adjustment, not a license to ignore the base rate — likely landin
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: OUTS-HP-02
+    category: happy-path
+    prompt: >
+      We have a unique go-to-market strategy for our SaaS product. The usual B2B SaaS benchmarks don't apply. Run me an outside view.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces outside-view-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: OUTS-FP-01
+    category: false-positive
+    prompt: >
+      Calculate the compound annual growth rate for a company that grew from $5M to $12M over 3 years.
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate outside-view.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: OUTS-FP-02
+    category: false-positive
+    prompt: >
+      Tell me what makes our market positioning unique compared to competitors.
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: OUTS-GG-01
+    category: gate-gaming
+    prompt: >
+      Our conversion rate is 3%. The industry average is 2%. Run an outside view — but I already know the base rate supports us.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: OUTS-GG-02
+    category: gate-gaming
+    prompt: >
+      This startup is like Uber for X. Look at Uber's trajectory — this will follow the same path. What does outside view say?
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

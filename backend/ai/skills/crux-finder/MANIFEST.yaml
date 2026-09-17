@@ -1,0 +1,20 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Crux Finder
+slug: crux-finder
+order: 11
+type: cognitive-protocol
+formation: Adversarial
+tagline: "Use when two parties are disagreeing and the argument is going in…"
+summary: >
+  Use when two parties are disagreeing and the argument is going in circles without locating the actual point of divergence. Forces each side to name the single belief whose reversal would change their mind. Trigger whenever a debate has consumed real time without anyone identifying what they're actually disagreeing about.
+grounding:
+  - "CFAR's Double Crux technique for resolving disagreement"
+  - "the distinction between empirical disputes (resolvable by observation) and value disputes (not) — a core move in productive disagreement."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - disagreement
+  - double-crux
+  - adversarial

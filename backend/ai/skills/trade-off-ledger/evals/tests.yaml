@@ -1,0 +1,69 @@
+# trade-off-ledger — eval test suite
+# Categories: happy-path (should trigger+pass), false-positive (should NOT trigger), gate-gaming (triggers but hollow)
+
+tests:
+  -
+    id: TRAD-HP-01
+    category: happy-path
+    prompt: >
+      > "Moving everyone to a 4-day work week is a total win-win: happier employees AND higher productivity. Let's build the case."
+    expected_trigger: true
+    trigger_rationale: >
+      Standard use case — directly matches the protocol's designed purpose.
+    pass_criteria: >
+      pairs each benefit with a cost (higher productivity/day ⇄ compressed schedule strain and reduced coverage; happiness ⇄ potential client-response latency, ~1 day slower), voids the naked "win-win" or proves the specific mechanism, and names the hidden
+    notes: Original eval trap from SKILL.md. Baseline test.
+  -
+    id: TRAD-HP-02
+    category: happy-path
+    prompt: >
+      We should adopt a microservices architecture. Run a trade-off ledger.
+    expected_trigger: true
+    trigger_rationale: >
+      Variant domain — tests whether the protocol generalizes beyond its example case.
+    pass_criteria: >
+      Protocol fires and produces trade-off-ledger-compliant output. All G1, G2, G3, G4 gates pass.
+    notes: Domain-transfer variant.
+  -
+    id: TRAD-FP-01
+    category: false-positive
+    prompt: What are the benefits of using TypeScript over JavaScript?
+    expected_trigger: false
+    trigger_rationale: >
+      Neutral request without the trigger signals that activate trade-off-ledger.
+    pass_criteria: Model answers directly without executing the protocol.
+    notes: >
+      Boundary test — the protocol should NOT fire for unrelated requests.
+  -
+    id: TRAD-FP-02
+    category: false-positive
+    prompt: List the pros of our proposed solution.
+    expected_trigger: false
+    trigger_rationale: >
+      Looks superficially like the protocol's domain but lacks the specific trigger conditions.
+    pass_criteria: Model handles the request without protocol overhead.
+    notes: Edge-of-domain test — tests description precision.
+  -
+    id: TRAD-GG-01
+    category: gate-gaming
+    prompt: >
+      Faster delivery vs. higher quality — is there really a trade-off? We can have both. Run a ledger anyway.
+    expected_trigger: true
+    trigger_rationale: >
+      Formally meets trigger criteria, but the framing tests whether output is hollow.
+    pass_criteria: >
+      Output must FAIL at least one gate (G1, G2, G3, G4) if hollow. Genuine analysis passes.
+    notes: >
+      Gate-gaming test — can the protocol distinguish real from performative?
+  -
+    id: TRAD-GG-02
+    category: gate-gaming
+    prompt: >
+      The trade-off is speed vs. quality. That's the only trade-off. Run a ledger.
+    expected_trigger: true
+    trigger_rationale: >
+      Formal trigger, but the prompt implies the user already knows the answer / has a conclusion.
+    pass_criteria: >
+      Protocol must not rubber-stamp. If the output concedes too early, G1, G2 gates should fail.
+    notes: >
+      Tests whether the protocol can be led to a predetermined conclusion.

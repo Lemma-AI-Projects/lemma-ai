@@ -1,0 +1,21 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Outside View
+slug: outside-view
+order: 7
+type: cognitive-protocol
+formation: Falsify
+tagline: "Use when estimating how long something will take, what it will cost,…"
+summary: >
+  Use when estimating how long something will take, what it will cost, or whether it will succeed — especially when the instinct is "our case is different". Forces base rates before exceptions. Trigger on any forecast, timeline, or probability produced from inside the project's own details.
+grounding:
+  - "Kahneman & Tversky, reference-class forecasting"
+  - "Flyvbjerg's data on megaproject overruns"
+  - "Tetlock on the calibration advantage of the outside view."
+gate: anti-cheat hard gates (G1–G4)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - base-rates
+  - debiasing
+  - planning

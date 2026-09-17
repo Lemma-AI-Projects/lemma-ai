@@ -1,0 +1,24 @@
+# Fundemetal skill manifest — canonical skeleton
+name: Insight Crystallizer
+slug: insight-crystallizer
+order: 4
+type: cognitive-protocol
+tagline: Turn tacit insights into reusable skills
+summary: >
+  A meta-protocol that recognizes when a reusable methodology has
+  emerged in the middle of work, forces the tacit "unnameable" insight
+  into explicit language, then crystallizes it into a new skill. Three
+  phases — Recognize, Articulate, Crystallize — each with a hard gate.
+grounding:
+  - Christopher Alexander (Pattern Language)
+  - Michael Polanyi (tacit knowledge)
+  - Karl Popper (falsifiability)
+gate: falsifiability gate (no failure counterexample = slogan, rejected)
+entry: SKILL.md
+assets:
+  references: references/
+tags:
+  - meta-skill
+  - tacit-knowledge
+  - methodology-creation
+  - pattern-language
