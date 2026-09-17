@@ -33,28 +33,28 @@ export function ScheduleTimeline() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex h-[42px] shrink-0 items-center justify-end px-4">
-        <div className="flex items-center gap-2">
+      <div className="flex h-[60px] shrink-0 items-center justify-end px-4">
+        <div className="flex h-full items-center gap-2">
           <Button
             variant="ghost"
-            size="icon"
-            className="size-6 rounded-full bg-transparent"
+            size="icon-sm"
+            className="rounded-full bg-transparent"
             onClick={() => setMonth((current) => subMonths(current, 1))}
             aria-label="Previous month"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-[18px]" />
           </Button>
-          <span className="min-w-[100px] text-center text-[16px] font-semibold">
+          <span className="flex h-full min-w-[124px] items-center justify-center text-center text-[18px] font-semibold leading-none">
             {format(month, 'MMMM yyyy')}
           </span>
           <Button
             variant="ghost"
-            size="icon"
-            className="size-6 rounded-full bg-transparent"
+            size="icon-sm"
+            className="rounded-full bg-transparent"
             onClick={() => setMonth((current) => addMonths(current, 1))}
             aria-label="Next month"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-[18px]" />
           </Button>
         </div>
       </div>
@@ -62,14 +62,14 @@ export function ScheduleTimeline() {
       <div
         role="table"
         aria-label={format(month, 'MMMM yyyy')}
-        className="flex min-h-0 flex-1 flex-col px-3 pb-3"
+        className="flex min-h-0 flex-1 flex-col px-4 pb-3"
       >
-        <div role="row" className="grid h-9 shrink-0 grid-cols-7 gap-1.5">
+        <div role="row" className="mb-1.5 grid h-[27px] shrink-0 grid-cols-7 gap-[5px]">
           {weeks[0].map((day) => (
             <div
               key={day.getDay()}
               role="columnheader"
-              className="flex items-center justify-center text-xs text-muted-foreground"
+              className="flex items-center justify-center text-xs font-medium leading-4 tracking-[0.04em] text-zinc-500"
             >
               {format(day, 'EEE')}
             </div>
@@ -79,14 +79,14 @@ export function ScheduleTimeline() {
         <div className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto">
           <div
             role="rowgroup"
-            className="grid min-h-full gap-1.5"
+            className="grid min-h-full gap-[5px]"
             style={{ gridTemplateRows: `repeat(${weeks.length}, minmax(88px, 1fr))` }}
           >
             {weeks.map((week) => (
               <div
                 key={format(week[0], 'yyyy-MM-dd')}
                 role="row"
-                className="grid grid-cols-7 gap-1.5"
+                className="grid grid-cols-7 gap-[5px]"
               >
                 {week.map((day) => {
                   const today = isToday(day)
@@ -98,19 +98,19 @@ export function ScheduleTimeline() {
                       role="cell"
                       aria-label={format(day, 'EEEE, MMMM d, yyyy')}
                       className={cn(
-                        'min-w-0 rounded-xl border p-2',
+                        'min-w-0 rounded-[12px] border p-[6px] transition-[background-color,border-color,box-shadow] duration-200',
                         inMonth
-                          ? 'border-zinc-200/80 bg-white/50 text-zinc-600'
-                          : 'border-zinc-200/50 text-zinc-300',
-                        today && 'border-zinc-400 bg-white'
+                          ? 'border-zinc-200/60 bg-zinc-100/25 text-zinc-700 hover:border-zinc-300/70 hover:bg-zinc-100/70'
+                          : 'border-zinc-200/50 bg-zinc-100/20 text-zinc-400 opacity-45',
+                        today && 'border-zinc-300 bg-white shadow-[inset_0_0_0_1.5px_#71717a] hover:border-zinc-300 hover:bg-white'
                       )}
                     >
                       <time
                         dateTime={format(day, 'yyyy-MM-dd')}
                         aria-current={today ? 'date' : undefined}
                         className={cn(
-                          'ml-auto flex size-6 items-center justify-center rounded-full text-xs tabular-nums',
-                          today && 'bg-zinc-900 font-medium text-white'
+                          'ml-auto flex size-5 items-center justify-center rounded-full text-[11px] font-medium leading-4 tabular-nums',
+                          today && 'bg-zinc-700 font-semibold text-white'
                         )}
                       >
                         {format(day, 'd')}

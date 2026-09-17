@@ -4,6 +4,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
+import { CourseDesignPage } from '@/pages/CourseDesignPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
@@ -40,6 +41,10 @@ const routes: RouteObject[] = [
           {
             path: 'courses',
             element: <CourseCenterPage />,
+          },
+          {
+            path: 'coursepage',
+            element: <CourseDesignPage />,
           },
           {
             path: 'knowledge',
