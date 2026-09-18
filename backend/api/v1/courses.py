@@ -10,11 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
-from models.course import Course
 from schemas.course import (
     CourseDetailOut,
     CourseListItemOut,
     IntakeAnswersIn,
+    PointProgressIn,
+    PointProgressOut,
     PointVideoOut,
     QuestionnaireOut,
 )
@@ -23,6 +24,7 @@ from services import (
     course_planning_service,
     course_search_service,
     course_service,
+    progress_service,
     video_asset_service,
 )
 
@@ -71,7 +73,7 @@ async def list_courses(
     offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[Course]:
+) -> list[CourseListItemOut]:
     return await course_service.list_courses(
         db, user_id=current_user.id, limit=limit, offset=offset
     )
@@ -89,6 +91,21 @@ async def get_course(
     if detail is None:
         raise _NOT_FOUND
     return detail
+
+
+@router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_course(
+    course_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    # 404 rather than 403 when not owned — never confirm another user's course id.
+    course = await course_service.get_owned_course(
+        db, user_id=current_user.id, course_id=course_id
+    )
+    if course is None:
+        raise _NOT_FOUND
+    await course_service.delete_course(db, course)
 
 
 @router.get("/{course_id}/points/{point_id}/video", response_model=PointVideoOut)
@@ -109,6 +126,35 @@ async def read_point_video(
     if video is None:
         raise _NOT_FOUND
     return video
+
+
+@router.put(
+    "/{course_id}/points/{point_id}/progress", response_model=PointProgressOut
+)
+async def report_point_progress(
+    course_id: uuid.UUID,
+    point_id: uuid.UUID,
+    payload: PointProgressIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PointProgressOut:
+    # Player heartbeat, so idempotent by construction: it states where the
+    # learner is rather than incrementing anything, and a point already finished
+    # stays finished. 404 when not owned / point not in course (IDOR-safe).
+    progress = await progress_service.report_point_progress(
+        db,
+        user_id=current_user.id,
+        course_id=course_id,
+        point_id=point_id,
+        position_seconds=payload.position_seconds,
+        duration_seconds=payload.duration_seconds,
+    )
+    if progress is None:
+        raise _NOT_FOUND
+    return PointProgressOut(
+        completed=progress.completed,
+        last_position_seconds=progress.last_position_seconds,
+    )
 
 
 @router.get("/{course_id}/questionnaire", response_model=QuestionnaireOut)

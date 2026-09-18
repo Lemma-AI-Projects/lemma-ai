@@ -1,6 +1,7 @@
-import type { CSSProperties } from 'react'
-import { CourseCenterCourseCard } from '@/features/course/CourseCenterCourseCard'
+import { useState, type CSSProperties } from 'react'
+import { CourseCenterCourseList } from '@/features/course/CourseCenterCourseList'
 import { CourseCenterTabs } from '@/features/course/CourseCenterTabs'
+import type { CourseCenterTab } from '@/features/course/courseCenterFilters'
 import { CourseWeeklyProgressCard } from '@/features/course/CourseWeeklyProgressCard'
 
 const COURSE_CENTER_LAYOUT_STYLE = {
@@ -17,6 +18,10 @@ const COURSE_CENTER_LAYOUT_STYLE = {
 } as CSSProperties
 
 export function CourseCenterPage() {
+  // 工具栏与列表共用筛选状态，故提升到页面。
+  const [activeTab, setActiveTab] = useState<CourseCenterTab>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+
   return (
     <div className="relative h-full overflow-y-auto rounded-md border border-zinc-200/80 bg-zinc-50">
       <main className="min-h-full">
@@ -31,8 +36,17 @@ export function CourseCenterPage() {
               </h1>
 
               <div className="mt-[var(--course-center-title-tabs-gap)] flex w-full max-w-[644px] flex-1 flex-col">
-                <CourseCenterTabs />
-                <CourseCenterCourseCard className="mt-2 min-h-[160px] flex-1" />
+                <CourseCenterTabs
+                  activeTab={activeTab}
+                  onActiveTabChange={setActiveTab}
+                  searchTerm={searchTerm}
+                  onSearchTermChange={setSearchTerm}
+                />
+                <CourseCenterCourseList
+                  activeTab={activeTab}
+                  searchTerm={searchTerm}
+                  className="mt-2"
+                />
               </div>
             </div>
 

@@ -1,3 +1,7 @@
+import {
+  lessonProgressPercent,
+  moduleProgressPercent,
+} from '@/features/course/courseProgress'
 import type { CourseDetail } from '@/types/course'
 
 import type { CourseDashboardData } from './types'
@@ -28,9 +32,9 @@ function toChineseOrdinal(value: number): string {
 /**
  * 后端快照 -> 仪表盘视图模型。
  *
- * 编号（「1」「一」）在这里按顺序派生——后端不下发它们。进度与「已学」一律
- * 归零：后端的 buildStatus 是生成管线状态，一门刚交付的课程全是 ready 而用户
- * 一节未学，直接拿来渲染进度环会让所有环显示 100%。学习进度是独立能力，尚未实现。
+ * 编号（「1」「一」）在这里按顺序派生——后端不下发它们。进度一律由学习点的
+ * completed 聚合而来，绝不能用 buildStatus：那是生成管线状态，一门刚交付的
+ * 课程全是 ready 而用户一节未学，拿它渲染会让所有进度环直接满格。
  */
 export function mapCourseDetailToDashboard(
   course: CourseDetail
@@ -46,17 +50,17 @@ export function mapCourseDetailToDashboard(
       ordinalLabel: toChineseOrdinal(moduleIndex + 1),
       title: module.title,
       summary: module.summary,
-      progress: 0,
+      progress: moduleProgressPercent(module),
       lessons: module.lessons.map((lesson, lessonIndex) => ({
         id: lesson.id,
         label: String(lessonIndex + 1),
         title: lesson.title,
         summary: lesson.summary,
-        progress: 0,
+        progress: lessonProgressPercent(lesson),
         points: lesson.points.map((point) => ({
           id: point.id,
           title: point.title,
-          completed: false,
+          completed: point.completed,
         })),
       })),
     })),

@@ -7,6 +7,7 @@ from api.v1 import (
     courses,
     graphs,
     health,
+    progress,
     projects,
     users,
 )
@@ -20,3 +21,4 @@ api_router.include_router(projects.router)
 api_router.include_router(courses.router)
 api_router.include_router(companion.router)
 api_router.include_router(graphs.router)
+api_router.include_router(progress.router)

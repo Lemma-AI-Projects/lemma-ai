@@ -202,8 +202,19 @@ async def main() -> int:
             )
             point0 = lesson0["points"][0]
             check(
-                set(point0.keys()) == {"id", "title", "buildStatus"},
-                "快照 point 键集正确（buildStatus，无 progress）",
+                set(point0.keys())
+                == {
+                    "id",
+                    "title",
+                    "buildStatus",
+                    "completed",
+                    "lastPositionSeconds",
+                },
+                "快照 point 键集正确（生成态 buildStatus + 学习进度两字段）",
+            )
+            check(
+                point0["completed"] is False and point0["lastPositionSeconds"] == 0,
+                "未学过的学习点进度为 false/0",
             )
             order_index_leaks = (
                 not _no_order_index(dumped)

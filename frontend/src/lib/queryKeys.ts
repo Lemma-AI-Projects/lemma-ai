@@ -13,6 +13,10 @@ export function courseDetailQueryKey(courseId: string) {
   return [...coursesQueryRootKey, 'detail', courseId] as const
 }
 
+// 学习进度里跨课程的部分（周进度卡）。故意不挂 courses 前缀：它不按课程
+// 划分，而课程域的前缀失效不该顺手把它冲掉。
+export const progressQueryRootKey = ['progress'] as const
+
 // 会话详情（标题/归属项目）。跨域原因：全局 hooks/useMoveConversation
 // 改变归属后需要失效它。故意不挂 conversations 前缀（同 messages 的教训：
 // 流结束的前缀失效不该误伤它）。

@@ -16,6 +16,7 @@ import '@vidstack/react/player/styles/default/layouts/video.css'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { usePointVideoQuery } from '@/features/course/courseApi'
+import { usePointProgressReporter } from './usePointProgressReporter'
 
 function PlatformIcon({ platform }: { platform: string }) {
   const normalizedPlatform = platform.trim().toLowerCase()
@@ -35,14 +36,23 @@ export function CoursePointVideo({
   courseId,
   pointId,
   title,
+  lastPositionSeconds,
 }: {
   courseId: string
   pointId: string
   title: string
+  /** 断点续播位置；0 表示没看过，从头播。 */
+  lastPositionSeconds: number
 }) {
   const videoQuery = usePointVideoQuery(courseId, pointId)
   const video = videoQuery.data
   const playerRef = useRef<MediaPlayerInstance>(null)
+  const progress = usePointProgressReporter({
+    playerRef,
+    courseId,
+    pointId,
+    lastPositionSeconds,
+  })
 
   const isReady = video?.status === 'ready' && Boolean(video.playbackUrl)
   const isFailed = video?.status === 'failed' || videoQuery.isError
@@ -82,6 +92,9 @@ export function CoursePointVideo({
         hideControlsOnMouseLeave
         onMouseEnter={handlePlayerMouseEnter}
         onMouseLeave={handlePlayerMouseLeave}
+        onCanPlay={progress.handleCanPlay}
+        onTimeUpdate={progress.handleTimeUpdate}
+        onEnded={progress.handleEnded}
         playsInline
         className="relative z-10 mt-5 aspect-video w-full overflow-hidden rounded-xl bg-black text-white"
       >

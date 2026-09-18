@@ -1,9 +1,15 @@
+import { useMemo, useState } from 'react'
 import { Pin, Share2, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCoursesListQuery } from '@/features/course/courseApi'
+import { CircularProgress } from '@/components/CircularProgress'
+import { flattenPoints } from '@/features/course/courseApi'
+import { toProgressPercent } from '@/features/course/courseProgress'
+import { DeleteCourseDialog } from '@/features/course/DeleteCourseDialog'
+import { useCourseDetailQuery } from '@/hooks/useCourseDetail'
 import { cn } from '@/lib/utils'
+import type { CourseListItem } from '@/types/course'
 
 function formatChineseDate(iso: string): string {
   const date = new Date(iso)
@@ -11,12 +17,27 @@ function formatChineseDate(iso: string): string {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
 }
 
-export function CourseCenterCourseCard({ className }: { className?: string }) {
+export function CourseCenterCourseCard({
+  course,
+  className,
+}: {
+  course: CourseListItem
+  className?: string
+}) {
   const navigate = useNavigate()
-  const coursesQuery = useCoursesListQuery()
-  const course = coursesQuery.data?.[0]
-  const quickStartCourse = coursesQuery.data?.find(
-    (item) => item.status === 'ready'
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  // 详情与仪表盘共用 query key，所以这次取数也顺带预热了「前往课堂」。
+  const detailQuery = useCourseDetailQuery(course.id)
+  const { resumePoint, hasPoints } = useMemo(() => {
+    const points = flattenPoints(detailQuery.data)
+    return {
+      resumePoint: points.find((point) => !point.completed),
+      hasPoints: points.length > 0,
+    }
+  }, [detailQuery.data])
+  const progressPercent = toProgressPercent(
+    course.completedPointCount,
+    course.totalPointCount
   )
 
   return (
@@ -35,15 +56,12 @@ export function CourseCenterCourseCard({ className }: { className?: string }) {
         <p className="text-[13px] leading-[18px] font-medium text-zinc-400">
           继续学习
         </p>
-        {coursesQuery.isPending ? (
+        {/* 第一个没学完的学习点，即下次该从哪儿接着看。 */}
+        {detailQuery.isPending ? (
           <Skeleton className="mt-1 h-5 w-full" />
-        ) : coursesQuery.isError ? (
-          <p className="mt-1 text-[12px] leading-4 text-zinc-400">
-            课程加载失败
-          </p>
         ) : (
           <p className="mt-1 line-clamp-4 text-[15px] leading-[21px] font-semibold text-zinc-900">
-            {quickStartCourse?.title ?? '暂无可继续的课程'}
+            {resumePoint?.title ?? (hasPoints ? '已全部学完' : '暂无学习点')}
           </p>
         )}
       </div>
@@ -51,10 +69,7 @@ export function CourseCenterCourseCard({ className }: { className?: string }) {
       <Button
         type="button"
         variant="ghost"
-        disabled={!quickStartCourse}
-        onClick={() => {
-          if (quickStartCourse) navigate(`/courses/${quickStartCourse.id}`)
-        }}
+        onClick={() => navigate(`/courses/${course.id}`)}
         className="absolute right-4 bottom-[43px] h-8 rounded-full border border-zinc-300 bg-transparent px-3 text-[13px] font-medium text-zinc-600 hover:border-zinc-400 hover:bg-transparent hover:text-zinc-900"
       >
         前往课堂
@@ -64,48 +79,67 @@ export function CourseCenterCourseCard({ className }: { className?: string }) {
         <p className="text-[12px] leading-4 font-medium text-zinc-400">
           课程名称
         </p>
-        {coursesQuery.isPending ? (
-          <Skeleton className="mt-0.5 h-[26px] w-full" />
-        ) : coursesQuery.isError ? (
-          <p className="mt-0.5 text-sm leading-[26px] text-zinc-400">
-            课程加载失败
-          </p>
-        ) : (
-          <h2 className="mt-0.5 line-clamp-2 text-[20px] leading-[26px] font-bold tracking-[-0.015em] text-zinc-900">
-            {course?.title ?? '暂无课程'}
-          </h2>
-        )}
+        <h2 className="mt-0.5 line-clamp-2 text-[20px] leading-[26px] font-bold tracking-[-0.015em] text-zinc-900">
+          {course.title}
+        </h2>
+        <div className="mt-3 flex gap-2">
+          <span
+            title={`已学完 ${course.completedPointCount}/${course.totalPointCount} 个学习点`}
+            className="flex h-6 items-center gap-[4px] rounded-full border border-zinc-300 pr-2 pl-[3px]"
+          >
+            <CircularProgress
+              value={progressPercent}
+              size={15}
+              strokeWidth={2.5}
+            />
+            <span className="-translate-y-[0.1px] whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">
+              学习进度
+            </span>
+          </span>
+          {/* 测验还没有后端契约（生成/提交/评分都未实现），恒为 0。 */}
+          <span className="flex h-6 items-center gap-[4px] rounded-full border border-zinc-300 pr-2 pl-[3px]">
+            <CircularProgress
+              value={0}
+              size={15}
+              strokeWidth={2.5}
+              progressColor="#eab308"
+            />
+            <span className="-translate-y-[0.1px] whitespace-nowrap text-[12.5px] font-semibold text-zinc-600">
+              测验进度
+            </span>
+          </span>
+        </div>
       </div>
 
-      {/* 学习进度 / 测验进度尚未实现（后端只有生成状态），这里不渲染假数据。 */}
-      <div className="absolute right-[calc(25%+16px)] bottom-12 left-[204px] flex flex-col gap-3">
+      <div className="absolute right-[calc(25%+16px)] bottom-12 left-[204px] grid grid-cols-2 gap-4">
         <div className="min-w-0">
           <p className="text-[13px] leading-[18px] font-medium text-zinc-400">
-            课程简介
+            课程类型
           </p>
-          {coursesQuery.isPending ? (
-            <Skeleton className="mt-1 h-4 w-4/5" />
-          ) : (
-            <p className="mt-0.5 line-clamp-2 text-[14px] leading-[20px] text-zinc-700">
-              {course?.description ?? '暂无简介'}
-            </p>
-          )}
+          <p className="mt-0.5 truncate text-[16px] leading-[22px] font-semibold text-zinc-800">
+            视频课程
+          </p>
         </div>
         <div className="min-w-0">
           <p className="text-[13px] leading-[18px] font-medium text-zinc-400">
             创建日期
           </p>
-          {coursesQuery.isPending ? (
-            <Skeleton className="mt-1 h-4 w-24" />
-          ) : (
-            <p className="mt-0.5 truncate text-[16px] leading-[22px] font-semibold text-zinc-800">
-              {course ? formatChineseDate(course.createdAt) : '—'}
-            </p>
-          )}
+          <p className="mt-0.5 truncate text-[16px] leading-[22px] font-semibold text-zinc-800">
+            {formatChineseDate(course.createdAt)}
+          </p>
         </div>
       </div>
 
-      <div className="size-[176px] shrink-0 rounded-[14px] border border-zinc-200/80" />
+      {/* 封面：后端 coverUrl 暂无生产者，恒为占位块。 */}
+      {course.coverUrl ? (
+        <img
+          src={course.coverUrl}
+          alt=""
+          className="size-[176px] shrink-0 rounded-[14px] object-cover"
+        />
+      ) : (
+        <div className="size-[176px] shrink-0 rounded-[14px] border border-zinc-200/80" />
+      )}
 
       <div className="mt-auto flex w-[176px] items-center justify-center gap-2 pt-2">
         <Button
@@ -113,6 +147,7 @@ export function CourseCenterCourseCard({ className }: { className?: string }) {
           variant="ghost"
           size="icon-xs"
           aria-label="删除"
+          onClick={() => setDeleteDialogOpen(true)}
           className="size-7 rounded-full border border-zinc-200 bg-transparent text-zinc-500 hover:bg-transparent hover:text-zinc-800"
         >
           <Trash2 className="size-[14px]" />
@@ -136,6 +171,13 @@ export function CourseCenterCourseCard({ className }: { className?: string }) {
           <Share2 className="size-[14px]" />
         </Button>
       </div>
+
+      <DeleteCourseDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        courseId={course.id}
+        courseTitle={course.title}
+      />
     </div>
   )
 }

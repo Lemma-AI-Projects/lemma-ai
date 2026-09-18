@@ -6,12 +6,14 @@ point（学习点）— and a point is exactly one video:
     { id, title, description, coverUrl, status, questionnaireReady,
       modules: [{ id, title, summary,
                   lessons: [{ id, title, summary,
-                              points: [{ id, title, buildStatus }] }] }] }
+                              points: [{ id, title, buildStatus,
+                                         completed, lastPositionSeconds }] }] }] }
 
 `status` (course) and `buildStatus` (point) describe the GENERATION pipeline,
 not the learner's progress: a freshly delivered course has every point at
-`ready` and nothing learned. Learning progress is a separate concern that does
-not exist yet — never drive a progress ring from these fields.
+`ready` and nothing learned. Learning progress rides on the separate
+`completed` / `lastPositionSeconds` fields (services/progress_service.py) — a
+progress ring must be driven from those and never from the pipeline fields.
 
 order_index is deliberately omitted — ordering is applied when the rows are
 read, the wire never exposes it.
@@ -75,6 +77,11 @@ class CoursePointOut(BaseModel):
     title: str
     # Generation pipeline state, NOT learning progress.
     build_status: str
+    # Learning progress, merged in per-caller (the ORM row knows nothing about
+    # who is reading). Defaults cover the organize SSE, where the course is
+    # still being built and nothing can have been learned yet.
+    completed: bool = False
+    last_position_seconds: int = 0
 
 
 class CourseLessonOut(BaseModel):
@@ -150,6 +157,34 @@ class CourseListItemOut(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    # Learning progress as counts, not a percentage: the course card shows a
+    # ring while the 进行中/已完成 filter needs "finished everything", and both
+    # fall out of the same pair without the wire rounding anything away.
+    completed_point_count: int = 0
+    total_point_count: int = 0
+
+
+# --- 学习进度上报 ---
+
+
+class PointProgressIn(BaseModel):
+    """Player heartbeat for one learning point.
+
+    `durationSeconds` may be absent when the player has not resolved metadata
+    yet; the completion ratio is then uncomputable and the point stays open.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    position_seconds: int = Field(ge=0)
+    duration_seconds: int | None = Field(default=None, gt=0)
+
+
+class PointProgressOut(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    completed: bool
+    last_position_seconds: int
 
 
 # --- 学习点视频交付（播放）---

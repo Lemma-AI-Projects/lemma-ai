@@ -1,11 +1,11 @@
 // 仪表盘视图模型：由后端 CourseDetail 派生（见 mapCourseDetailToDashboard）。
 // 与 wire 类型分开，是因为这里额外承载「第几章」「一二三」这类纯展示的编号，
-// 以及未来的学习进度——后端不下发编号，进度也还没实现。
+// 以及由学习点聚合出来的进度百分比——后端两者都不下发。
 
 export interface DashboardPoint {
   id: string
   title: string
-  /** 学习进度尚未实现，当前恒为 false。 */
+  /** 学习者是否已学完这个学习点。 */
   completed: boolean
 }
 
@@ -15,7 +15,7 @@ export interface DashboardLesson {
   label: string
   title: string
   summary: string | null
-  /** 学习进度尚未实现，当前恒为 0。 */
+  /** 0–100，由单元内学习点的完成比例算出。 */
   progress: number
   points: DashboardPoint[]
 }
@@ -28,7 +28,7 @@ export interface DashboardModule {
   ordinalLabel: string
   title: string
   summary: string | null
-  /** 学习进度尚未实现，当前恒为 0。 */
+  /** 0–100，按章内学习点总数聚合（长单元权重更大）。 */
   progress: number
   lessons: DashboardLesson[]
 }

@@ -368,6 +368,7 @@ export function CoursePointPage() {
               courseId={courseId}
               pointId={pointId}
               title={current.title}
+              lastPositionSeconds={current.lastPositionSeconds}
             />
 
             <div className="mt-6 flex items-center justify-between gap-4">

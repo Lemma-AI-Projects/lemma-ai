@@ -19,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from models.course import Course, CourseLesson, CourseModule, CoursePoint
-from schemas.course import CourseDetailOut, QuestionnaireOut
+from schemas.course import CourseDetailOut, CourseListItemOut, QuestionnaireOut
+from services import progress_service
 
 # Only fully-built courses appear in the list (拍板: status < ready stay hidden,
 # failed drafts too). Everything below this is a draft swept by cleanup.
@@ -62,7 +63,11 @@ async def get_owned_course(
 async def get_course_detail(
     db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID
 ) -> CourseDetailOut | None:
-    """Owned full snapshot (modules -> lessons -> points eager-loaded). None -> 404."""
+    """Owned full snapshot (modules -> lessons -> points eager-loaded). None -> 404.
+
+    The learner's progress is merged onto the points afterwards: it belongs to
+    the reader, not to the row, so it can't come out of the eager load.
+    """
     result = await db.execute(
         select(Course)
         .where(Course.id == course_id, Course.user_id == user_id)
@@ -77,6 +82,19 @@ async def get_course_detail(
         return None
     detail = CourseDetailOut.model_validate(course)
     detail.questionnaire_ready = bool((course.intake_json or {}).get("questionnaire"))
+
+    progress = await progress_service.get_course_point_progress(
+        db, user_id=user_id, course_id=course_id
+    )
+    if progress:
+        for module in detail.modules:
+            for lesson in module.lessons:
+                for point in lesson.points:
+                    entry = progress.get(point.id)
+                    if entry is None:
+                        continue
+                    point.completed = entry.completed
+                    point.last_position_seconds = entry.last_position_seconds
     return detail
 
 
@@ -250,8 +268,12 @@ async def get_materialization_progress(
 
 async def list_courses(
     db: AsyncSession, *, user_id: uuid.UUID, limit: int = 50, offset: int = 0
-) -> list[Course]:
-    """Only ready courses, newest first (drafts/failed stay hidden)."""
+) -> list[CourseListItemOut]:
+    """Only ready courses, newest first (drafts/failed stay hidden).
+
+    Carries each course's learned/total point counts so the course center can
+    draw its ring and filter by 进行中/已完成 without a per-card detail fetch.
+    """
     result = await db.execute(
         select(Course)
         .where(Course.user_id == user_id, Course.status == _LISTED_STATUS)
@@ -259,7 +281,20 @@ async def list_courses(
         .limit(limit)
         .offset(offset)
     )
-    return list(result.scalars())
+    courses = list(result.scalars())
+    counts = await progress_service.get_courses_point_counts(
+        db, user_id=user_id, course_ids=[course.id for course in courses]
+    )
+
+    items: list[CourseListItemOut] = []
+    for course in courses:
+        item = CourseListItemOut.model_validate(course)
+        entry = counts.get(course.id)
+        if entry is not None:
+            item.completed_point_count = entry.completed
+            item.total_point_count = entry.total
+        items.append(item)
+    return items
 
 
 async def delete_course(db: AsyncSession, course: Course) -> None:

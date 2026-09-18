@@ -104,19 +104,21 @@ function mapPointStatus(status: PointBuildStatus): ProgressStatus {
 
 // The backend tracks build state on points but not on lessons/modules, so the
 // row icons are rolled up here (display-only; no backend truth duplicated).
-// Mirrors the backend's course rule (any ready -> ready, else failed) one level
-// down: all terminal with any success -> completed, all failed -> failed.
+//
+// A failure wins over its successful siblings on purpose. The backend's
+// delivery rule is the opposite (any ready point -> the course ships), but that
+// rule decides whether you can ENTER the course, not what the card should say:
+// rolling a mixed row up to `completed` would tick every line while the header
+// still spins, telling the user everything worked when a video actually failed.
 function rollupStatus(statuses: ProgressStatus[]): ProgressStatus {
   if (statuses.length === 0) {
     return 'not-started'
   }
-  const allTerminal = statuses.every(
-    (status) => status === 'completed' || status === 'failed'
-  )
-  if (allTerminal) {
-    return statuses.some((status) => status === 'completed')
-      ? 'completed'
-      : 'failed'
+  if (statuses.some((status) => status === 'failed')) {
+    return 'failed'
+  }
+  if (statuses.every((status) => status === 'completed')) {
+    return 'completed'
   }
   if (statuses.some((status) => status !== 'not-started')) {
     return 'in-progress'

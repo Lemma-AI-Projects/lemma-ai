@@ -383,7 +383,18 @@ export function ConversationToolShell({
             </span>
           </h3>
 
-          <OutlineTree modules={modules} renderIcon={() => <BacklogStatusIcon />} />
+          {/* 部分交付：课程整体 ready，但个别行的视频没做出来——照实标红，
+              否则用户只能点进去才发现那一节打不开。 */}
+          <OutlineTree
+            modules={modules}
+            renderIcon={(status) =>
+              status === 'failed' ? (
+                <ProgressStatusIcon status="failed" />
+              ) : (
+                <BacklogStatusIcon />
+              )
+            }
+          />
 
           {errorMessage ? (
             <p className="mt-3 text-sm text-destructive">{errorMessage}</p>
