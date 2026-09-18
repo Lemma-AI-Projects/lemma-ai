@@ -17,9 +17,9 @@ import {
 } from '@/features/conversation/ConversationToolShell'
 import { StreamdownStyleCanvas } from '@/features/conversation/markdown/StreamdownStyleCanvas'
 import type {
+  ConversationToolModule,
   ConversationToolQuestion,
   ConversationToolStage,
-  ConversationToolUnit,
 } from '@/features/conversation/types'
 
 // [sandbox] 课程编排工具卡片的「各阶段静态预览」调试页：不连后端，把
@@ -44,80 +44,65 @@ const SAMPLE_QUESTIONS: ConversationToolQuestion[] = [
   },
 ]
 
-const PENDING_UNITS: ConversationToolUnit[] = [
+const BUILDING_MODULES: ConversationToolModule[] = [
   {
-    id: 'u1',
-    title: '单元一：极限——微积分的基石',
-    status: 'not-started',
-    chapters: [
-      { id: 'c1', title: '第一章：什么是极限？', status: 'not-started' },
-      { id: 'c2', title: '第二章：极限的运算法则与连续性', status: 'not-started' },
-    ],
-  },
-  {
-    id: 'u2',
-    title: '单元二：导数——变化率的量化',
-    status: 'not-started',
-    chapters: [
-      { id: 'c3', title: '第一章：导数的定义与几何意义', status: 'not-started' },
-      { id: 'c4', title: '第二章：基本求导法则', status: 'not-started' },
-    ],
-  },
-]
-
-const BUILDING_UNITS: ConversationToolUnit[] = [
-  {
-    id: 'u1',
-    title: '单元一：极限——微积分的基石',
+    id: 'm1',
+    title: '第一章：极限——微积分的基石',
     status: 'in-progress',
-    progress: 50,
-    chapters: [
-      { id: 'c1', title: '第一章：什么是极限？', status: 'completed', progress: 100 },
+    lessons: [
       {
-        id: 'c2',
-        title: '第二章：极限的运算法则与连续性',
-        status: 'in-progress',
-        progress: 60,
-      },
-    ],
-  },
-  {
-    id: 'u2',
-    title: '单元二：导数——变化率的量化',
-    status: 'not-started',
-    chapters: [
-      { id: 'c3', title: '第一章：导数的定义与几何意义', status: 'not-started' },
-      { id: 'c4', title: '第二章：基本求导法则', status: 'not-started' },
-    ],
-  },
-]
-
-const READY_UNITS: ConversationToolUnit[] = [
-  {
-    id: 'u1',
-    title: '单元一：极限——微积分的基石',
-    status: 'completed',
-    progress: 100,
-    chapters: [
-      { id: 'c1', title: '第一章：什么是极限？', status: 'completed', progress: 100 },
-      {
-        id: 'c2',
-        title: '第二章：极限的运算法则与连续性',
+        id: 'l1',
+        title: '第一单元：什么是极限？',
+        pointCount: 2,
         status: 'completed',
-        progress: 100,
+      },
+      {
+        id: 'l2',
+        title: '第二单元：极限的运算法则与连续性',
+        pointCount: 3,
+        status: 'in-progress',
+      },
+    ],
+  },
+  {
+    id: 'm2',
+    title: '第二章：导数——变化率的量化',
+    status: 'not-started',
+    lessons: [
+      {
+        id: 'l3',
+        title: '第一单元：导数的定义与几何意义',
+        pointCount: 2,
+        status: 'not-started',
       },
     ],
   },
 ]
 
-const FAILED_UNITS: ConversationToolUnit[] = [
+const READY_MODULES: ConversationToolModule[] = [
   {
-    id: 'u1',
-    title: '单元一：极限——微积分的基石',
+    id: 'm1',
+    title: '第一章：极限——微积分的基石',
+    status: 'completed',
+    lessons: [
+      { id: 'l1', title: '第一单元：什么是极限？', pointCount: 2, status: 'completed' },
+      {
+        id: 'l2',
+        title: '第二单元：极限的运算法则与连续性',
+        pointCount: 3,
+        status: 'completed',
+      },
+    ],
+  },
+]
+
+const FAILED_MODULES: ConversationToolModule[] = [
+  {
+    id: 'm1',
+    title: '第一章：极限——微积分的基石',
     status: 'failed',
-    chapters: [
-      { id: 'c1', title: '第一章：什么是极限？', status: 'failed' },
-      { id: 'c2', title: '第二章：极限的运算法则与连续性', status: 'failed' },
+    lessons: [
+      { id: 'l1', title: '第一单元：什么是极限？', pointCount: 1, status: 'failed' },
     ],
   },
 ]
@@ -235,9 +220,8 @@ interface StagePreview {
   key: string
   label: string
   stage: ConversationToolStage
-  units?: ConversationToolUnit[]
+  modules?: ConversationToolModule[]
   questions?: ConversationToolQuestion[]
-  progress?: number
   failed?: boolean
 }
 
@@ -260,40 +244,24 @@ const STAGE_PREVIEWS: StagePreview[] = [
     key: 'searching',
     label: 'searching · 搜索中',
     stage: 'searching',
-    progress: 28,
   },
   {
-    key: 'pending',
-    label: 'pending · 大纲待构建',
-    stage: 'pending',
-    units: PENDING_UNITS,
-  },
-  {
-    key: 'materialization',
-    label: 'materialization · 物料化',
-    stage: 'pending',
-    units: PENDING_UNITS,
-  },
-  {
-    key: 'in-progress',
-    label: 'in-progress · 构建中',
-    stage: 'in-progress',
-    units: BUILDING_UNITS,
-    progress: 45,
+    key: 'materializing',
+    label: 'materializing · 物料化',
+    stage: 'materializing',
+    modules: BUILDING_MODULES,
   },
   {
     key: 'ready',
     label: 'ready · 已就绪',
     stage: 'ready',
-    units: READY_UNITS,
-    progress: 100,
+    modules: READY_MODULES,
   },
   {
     key: 'failed',
     label: 'ready + failed · 生成未完成',
     stage: 'ready',
-    units: FAILED_UNITS,
-    progress: 100,
+    modules: FAILED_MODULES,
     failed: true,
   },
 ]
@@ -530,10 +498,10 @@ function SearchPreviewShell() {
 
 function MaterializationSandboxShell({
   title,
-  units,
+  modules,
 }: {
   title: string
-  units: ConversationToolUnit[]
+  modules: ConversationToolModule[]
 }) {
   const [loaded, setLoaded] = useState(false)
 
@@ -551,7 +519,7 @@ function MaterializationSandboxShell({
       translate="no"
       className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5"
     >
-      <div data-stage="materialization" className="flex flex-col">
+      <div data-stage="materializing" className="flex flex-col">
         <h3 className="flex items-center gap-2 text-[19.5px] font-semibold leading-7 tracking-tight text-zinc-900">
           <span className="flex size-5 translate-y-[1px] shrink-0 items-center justify-center">
             {loaded ? (
@@ -564,8 +532,8 @@ function MaterializationSandboxShell({
         </h3>
 
         <div className="mt-4 flex flex-col gap-1">
-          {units.map((unit) => (
-            <section key={unit.id}>
+          {modules.map((module) => (
+            <section key={module.id}>
               <div className="flex min-h-9 items-start gap-2 py-2 text-[16.5px] font-medium text-zinc-800">
                 <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
                   {loaded ? (
@@ -575,7 +543,7 @@ function MaterializationSandboxShell({
                   )}
                 </span>
                 <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
-                  {unit.title}
+                  {module.title}
                 </span>
               </div>
 
@@ -584,9 +552,9 @@ function MaterializationSandboxShell({
                   aria-hidden
                   className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200"
                 />
-                {unit.chapters.map((chapter) => (
+                {module.lessons.map((lesson) => (
                   <div
-                    key={chapter.id}
+                    key={lesson.id}
                     className="flex min-h-9 items-start gap-2 py-2 text-[15.5px] text-zinc-600"
                   >
                     <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
@@ -597,7 +565,10 @@ function MaterializationSandboxShell({
                       )}
                     </span>
                     <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
-                      {chapter.title}
+                      {lesson.title}
+                    </span>
+                    <span className="mt-0.5 shrink-0 text-[13px] leading-5 text-zinc-400">
+                      {lesson.pointCount} 个学习点
                     </span>
                   </div>
                 ))}
@@ -639,10 +610,10 @@ function MaterializationSandboxShell({
 
 function ReadySandboxShell({
   title,
-  units,
+  modules,
 }: {
   title: string
-  units: ConversationToolUnit[]
+  modules: ConversationToolModule[]
 }) {
   return (
     <div
@@ -656,14 +627,14 @@ function ReadySandboxShell({
         </h3>
 
         <div className="mt-4 flex flex-col gap-1">
-          {units.map((unit) => (
-            <section key={unit.id}>
+          {modules.map((module) => (
+            <section key={module.id}>
               <div className="flex min-h-9 items-start gap-2 py-2 text-[16.5px] font-medium text-zinc-800">
                 <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
                   <BacklogStatusIcon />
                 </span>
                 <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
-                  {unit.title}
+                  {module.title}
                 </span>
               </div>
 
@@ -672,16 +643,19 @@ function ReadySandboxShell({
                   aria-hidden
                   className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200"
                 />
-                {unit.chapters.map((chapter) => (
+                {module.lessons.map((lesson) => (
                   <div
-                    key={chapter.id}
+                    key={lesson.id}
                     className="flex min-h-9 items-start gap-2 py-2 text-[15.5px] text-zinc-600"
                   >
                     <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
                       <BacklogStatusIcon />
                     </span>
                     <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
-                      {chapter.title}
+                      {lesson.title}
+                    </span>
+                    <span className="mt-0.5 shrink-0 text-[13px] leading-5 text-zinc-400">
+                      {lesson.pointCount} 个学习点
                     </span>
                   </div>
                 ))}
@@ -691,10 +665,7 @@ function ReadySandboxShell({
         </div>
 
         <div className="-mx-1 -mb-1 mt-auto flex justify-end pt-4">
-          <Button
-            type="button"
-            className={sandboxPrimaryActionButtonClassName}
-          >
+          <Button type="button" className={sandboxPrimaryActionButtonClassName}>
             进入课程
           </Button>
         </div>
@@ -795,15 +766,15 @@ export function ConversationSandboxPage() {
                 </div>
                 {preview.key === 'searching' ? (
                   <SearchPreviewShell key={searchReplayKey} />
-                ) : preview.key === 'materialization' ? (
+                ) : preview.key === 'materializing' ? (
                   <MaterializationSandboxShell
                     title="微积分速成：核心概念与应用基础"
-                    units={preview.units ?? []}
+                    modules={preview.modules ?? []}
                   />
                 ) : preview.key === 'ready' ? (
                   <ReadySandboxShell
                     title="微积分速成：核心概念与应用基础"
-                    units={preview.units ?? []}
+                    modules={preview.modules ?? []}
                   />
                 ) : (
                   <ConversationToolShell
@@ -811,8 +782,7 @@ export function ConversationSandboxPage() {
                     stage={preview.stage}
                     questions={preview.questions}
                     answers={answers}
-                    units={preview.units}
-                    progress={preview.progress}
+                    modules={preview.modules}
                     failed={preview.failed}
                     onAnswerChange={handleAnswerChange}
                     onSubmitAnswers={() => undefined}

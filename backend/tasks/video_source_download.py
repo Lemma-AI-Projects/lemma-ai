@@ -78,7 +78,7 @@ def download_video_to_mp4(
     target_dir: Path,
     *,
     platform: str | None = None,
-    chapter_id: object | None = None,
+    point_id: object | None = None,
 ) -> DownloadResult:
     """Download `source_url` into `target_dir`, returning path + successful backend."""
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -102,7 +102,7 @@ def download_video_to_mp4(
             _log_attempt(
                 platform=normalized_platform,
                 backend=backend,
-                chapter_id=chapter_id,
+                point_id=point_id,
                 success=False,
                 latency_ms=_elapsed_ms(started),
                 error_type=type(error).__name__,
@@ -115,7 +115,7 @@ def download_video_to_mp4(
         _log_attempt(
             platform=normalized_platform,
             backend=backend,
-            chapter_id=chapter_id,
+            point_id=point_id,
             success=True,
             latency_ms=latency_ms,
             error_type=None,
@@ -126,7 +126,7 @@ def download_video_to_mp4(
             level="info",
             platform=normalized_platform,
             backend=backend,
-            chapter_id=str(chapter_id) if chapter_id is not None else None,
+            point_id=str(point_id) if point_id is not None else None,
             size_bytes=size_bytes,
             latency_ms=latency_ms,
         )
@@ -390,7 +390,7 @@ def _log_attempt(
     *,
     platform: str,
     backend: str,
-    chapter_id: object | None,
+    point_id: object | None,
     success: bool,
     latency_ms: int,
     error_type: str | None,
@@ -401,7 +401,7 @@ def _log_attempt(
         level="info" if success else "warning",
         platform=platform,
         backend=backend,
-        chapter_id=str(chapter_id) if chapter_id is not None else None,
+        point_id=str(point_id) if point_id is not None else None,
         success=success,
         latency_ms=latency_ms,
         error_type=error_type,

@@ -1,35 +1,34 @@
-"""物料化门禁 Celery chord: per-chapter materialize + strict finalize.
+"""物料化门禁 Celery chord: per-point materialize + strict finalize.
 
 Fan-out (决策②, 拍板 1): `run_organize` enqueues
-`chord(group(chapter.materialize per chapter) | course.materialize_finalize)`.
+`chord(group(point.materialize per point) | course.materialize_finalize)`.
 
-- `chapter.materialize(chapter_id)` INLINES the existing core bodies — never
+- `point.materialize(point_id)` INLINES the existing core bodies — never
   `.delay()`s a sub-task and polls — so no task ever waits on another and the
   chord can't deadlock the worker pool (at concurrency=1 it just runs serially):
     1. video_download.run_download   (chosen video -> Supabase Storage)
-    2. chapter_gemini_ingest.run_ingest  (Storage -> Gemini Files API cache)
-    3. each registered content step (OverviewStep) — drains the shared overview
-       core (no SSE consumer; just persists + records ai_usage_logs).
+    2. each registered content step (currently none — a point is ready as soon
+       as its video is playable).
+  The Gemini Files upload is deliberately NOT done here: it expires in ~48h and
+  the companion warms it lazily on first use (services/point_gemini_prep).
   It SWALLOWS every exception and ALWAYS returns normally so the chord callback
-  fires. CONTENT failures (unusable video/overview) land a terminal `failed`;
-  INFRA blips (DB/network, 6-30 事故) leave the chapter non-terminal so the
+  fires. CONTENT failures (unusable video) land a terminal `failed`;
+  INFRA blips (DB/network, 6-30 事故) leave the point non-terminal so the
   retry pass re-runs it without flashing a false failure at the user.
   Transient-failure resilience is the course-level re-enqueue (decision⑥),
   not Celery auto-retry.
 - `course.materialize_finalize` reads the DB (the truth, not the chord results)
   and atomically flips the course via single conditional UPDATEs. Within the
   retry budget the gate is STRICT (all ready -> `ready` + done(), else retry);
-  once the budget is exhausted it FORCES leftover non-terminal chapters to
-  `failed` and then delivers PARTIALLY (7-3 拍板): >=1 ready chapter -> course
-  `ready` + done() with failed chapters rendered in-course (self-heal on visit);
+  once the budget is exhausted it FORCES leftover non-terminal points to
+  `failed` and then delivers PARTIALLY (7-3 拍板): >=1 ready point -> course
+  `ready` + done() with failed points rendered in-course (self-heal on visit);
   nothing ready -> `failed` + error(). Either way the course never hangs in
   `materializing`.
 
-Celery 纪律: asyncio.run wraps the async body; the AI runtime is initialised for
-the overview model call and torn down after; the module engine is disposed at the
-end. Idempotent/re-entrant: every core body hits its claim/mark + read_usable/
-read_ready, so a re-enqueued chord skips finished chapters and only retries the
-ones that are still failed.
+Celery 纪律: asyncio.run wraps the async body; the module engine is disposed at
+the end. Idempotent/re-entrant: every core body hits its claim/mark, so a
+re-enqueued chord skips finished points and only retries the failed ones.
 """
 
 import asyncio
@@ -40,18 +39,11 @@ import uuid
 import asyncpg
 from sqlalchemy.exc import SQLAlchemyError
 
-from ai import init_ai_runtime, shutdown_ai_runtime
 from core.database import AsyncSessionLocal, engine
-from services import (
-    course_build_service,
-    course_service,
-    gemini_file_service,
-    video_asset_service,
-)
+from services import course_build_service, course_service, video_asset_service
 from services.course_organize_events import OrganizeEventPublisher
 from services.materialization import CONTENT_STEPS, StepContext
 from tasks.celery_app import celery_app
-from tasks.chapter_gemini_ingest import run_ingest
 from tasks.video_download import run_download
 
 logger = logging.getLogger("lemma.tasks.course_materialize")
@@ -62,7 +54,7 @@ _FAILED = "failed"
 _PENDING = "pending"
 _MATERIALIZE_FAILED = "course_materialize_failed"
 
-# Infrastructure errors are not a verdict on the chapter's content: the chapter
+# Infrastructure errors are not a verdict on the point's content: the point
 # stays non-terminal and the bounded retry chord re-runs it. ConnectionError /
 # TimeoutError are OSError subclasses; SQLAlchemyError covers errors wrapped by
 # the DBAPI layer; raw asyncpg errors surface UNwrapped from the connect phase
@@ -74,121 +66,99 @@ _INFRA_ERRORS = (
     asyncpg.InterfaceError,
 )
 
-# Bounded automatic retry: a chapter's video/overview can fail transiently (e.g.
-# a streaming RemoteProtocolError on a large-video overview). The strict gate then
-# fails the whole course, so the finalize re-enqueues the UNFINISHED chapters a
-# few times (ready ones are skipped via claim/mark + read_usable/read_ready)
-# before giving up — transient failures self-heal instead of bricking the course.
+# Bounded automatic retry: a point's video can fail transiently. The strict gate
+# then fails the whole course, so the finalize re-enqueues the UNFINISHED points
+# a few times (ready ones are skipped via claim/mark) before giving up —
+# transient failures self-heal instead of bricking the course.
 _MAX_MATERIALIZE_ATTEMPTS = 3
 _RETRY_BACKOFF_S = 20
 
 
-async def _materialize_chapter_steps(
-    chapter_id: uuid.UUID, ctx: course_service.ChapterMaterializeContext
+async def _materialize_point_steps(
+    point_id: uuid.UUID, ctx: course_service.PointMaterializeContext
 ) -> str:
-    """Inline video -> Gemini -> content steps. Returns 'ready' | 'failed'.
+    """Inline video download -> content steps. Returns 'ready' | 'failed'.
 
-    Each core body is idempotent (claim/mark): a re-run hits a ready asset / file /
-    overview and skips. run_download / run_ingest mark their own asset/file failed
-    and re-raise; we swallow + gate on the readiness read.
+    Each core body is idempotent (claim/mark): a re-run hits a ready asset and
+    skips. run_download marks its own asset failed and re-raises; we swallow +
+    gate on the readiness read.
     """
     # 1. chosen video -> Supabase Storage.
     try:
-        await run_download(chapter_id)
+        await run_download(point_id)
     except Exception:  # noqa: BLE001 — failure is recorded on the asset row
-        logger.warning("chapter %s video download failed", chapter_id, exc_info=True)
+        logger.warning("point %s video download failed", point_id, exc_info=True)
     async with AsyncSessionLocal() as db:
-        stored = await video_asset_service.get_ready_stored_video(
-            db, chapter_id=chapter_id
-        )
+        stored = await video_asset_service.get_ready_stored_video(db, point_id=point_id)
     if stored is None:
         return _FAILED
 
-    # 2. Storage -> Gemini Files API cache.
-    try:
-        await run_ingest(chapter_id)
-    except Exception:  # noqa: BLE001 — failure is recorded on the gemini-file row
-        logger.warning("chapter %s gemini ingest failed", chapter_id, exc_info=True)
-    async with AsyncSessionLocal() as db:
-        video = await gemini_file_service.read_usable(
-            db, chapter_id=chapter_id, candidate_id=stored.candidate_id
-        )
-    if video is None:
-        return _FAILED
-
-    # 3. registered content steps (overview now; quiz/assignment/unit later).
+    # 2. registered content steps (none today; quiz/practice land here later).
     step_ctx = StepContext(
         course_id=ctx.course_id,
         user_id=ctx.user_id,
-        chapter_id=chapter_id,
+        point_id=point_id,
         candidate_id=stored.candidate_id,
         video_duration_s=stored.duration_s,
     )
     for step in CONTENT_STEPS:
-        result = await step.ensure(step_ctx, video)
+        result = await step.ensure(step_ctx)
         if result.status != _READY:
             logger.info(
-                "chapter %s step %s failed: %s",
-                chapter_id,
-                step.name,
-                result.error_type,
+                "point %s step %s failed: %s", point_id, step.name, result.error_type
             )
             return _FAILED
     return _READY
 
 
-async def run_materialize_chapter(chapter_id: uuid.UUID) -> str:
+async def run_materialize_point(point_id: uuid.UUID) -> str:
     """Async body. NEVER raises — the chord callback must always fire.
 
     Content failures land a terminal `failed`. Infra blips (`_INFRA_ERRORS`)
-    leave the chapter status untouched (non-terminal `researching`) so the
+    leave the point status untouched (non-terminal `researching`) so the
     retry chord re-runs it instead of showing the user a false failure; the
     exhausted-budget finalize force-terminalizes any leftovers. Progress is
-    surfaced by the /organize/stream endpoint from DB truth, so the chapter
+    surfaced by the /organize/stream endpoint from DB truth, so the point
     task itself publishes nothing."""
-    # None -> leave the chapter status untouched (infra blip, not a verdict).
+    # None -> leave the point status untouched (infra blip, not a verdict).
     status: str | None = _FAILED
     try:
         async with AsyncSessionLocal() as db:
-            ctx = await course_service.load_chapter_materialize_context(
-                db, chapter_id=chapter_id
+            ctx = await course_service.load_point_materialize_context(
+                db, point_id=point_id
             )
         if ctx is None or ctx.candidate_id is None:
-            logger.info("chapter %s has no materialize context; mark failed", chapter_id)
+            logger.info("point %s has no materialize context; mark failed", point_id)
             return _FAILED
-        init_ai_runtime()
-        try:
-            status = await _materialize_chapter_steps(chapter_id, ctx)
-        finally:
-            await shutdown_ai_runtime()
+        status = await _materialize_point_steps(point_id, ctx)
     except _INFRA_ERRORS:
         logger.warning(
-            "chapter %s materialize hit an infra error; left non-terminal for"
+            "point %s materialize hit an infra error; left non-terminal for"
             " the retry pass",
-            chapter_id,
+            point_id,
             exc_info=True,
         )
         status = None
     except Exception:  # noqa: BLE001 — swallow: the chord callback must still fire
-        logger.exception("chapter %s materialize crashed", chapter_id)
+        logger.exception("point %s materialize crashed", point_id)
         status = _FAILED
     finally:
         if status is not None:
             with contextlib.suppress(Exception):
                 async with AsyncSessionLocal() as db:
-                    await course_service.set_chapter_status(
-                        db, chapter_id=chapter_id, status=status
+                    await course_service.set_point_build_status(
+                        db, point_id=point_id, build_status=status
                     )
         await engine.dispose()
     return status if status is not None else _PENDING
 
 
 async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
-    """Strict gate with bounded auto-retry. All chapters ready -> course ready +
-    done(). Otherwise, while attempts remain, re-enqueue the UNFINISHED chapters
-    (ready ones are skipped via claim/mark + read_usable/read_ready) with backoff,
-    leaving the course `materializing` so a transient failure self-heals. Only
-    after exhausting retries does the strict gate fail the course (+ error()).
+    """Strict gate with bounded auto-retry. All points ready -> course ready +
+    done(). Otherwise, while attempts remain, re-enqueue the UNFINISHED points
+    (ready ones are skipped via claim/mark) with backoff, leaving the course
+    `materializing` so a transient failure self-heals. Only after exhausting
+    retries does the strict gate fail the course (+ error()).
     Single conditional UPDATEs keep the flip race-safe (only the winner publishes).
     """
     publisher = OrganizeEventPublisher(course_id)
@@ -201,12 +171,12 @@ async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
         next_attempt = attempt + 1
         if next_attempt < _MAX_MATERIALIZE_ATTEMPTS:
             async with AsyncSessionLocal() as db:
-                pending = await course_service.get_unfinished_chapter_ids(
+                pending = await course_service.get_unfinished_point_ids(
                     db, course_id=course_id
                 )
             if pending:
                 logger.warning(
-                    "course %s materialize attempt %d incomplete (%d chapters left);"
+                    "course %s materialize attempt %d incomplete (%d points left);"
                     " retrying",
                     course_id,
                     attempt,
@@ -220,23 +190,23 @@ async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
                 )
                 return  # course stays `materializing`; the retry chord will finalize
 
-        # Retries exhausted: force leftover non-terminal chapters to `failed`
+        # Retries exhausted: force leftover non-terminal points to `failed`
         # first (infra crashes keep them `researching` by design), so one of the
         # conditional flips below necessarily fires — the course must never hang
         # in `materializing`.
         async with AsyncSessionLocal() as db:
-            forced = await course_build_service.fail_unfinished_chapters(
+            forced = await course_build_service.fail_unfinished_points(
                 db, course_id=course_id
             )
         if forced:
             logger.warning(
-                "course %s: forced %d unfinished chapters to failed after"
+                "course %s: forced %d unfinished points to failed after"
                 " exhausting materialize retries",
                 course_id,
                 forced,
             )
-        # Partial delivery (7-3 拍板): >=1 ready chapter ships the course as
-        # ready — failed chapters render as failed in-course and self-heal
+        # Partial delivery (7-3 拍板): >=1 ready point ships the course as
+        # ready — failed points render as failed in-course and self-heal
         # lazily on visit. Only a course with NOTHING usable fails outright.
         async with AsyncSessionLocal() as db:
             if await course_build_service.finalize_partial(db, course_id=course_id):
@@ -247,7 +217,7 @@ async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
                         )
                     )
                 logger.warning(
-                    "course %s delivered partially: %d/%d chapters failed",
+                    "course %s delivered partially: %d/%d points failed",
                     course_id,
                     failed,
                     total,
@@ -257,7 +227,7 @@ async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
         async with AsyncSessionLocal() as db:
             if await course_build_service.finalize_failed(db, course_id=course_id):
                 await publisher.error(
-                    _MATERIALIZE_FAILED, "部分章节物料化失败，无法进入课程"
+                    _MATERIALIZE_FAILED, "部分学习点物料化失败，无法进入课程"
                 )
                 return
         # No-op now only means another finalize already flipped the course.
@@ -279,29 +249,29 @@ async def run_finalize(course_id: uuid.UUID, attempt: int) -> None:
 
 def enqueue_materialize_chord(
     course_id: uuid.UUID,
-    chapter_ids: list[uuid.UUID],
+    point_ids: list[uuid.UUID],
     *,
     attempt: int = 0,
     countdown: int = 0,
 ) -> None:
-    """Fan out per-chapter materialize + the strict finalize callback. `attempt`
+    """Fan out per-point materialize + the strict finalize callback. `attempt`
     threads the retry counter through the callback; `countdown` delays a retry's
     header tasks (backoff). Lazy import keeps celery `chord` out of import time."""
     from celery import chord, group
 
     header = group(
-        chapter_materialize.s(str(chapter_id)).set(countdown=countdown)
+        point_materialize.s(str(point_id)).set(countdown=countdown)
         if countdown
-        else chapter_materialize.s(str(chapter_id))
-        for chapter_id in chapter_ids
+        else point_materialize.s(str(point_id))
+        for point_id in point_ids
     )
     chord(header)(course_materialize_finalize.s(str(course_id), attempt))
 
 
-@celery_app.task(name="chapter.materialize", bind=True)
-def chapter_materialize(self, chapter_id: str) -> str:  # noqa: ANN001 — celery bind
+@celery_app.task(name="point.materialize", bind=True)
+def point_materialize(self, point_id: str) -> str:  # noqa: ANN001 — celery bind
     """Sync entrypoint. Always returns normally (swallows) so the chord fires."""
-    return asyncio.run(run_materialize_chapter(uuid.UUID(chapter_id)))
+    return asyncio.run(run_materialize_point(uuid.UUID(point_id)))
 
 
 @celery_app.task(

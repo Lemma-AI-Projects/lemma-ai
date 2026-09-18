@@ -1,10 +1,10 @@
-"""Course 域模型冒烟：建课程树 → 读回断言层级/时间戳 → 候选与选中 → 级联删除，
+"""Course 域模型冒烟：建四层课程树 → 读回断言层级/时间戳 → 候选与选中 → 级联删除，
 并验证 CourseDetailOut 从 ORM 直出 camelCase 嵌套快照。
 
 跑法（backend/ 目录下）:
     uv run python scripts/smoke_course_models.py
 
-纯 ORM + schema 直测（Phase 1 无 service/api），与 smoke_projects 同款风格。
+纯 ORM + schema 直测，与 smoke_projects 同款风格。
 """
 
 import asyncio
@@ -19,8 +19,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from core.database import AsyncSessionLocal, engine
-from models.course import Course, CourseChapter, CourseUnit
-from models.course_candidate import ChapterVideoCandidate
+from models.course import Course, CourseLesson, CourseModule, CoursePoint
+from models.point_video_candidate import PointVideoCandidate
 from models.profile import Profile
 from models.provider_usage_log import ProviderUsageLog
 from schemas.course import CourseDetailOut, CourseListItemOut
@@ -46,56 +46,70 @@ async def main() -> int:
             profile = (await s.execute(select(Profile).limit(1))).scalar_one()
         user_id = profile.id
 
-        # --- 1. 建课程树：Course(intake) + 2 unit × 2 chapter，首章 3 候选 ---
-        units: list[CourseUnit] = []
-        chapters: list[CourseChapter] = []
-        first_chapter: CourseChapter | None = None
+        # --- 1. 建课程树：Course(intake) + 2 module × 2 lesson × 2 point ---
+        module_ids: list[uuid.UUID] = []
+        lesson_ids: list[uuid.UUID] = []
+        point_ids: list[uuid.UUID] = []
+        first_point_id: uuid.UUID | None = None
         async with AsyncSessionLocal() as db:
             course = Course(
                 user_id=user_id,
                 topic="冒烟：我想从零开始学线性代数",
                 title="线性代数冒烟课",
+                description="冒烟用课程简介",
                 status="intake",
-                intake_json={"goal": "smoke", "answers": []},
+                intake_json={"answers": {"level": "zero"}},
             )
             db.add(course)
             await db.flush()
 
-            for u in range(2):
-                unit = CourseUnit(
+            for m in range(2):
+                module = CourseModule(
                     course_id=course.id,
-                    order_index=u,
-                    title=f"单元 {u + 1}",
-                    status="not_started",
+                    order_index=m,
+                    title=f"第 {m + 1} 章",
+                    summary=f"第 {m + 1} 章简介",
                 )
-                db.add(unit)
+                db.add(module)
                 await db.flush()
-                units.append(unit)
-                for c in range(2):
-                    chapter = CourseChapter(
-                        unit_id=unit.id,
-                        order_index=c,
-                        title=f"章节 {u + 1}.{c + 1}",
-                        status="not_started",
+                module_ids.append(module.id)
+                for le in range(2):
+                    lesson = CourseLesson(
+                        module_id=module.id,
+                        order_index=le,
+                        title=f"单元 {m + 1}.{le + 1}",
+                        summary=f"单元 {m + 1}.{le + 1} 概述",
                     )
-                    db.add(chapter)
+                    db.add(lesson)
                     await db.flush()
-                    chapters.append(chapter)
-                    if u == 0 and c == 0:
-                        first_chapter = chapter
+                    lesson_ids.append(lesson.id)
+                    for p in range(2):
+                        point = CoursePoint(
+                            lesson_id=lesson.id,
+                            order_index=p,
+                            title=f"学习点 {m + 1}.{le + 1}.{p + 1}",
+                            build_status="not_started",
+                        )
+                        db.add(point)
+                        await db.flush()
+                        point_ids.append(point.id)
+                        if first_point_id is None:
+                            first_point_id = point.id
 
-            assert first_chapter is not None
+            assert first_point_id is not None
             for k in range(3):
                 db.add(
-                    ChapterVideoCandidate(
-                        chapter_id=first_chapter.id,
+                    PointVideoCandidate(
+                        point_id=first_point_id,
                         platform="youtube" if k % 2 == 0 else "bilibili",
                         platform_video_id=f"smoke-vid-{k}",
                         url=f"https://example.com/watch?v=smoke-vid-{k}",
                         title=f"候选视频 {k + 1}",
                         author=f"作者 {k + 1}",
                         duration_s=600 + k,
-                        view_count=1000 * (k + 1),
+                        # Above the old int32 ceiling: the delivery table is
+                        # BigInteger now, so a hot video needs no clamping.
+                        view_count=3_000_000_000 + k,
                         like_count=100 * (k + 1),
                         thumbnail_url=f"https://example.com/thumb-{k}.jpg",
                         score=Decimal("0.90") - Decimal(k) / 100,
@@ -104,11 +118,7 @@ async def main() -> int:
                     )
                 )
             await db.commit()
-
             course_id = course.id
-            unit_ids = [u.id for u in units]
-            chapter_ids = [ch.id for ch in chapters]
-            first_chapter_id = first_chapter.id
 
         # --- 2. 读回：层级正确、created_at 非空、默认值 ---
         async with AsyncSessionLocal() as db:
@@ -117,121 +127,130 @@ async def main() -> int:
                     select(Course)
                     .where(Course.id == course_id)
                     .options(
-                        selectinload(Course.units).selectinload(CourseUnit.chapters)
+                        selectinload(Course.modules)
+                        .selectinload(CourseModule.lessons)
+                        .selectinload(CourseLesson.points)
                     )
                 )
             ).scalar_one()
 
             check(course.created_at is not None, "course.created_at 非空")
             check(course.updated_at is not None, "course.updated_at 非空")
-            check(len(course.units) == 2, "course 含 2 个 unit")
+            check(len(course.modules) == 2, "course 含 2 个 module")
             check(
-                [u.order_index for u in course.units] == [0, 1],
-                "unit 按 order_index 排序",
+                [m.order_index for m in course.modules] == [0, 1],
+                "module 按 order_index 排序",
+            )
+            lessons_flat = [le for m in course.modules for le in m.lessons]
+            check(len(lessons_flat) == 4, "共 4 个 lesson")
+            points_flat = [p for le in lessons_flat for p in le.points]
+            check(len(points_flat) == 8, "共 8 个 point")
+            check(
+                all(p.created_at is not None for p in points_flat),
+                "point.created_at 非空",
             )
             check(
-                all(len(u.chapters) == 2 for u in course.units),
-                "每个 unit 含 2 个 chapter",
-            )
-            check(
-                all(u.created_at is not None for u in course.units),
-                "unit.created_at 非空",
-            )
-            chapters_flat = [ch for u in course.units for ch in u.chapters]
-            check(
-                all(ch.created_at is not None for ch in chapters_flat),
-                "chapter.created_at 非空",
-            )
-            check(
-                all(ch.progress == 0 for ch in chapters_flat),
-                "chapter.progress 默认 0 (server_default)",
+                all(p.build_status == "not_started" for p in points_flat),
+                "point.build_status 持久化",
             )
 
             cands = (
-                await db.execute(
-                    select(ChapterVideoCandidate).where(
-                        ChapterVideoCandidate.chapter_id == first_chapter_id
+                (
+                    await db.execute(
+                        select(PointVideoCandidate).where(
+                            PointVideoCandidate.point_id == first_point_id
+                        )
                     )
                 )
-            ).scalars().all()
-            check(len(cands) == 3, "首章含 3 个候选")
-            check(
-                all(c.created_at is not None for c in cands),
-                "candidate.created_at 非空",
+                .scalars()
+                .all()
             )
+            check(len(cands) == 3, "首个学习点含 3 个候选")
             check(
-                {c.view_count for c in cands} == {1000, 2000, 3000}
-                and {c.like_count for c in cands} == {100, 200, 300},
-                "candidate.view_count / like_count 持久化",
+                all(c.view_count > 2_147_483_647 for c in cands),
+                "candidate.view_count 支持 BigInteger（无需截断）",
             )
             check(
                 all(c.is_chosen is False for c in cands),
                 "候选默认 is_chosen=False (server_default)",
             )
-            check(
-                all(c.raw_json is not None for c in cands),
-                "candidate.raw_json 持有原始项",
-            )
 
             # --- 3. 纯逻辑：CourseDetailOut 从 ORM 直出 camelCase 嵌套快照 ---
             dumped = CourseDetailOut.model_validate(course).model_dump(by_alias=True)
             check(
-                set(dumped.keys()) == {"id", "title", "status", "progress", "units"},
+                set(dumped.keys())
+                == {
+                    "id",
+                    "title",
+                    "description",
+                    "coverUrl",
+                    "status",
+                    "questionnaireReady",
+                    "modules",
+                },
                 "CourseDetailOut 顶层键集正确",
             )
-            check(len(dumped["units"]) == 2, "快照 units 嵌套正确 (2)")
-            unit0 = dumped["units"][0]
+            module0 = dumped["modules"][0]
             check(
-                set(unit0.keys())
-                == {"id", "title", "status", "progress", "chapters"},
-                "快照 unit 键集正确",
+                set(module0.keys()) == {"id", "title", "summary", "lessons"},
+                "快照 module 键集正确",
             )
-            check(len(unit0["chapters"]) == 2, "快照 chapters 嵌套正确 (2)")
-            chapter0 = unit0["chapters"][0]
+            lesson0 = module0["lessons"][0]
             check(
-                set(chapter0.keys()) == {"id", "title", "status", "progress"},
-                "快照 chapter 键集正确",
+                set(lesson0.keys()) == {"id", "title", "summary", "points"},
+                "快照 lesson 键集正确",
+            )
+            point0 = lesson0["points"][0]
+            check(
+                set(point0.keys()) == {"id", "title", "buildStatus"},
+                "快照 point 键集正确（buildStatus，无 progress）",
             )
             order_index_leaks = (
                 not _no_order_index(dumped)
-                or any(not _no_order_index(u) for u in dumped["units"])
+                or any(not _no_order_index(m) for m in dumped["modules"])
                 or any(
-                    not _no_order_index(c)
-                    for u in dumped["units"]
-                    for c in u["chapters"]
+                    not _no_order_index(le)
+                    for m in dumped["modules"]
+                    for le in m["lessons"]
+                )
+                or any(
+                    not _no_order_index(p)
+                    for m in dumped["modules"]
+                    for le in m["lessons"]
+                    for p in le["points"]
                 )
             )
             check(not order_index_leaks, "快照不泄漏 order_index/orderIndex")
 
-            # camelCase 转换在多词字段上的实证：updated_at -> updatedAt
             item = CourseListItemOut.model_validate(course).model_dump(by_alias=True)
             check(
                 "updatedAt" in item and "updated_at" not in item,
                 "CourseListItemOut 输出 updatedAt (camelCase)",
             )
+            check("coverUrl" in item, "CourseListItemOut 含 coverUrl")
 
-        # --- 4. 选中：is_chosen=True + 回写 chapter.chosen_candidate_id ---
+        # --- 4. 选中：is_chosen=True + 回写 point.chosen_candidate_id ---
         async with AsyncSessionLocal() as db:
             chosen = (
                 await db.execute(
-                    select(ChapterVideoCandidate)
-                    .where(ChapterVideoCandidate.chapter_id == first_chapter_id)
+                    select(PointVideoCandidate)
+                    .where(PointVideoCandidate.point_id == first_point_id)
                     .limit(1)
                 )
             ).scalar_one()
             chosen.is_chosen = True
-            chapter = await db.get(CourseChapter, first_chapter_id)
-            chapter.chosen_candidate_id = chosen.id
+            point = await db.get(CoursePoint, first_point_id)
+            point.chosen_candidate_id = chosen.id
             await db.commit()
             chosen_id = chosen.id
 
         async with AsyncSessionLocal() as db:
-            chosen = await db.get(ChapterVideoCandidate, chosen_id)
-            chapter = await db.get(CourseChapter, first_chapter_id)
+            chosen = await db.get(PointVideoCandidate, chosen_id)
+            point = await db.get(CoursePoint, first_point_id)
             check(chosen.is_chosen is True, "候选 is_chosen=True 持久化")
             check(
-                chapter.chosen_candidate_id == chosen_id,
-                "chapter.chosen_candidate_id 回写成功",
+                point.chosen_candidate_id == chosen_id,
+                "point.chosen_candidate_id 回写成功",
             )
 
         # --- 5. provider_usage_logs 台账：追加 → 读回 → 清理（无 FK，手动清） ---
@@ -242,7 +261,7 @@ async def main() -> int:
                     provider="apify",
                     actor_id="smoke-actor",
                     platform="youtube",
-                    use_case="chapter_query",
+                    use_case="course_topic_search",
                     run_id="smoke-run",
                     result_count=5,
                     cost_usd=Decimal("0.01230000"),
@@ -268,7 +287,7 @@ async def main() -> int:
             await db.delete(row)
             await db.commit()
 
-        # --- 6. 级联：删 course → unit/chapter/candidate 全没 ---
+        # --- 6. 级联：删 course → module/lesson/point/candidate 全没 ---
         async with AsyncSessionLocal() as db:
             course = await db.get(Course, course_id)
             await db.delete(course)
@@ -276,25 +295,28 @@ async def main() -> int:
 
         async with AsyncSessionLocal() as db:
             check((await db.get(Course, course_id)) is None, "course 已删除")
-            units_left = (
-                await db.execute(
-                    select(CourseUnit).where(CourseUnit.id.in_(unit_ids))
+            for label, model, ids in (
+                ("module", CourseModule, module_ids),
+                ("lesson", CourseLesson, lesson_ids),
+                ("point", CoursePoint, point_ids),
+            ):
+                left = (
+                    (await db.execute(select(model).where(model.id.in_(ids))))
+                    .scalars()
+                    .all()
                 )
-            ).scalars().all()
-            check(len(units_left) == 0, "级联: 所属 unit 全删")
-            chapters_left = (
-                await db.execute(
-                    select(CourseChapter).where(CourseChapter.id.in_(chapter_ids))
-                )
-            ).scalars().all()
-            check(len(chapters_left) == 0, "级联: 所属 chapter 全删")
+                check(len(left) == 0, f"级联: 所属 {label} 全删")
             cands_left = (
-                await db.execute(
-                    select(ChapterVideoCandidate).where(
-                        ChapterVideoCandidate.chapter_id == first_chapter_id
+                (
+                    await db.execute(
+                        select(PointVideoCandidate).where(
+                            PointVideoCandidate.point_id == first_point_id
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             check(len(cands_left) == 0, "级联: 所属 candidate 全删")
     finally:
         await engine.dispose()

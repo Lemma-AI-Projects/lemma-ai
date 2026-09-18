@@ -12,7 +12,7 @@ import uuid
 from collections.abc import Iterable
 
 from ai.client import ai_client
-from ai.coursegen.types import ChapterQueries
+from ai.coursegen.types import SearchQueries
 from ai.errors import AIError
 from ai.search import (
     ApifyClient,
@@ -28,8 +28,8 @@ logger = logging.getLogger("lemma.ai.coursegen")
 # provider_usage_logs.use_case for the request-level broad search.
 _SEARCH_USE_CASE = "course_topic_search"
 _SEARCH_PLATFORMS = (SearchPlatform.YOUTUBE, SearchPlatform.BILIBILI)
-# Broader than the old per-chapter search: more queries, more per-query results,
-# because this single pass must cover the whole topic's real supply.
+# One broad pass has to cover the whole topic's real supply, so it runs more
+# queries and takes more results per query than a narrow per-video search would.
 _MAX_SEARCH_QUERIES = 4
 _PER_QUERY_LIMIT = 8
 
@@ -54,7 +54,7 @@ async def _expand_queries(topic: str) -> list[str]:
     prompt = f"学习诉求：{topic}"
     try:
         result = await ai_client.generate(
-            AIUseCase.TOPIC_SEARCH, prompt, ChapterQueries
+            AIUseCase.TOPIC_SEARCH, prompt, SearchQueries
         )
         queries = _dedup_str(q.strip() for q in result.queries if q and q.strip())
     except AIError as exc:

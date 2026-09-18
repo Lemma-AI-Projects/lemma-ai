@@ -52,7 +52,7 @@ class AiConversation(Base):
     # Single-home course link (AI 伴学, 拍板 2026-06-21): a companion conversation
     # belongs to one course. CASCADE on course delete — deliberately unlike
     # project_id's SET NULL: a companion is meaningless without the course's
-    # chapter videos (which also cascade), so it goes with the course rather than
+    # point videos (which also cascade), so it goes with the course rather than
     # orphaning into the main list.
     course_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useCoursesListQuery } from '@/features/course/courseLearningApi'
+import { useCoursesListQuery } from '@/features/course/courseApi'
 import { cn } from '@/lib/utils'
 
 type WeekView = 'current' | 'previous'
@@ -123,7 +123,7 @@ export function CourseWeeklyProgressCard({ className }: { className?: string }) 
         ) : quickStartCourse ? (
           <button
             type="button"
-            onClick={() => navigate(`/course/${quickStartCourse.id}`)}
+            onClick={() => navigate(`/courses/${quickStartCourse.id}`)}
             className="w-full rounded-[14px] border border-zinc-200 bg-white px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
           >
             <span className="block truncate text-[14.5px] leading-5 font-semibold text-zinc-900">

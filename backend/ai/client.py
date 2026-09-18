@@ -74,7 +74,6 @@ _VIDEO_USE_CASES = frozenset(
         AIUseCase.VIDEO_SUMMARY,
         AIUseCase.VIDEO_LOCATE,
         AIUseCase.COURSE_COMPANION,
-        AIUseCase.COURSE_OVERVIEW,
     }
 )
 
@@ -724,9 +723,9 @@ class AIClient:
         the API layer encodes them to SSE identically.
 
         Native engine only for now (the default); other engines raise — streaming
-        on the pydantic_ai path is a later phase. The chapter video reference
+        on the pydantic_ai path is a later phase. The point video reference
         (provider file) is validated for expiry/platform before use; history is
-        prior turns (text), the current chapter video is always re-attached by
+        prior turns (text), the current point video is always re-attached by
         gemini_video so the model sees what the user is watching.
         """
         if use_case not in _VIDEO_USE_CASES:
@@ -842,7 +841,7 @@ class AIClient:
         """Text-first streaming chat with optional function-calling tools (决策⑩-a).
 
         The model answers in text by default and may call a bound tool (e.g. load
-        the chapter video) when it decides it needs it; the manual FC loop runs
+        the point video) when it decides it needs it; the manual FC loop runs
         on the native channel inside gemini_video and yields AIChunk events
         identical to stream_chat (so the API encodes them via encode_chunk). Tool
         HANDLERS are injected by the caller (services) — ai/ never imports
@@ -857,7 +856,7 @@ class AIClient:
         route = routes[0]
         system_prompt = render_system_prompt(use_case, prompt_vars)
         # Long-video downgrade (7-3 工单): must match the overview's choice for
-        # the chapter so implicit context caching keeps hitting (见 plan 2.5).
+        # the point so implicit context caching keeps hitting (见 plan 2.5).
         route_extra = (
             {**(route.extra or {}), "media_resolution": media_resolution}
             if media_resolution

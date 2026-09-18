@@ -1,11 +1,18 @@
-"""Boundary types for the per-chapter content materialization steps (决策⑧).
+"""Boundary types for the per-point content materialization steps (决策⑧).
 
-A "step" is one content artifact a chapter must produce during the materialization
-phase (overview is the first; quiz / assignment / unit overview are future steps).
-The video substrate (download -> Gemini upload) is NOT a step — it is ensured
-inline by the chapter.materialize task and handed to every step as a ready
-`VideoInput`. Adding a step ≈ writing a ChapterContentStep + registering it; the
-chord orchestration骨架 never changes. No framework types leak through here.
+A "step" is one content artifact a learning point must produce during the
+materialization phase. The video substrate (download to Storage) is NOT a step
+— it is ensured inline by the point.materialize task before any step runs, so a
+step can assume the point has a playable video. A step that additionally needs
+the model to WATCH the video drives services/point_gemini_prep itself; the
+Gemini upload is deliberately not pre-warmed during materialization (a file
+expires in ~48h, long before most learners arrive).
+
+Adding a step ≈ writing a PointContentStep + registering it; the chord
+orchestration骨架 never changes. No framework types leak here.
+
+There are currently NO registered steps: the AI chapter overview was retired with
+the four-level restructure, and quiz / practice generation does not exist yet.
 """
 
 import uuid
@@ -14,20 +21,18 @@ from typing import Literal, Protocol
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai import VideoInput
-
 StepStatus = Literal["ready", "pending", "failed"]
 
 
 @dataclass
 class StepContext:
-    """Everything a step needs for one chapter (resolved by the orchestrator)."""
+    """Everything a step needs for one point (resolved by the orchestrator)."""
 
     course_id: uuid.UUID
     user_id: uuid.UUID
-    chapter_id: uuid.UUID
+    point_id: uuid.UUID
     candidate_id: uuid.UUID
-    # Chapter video duration (from the ready asset row) — drives the long-video
+    # Point video duration (from the ready asset row) — drives the long-video
     # media-resolution downgrade (ai/video_limits). None = unknown, keep default.
     video_duration_s: int | None = None
 
@@ -38,15 +43,16 @@ class StepResult:
     error_type: str | None = None
 
 
-class ChapterContentStep(Protocol):
-    """A registrable content artifact for a chapter. `ensure` is idempotent (it
-    short-circuits when already done) and must NEVER raise — it reports failure
-    via StepResult so the chapter task can swallow + record a terminal status."""
+class PointContentStep(Protocol):
+    """A registrable content artifact for a learning point. `ensure` is
+    idempotent (it short-circuits when already done) and must NEVER raise — it
+    reports failure via StepResult so the point task can swallow + record a
+    terminal status."""
 
     name: str
 
     async def status(
-        self, db: AsyncSession, *, chapter_id: uuid.UUID, candidate_id: uuid.UUID
+        self, db: AsyncSession, *, point_id: uuid.UUID, candidate_id: uuid.UUID
     ) -> StepStatus: ...
 
-    async def ensure(self, ctx: StepContext, video: VideoInput) -> StepResult: ...
+    async def ensure(self, ctx: StepContext) -> StepResult: ...

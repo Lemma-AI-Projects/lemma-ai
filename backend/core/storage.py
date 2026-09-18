@@ -101,7 +101,7 @@ def download_file(client: Any, *, key: str, local_path: str) -> None:
     """Download a private-bucket object to a local path (multipart, parallel).
 
     The inverse of upload_file — used by the companion ingest task to pull a
-    chapter's re-hosted video body out of Storage before handing it to the Gemini
+    point's re-hosted video body out of Storage before handing it to the Gemini
     Files API. Celery builds its OWN client (build_s3_client), per-task, never
     reusing one across loops.
     """

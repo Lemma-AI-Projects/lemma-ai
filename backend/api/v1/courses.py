@@ -12,10 +12,10 @@ from core.database import AsyncSessionLocal, get_db
 from core.security import CurrentUser, get_current_user
 from models.course import Course
 from schemas.course import (
-    ChapterVideoOut,
     CourseDetailOut,
     CourseListItemOut,
     IntakeAnswersIn,
+    PointVideoOut,
     QuestionnaireOut,
 )
 from services import (
@@ -54,7 +54,7 @@ async def submit_intake(
 ) -> CourseDetailOut:
     # 搜索前置: record answers, flip the course to `organizing`, and enqueue the
     # organize task (compose over the pre-searched candidate pool, gated on the
-    # broad search finishing). Returns the `organizing` snapshot (empty units);
+    # broad search finishing). Returns the `organizing` snapshot (empty tree);
     # the card then streams progress via /organize/stream until ready/failed.
     answers = {answer.question_id: answer.answer for answer in payload.answers}
     detail = await course_planning_service.submit_answers(
@@ -91,22 +91,20 @@ async def get_course(
     return detail
 
 
-@router.get(
-    "/{course_id}/chapters/{chapter_id}/video", response_model=ChapterVideoOut
-)
-async def read_chapter_video(
+@router.get("/{course_id}/points/{point_id}/video", response_model=PointVideoOut)
+async def read_point_video(
     course_id: uuid.UUID,
-    chapter_id: uuid.UUID,
+    point_id: uuid.UUID,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> ChapterVideoOut:
-    # Opening a chapter's video is the "started this chapter" trigger: it lazily
-    # downloads this chapter's video if needed and pre-warms the next one. 404
-    # when not owned / chapter not in course / no chosen video (IDOR-safe — no
+) -> PointVideoOut:
+    # Opening a learning point's video is the "started this point" trigger: it
+    # lazily downloads this point's video if needed and pre-warms the next one.
+    # 404 when not owned / point not in course / no chosen video (IDOR-safe — no
     # probing which ids exist). Returns immediately with status downloading while
     # a fetch is in flight; the client polls this same endpoint.
-    video = await video_asset_service.get_chapter_video(
-        db, current_user, course_id=course_id, chapter_id=chapter_id
+    video = await video_asset_service.get_point_video(
+        db, current_user, course_id=course_id, point_id=point_id
     )
     if video is None:
         raise _NOT_FOUND
@@ -198,7 +196,7 @@ async def _terminal_frame_if_done(
 
 def _materializing_frame(detail: CourseDetailOut) -> str:
     """SSE frame pushing the live course snapshot during materialization, so the
-    card renders the per-chapter tree (spinner -> check) and flips each item as it
+    card renders the per-point tree (spinner -> check) and flips each item as it
     finishes — same payload shape as the `done` frame, but non-terminal. DB-truth
     (built from the snapshot), so reconnect / Redis-down degrade work unchanged."""
     return course_organize_events.to_sse(
@@ -284,7 +282,7 @@ async def _degrade_snapshot_stream(
     *, user_id: uuid.UUID, course_id: uuid.UUID, search_emitted: bool
 ) -> AsyncIterator[str]:
     """Redis-down fallback: poll the DB ~1s, emit searching/search/done/error
-    (no live reasoning). Mirrors the retired /build/stream snapshot loop."""
+    (no live reasoning)."""
     while True:
         detail = await _course_snapshot(user_id=user_id, course_id=course_id)
         if detail is None:

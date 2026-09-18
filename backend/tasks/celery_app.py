@@ -23,7 +23,7 @@ celery_app = Celery(
         "tasks.course_search",
         "tasks.course_organize",
         "tasks.video_download",
-        "tasks.chapter_gemini_ingest",
+        "tasks.point_gemini_ingest",
         "tasks.course_materialize",
         "tasks.video_cleanup",
     ],
@@ -42,7 +42,7 @@ celery_app.conf.update(
     # connection demand against the Supabase pooler quota is halved (7-2 事故).
     worker_concurrency=4,
     result_expires=60 * 60 * 24,
-    # Sliding-expiry cleanup of re-hosted chapter videos (Supabase Storage),
+    # Sliding-expiry cleanup of re-hosted point videos (Supabase Storage),
     # daily off-peak. The task itself computes the cutoff from VIDEO_ASSET_TTL_DAYS.
     beat_schedule={
         "cleanup-expired-video-assets": {

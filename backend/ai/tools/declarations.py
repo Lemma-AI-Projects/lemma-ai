@@ -18,22 +18,22 @@ from ai.skills import catalog
 from ai.tools.types import ToolSpec
 
 # Tool names (the model calls these by name; keep stable).
-LOAD_CHAPTER_VIDEO = "load_chapter_video"
+LOAD_POINT_VIDEO = "load_point_video"
 LOAD_SKILL = "load_skill"
 RENDER_DESMOS_GRAPH = "render_desmos_graph"
 RENDER_DESMOS_3D_GRAPH = "render_desmos_3d_graph"
 READ_CURRENT_GRAPH = "read_current_graph"
 
 _REGISTRY: dict[str, ToolSpec] = {
-    LOAD_CHAPTER_VIDEO: ToolSpec(
-        name=LOAD_CHAPTER_VIDEO,
+    LOAD_POINT_VIDEO: ToolSpec(
+        name=LOAD_POINT_VIDEO,
         description=(
-            "加载用户此刻正在观看的本章节视频，以便结合视频画面、板书与讲解来回答。"
+            "加载用户此刻正在观看的学习点视频，以便结合视频画面、板书与讲解来回答。"
             "当用户的问题需要看到视频内容才能准确解释时调用；纯概念性、与画面无关的"
-            "问题无需调用。无需任何参数——始终加载用户当前正在看的那一章。"
+            "问题无需调用。无需任何参数——始终加载用户当前正在看的那个学习点。"
         ),
-        # Argless: the handler always loads the CURRENT chapter (request-scoped),
-        # never a model-chosen one — enforces 「每轮取当前章、非粘性」.
+        # Argless: the handler always loads the CURRENT point (request-scoped),
+        # never a model-chosen one — enforces 「每轮取当前学习点、非粘性」.
         parameters={"type": "object", "properties": {}},
         result_kind="media",
     ),

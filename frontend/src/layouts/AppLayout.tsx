@@ -7,12 +7,10 @@ import {
   GraduationCap,
   Home,
   LibraryBig,
-  ListTree,
-  Menu,
   Puzzle,
   SquarePen,
 } from 'lucide-react'
-import { Link, Outlet, useMatch } from 'react-router-dom'
+import { Link, Outlet } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -20,7 +18,6 @@ import { SidebarItem } from '@/components/SidebarItem'
 import { SidebarMoreMenu } from '@/components/SidebarMoreMenu'
 import { SidebarSection } from '@/components/SidebarSection'
 import { useConversationsQuery } from '@/features/conversation/conversationApi'
-import { CourseSidebarDirectory } from '@/features/course/CourseSidebarDirectory'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
 import { useProjectsQuery } from '@/features/project/projectApi'
 
@@ -37,51 +34,10 @@ function SidebarHeader({ children }: { children?: ReactNode }) {
   )
 }
 
-function CourseSidebarSwitcher({
-  activeCourseId,
-  navigationSidebarContent,
-}: {
-  activeCourseId: string
-  navigationSidebarContent: ReactNode
-}) {
-  const [showCourseDirectory, setShowCourseDirectory] = useState(true)
-
-  return (
-    <>
-      <SidebarHeader>
-        <Button
-          variant="ghost"
-          aria-label={
-            showCourseDirectory
-              ? 'Show navigation sidebar'
-              : 'Show course directory'
-          }
-          className="size-7 rounded-full border border-zinc-200 p-0 hover:bg-zinc-200/70 hover:text-zinc-900"
-          onClick={() => setShowCourseDirectory((current) => !current)}
-        >
-          {showCourseDirectory ? (
-            <Menu className="size-3.5" />
-          ) : (
-            <ListTree className="size-3.5" />
-          )}
-        </Button>
-      </SidebarHeader>
-
-      {showCourseDirectory ? (
-        <CourseSidebarDirectory key={activeCourseId} courseId={activeCourseId} />
-      ) : (
-        navigationSidebarContent
-      )}
-    </>
-  )
-}
-
 export function AppLayout() {
   const navRef = useRef<HTMLElement>(null)
-  const courseMatch = useMatch('/course/:id')
   const [isScrolledFromTop, setIsScrolledFromTop] = useState(false)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
-  const activeCourseId = courseMatch?.params.id
   const conversationsQuery = useConversationsQuery()
   const projectsQuery = useProjectsQuery()
   const projects = projectsQuery.data ?? []
@@ -191,18 +147,8 @@ export function AppLayout() {
     <div className="flex h-screen gap-2 overflow-hidden bg-zinc-100 p-2 text-zinc-950 [--sidebar-width:240px]">
       <aside className="flex h-full w-[var(--sidebar-width)] shrink-0 flex-col">
         <nav ref={navRef} className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto">
-          {activeCourseId ? (
-            <CourseSidebarSwitcher
-              activeCourseId={activeCourseId}
-              navigationSidebarContent={navigationSidebarContent}
-            />
-          ) : (
-            <>
-              <SidebarHeader />
-              {navigationSidebarContent}
-            </>
-          )}
-
+          <SidebarHeader />
+          {navigationSidebarContent}
         </nav>
       </aside>
 

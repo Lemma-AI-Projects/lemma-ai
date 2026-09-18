@@ -20,9 +20,9 @@ export class CourseCompanionStreamError extends Error {
 
 export interface StreamCourseCompanionChatOptions {
   courseId: string
-  /** Current content node's chapter, or null on a text-only node (unit/no chapter).
-   *  Sent every turn (非粘性); the model loads the video on demand when needed. */
-  chapterId: string | null
+  /** The learning point the user is on, or null when not on one (e.g. the
+   *  dashboard). Sent every turn (非粘性); the model loads the video on demand. */
+  pointId: string | null
   message: string
   conversationId?: string
   signal: AbortSignal
@@ -39,7 +39,7 @@ export async function streamCourseCompanionChat(
 ): Promise<void> {
   const {
     courseId,
-    chapterId,
+    pointId,
     message,
     conversationId,
     signal,
@@ -73,7 +73,7 @@ export async function streamCourseCompanionChat(
       },
       body: JSON.stringify({
         ...(conversationId ? { conversationId } : {}),
-        chapterId,
+        pointId,
         message,
       }),
       signal,

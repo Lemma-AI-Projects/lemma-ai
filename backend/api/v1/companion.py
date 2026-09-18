@@ -3,9 +3,9 @@
 Course-scoped under /courses/{course_id}/companion. The chat body is an SSE
 stream (reuses ai/streaming encode_chunk). The companion is text-first; a
 `preparing` event is emitted only when the model calls the video tool and the
-chapter file is still uploading to Gemini — so the endpoint just relays the
+point's file is still uploading to Gemini — so the endpoint just relays the
 AIChunks. IDOR is enforced in companion_service.prepare_turn (course /
-conversation ownership; a missing/foreign chapter is NOT a 404 — text-only).
+conversation ownership; a missing/foreign point is NOT a 404 — text-only).
 """
 
 import uuid
@@ -65,8 +65,8 @@ async def companion_chat(
             db, payload, current_user, course_id=course_id
         )
     if context is None:
-        # Foreign/unknown course, chapter, or conversation are indistinguishable
-        # on purpose (IDOR red line).
+        # Foreign/unknown course or conversation are indistinguishable on
+        # purpose (IDOR red line).
         raise _NOT_FOUND
     return StreamingResponse(
         _companion_event_stream(context),
@@ -83,7 +83,7 @@ async def _companion_event_stream(
     context: companion_service.CompanionTurnContext,
 ) -> AsyncIterator[str]:
     """Relay the tool-chat AIChunks as SSE. `preparing` (the video tool warming
-    the Gemini file), reasoning/delta, usage, done and error all originate in the
-    AIClient tool loop and are encoded by encode_chunk — no pre-stream poll."""
+    the point's Gemini file), reasoning/delta, usage, done and error all originate
+    in the AIClient tool loop and are encoded by encode_chunk — no pre-stream poll."""
     async for chunk in companion_service.stream_answer(context):
         yield encode_chunk(chunk)

@@ -57,14 +57,14 @@ class _TransientComposeError(Exception):
 
 
 def _enqueue_materialize_chord(
-    course_id: uuid.UUID, chapter_ids: list[uuid.UUID]
+    course_id: uuid.UUID, point_ids: list[uuid.UUID]
 ) -> None:
-    """Fan out the initial per-chapter materialization chord (attempt 0). The
-    finalize callback bounded-retries the unfinished chapters before failing.
+    """Fan out the initial per-point materialization chord (attempt 0). The
+    finalize callback bounded-retries the unfinished points before failing.
     Lazy import: tasks import services, so a top-level import would cycle."""
     from tasks.course_materialize import enqueue_materialize_chord
 
-    enqueue_materialize_chord(course_id, chapter_ids)
+    enqueue_materialize_chord(course_id, point_ids)
 
 
 async def run_organize(course_id: uuid.UUID) -> str:
@@ -154,20 +154,20 @@ async def run_organize(course_id: uuid.UUID) -> str:
                 final_status = await course_build_service.persist_composed_course(
                     db, course_id=course_id, result=result
                 )
-                chapter_ids = (
-                    await course_service.get_ordered_playable_chapter_ids(
+                point_ids = (
+                    await course_service.get_ordered_playable_point_ids(
                         db, course_id=course_id
                     )
                     if final_status == "materializing"
                     else []
                 )
-            if final_status == "materializing" and chapter_ids:
-                # 物料化门禁: fan out a chord — each chapter materializes its video +
-                # overview inline; the callback strictly flips ready/failed. The
+            if final_status == "materializing" and point_ids:
+                # 物料化门禁: fan out a chord — each point downloads its video
+                # inline; the callback strictly flips ready/failed. The
                 # organize SSE stays open (materializing is non-terminal) and the
                 # chord tasks publish progress + the terminal done/error. NOTE: no
                 # publisher.done() here — finalize owns the terminal frame.
-                _enqueue_materialize_chord(course_id, chapter_ids)
+                _enqueue_materialize_chord(course_id, point_ids)
             else:
                 # compose produced nothing playable -> terminal failure.
                 async with AsyncSessionLocal() as db:

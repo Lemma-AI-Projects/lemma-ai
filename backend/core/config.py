@@ -29,21 +29,6 @@ _DEFAULT_AI_ROUTES_JSON = (
     ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
     ' {"platform": "openrouter", "adapter": "openrouter",'
     ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 60}'
-    '], "course_outline": ['
-    '{"platform": "aihubmix", "adapter": "openai_compatible",'
-    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
-    ' {"platform": "openrouter", "adapter": "openrouter",'
-    ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 60}'
-    '], "chapter_query": ['
-    '{"platform": "aihubmix", "adapter": "openai_compatible",'
-    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
-    ' {"platform": "openrouter", "adapter": "openrouter",'
-    ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 60}'
-    '], "video_select": ['
-    '{"platform": "aihubmix", "adapter": "openai_compatible",'
-    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
-    ' {"platform": "openrouter", "adapter": "openrouter",'
-    ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 60}'
     '], "topic_search": ['
     '{"platform": "aihubmix", "adapter": "openai_compatible",'
     ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
@@ -61,17 +46,6 @@ _DEFAULT_AI_ROUTES_JSON = (
     '{"platform": "aihubmix", "adapter": "gemini_video",'
     ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 90,'
     ' "extra": {"media_resolution": "medium", "include_thoughts": true}}'
-    # 章节概述: same native gemini_video channel as companion so both share the
-    # one chapter_gemini_files upload (零重传). media_resolution=medium (决策⑨)
-    # + thinking on; a longer timeout — it writes a full study note, not a turn.
-    # thinking_budget caps the pre-answer reasoning (observed 620-3635 thought
-    # tokens): a long think delays the first output byte and flirts with the
-    # gateway's ~60s stream cutoff (7-3 事故) for zero overview-quality gain.
-    '], "course_overview": ['
-    '{"platform": "aihubmix", "adapter": "gemini_video",'
-    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 120,'
-    ' "extra": {"media_resolution": "medium", "include_thoughts": true,'
-    ' "thinking_budget": 1024}}'
     "]}"
 )
 

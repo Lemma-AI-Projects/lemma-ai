@@ -1,14 +1,15 @@
 import { useState } from 'react'
 
+import { useCourseDetailQuery } from '@/hooks/useCourseDetail'
+import { isNotFoundError } from '@/lib/apiUtils'
 import {
   mapCourseToToolShellData,
   useCourseOrganizeStream,
-  useCourseQuery,
   useCourseQuestionnaireQuery,
   useSubmitCourseIntakeMutation,
   type CourseIntakeAnswer,
   type CoursePlannerStage,
-  type CourseToolUnit,
+  type CourseToolModule,
   type QuestionnaireAnswers,
   type QuestionnaireQuestion,
 } from './courseApi'
@@ -22,16 +23,17 @@ export interface CoursePlannerView {
   title: string
   questions: QuestionnaireQuestion[]
   answers: QuestionnaireAnswers
-  units: CourseToolUnit[]
-  progress: number
+  modules: CourseToolModule[]
   failed: boolean
-  // The searching window (decision ②/⑤): real search hits + live compose
+  // The searching window (决策②/⑤): real search hits + live compose
   // reasoning, streamed over /organize/stream. Only meaningful at stage
   // 'searching'.
   search: CourseSearchProgress | null
   reasoningText: string
   errorMessage: string | null
   isLoading: boolean
+  /** 课程已不存在（清库 / 用户删课）：卡片渲染「不存在」而不是无限骨架屏。 */
+  isMissing: boolean
   isSubmittingAnswers: boolean
   onAnswerChange: (questionId: string, option: string) => void
   onSubmitAnswers: (answers: CourseIntakeAnswer[]) => void
@@ -42,19 +44,21 @@ export interface CoursePlannerView {
  * courseId. Both the in-conversation card and the sandbox use it, so live and
  * reload exercise the exact same code path:
  *
- *   GET /courses/{id}          -> stage / title / progress / outline tree
+ *   GET /courses/{id}          -> stage / title / tree
  *   GET /courses/{id}/questionnaire (only at the questionnaire stage)
  *   POST /intake               -> organize starts in the worker
  *   GET /organize/stream       -> live organize SSE (searching: real search
- *                                 hits + compose reasoning -> ready)
+ *                                 hits + compose reasoning -> materializing ->
+ *                                 ready)
  *
  * The DB snapshot is the truth; this hook only orchestrates the calls and holds
  * the transient answer selections.
  */
 export function useCoursePlanner(courseId: string | undefined): CoursePlannerView {
   // The course query self-polls while the questionnaire is generating (see
-  // useCourseQuery), so stage/questionnaireReady stay fresh without extra logic.
-  const courseQuery = useCourseQuery(courseId, { enabled: Boolean(courseId) })
+  // useCourseDetailQuery), so stage/questionnaireReady stay fresh with no extra
+  // logic here.
+  const courseQuery = useCourseDetailQuery(courseId)
   const shellData = courseQuery.data
     ? mapCourseToToolShellData(courseQuery.data)
     : null
@@ -77,7 +81,7 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
   const submitIntake = useSubmitCourseIntakeMutation()
   // Live organize SSE: real search hits + compose reasoning, then materialization
   // — one continuous stream from organizing through materializing. It writes each
-  // live snapshot into the course cache (materializing -> the per-chapter tree;
+  // live snapshot into the course cache (materializing -> the live tree;
   // done -> ready/failed), so the stage flips with no polling (无轮询).
   const organize = useCourseOrganizeStream(courseId, {
     enabled: stage === 'searching' || stage === 'materializing',
@@ -101,9 +105,11 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
   // failure still flips the card to the failed stage via the terminal-code path
   // (a scary red banner for a self-healing blip just hurts the experience). Only
   // real, actionable errors surface here.
+  // 课程 404（清库 / 用户删课）单独走 isMissing，不当成可重试的加载失败。
+  const isMissing = courseQuery.isError && isNotFoundError(courseQuery.error)
   const errorMessage = submitIntake.isError
     ? '提交问卷失败，请重试'
-    : courseQuery.isError
+    : courseQuery.isError && !isMissing
       ? '加载课程失败，请重试'
       : null
 
@@ -112,13 +118,13 @@ export function useCoursePlanner(courseId: string | undefined): CoursePlannerVie
     title: shellData?.title ?? '课程规划',
     questions,
     answers,
-    units: shellData?.units ?? [],
-    progress: shellData?.progress ?? 0,
+    modules: shellData?.modules ?? [],
     failed: shellData?.failed ?? false,
     search: organize.search,
     reasoningText: organize.reasoningText,
     errorMessage,
     isLoading: courseQuery.isPending,
+    isMissing,
     isSubmittingAnswers: submitIntake.isPending,
     onAnswerChange,
     onSubmitAnswers,

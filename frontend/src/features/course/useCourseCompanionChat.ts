@@ -183,8 +183,7 @@ const companionErrorMessages: Record<string, string> = {
   ai_unsupported_capability: '当前 AI 配置暂不支持视频伴学',
   companion_video_preparing: '视频准备超时，请稍后重试',
   companion_video_failed: '视频解析失败，请稍后重试',
-  not_found: '课程、章节或会话不存在',
-  chapter_required: '请先打开一个视频章节',
+  not_found: '课程、学习点或会话不存在',
   stream_interrupted: '连接中断，请重试',
 }
 
@@ -208,7 +207,7 @@ function isAbortError(error: unknown): boolean {
 
 interface UseCourseCompanionChatOptions {
   courseId: string | undefined
-  chapterId: string | null
+  pointId: string | null
   conversationId: string | undefined
   onConversationAdopted: (conversationId: string) => void
   onRestoreDraft: (text: string) => void
@@ -217,7 +216,7 @@ interface UseCourseCompanionChatOptions {
 
 export function useCourseCompanionChat({
   courseId,
-  chapterId,
+  pointId,
   conversationId,
   onConversationAdopted,
   onRestoreDraft,
@@ -234,7 +233,7 @@ export function useCourseCompanionChat({
   const hasOutputRef = useRef(false)
   const pendingIdRef = useRef<string | null>(null)
   const lastUserTextRef = useRef<string | null>(null)
-  const lastChapterIdRef = useRef<string | null>(null)
+  const lastPointIdRef = useRef<string | null>(null)
   const callbacksRef = useRef({
     onConversationAdopted,
     onRestoreDraft,
@@ -272,7 +271,7 @@ export function useCourseCompanionChat({
     hasOutputRef.current = false
     pendingIdRef.current = null
     lastUserTextRef.current = null
-    lastChapterIdRef.current = null
+    lastPointIdRef.current = null
     selfCreatedIdRef.current = null
     // Conversation switch reset mirrors useConversationChat: the prev-id guard
     // prevents cascades, and the reset must stay atomic with abort/ref cleanup.
@@ -284,7 +283,7 @@ export function useCourseCompanionChat({
   const startStream = (
     content: string,
     activeConversationId: string | undefined,
-    activeChapterId: string | null
+    activePointId: string | null
   ) => {
     if (!courseId) {
       return
@@ -311,7 +310,7 @@ export function useCourseCompanionChat({
       try {
         await streamCourseCompanionChat({
           courseId,
-          chapterId: activeChapterId,
+          pointId: activePointId,
           message: content,
           conversationId: activeConversationId,
           signal: controller.signal,
@@ -398,7 +397,7 @@ export function useCourseCompanionChat({
   const send = (content: string) => {
     const trimmed = content.trim()
     const { status } = stateRef.current
-    // chapterId may be null (text-only nodes) — the companion is always usable.
+    // pointId may be null (e.g. on the dashboard) — the companion is always usable.
     if (
       !trimmed ||
       !courseId ||
@@ -410,11 +409,11 @@ export function useCourseCompanionChat({
     }
 
     lastUserTextRef.current = trimmed
-    lastChapterIdRef.current = chapterId
+    lastPointIdRef.current = pointId
     apply({ type: 'send', content: trimmed, createdAt: new Date().toISOString() })
     const activeConversationId =
       conversationId ?? selfCreatedIdRef.current ?? undefined
-    startStream(trimmed, activeConversationId, chapterId)
+    startStream(trimmed, activeConversationId, pointId)
   }
 
   const retry = () => {
@@ -424,7 +423,7 @@ export function useCourseCompanionChat({
     apply({ type: 'send', content: text, createdAt: new Date().toISOString() })
     const activeConversationId =
       conversationId ?? selfCreatedIdRef.current ?? undefined
-    startStream(text, activeConversationId, lastChapterIdRef.current ?? chapterId)
+    startStream(text, activeConversationId, lastPointIdRef.current ?? pointId)
   }
 
   const stop = () => {

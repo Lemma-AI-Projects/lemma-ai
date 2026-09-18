@@ -2,8 +2,12 @@
 
 Same IDOR red line as conversations/projects: every query that touches a course
 by id MUST filter by user_id too — "not yours" and "not there" are both
-None -> 404. This module owns the ORM; course_planning_service / the future
-build service orchestrate and delegate persistence here.
+None -> 404. This module owns the ORM; course_planning_service /
+course_build_service orchestrate and delegate persistence here.
+
+树形: course -> module（章）-> lesson（单元）-> point（学习点）. Every ordering
+query walks all three levels, so learning order is
+module.order_index -> lesson.order_index -> point.order_index.
 """
 
 import uuid
@@ -14,8 +18,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ai.coursegen.types import CourseOutline
-from models.course import Course, CourseChapter, CourseUnit
+from models.course import Course, CourseLesson, CourseModule, CoursePoint
 from schemas.course import CourseDetailOut, QuestionnaireOut
 
 # Only fully-built courses appear in the list (拍板: status < ready stay hidden,
@@ -32,7 +35,7 @@ async def create_course(
     intake_json: dict | None,
 ) -> Course:
     """Create a course in the `intake` state. title starts as the topic and is
-    replaced by the AI course title once the outline is generated."""
+    replaced by the AI course title once compose runs."""
     course = Course(
         user_id=user_id,
         topic=topic,
@@ -56,59 +59,24 @@ async def get_owned_course(
     return result.scalar_one_or_none()
 
 
-async def persist_outline(
-    db: AsyncSession,
-    course: Course,
-    outline: CourseOutline,
-    *,
-    intake_json: dict | None,
-) -> None:
-    """Lay the AI outline down as unit/chapter rows and advance to outline_ready.
-
-    order_index is assigned from list position (the wire never exposes it). DB
-    fields the brain doesn't produce (id/status/progress) are set here; the
-    chapter `summary` from the outline is stored on the row.
-    """
-    course.title = outline.title
-    course.intake_json = intake_json
-    course.status = "outline_ready"
-    for unit_index, outline_unit in enumerate(outline.units):
-        unit = CourseUnit(
-            course_id=course.id,
-            order_index=unit_index,
-            title=outline_unit.title,
-            status="not_started",
-        )
-        db.add(unit)
-        await db.flush()  # need unit.id for its chapters
-        for chapter_index, outline_chapter in enumerate(outline_unit.chapters):
-            db.add(
-                CourseChapter(
-                    unit_id=unit.id,
-                    order_index=chapter_index,
-                    title=outline_chapter.title,
-                    summary=outline_chapter.summary,
-                    status="not_started",
-                )
-            )
-    await db.commit()
-
-
 async def get_course_detail(
     db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID
 ) -> CourseDetailOut | None:
-    """Owned full snapshot (units -> chapters eager-loaded). None -> 404."""
+    """Owned full snapshot (modules -> lessons -> points eager-loaded). None -> 404."""
     result = await db.execute(
         select(Course)
         .where(Course.id == course_id, Course.user_id == user_id)
-        .options(selectinload(Course.units).selectinload(CourseUnit.chapters))
+        .options(
+            selectinload(Course.modules)
+            .selectinload(CourseModule.lessons)
+            .selectinload(CourseLesson.points)
+        )
     )
     course = result.scalar_one_or_none()
     if course is None:
         return None
     detail = CourseDetailOut.model_validate(course)
     detail.questionnaire_ready = bool((course.intake_json or {}).get("questionnaire"))
-    _apply_progress(detail)
     return detail
 
 
@@ -163,120 +131,96 @@ async def mark_intake_failed(db: AsyncSession, *, course_id: uuid.UUID) -> None:
         await db.commit()
 
 
-def _apply_progress(detail: CourseDetailOut) -> None:
-    """Roll chapter progress up to unit and course (章节进度的平均值).
+# --- learning order (module -> lesson -> point) ---
 
-    Chapter progress moves through in-flight beats (搜索 25 / 排序 50 / 选片 75)
-    and reaches 100 only at a terminal write (ready/failed); unit and course
-    progress are the average of their chapters, derived here for the snapshot.
-    Build progress therefore rises smoothly and hits 100 once every chapter is
-    terminal.
-    """
-    all_chapters = [chapter for unit in detail.units for chapter in unit.chapters]
-    for unit in detail.units:
-        if unit.chapters:
-            unit.progress = round(
-                sum(c.progress for c in unit.chapters) / len(unit.chapters)
-            )
-    if all_chapters:
-        detail.progress = round(
-            sum(c.progress for c in all_chapters) / len(all_chapters)
+
+def _points_in_course(course_id: uuid.UUID):
+    """SELECT over a course's points, joined up to the module for ordering."""
+    return (
+        select(CoursePoint.id)
+        .join(CourseLesson, CoursePoint.lesson_id == CourseLesson.id)
+        .join(CourseModule, CourseLesson.module_id == CourseModule.id)
+        .where(CourseModule.course_id == course_id)
+        .order_by(
+            CourseModule.order_index,
+            CourseLesson.order_index,
+            CoursePoint.order_index,
         )
+    )
 
 
-async def get_ordered_playable_chapter_ids(
+async def get_ordered_playable_point_ids(
     db: AsyncSession, *, course_id: uuid.UUID
 ) -> list[uuid.UUID]:
-    """Chapter ids that have a chosen video, in learning order (unit→chapter).
+    """Point ids that have a chosen video, in learning order.
 
-    The nearest-preheat order: 'first chapter' is the head and 'next chapter' is
-    the element after a given id. Chapters with no chosen candidate (failed
-    research) are skipped — they have nothing to download.
+    The nearest-preheat order: 'first point' is the head and 'next point' is the
+    element after a given id. Points with no chosen candidate (failed research)
+    are skipped — they have nothing to download.
     """
     result = await db.execute(
-        select(CourseChapter.id)
-        .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
-        .where(
-            CourseUnit.course_id == course_id,
-            CourseChapter.chosen_candidate_id.isnot(None),
-        )
-        .order_by(CourseUnit.order_index, CourseChapter.order_index)
+        _points_in_course(course_id).where(CoursePoint.chosen_candidate_id.isnot(None))
     )
     return list(result.scalars())
-
-
-async def get_first_playable_chapter_id(
-    db: AsyncSession, *, course_id: uuid.UUID
-) -> uuid.UUID | None:
-    """The chapter to pre-warm right after a build finishes (拍板: 先下第一章)."""
-    ids = await get_ordered_playable_chapter_ids(db, course_id=course_id)
-    return ids[0] if ids else None
 
 
 # --- materialization (物料化门禁) helpers ---
 
 
 @dataclass
-class ChapterMaterializeContext:
-    """The course/user/candidate a chapter.materialize task needs (one join)."""
+class PointMaterializeContext:
+    """The course/user/candidate a point.materialize task needs (one join)."""
 
     course_id: uuid.UUID
     user_id: uuid.UUID
     candidate_id: uuid.UUID | None
 
 
-async def load_chapter_materialize_context(
-    db: AsyncSession, *, chapter_id: uuid.UUID
-) -> ChapterMaterializeContext | None:
-    """Resolve a chapter's course id, owner, and chosen candidate in one query.
+async def load_point_materialize_context(
+    db: AsyncSession, *, point_id: uuid.UUID
+) -> PointMaterializeContext | None:
+    """Resolve a point's course id, owner, and chosen candidate in one query.
 
     Worker-side (the chord already runs on an authorized course), so no user
-    filter — None only when the chapter is gone.
+    filter — None only when the point is gone.
     """
     row = (
         await db.execute(
-            select(
-                Course.id, Course.user_id, CourseChapter.chosen_candidate_id
-            )
-            .join(CourseUnit, CourseUnit.course_id == Course.id)
-            .join(CourseChapter, CourseChapter.unit_id == CourseUnit.id)
-            .where(CourseChapter.id == chapter_id)
+            select(Course.id, Course.user_id, CoursePoint.chosen_candidate_id)
+            .join(CourseModule, CourseModule.course_id == Course.id)
+            .join(CourseLesson, CourseLesson.module_id == CourseModule.id)
+            .join(CoursePoint, CoursePoint.lesson_id == CourseLesson.id)
+            .where(CoursePoint.id == point_id)
         )
     ).first()
     if row is None:
         return None
-    return ChapterMaterializeContext(
+    return PointMaterializeContext(
         course_id=row[0], user_id=row[1], candidate_id=row[2]
     )
 
 
-async def set_chapter_status(
-    db: AsyncSession, *, chapter_id: uuid.UUID, status: str
+async def set_point_build_status(
+    db: AsyncSession, *, point_id: uuid.UUID, build_status: str
 ) -> None:
-    """Land a chapter's terminal materialization status (ready -> progress 100)."""
-    chapter = await db.get(CourseChapter, chapter_id)
-    if chapter is None:
+    """Land a point's terminal materialization status."""
+    point = await db.get(CoursePoint, point_id)
+    if point is None:
         return
-    chapter.status = status
-    if status == "ready":
-        chapter.progress = 100
+    point.build_status = build_status
     await db.commit()
 
 
-async def get_unfinished_chapter_ids(
+async def get_unfinished_point_ids(
     db: AsyncSession, *, course_id: uuid.UUID
 ) -> list[uuid.UUID]:
-    """Playable chapters not yet `ready` (failed or still researching), in order —
-    the set a materialization retry pass re-runs (ready chapters are skipped)."""
+    """Playable points not yet `ready` (failed or still researching), in order —
+    the set a materialization retry pass re-runs (ready points are skipped)."""
     result = await db.execute(
-        select(CourseChapter.id)
-        .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
-        .where(
-            CourseUnit.course_id == course_id,
-            CourseChapter.chosen_candidate_id.isnot(None),
-            CourseChapter.status != "ready",
+        _points_in_course(course_id).where(
+            CoursePoint.chosen_candidate_id.isnot(None),
+            CoursePoint.build_status != "ready",
         )
-        .order_by(CourseUnit.order_index, CourseChapter.order_index)
     )
     return list(result.scalars())
 
@@ -284,15 +228,20 @@ async def get_unfinished_chapter_ids(
 async def get_materialization_progress(
     db: AsyncSession, *, course_id: uuid.UUID
 ) -> tuple[int, int, int]:
-    """(done, total, failed) counted over the course's chapters by status — the
-    DB-truth progress for the materializing SSE + the strict finalize gate."""
+    """(done, total, failed) counted over the course's points by build_status —
+    the DB-truth progress for the materializing SSE + the strict finalize gate."""
     rows = (
-        await db.execute(
-            select(CourseChapter.status)
-            .join(CourseUnit, CourseChapter.unit_id == CourseUnit.id)
-            .where(CourseUnit.course_id == course_id)
+        (
+            await db.execute(
+                select(CoursePoint.build_status)
+                .join(CourseLesson, CoursePoint.lesson_id == CourseLesson.id)
+                .join(CourseModule, CourseLesson.module_id == CourseModule.id)
+                .where(CourseModule.course_id == course_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     total = len(rows)
     done = sum(1 for s in rows if s == "ready")
     failed = sum(1 for s in rows if s == "failed")
@@ -314,7 +263,16 @@ async def list_courses(
 
 
 async def delete_course(db: AsyncSession, course: Course) -> None:
-    # units/chapters/candidates go with it (FK ON DELETE CASCADE).
+    """Delete a course, its tree, and its re-hosted videos.
+
+    The DB cascade reaches modules/lessons/points/candidates/assets and the
+    course's companion conversations — but NOT Supabase Storage, which has no
+    foreign keys. Dropping the rows first would strand every object, so the
+    objects go first (best effort; a failure there must not block the delete).
+    """
+    from services import video_asset_service
+
+    await video_asset_service.purge_course_objects(db, course_id=course.id)
     await db.delete(course)
     await db.commit()
 
@@ -322,14 +280,28 @@ async def delete_course(db: AsyncSession, course: Course) -> None:
 async def cleanup_stale_drafts(db: AsyncSession, *, before: datetime) -> int:
     """Delete unfinished courses (status != ready) untouched since `before`.
 
-    Drafts abandoned at intake/outline_ready/building and failed runs accumulate
-    otherwise. Bulk delete; the DB cascades to units/chapters/candidates.
-    Returns the number of courses removed.
+    Drafts abandoned at intake/organizing/materializing and failed runs
+    accumulate otherwise. Their Storage objects are purged first (same reason as
+    delete_course); the DB then cascades to the tree and candidates. Returns the
+    number of courses removed.
     """
-    result = await db.execute(
-        delete(Course).where(
-            Course.status != _LISTED_STATUS, Course.updated_at < before
+    from services import video_asset_service
+
+    stale = (
+        (
+            await db.execute(
+                select(Course.id).where(
+                    Course.status != _LISTED_STATUS, Course.updated_at < before
+                )
+            )
         )
+        .scalars()
+        .all()
     )
+    if not stale:
+        return 0
+    for course_id in stale:
+        await video_asset_service.purge_course_objects(db, course_id=course_id)
+    result = await db.execute(delete(Course).where(Course.id.in_(stale)))
     await db.commit()
     return result.rowcount or 0

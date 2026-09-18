@@ -10,7 +10,6 @@ injectable for tests).
 import math
 from datetime import UTC, datetime
 
-from ai.coursegen.types import ChapterPlan
 from ai.search.types import VideoCandidate
 
 # Weights (additive). Views dominate, duration fit is a strong secondary signal
@@ -24,16 +23,11 @@ _DECAY_DAYS = 3650.0  # recency fades to 0 over ~10 years
 
 
 def rank(
-    candidates: list[VideoCandidate],
-    chapter_plan: ChapterPlan | None = None,
-    *,
-    now: datetime | None = None,
+    candidates: list[VideoCandidate], *, now: datetime | None = None
 ) -> list[VideoCandidate]:
     """Return candidates sorted best-first. Stable (preserves input order on
-    ties). chapter_plan is optional/reserved (future relevance signals); the
-    current score is metric-only and deterministic, so the search-first compose
-    step calls rank(pool) with no plan to pre-rank the whole candidate pool."""
-    del chapter_plan  # reserved; current scoring is purely metric-based
+    ties). Scoring is metric-only and deterministic, so compose pre-ranks the
+    whole candidate pool with a single rank(pool) call."""
     moment = now or datetime.now(UTC)
     # enumerate index is the stable tiebreaker (Python sort is stable, but the
     # negative score key alone would reorder equal scores arbitrarily otherwise).
@@ -60,7 +54,7 @@ def _score(candidate: VideoCandidate, now: datetime) -> float:
 def _duration_score(duration_s: int | None) -> float:
     if duration_s is None:
         return 0.5
-    if duration_s < 120:  # shorts / clips: too thin for a chapter
+    if duration_s < 120:  # shorts / clips: too thin for a learning point
         return 0.2
     if duration_s <= 2400:  # 2–40 min: the teaching sweet spot
         return 1.0

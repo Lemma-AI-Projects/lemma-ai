@@ -1,18 +1,18 @@
-"""AI 伴学 business logic: text-first chat with the chapter video as a TOOL.
+"""AI 伴学 business logic: text-first chat with the point's video as a TOOL.
 
-The companion is always available (any content node — video / overview / quiz /
-assignment / a chapter with no video). It answers in text by default and, when
-the model decides it needs to see what the user is watching, calls the
-`load_chapter_video` tool; the AIClient tool loop (native channel) then injects
-the chapter's Gemini file and continues. This module wires that loop: it composes
-conversation_service (history + persistence), video_asset_service (IDOR + the
-chapter's chosen candidate) and chapter_gemini_prep (ensure the Gemini file),
-and provides the tool HANDLER as a closure over THIS turn's chapter — ai/ never
-imports services. It never touches the ORM directly.
+The companion is always available (on a learning point or on the course
+dashboard). It answers in text by default and, when the model decides it needs
+to see what the user is watching, calls the `load_point_video` tool; the
+AIClient tool loop (native channel) then injects the point's Gemini file and
+continues. This module wires that loop: it composes conversation_service
+(history + persistence), video_asset_service (IDOR + the point's chosen
+candidate) and point_gemini_prep (ensure the Gemini file), and provides the tool
+HANDLER as a closure over THIS turn's point — ai/ never imports services. It
+never touches the ORM directly.
 
 Boundaries (rules): history is text-only (the video is re-introduced per turn via
 the tool, never replayed from history, so 48h file expiry never strands old refs);
-the handler only ever loads the CURRENT turn's chapter (非粘性, 每轮重判).
+the handler only ever loads the CURRENT turn's point (非粘性, 每轮重判).
 """
 
 import asyncio
@@ -25,7 +25,7 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai import (
-    LOAD_CHAPTER_VIDEO,
+    LOAD_POINT_VIDEO,
     AIChunk,
     AIUseCase,
     ChatMessage,
@@ -41,10 +41,10 @@ from core import aio
 from core.security import CurrentUser
 from schemas.companion import CompanionChatRequest
 from services import (
-    chapter_gemini_prep,
     conversation_service,
     conversation_tool_service,
     course_service,
+    point_gemini_prep,
     video_asset_service,
 )
 
@@ -57,13 +57,13 @@ class CompanionTurnContext:
     question: str
     user_sent_at: datetime
     history: list[ChatMessage]
-    # The chapter the user is currently on, and its chosen candidate (keys the
-    # Gemini-file cache). BOTH None when the content node has no video (quiz /
-    # assignment / unknown chapter) — the video tool then degrades to text-only.
-    chapter_id: uuid.UUID | None = None
+    # The learning point the user is currently on, and its chosen candidate
+    # (keys the Gemini-file cache). BOTH None when there is no video in context
+    # (dashboard / unknown point) — the video tool then degrades to text-only.
+    point_id: uuid.UUID | None = None
     candidate_id: uuid.UUID | None = None
     # Chosen video duration: drives the long-video media-resolution downgrade
-    # (ai/video_limits); must match the overview's choice for cache hits.
+    # (ai/video_limits).
     video_duration_s: int | None = None
     # Set for a NEW conversation (its row doesn't exist yet); persist_turn
     # creates it (with course_id) together with the first turn.
@@ -77,14 +77,14 @@ async def prepare_turn(
     *,
     course_id: uuid.UUID,
 ) -> CompanionTurnContext | None:
-    """Resolve the conversation (+ optional chapter) for this turn before streaming.
+    """Resolve the conversation (+ optional point) for this turn before streaming.
 
     IDOR red lines (all -> None -> 404, indistinguishable):
     - the course must belong to the caller;
     - a continued conversation must belong to the caller AND to THIS course.
-    A MISSING / foreign chapter or a chapter with no chosen video is NOT a 404 —
-    the companion stays text-only for it (契约变更: 不再因无视频 404). A new
-    conversation is not written here — only its id is generated.
+    A MISSING / foreign point or a point with no chosen video is NOT a 404 —
+    the companion stays text-only for it. A new conversation is not written
+    here — only its id is generated.
     """
     course = await course_service.get_owned_course(
         db, user_id=user.id, course_id=course_id
@@ -92,13 +92,13 @@ async def prepare_turn(
     if course is None:
         return None
 
-    # Optional: resolve the current chapter's chosen candidate. None (foreign /
+    # Optional: resolve the current point's chosen candidate. None (foreign /
     # unknown / no chosen video) just means "no video to load" — never a 404.
     candidate_id: uuid.UUID | None = None
     video_duration_s: int | None = None
-    if payload.chapter_id is not None:
-        ref = await video_asset_service.get_chapter_chosen_candidate_ref(
-            db, course_id=course_id, chapter_id=payload.chapter_id
+    if payload.point_id is not None:
+        ref = await video_asset_service.get_point_chosen_candidate_ref(
+            db, course_id=course_id, point_id=payload.point_id
         )
         if ref is not None:
             candidate_id, video_duration_s = ref
@@ -111,7 +111,7 @@ async def prepare_turn(
             question=payload.message,
             user_sent_at=datetime.now(UTC),
             history=[],
-            chapter_id=payload.chapter_id,
+            point_id=payload.point_id,
             candidate_id=candidate_id,
             video_duration_s=video_duration_s,
             new_conversation_title=conversation_service.title_from_first_message(
@@ -137,25 +137,25 @@ async def prepare_turn(
         question=payload.message,
         user_sent_at=datetime.now(UTC),
         history=history,
-        chapter_id=payload.chapter_id,
+        point_id=payload.point_id,
         candidate_id=candidate_id,
         video_duration_s=video_duration_s,
     )
 
 
 def _build_video_tool(context: CompanionTurnContext) -> ToolBinding:
-    """The `load_chapter_video` tool, bound to THIS turn's chapter (非粘性).
+    """The `load_point_video` tool, bound to THIS turn's point (非粘性).
 
-    The handler ignores its (argless) call and always loads the current chapter:
+    The handler ignores its (argless) call and always loads the current point:
     cold ⇒ emit ToolProgress(preparing) while the shared chain downloads+uploads,
-    then ToolResult(media=video); no video for this node ⇒ ToolResult(unavailable)
+    then ToolResult(media=video); no video in context ⇒ ToolResult(unavailable)
     so the model answers from text alone.
     """
-    spec = tool_spec(LOAD_CHAPTER_VIDEO)
+    spec = tool_spec(LOAD_POINT_VIDEO)
 
     async def handler(_call: ToolCall) -> AsyncIterator[ToolProgress | ToolResult]:
-        async for event in chapter_gemini_prep.stream_until_usable(
-            chapter_id=context.chapter_id, candidate_id=context.candidate_id
+        async for event in point_gemini_prep.stream_until_usable(
+            point_id=context.point_id, candidate_id=context.candidate_id
         ):
             if event.kind == "preparing":
                 yield ToolProgress()
@@ -170,7 +170,7 @@ def _build_video_tool(context: CompanionTurnContext) -> ToolBinding:
 
 
 async def stream_answer(context: CompanionTurnContext) -> AsyncIterator[AIChunk]:
-    """Stream the companion answer (text-first + video tool) and persist the pair.
+    """Stream the companion answer (text-first + point video tool) and persist.
 
     Mirrors chat_service.stream_turn: persistence runs on a protected background
     task scheduled synchronously in `finally`, so a mid-stream disconnect still

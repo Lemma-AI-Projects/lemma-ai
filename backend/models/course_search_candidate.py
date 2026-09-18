@@ -14,11 +14,11 @@ class CourseSearchCandidate(Base):
 
     Every video the request-level broad search found, cached BEFORE any outline
     exists. compose reads this pool (rank + trim) to select + organize; the
-    chosen subset is then materialized into chapter_video_candidates, so the
+    chosen subset is then materialized into point_video_candidates, so the
     video-delivery path stays unchanged.
 
-    Kept separate from chapter_video_candidates on purpose: that one is the
-    per-chapter funnel keyed by chapter_id; this is the pre-structure pool keyed
+    Kept separate from point_video_candidates on purpose: that one is the
+    per-point funnel keyed by point_id; this is the pre-structure pool keyed
     by course_id. Rich engagement fields (comment_count / tags / metrics) live
     here for selection and never need to reach the delivery table. raw_json keeps
     the provider's untouched item (boundary stays inside the row).

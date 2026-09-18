@@ -1,24 +1,16 @@
 import { useState } from 'react'
-import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizInstructionsView } from '@/features/course/quiz/CourseQuizInstructionsView'
 import { CourseQuizQuestionsView } from '@/features/course/quiz/CourseQuizQuestionsView'
 import { CourseQuizResultView } from '@/features/course/quiz/CourseQuizResultView'
+import type { CourseQuestionFlowContent } from '@/features/course/quiz/types'
 
 interface CourseQuizViewProps {
   content: CourseQuestionFlowContent
+  /** 说明页「跳过」；省略则不渲染该按钮。 */
+  onSkip?: () => void
 }
 
 type CourseQuizPage = 'instructions' | 'questions' | 'result'
-
-function getCurrentQuizId(content: CourseQuestionFlowContent): string {
-  const contentSuffix = content.type === 'assignment' ? 'assignment' : 'quiz'
-
-  if (content.scope === 'unit') {
-    return `${content.unit.id}-${contentSuffix}`
-  }
-
-  return content.chapter ? `${content.chapter.id}-${contentSuffix}` : ''
-}
 
 function getCourseQuizPageTitles(content: CourseQuestionFlowContent) {
   if (content.type === 'assignment') {
@@ -34,26 +26,20 @@ function getCourseQuizPageTitles(content: CourseQuestionFlowContent) {
   }
 }
 
-export function CourseQuizView({ content }: CourseQuizViewProps) {
-  // 切换到另一个测验/作业时用 key 重挂载答题流程，使页面状态
+export function CourseQuizView({ content, onSkip }: CourseQuizViewProps) {
+  // 切换到另一个测验/作业时用 key 重挂答题流程，使页面状态
   // 自然回到说明页，替代先渲染旧页再被 effect 重置的双趟渲染
-  const currentContentId = getCurrentQuizId(content)
-
   return (
-    <CourseQuizFlow
-      key={currentContentId}
-      content={content}
-      currentContentId={currentContentId}
-    />
+    <CourseQuizFlow key={content.id} content={content} onSkip={onSkip} />
   )
 }
 
 function CourseQuizFlow({
   content,
-  currentContentId,
+  onSkip,
 }: {
   content: CourseQuestionFlowContent
-  currentContentId: string
+  onSkip?: () => void
 }) {
   const pageTitles = getCourseQuizPageTitles(content)
   const [currentQuizPage, setCurrentQuizPage] =
@@ -63,26 +49,20 @@ function CourseQuizFlow({
     return (
       <CourseQuizQuestionsView
         content={content}
-        currentContentId={currentContentId}
+        currentContentId={content.id}
         onSubmit={() => setCurrentQuizPage('result')}
       />
     )
   }
 
   if (currentQuizPage === 'result') {
-    return (
-      <CourseQuizResultView
-        content={content}
-        currentContentId={currentContentId}
-        title={pageTitles.result}
-      />
-    )
+    return <CourseQuizResultView content={content} title={pageTitles.result} />
   }
 
   return (
     <CourseQuizInstructionsView
       content={content}
-      currentContentId={currentContentId}
+      onSkip={onSkip}
       onStart={() => setCurrentQuizPage('questions')}
       title={pageTitles.instructions}
     />

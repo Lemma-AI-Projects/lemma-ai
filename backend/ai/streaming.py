@@ -49,7 +49,7 @@ def tool_event(payload: dict[str, Any]) -> str:
 
 
 def preparing_event() -> str:
-    # A tool is preparing a long-running resource (e.g. uploading the chapter
+    # A tool is preparing a long-running resource (e.g. uploading the point's
     # video to Gemini) before the answer can continue; the client shows a wait.
     return _encode("preparing", {})
 

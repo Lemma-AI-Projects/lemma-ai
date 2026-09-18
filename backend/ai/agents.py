@@ -15,13 +15,7 @@ from typing import Any
 
 from pydantic_ai import Agent, RunContext
 
-from ai.coursegen.types import (
-    ChapterQueries,
-    ComposedCourse,
-    CourseOutline,
-    Questionnaire,
-    VideoSelection,
-)
+from ai.coursegen.types import ComposedCourse, Questionnaire, SearchQueries
 from ai.errors import UnsupportedCapabilityError
 from ai.types import AIUseCase
 
@@ -64,9 +58,6 @@ video_locate_agent = _build_agent()
 # framework agent only serves the pydantic_ai engine path, like the other video
 # agents.
 course_companion_agent = _build_agent()
-# Chapter overview: native gemini_video streams it; this framework agent only
-# serves the pydantic_ai engine path, like the other video agents.
-course_overview_agent = _build_agent()
 
 _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.TEXT_CHAT: text_chat_agent,
@@ -75,25 +66,17 @@ _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.VIDEO_SUMMARY: video_summary_agent,
     AIUseCase.VIDEO_LOCATE: video_locate_agent,
     AIUseCase.COURSE_COMPANION: course_companion_agent,
-    AIUseCase.COURSE_OVERVIEW: course_overview_agent,
 }
 
 course_intake_agent = _build_structured_agent(Questionnaire)
-# 搜索前置: broad query expansion (reuses the ChapterQueries shape) + compose.
-topic_search_agent = _build_structured_agent(ChapterQueries)
+# 搜索前置: broad query expansion + compose (select & organize the pool).
+topic_search_agent = _build_structured_agent(SearchQueries)
 course_compose_agent = _build_structured_agent(ComposedCourse)
-# Retired by the search-first flow (kept registered for rollback/historical use).
-course_outline_agent = _build_structured_agent(CourseOutline)
-chapter_query_agent = _build_structured_agent(ChapterQueries)
-video_select_agent = _build_structured_agent(VideoSelection)
 
 _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_INTAKE: course_intake_agent,
     AIUseCase.TOPIC_SEARCH: topic_search_agent,
     AIUseCase.COURSE_COMPOSE: course_compose_agent,
-    AIUseCase.COURSE_OUTLINE: course_outline_agent,
-    AIUseCase.CHAPTER_QUERY: chapter_query_agent,
-    AIUseCase.VIDEO_SELECT: video_select_agent,
 }
 
 

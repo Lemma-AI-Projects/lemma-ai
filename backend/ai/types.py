@@ -23,29 +23,20 @@ class AIUseCase(StrEnum):
     # Course generation. Each value doubles as its prompt template name
     # (ai/prompts/templates/<value>.system.txt).
     COURSE_INTAKE = "course_intake"
-    # 搜索前置重构: TOPIC_SEARCH expands broad queries from the USER REQUEST
-    # (not a chapter title); COURSE_COMPOSE selects from the real candidate pool
-    # and organizes the chosen videos into units/chapters.
+    # 搜索前置: TOPIC_SEARCH expands broad queries from the USER REQUEST;
+    # COURSE_COMPOSE selects from the real candidate pool and organizes the
+    # chosen videos into modules -> lessons -> points.
     TOPIC_SEARCH = "topic_search"
     COURSE_COMPOSE = "course_compose"
-    # Retired by the search-first flow (kept for historical rows / rollback;
-    # no longer on the active path): COURSE_OUTLINE / CHAPTER_QUERY / VIDEO_SELECT.
-    COURSE_OUTLINE = "course_outline"
-    CHAPTER_QUERY = "chapter_query"
-    VIDEO_SELECT = "video_select"
     # Short conversational acknowledgement streamed BEFORE the course-planning
     # tool card is attached to a chat turn (the "AI replies first" beat). A
     # plain text agent like TEXT_CHAT, but with its own prompt so it stays a
     # tight intro instead of answering the topic itself.
     COURSE_PLAN_INTRO = "course_plan_intro"
-    # AI 伴学: grounded video Q&A while watching a chapter — the model sees the
-    # chapter's re-hosted video via the Gemini Files API and explains it. A video
-    # use case (gemini_video channel), streamed with reasoning.
+    # AI 伴学: grounded video Q&A while watching a learning point — the model
+    # sees the point's re-hosted video via the Gemini Files API and explains it.
+    # A video use case (gemini_video channel), streamed with reasoning.
     COURSE_COMPANION = "course_companion"
-    # Chapter overview: the model watches the chapter's video and writes a
-    # learning-oriented Markdown summary, streamed (gemini_video + reasoning) and
-    # cached. Distinct prompt from VIDEO_SUMMARY (study notes, not a recap).
-    COURSE_OVERVIEW = "course_overview"
 
 
 class VideoInputKind(StrEnum):

@@ -6,7 +6,7 @@ client, its raw items and the routing/cost machinery all stay inside this
 package.
 
 Client lifecycle: pass `client` to reuse one across many searches (the future
-Celery task builds one per task and reuses it across chapters); omit it and the
+Celery task builds one per task and reuses it across queries); omit it and the
 facade builds and closes its own — that's the convenience path the smoke uses.
 `use_case` / `course_id` are optional accounting context written to
 provider_usage_logs.

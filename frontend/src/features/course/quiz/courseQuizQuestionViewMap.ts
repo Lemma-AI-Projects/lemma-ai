@@ -1,13 +1,13 @@
 import type { ReactElement } from 'react'
-import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizFillBlankQuestionView } from '@/features/course/quiz/CourseQuizFillBlankQuestionView'
 import { CourseQuizMultipleChoiceQuestionView } from '@/features/course/quiz/CourseQuizMultipleChoiceQuestionView'
 import { CourseQuizShortAnswerQuestionView } from '@/features/course/quiz/CourseQuizShortAnswerQuestionView'
 import { CourseQuizSingleChoiceQuestionView } from '@/features/course/quiz/CourseQuizSingleChoiceQuestionView'
 import type {
+  CourseQuestionFlowContent,
   CourseQuizQuestion,
   CourseQuizQuestionType,
-} from '@/mock/course/courseItems'
+} from '@/features/course/quiz/types'
 
 export type CourseQuizQuestionAnswerValue = string | string[]
 

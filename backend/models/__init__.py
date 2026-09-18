@@ -2,13 +2,12 @@
 
 from models.ai_conversation import AiConversation, AiMessage
 from models.ai_usage_log import AiUsageLog
-from models.chapter_gemini_file import ChapterGeminiFile
-from models.chapter_overview import ChapterOverview
-from models.chapter_video_asset import ChapterVideoAsset
-from models.course import Course, CourseChapter, CourseUnit
-from models.course_candidate import ChapterVideoCandidate
+from models.course import Course, CourseLesson, CourseModule, CoursePoint
 from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
+from models.point_gemini_file import PointGeminiFile
+from models.point_video_asset import PointVideoAsset
+from models.point_video_candidate import PointVideoCandidate
 from models.profile import Profile
 from models.project import Project
 from models.provider_usage_log import ProviderUsageLog
@@ -17,15 +16,15 @@ __all__ = [
     "AiConversation",
     "AiMessage",
     "AiUsageLog",
-    "ChapterGeminiFile",
-    "ChapterOverview",
-    "ChapterVideoAsset",
-    "ChapterVideoCandidate",
     "Course",
-    "CourseChapter",
+    "CourseLesson",
+    "CourseModule",
+    "CoursePoint",
     "CourseSearchCandidate",
-    "CourseUnit",
     "DesmosGraph",
+    "PointGeminiFile",
+    "PointVideoAsset",
+    "PointVideoCandidate",
     "Profile",
     "Project",
     "ProviderUsageLog",

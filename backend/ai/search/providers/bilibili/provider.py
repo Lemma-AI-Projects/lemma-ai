@@ -4,7 +4,7 @@ Anonymous and free; maps each result item to the boundary VideoCandidate. WBI
 signing is opt-in via ``route.extra.wbi`` (default off — the endpoint currently
 accepts unsigned requests). Risk-control responses (-412 / v_voucher) surface as
 retryable so a configured fallback (e.g. Apify) can take over; with the default
-self-built-only chain the leg simply fails and the chapter retries — never a
+self-built-only chain the leg simply fails and the search leg retries — never a
 silent paid fallback. Construction signature is (client, route, ctx) to match
 routing._build_provider; the Apify ``client`` is ignored (this provider uses the
 per-loop BiliClient).

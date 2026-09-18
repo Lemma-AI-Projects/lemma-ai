@@ -1,17 +1,20 @@
 """API contracts for the course domain (rules 第十章). Wire format is camelCase.
 
-The snapshot tree mirrors the frontend ConversationToolBlock
-(features/conversation/types.ts):
+The course tree has four levels — course → module（章）→ lesson（单元）→
+point（学习点）— and a point is exactly one video:
 
-    { id, title, status, progress,
-      units: [{ id, title, status, progress,
-                chapters: [{ id, title, status, progress }] }] }
+    { id, title, description, coverUrl, status, questionnaireReady,
+      modules: [{ id, title, summary,
+                  lessons: [{ id, title, summary,
+                              points: [{ id, title, buildStatus }] }] }] }
 
-status/progress are carried straight from the DB. Mapping DB lifecycle states
-(intake/building/ready/... , not_started/researching/...) to the frontend's
-display states is business behavior left to a later phase; here the contract
-only fixes the shape. order_index is deliberately omitted — ordering is applied
-when the rows are read, the wire never exposes it.
+`status` (course) and `buildStatus` (point) describe the GENERATION pipeline,
+not the learner's progress: a freshly delivered course has every point at
+`ready` and nothing learned. Learning progress is a separate concern that does
+not exist yet — never drive a progress ring from these fields.
+
+order_index is deliberately omitted — ordering is applied when the rows are
+read, the wire never exposes it.
 """
 
 import uuid
@@ -20,7 +23,6 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
-
 
 # --- 阶段一：问卷与答案 ---
 
@@ -59,56 +61,81 @@ class IntakeAnswersIn(BaseModel):
     answers: list[IntakeAnswerIn] = Field(min_length=1)
 
 
-# --- 课程树快照（对齐前端 ConversationToolBlock）---
+# --- 课程树快照（course → module → lesson → point）---
 
 
-class CourseChapterOut(BaseModel):
+class CoursePointOut(BaseModel):
+    """A learning point: the leaf, bound to exactly one video."""
+
     model_config = ConfigDict(
         alias_generator=to_camel, populate_by_name=True, from_attributes=True
     )
 
     id: uuid.UUID
     title: str
-    status: str
-    progress: int = 0
+    # Generation pipeline state, NOT learning progress.
+    build_status: str
 
 
-class CourseUnitOut(BaseModel):
+class CourseLessonOut(BaseModel):
+    """A lesson（单元）: a few learning points plus a short summary."""
+
     model_config = ConfigDict(
         alias_generator=to_camel, populate_by_name=True, from_attributes=True
     )
 
     id: uuid.UUID
     title: str
-    status: str
-    # Unit/course progress has no DB column yet (only chapters track it);
-    # defaults to 0 until rollup is computed in a later phase.
-    progress: int = 0
-    chapters: list[CourseChapterOut] = Field(default_factory=list)
+    # A few sentences, written by compose. Null on rows produced before the
+    # field existed or when the model omitted it.
+    summary: str | None = None
+    points: list[CoursePointOut] = Field(default_factory=list)
 
 
-class CourseOutlineOut(BaseModel):
+class CourseModuleOut(BaseModel):
+    """A module（章）: the top grouping layer. Pure structure, no state."""
+
     model_config = ConfigDict(
         alias_generator=to_camel, populate_by_name=True, from_attributes=True
     )
 
     id: uuid.UUID
     title: str
+    summary: str | None = None
+    lessons: list[CourseLessonOut] = Field(default_factory=list)
+
+
+class CourseDetailOut(BaseModel):
+    """Full course snapshot — the dashboard's read contract.
+
+    Also the payload of the organize stream's `materializing` and `done`
+    frames (see OrganizeSnapshot below), so one shape covers live progress,
+    reconnect and the plain GET.
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel, populate_by_name=True, from_attributes=True
+    )
+
+    id: uuid.UUID
+    title: str
+    description: str | None = None
+    # Display URL for the cover image. Not produced yet — the dashboard renders
+    # a placeholder while it is null.
+    cover_url: str | None = None
     status: str
-    progress: int = 0
-    units: list[CourseUnitOut] = Field(default_factory=list)
-
-
-class CourseDetailOut(CourseOutlineOut):
-    """Full course snapshot. Same tree shape as the outline today; kept as its
-    own type so the detail and outline endpoints can diverge later without
-    breaking either contract."""
-
     # True once the intake questionnaire has been generated and stored. The
     # in-conversation card polls this snapshot while it's still generating, then
     # fetches the questionnaire exactly once it flips true (or shows failure if
     # the course moved to `failed`).
     questionnaire_ready: bool = False
+    modules: list[CourseModuleOut] = Field(default_factory=list)
+
+
+# The organize SSE (`GET /courses/{id}/organize/stream`) carries this exact
+# snapshot — flat, not wrapped — on both its `materializing` and `done` frames.
+# Named here so the contract is discoverable from the schema module.
+OrganizeSnapshot = CourseDetailOut
 
 
 class CourseListItemOut(BaseModel):
@@ -118,29 +145,18 @@ class CourseListItemOut(BaseModel):
 
     id: uuid.UUID
     title: str
+    description: str | None = None
+    cover_url: str | None = None
     status: str
+    created_at: datetime
     updated_at: datetime
 
 
-class BuildProgressEvent(BaseModel):
-    """SSE payload for 阶段二 build progress.
-
-    定法: DB is the single source of truth; every ~1s tick ships the whole
-    course snapshot (no diff), so a reconnect is just GET-snapshot then resume.
-    """
-
-    model_config = ConfigDict(
-        alias_generator=to_camel, populate_by_name=True, from_attributes=True
-    )
-
-    course: CourseDetailOut
-
-
-# --- 章节视频交付（播放）---
+# --- 学习点视频交付（播放）---
 
 
 class VideoSourceOut(BaseModel):
-    """The original third-party video this chapter re-hosts (chin "来源" button)."""
+    """The original third-party video this point re-hosts (chin "来源" button)."""
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -160,8 +176,8 @@ class VideoAuthorOut(BaseModel):
     homepage_url: str | None = None
 
 
-class ChapterVideoOut(BaseModel):
-    """Playable chapter video + provenance.
+class PointVideoOut(BaseModel):
+    """Playable learning-point video + provenance.
 
     status drives the player: `ready` carries a short-lived signed `playbackUrl`;
     `downloading` means the asset is being fetched (the client polls); `failed`

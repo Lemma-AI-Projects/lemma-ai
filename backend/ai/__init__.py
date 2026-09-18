@@ -26,7 +26,7 @@ from ai.native.gemini_video import close_shared_client
 from ai.skills import validate_skills
 from ai.streaming import encode_chunk
 from ai.tools import (
-    LOAD_CHAPTER_VIDEO,
+    LOAD_POINT_VIDEO,
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
     RENDER_DESMOS_3D_GRAPH,
@@ -66,7 +66,7 @@ async def shutdown_ai_runtime() -> None:
 
 
 __all__ = [
-    "LOAD_CHAPTER_VIDEO",
+    "LOAD_POINT_VIDEO",
     "LOAD_SKILL",
     "READ_CURRENT_GRAPH",
     "RENDER_DESMOS_3D_GRAPH",

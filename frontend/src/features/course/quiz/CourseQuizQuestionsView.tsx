@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import {
   courseQuizQuestionViewMap,
   type CourseQuizQuestionAnswerValue,
 } from '@/features/course/quiz/courseQuizQuestionViewMap'
-import type { CourseQuizQuestionType } from '@/mock/course/courseItems'
+import type {
+  CourseQuestionFlowContent,
+  CourseQuizQuestionType,
+} from '@/features/course/quiz/types'
 
 interface CourseQuizQuestionsViewProps {
   content: CourseQuestionFlowContent

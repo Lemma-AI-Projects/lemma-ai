@@ -5,7 +5,7 @@ loop lives in the AIClient facade; framework translation in ai/conversion.py.
 """
 
 from ai.tools.declarations import (
-    LOAD_CHAPTER_VIDEO,
+    LOAD_POINT_VIDEO,
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
     RENDER_DESMOS_3D_GRAPH,
@@ -22,7 +22,7 @@ from ai.tools.types import (
 )
 
 __all__ = [
-    "LOAD_CHAPTER_VIDEO",
+    "LOAD_POINT_VIDEO",
     "LOAD_SKILL",
     "READ_CURRENT_GRAPH",
     "RENDER_DESMOS_3D_GRAPH",

@@ -3,7 +3,7 @@
 The ONLY module in providers/bilibili that touches the network. Anonymous (no
 cookie — verified 2026-06-19 that injecting visitor cookies triggers v_voucher
 empty results), with a browser UA + Referer. One BiliClient is cached per
-running event loop (id(loop)) so a build reuses it across chapters; the web
+running event loop (id(loop)) so a build reuses it across queries; the web
 process (long-lived loop) and each Celery task (own asyncio.run loop) get
 distinct instances and close theirs via aclose_search_clients() — mirroring the
 engine-per-task discipline in tasks/course_build.py (httpx clients are loop-

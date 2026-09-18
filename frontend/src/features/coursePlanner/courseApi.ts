@@ -4,6 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ProgressStatus } from '@/components/ProgressStatusIcon'
 import { apiClient } from '@/lib/apiClient'
 import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
+import { courseDetailQueryKey, coursesQueryRootKey } from '@/lib/queryKeys'
+import { getCourseDetail } from '@/hooks/useCourseDetail'
+import type { CourseDetail, PointBuildStatus } from '@/types/course'
 import {
   CourseOrganizeStreamError,
   streamCourseOrganize,
@@ -29,82 +32,40 @@ export interface CourseIntakeAnswer {
 // this shape; the conversation tool shell re-exports it for its consumers.
 export type QuestionnaireAnswers = Record<string, string | null>
 
-export interface CourseChapter {
+// 卡片只展示两层，单元行带学习点计数。
+export interface CourseToolLesson {
   id: string
   title: string
-  status: string
-  progress: number
+  pointCount: number
+  status: ProgressStatus
 }
 
-export interface CourseUnit {
-  id: string
-  title: string
-  status: string
-  progress: number
-  chapters: CourseChapter[]
-}
-
-export interface CourseDetail {
-  id: string
-  title: string
-  status: string
-  progress: number
-  units: CourseUnit[]
-  // True once the intake questionnaire has been generated (it is produced on a
-  // background task, so an intake course can briefly have it false).
-  questionnaireReady: boolean
-}
-
-export interface CourseToolChapter {
+export interface CourseToolModule {
   id: string
   title: string
   status: ProgressStatus
-  progress: number
-}
-
-export interface CourseToolUnit {
-  id: string
-  title: string
-  status: ProgressStatus
-  progress: number
-  chapters: CourseToolChapter[]
+  lessons: CourseToolLesson[]
 }
 
 export type CoursePlannerStage =
   | 'questionnaire'
   | 'searching'
   | 'materializing'
-  | 'pending'
-  | 'in-progress'
   | 'ready'
 
 export interface CourseToolShellData {
   stage: CoursePlannerStage
   title: string
-  progress: number
-  units: CourseToolUnit[]
-  // True only when the course itself ended in `failed` (no chapter produced a
-  // video). A `ready` course with some failed chapters is NOT failed.
+  modules: CourseToolModule[]
+  // True only when the course itself ended in `failed` (no point produced a
+  // video). A `ready` course with some failed points is NOT failed.
   failed: boolean
 }
 
-// While the intake questionnaire is still generating, poll the course snapshot
-// this often. The interval self-stops (returns false) once it's ready or the
-// course advances/fails, so there is no polling while the user answers.
-const QUESTIONNAIRE_POLL_MS = 1200
-
-export const coursePlannerQueryRootKey = ['course-planner'] as const
-
-export function courseQueryKey(courseId: string) {
-  return [...coursePlannerQueryRootKey, 'course', courseId] as const
-}
+export const coursePlannerQueryRootKey = coursesQueryRootKey
 
 export function courseQuestionnaireQueryKey(courseId: string) {
-  return [...coursePlannerQueryRootKey, 'questionnaire', courseId] as const
-}
-
-function clampProgress(progress: number): number {
-  return Math.min(Math.max(Math.round(progress), 0), 100)
+  return [...coursesQueryRootKey, 'questionnaire', courseId] as const
 }
 
 export function mapCourseStatusToStage(status: string): CoursePlannerStage {
@@ -112,33 +73,24 @@ export function mapCourseStatusToStage(status: string): CoursePlannerStage {
     case 'intake':
       return 'questionnaire'
     // 搜索前置 + 实时 SSE: after answers the course is `organizing` — the
-    // /organize/stream window (real search hits + compose reasoning). It maps to
-    // the `searching` stage (no chapter tree exists yet; it lands atomically with
-    // `ready`). `searching` is also accepted as a main status for forward compat.
-    case 'searching':
+    // /organize/stream window (real search hits + compose reasoning). No tree
+    // exists yet; it lands atomically with `materializing`.
     case 'organizing':
       return 'searching'
-    // 物料化门禁: after compose the course pre-generates every chapter's video +
-    // overview before it's enterable; the card shows x/total and stays open.
+    // 物料化门禁: after compose the course downloads every point's video before
+    // it's enterable; the card shows the tree and stays open.
     case 'materializing':
       return 'materializing'
-    // `building` is retired by the new flow but kept mapped for old rows.
-    case 'building':
-      return 'in-progress'
-    case 'outline_ready':
-      return 'pending'
     case 'ready':
     case 'failed':
       return 'ready'
     default:
-      return 'pending'
+      return 'searching'
   }
 }
 
-export function mapCourseItemStatus(status: string): ProgressStatus {
+function mapPointStatus(status: PointBuildStatus): ProgressStatus {
   switch (status) {
-    case 'not_started':
-      return 'not-started'
     case 'researching':
       return 'in-progress'
     case 'ready':
@@ -150,10 +102,10 @@ export function mapCourseItemStatus(status: string): ProgressStatus {
   }
 }
 
-// The backend tracks status on chapters but not on units, so the unit icon is
-// rolled up from its chapters here (display-only; no backend truth duplicated).
-// Mirrors the backend's course rule (any ready -> ready, else failed) at the
-// unit level: all terminal with any success -> completed, all failed -> failed.
+// The backend tracks build state on points but not on lessons/modules, so the
+// row icons are rolled up here (display-only; no backend truth duplicated).
+// Mirrors the backend's course rule (any ready -> ready, else failed) one level
+// down: all terminal with any success -> completed, all failed -> failed.
 function rollupStatus(statuses: ProgressStatus[]): ProgressStatus {
   if (statuses.length === 0) {
     return 'not-started'
@@ -178,21 +130,21 @@ export function mapCourseToToolShellData(
   return {
     stage: mapCourseStatusToStage(course.status),
     title: course.title,
-    progress: clampProgress(course.progress),
     failed: course.status === 'failed',
-    units: course.units.map((unit) => {
-      const chapters = unit.chapters.map((chapter) => ({
-        id: chapter.id,
-        title: chapter.title,
-        status: mapCourseItemStatus(chapter.status),
-        progress: clampProgress(chapter.progress),
+    modules: course.modules.map((module) => {
+      const lessons = module.lessons.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        pointCount: lesson.points.length,
+        status: rollupStatus(
+          lesson.points.map((point) => mapPointStatus(point.buildStatus))
+        ),
       }))
       return {
-        id: unit.id,
-        title: unit.title,
-        status: rollupStatus(chapters.map((chapter) => chapter.status)),
-        progress: clampProgress(unit.progress),
-        chapters,
+        id: module.id,
+        title: module.title,
+        status: rollupStatus(lessons.map((lesson) => lesson.status)),
+        lessons,
       }
     }),
   }
@@ -215,13 +167,6 @@ export async function submitIntake(variables: {
   return data
 }
 
-export async function getCourse(courseId: string): Promise<CourseDetail> {
-  const { data } = await signOutOn401(
-    apiClient.get<CourseDetail>(`/api/v1/courses/${courseId}`)
-  )
-  return data
-}
-
 export async function getCourseQuestionnaire(
   courseId: string
 ): Promise<CourseQuestionnaire> {
@@ -239,32 +184,8 @@ export function useSubmitCourseIntakeMutation() {
   return useMutation({
     mutationFn: submitIntake,
     onSuccess: (course) => {
-      queryClient.setQueryData(courseQueryKey(course.id), course)
+      queryClient.setQueryData(courseDetailQueryKey(course.id), course)
     },
-  })
-}
-
-export function useCourseQuery(
-  courseId: string | undefined,
-  options?: { enabled?: boolean }
-) {
-  return useQuery({
-    queryKey: courseQueryKey(courseId ?? 'none'),
-    queryFn: () => getCourse(courseId as string),
-    enabled: Boolean(courseId) && (options?.enabled ?? true),
-    // Self-stopping poll: only while the questionnaire is still being generated
-    // (intake + not ready). Stops the moment it is ready or the course
-    // advances/fails — so it catches a background-generation failure too,
-    // without polling during the answer phase or the build (SSE handles that).
-    refetchInterval: (query) => {
-      const course = query.state.data
-      return course &&
-        course.status === 'intake' &&
-        !course.questionnaireReady
-        ? QUESTIONNAIRE_POLL_MS
-        : false
-    },
-    retry: retryUnlessClientError,
   })
 }
 
@@ -333,7 +254,7 @@ export interface CourseOrganizeStreamState {
  * Live organize SSE (方案二): drives the organizing window from /organize/stream
  * — real search hits + compose reasoning, NO polling. Writes the ready/failed
  * snapshot into the course query cache on `done` (-> stage flips to the real
- * outline / failed). A terminal business error refetches the snapshot; a
+ * tree / failed). A terminal business error refetches the snapshot; a
  * transport drop reconnects (losing earlier reasoning is accepted, 决策④).
  */
 export function useCourseOrganizeStream(
@@ -357,12 +278,15 @@ export function useCourseOrganizeStream(
 
     const refetchSnapshot = async () => {
       const snapshot = await queryClient.fetchQuery({
-        queryKey: courseQueryKey(activeCourseId),
-        queryFn: () => getCourse(activeCourseId),
+        queryKey: courseDetailQueryKey(activeCourseId),
+        queryFn: () => getCourseDetail(activeCourseId),
         staleTime: 0,
       })
       if (active && !controller.signal.aborted) {
-        queryClient.setQueryData(courseQueryKey(activeCourseId), snapshot)
+        queryClient.setQueryData(
+          courseDetailQueryKey(activeCourseId),
+          snapshot
+        )
       }
       return snapshot
     }
@@ -388,16 +312,22 @@ export function useCourseOrganizeStream(
               setReasoningText((current) => current + text)
             },
             onMaterializing: (snapshot) => {
-              // The materialization snapshot drives the live per-chapter tree:
-              // writing it to the course cache flips the stage to `materializing`
-              // (no poll) and updates each chapter's status as it completes.
+              // The materialization snapshot drives the live tree: writing it to
+              // the course cache flips the stage to `materializing` (no poll) and
+              // updates each row as its points complete.
               setError(null)
-              queryClient.setQueryData(courseQueryKey(activeCourseId), snapshot)
+              queryClient.setQueryData(
+                courseDetailQueryKey(activeCourseId),
+                snapshot
+              )
             },
           })
-          // `done` carried the ready snapshot — flip straight to the outline.
+          // `done` carried the ready snapshot — flip straight to the tree.
           if (active && !controller.signal.aborted) {
-            queryClient.setQueryData(courseQueryKey(activeCourseId), snapshot)
+            queryClient.setQueryData(
+              courseDetailQueryKey(activeCourseId),
+              snapshot
+            )
           }
           return
         } catch (streamError) {

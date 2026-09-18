@@ -4,8 +4,8 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
-import { CourseOverviewPage } from '@/pages/CourseOverviewPage'
-import { CoursePage } from '@/pages/CoursePage'
+import { CourseDashboardPage } from '@/pages/CourseDashboardPage'
+import { CoursePointPage } from '@/pages/CoursePointPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
@@ -39,12 +39,18 @@ const routes: RouteObject[] = [
             element: <SchedulePage />,
           },
           {
+            // 课程中心 -> 课程仪表盘 -> 学习点，与后端
+            // /api/v1/courses/{id}/points/{pointId} 同构。
             path: 'courses',
             element: <CourseCenterPage />,
           },
           {
-            path: 'coursepage',
-            element: <CourseOverviewPage />,
+            path: 'courses/:courseId',
+            element: <CourseDashboardPage />,
+          },
+          {
+            path: 'courses/:courseId/points/:pointId',
+            element: <CoursePointPage />,
           },
           {
             path: 'knowledge',
@@ -64,10 +70,6 @@ const routes: RouteObject[] = [
             // [sandbox] 临时调试路由，开发完成后可连同沙盒页面整体移除。
             path: 'sandbox',
             element: <ConversationSandboxPage />,
-          },
-          {
-            path: 'course/:id',
-            element: <CoursePage />,
           },
           {
             path: 'project/:id',

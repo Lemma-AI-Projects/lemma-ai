@@ -43,7 +43,7 @@ class ToolCall(BaseModel):
 
 class ToolProgress(BaseModel):
     """A progress signal a long-running handler yields before its result (e.g.
-    the video tool while the chapter file uploads). Relayed as AIChunk(preparing)."""
+    the video tool while the point's file uploads). Relayed as AIChunk(preparing)."""
 
     kind: Literal["preparing"] = "preparing"
     data: dict[str, Any] = Field(default_factory=dict)

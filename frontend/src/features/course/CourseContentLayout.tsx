@@ -1,30 +1,27 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
-import { getNextCourseDirectoryHref } from '@/features/course/getNextCourseDirectoryHref'
 import { cn } from '@/lib/utils'
-import type { CourseItem } from '@/mock/course/courseItems'
 
 interface CourseContentLayoutProps {
-  course: CourseItem
-  currentContentId: string
   title: string
   children: ReactNode
+  /** 底部「下一项」的目标；省略则不渲染页脚按钮。 */
+  nextHref?: string
+  nextLabel?: string
   showFooter?: boolean
   titleAlign?: 'left' | 'center'
   contentClassName?: string
 }
 
 export function CourseContentLayout({
-  course,
-  currentContentId,
   title,
   children,
+  nextHref,
+  nextLabel = '下一项',
   showFooter = true,
   titleAlign = 'left',
   contentClassName,
 }: CourseContentLayoutProps) {
-  const nextContentHref = getNextCourseDirectoryHref(course, currentContentId)
-
   return (
     <div className="relative h-full min-h-0 overflow-hidden bg-zinc-50">
       <div
@@ -52,13 +49,13 @@ export function CourseContentLayout({
           <div className="absolute inset-x-0 -top-1 bottom-0 bg-zinc-50" />
           <div className="absolute left-1/2 -top-1 h-px w-full max-w-[700px] -translate-x-1/2 bg-zinc-200" />
           <div className="relative left-1/2 flex w-full max-w-[700px] -translate-x-1/2 justify-end">
-            {nextContentHref ? (
+            {nextHref ? (
               <Button
                 asChild
                 variant="outline"
                 className="h-9 rounded-full border-zinc-300 bg-transparent px-4 font-normal text-zinc-700 hover:bg-accent hover:text-accent-foreground"
               >
-                <a href={nextContentHref}>下一章</a>
+                <a href={nextHref}>{nextLabel}</a>
               </Button>
             ) : null}
           </div>

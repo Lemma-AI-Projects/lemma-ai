@@ -9,10 +9,10 @@ overview and companion all agree:
 - SELECTION: candidates longer than `MAX_CANDIDATE_DURATION_S` can never fit a
   request even at low resolution (leaving headroom for prompt + history), so
   compose must not pick them at all.
-- RESOLUTION: chapters longer than `LOW_RESOLUTION_THRESHOLD_S` must be sent at
+- RESOLUTION: videos longer than `LOW_RESOLUTION_THRESHOLD_S` must be sent at
   low media resolution (50min × 263 ≈ 790K already flirts with the cap; low
   drops it ~2.6×, which also slashes prefill latency past the gateway's ~60s
-  streaming cutoff). The choice must stay constant across a chapter's turns or
+  streaming cutoff). The choice must stay constant across a point's turns or
   implicit context caching misses (见 plan 2.5).
 """
 
@@ -21,12 +21,12 @@ overview and companion all agree:
 MAX_CANDIDATE_DURATION_S = 150 * 60
 
 # Above ~50 min the default (medium, ~263 tok/s) resolution approaches the cap;
-# switch the whole chapter to low.
+# switch the whole video to low.
 LOW_RESOLUTION_THRESHOLD_S = 50 * 60
 
 
 def media_resolution_for_duration(duration_s: int | None) -> str | None:
-    """Route-extra override for a chapter of the given duration.
+    """Route-extra override for a video of the given duration.
 
     None -> keep the route's configured default (medium). Unknown duration keeps
     the default too: rejecting it here would break every candidate whose search

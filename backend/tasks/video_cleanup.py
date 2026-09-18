@@ -1,4 +1,4 @@
-"""Celery Beat task: sweep expired chapter video assets (滑动过期清理).
+"""Celery Beat task: sweep expired point video assets (滑动过期清理).
 
 Deletes the Storage objects for assets untouched past the sliding TTL (last
 access -> downloaded -> created, whichever exists), then removes the rows so a
@@ -46,10 +46,10 @@ async def run_cleanup() -> int:
             )
         if skipped:
             logger.warning(
-                "kept %d expired chapter video asset rows after storage delete failure",
+                "kept %d expired point video asset rows after storage delete failure",
                 skipped,
             )
-        logger.info("cleaned %d expired chapter video assets", len(row_ids_to_delete))
+        logger.info("cleaned %d expired point video assets", len(row_ids_to_delete))
         return len(row_ids_to_delete)
     finally:
         await engine.dispose()

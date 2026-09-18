@@ -29,7 +29,7 @@ export function ConversationQuestionnaireSkeleton() {
   )
 }
 
-/** Outline-stage skeleton — a few unit rows with an indented chapter line. */
+/** 大纲骨架 — 几行章标题加一行缩进的单元行。 */
 export function ConversationOutlineSkeleton() {
   return (
     <div className="mt-4 flex flex-col gap-4" aria-hidden>

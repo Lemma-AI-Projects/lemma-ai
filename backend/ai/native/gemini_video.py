@@ -266,9 +266,9 @@ async def stream_companion_answer(
 ]:
     """Streaming grounded video Q&A for the AI 伴学 companion.
 
-    Yields (text_delta, reasoning_delta, usage_metadata). The chapter video is
+    Yields (text_delta, reasoning_delta, usage_metadata). The point video is
     the FIRST part of the FIRST user turn so the stable prefix maximizes implicit
-    context-cache hits on the heavy video tokens across a chapter's multi-turn
+    context-cache hits on the heavy video tokens across a point's multi-turn
     thread (见 plan 2.5); media_resolution (默认 MEDIUM) caps per-frame token cost.
     """
     client = client or shared_client()
@@ -344,7 +344,7 @@ def _media_resolution_from_route_extra(
     """Map a route's media_resolution knob (low/medium/high) to the enum.
 
     Default MEDIUM (决策⑨): the clarity/cost balance for full lectures. MUST stay
-    constant across a chapter's turns or implicit caching misses (见 plan 2.5).
+    constant across a point's turns or implicit caching misses (见 plan 2.5).
     """
     mapping = {
         "low": genai_types.MediaResolution.MEDIA_RESOLUTION_LOW,

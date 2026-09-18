@@ -1,12 +1,11 @@
 import { Button } from '@/components/ui/button'
 import { CourseContentLayout } from '@/features/course/CourseContentLayout'
-import { getNextCourseDirectoryHref } from '@/features/course/getNextCourseDirectoryHref'
-import type { CourseQuestionFlowContent } from '@/features/course/CourseMainContent'
 import { CourseQuizInstructionsMarkdown } from '@/features/course/quiz/CourseQuizInstructionsMarkdown'
+import type { CourseQuestionFlowContent } from '@/features/course/quiz/types'
 
 interface CourseQuizInstructionsViewProps {
   content: CourseQuestionFlowContent
-  currentContentId: string
+  onSkip?: () => void
   onStart: () => void
   title?: string
 }
@@ -19,16 +18,12 @@ ${content.data.copy.rules}`
 
 export function CourseQuizInstructionsView({
   content,
-  currentContentId,
+  onSkip,
   onStart,
   title = '测验',
 }: CourseQuizInstructionsViewProps) {
-  const skipHref = getNextCourseDirectoryHref(content.course, currentContentId)
-
   return (
     <CourseContentLayout
-      course={content.course}
-      currentContentId={currentContentId}
       title={title}
       titleAlign="center"
       showFooter={false}
@@ -38,13 +33,14 @@ export function CourseQuizInstructionsView({
         {getQuizInstructionsMarkdown(content)}
       </CourseQuizInstructionsMarkdown>
       <div className="mt-10 flex justify-end gap-3">
-        {skipHref ? (
+        {onSkip ? (
           <Button
-            asChild
+            type="button"
             variant="outline"
+            onClick={onSkip}
             className="h-9 rounded-full border-zinc-300 bg-transparent px-4 font-normal text-zinc-700 hover:bg-accent hover:text-accent-foreground"
           >
-            <a href={skipHref}>跳过</a>
+            跳过
           </Button>
         ) : null}
         <Button

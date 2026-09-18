@@ -1,6 +1,6 @@
 import { env } from '@/lib/env'
 import { supabase } from '@/lib/supabaseClient'
-import type { CourseDetail } from './courseApi'
+import type { CourseDetail } from '@/types/course'
 
 // Real search hits shown while composing (decision ②). camelCase off the wire.
 export interface CourseSearchPlatformHit {
@@ -40,7 +40,7 @@ export interface StreamCourseOrganizeOptions {
   onSearch?: (search: CourseSearchProgress) => void
   /** A compose reasoning delta (live thinking). */
   onReasoning?: (text: string) => void
-  /** A live course snapshot during materialization (per-chapter tree state). */
+  /** A live course snapshot during materialization (live tree state). */
   onMaterializing?: (snapshot: CourseDetail) => void
 }
 

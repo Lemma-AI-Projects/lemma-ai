@@ -20,19 +20,19 @@ export interface ConversationReasoningBlock {
   content: string
 }
 
-export interface ConversationToolChapter {
+// 编排卡片只展示 章 -> 单元 两层；单元行用「N 个学习点」交代规模，不逐条列视频
+// （36rem 宽的卡片里三层缩进读不清，物料化阶段逐个视频转圈信息量也不大）。
+export interface ConversationToolLesson {
   id: string
   title: string
+  pointCount: number
   status?: 'not-started' | 'in-progress' | 'completed' | 'failed'
-  progress?: number
 }
 
 export type ConversationToolStage =
   | 'questionnaire'
   | 'searching'
   | 'materializing'
-  | 'pending'
-  | 'in-progress'
   | 'ready'
 
 export interface ConversationToolQuestion {
@@ -46,12 +46,11 @@ export interface ConversationToolAnswer {
   answer: string
 }
 
-export interface ConversationToolUnit {
+export interface ConversationToolModule {
   id: string
   title: string
-  chapters: ConversationToolChapter[]
+  lessons: ConversationToolLesson[]
   status?: 'not-started' | 'in-progress' | 'completed' | 'failed'
-  progress?: number
 }
 
 // Wire/persistence shape of a tool attached to a turn (matches the backend SSE

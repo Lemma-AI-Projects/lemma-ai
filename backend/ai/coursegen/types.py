@@ -1,10 +1,9 @@
 """Course-generation product + AI-IO types.
 
-The first three are the cross-layer products Phase 4/5 consume — their fields are
-fixed (don't drift). They carry NO DB fields (id / order_index / status /
-progress): those are generated at persist time. The rest are internal LLM
-input/output shapes (a ChapterPlan in, query-expansion / selection structures
-out) — they never leave the coursegen pipeline.
+The products below are the cross-layer shapes the services consume — their
+fields are fixed (don't drift). They carry NO DB fields (id / order_index /
+build_status): those are generated at persist time. The rest are internal LLM
+input/output shapes and never leave the coursegen pipeline.
 
 This module imports only pydantic and the ai/search boundary type; it must never
 touch models/, sqlalchemy, celery, tasks/ or apify_client.
@@ -14,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from ai.search.types import VideoCandidate
 
-# --- Products (Phase 4/5 consume; field shapes are fixed) ---
+# --- Products (services consume these; field shapes are fixed) ---
 
 
 class QuestionnaireQuestion(BaseModel):
@@ -25,76 +24,17 @@ class QuestionnaireQuestion(BaseModel):
 
 
 class Questionnaire(BaseModel):
-    """Same shape as schemas.course.QuestionnaireOut (Phase 4 turns it into the
+    """Same shape as schemas.course.QuestionnaireOut (the API turns it into the
     wire contract directly)."""
 
     questions: list[QuestionnaireQuestion]
 
 
-class OutlineChapter(BaseModel):
-    title: str
-    summary: str
+# --- 搜索前置: compose (选片 + 组织成 module -> lesson -> point) ---
 
 
-class OutlineUnit(BaseModel):
-    title: str
-    chapters: list[OutlineChapter]
-
-
-class CourseOutline(BaseModel):
-    """The pure AI outline: titles + per-chapter summary, nested units→chapters.
-
-    Intentionally NOT the same as schemas.course.CourseOutlineOut: that one is
-    the DB-shaped read tree (id/status/progress, no summary). Phase 4 assigns
-    ids/order/status when it persists this and stores `summary` on the chapter
-    row.
-    """
-
-    title: str
-    units: list[OutlineUnit]
-
-
-class ChapterResearchResult(BaseModel):
-    """Outcome of researching one chapter. `chosen` is one of `candidates` (the
-    same object) so Phase 5 can flag it is_chosen; None (with a reason) when
-    nothing fit or search/selection failed — research never raises, so one bad
-    chapter is marked failed instead of sinking the whole course."""
-
-    candidates: list[VideoCandidate]
-    chosen: VideoCandidate | None = None
-    reason: str
-
-
-# --- Inputs / internal LLM-IO (never cross the coursegen boundary) ---
-
-
-class ChapterPlan(BaseModel):
-    """What research_chapter needs to know about one chapter (title + summary;
-    the learner profile is passed alongside)."""
-
-    title: str
-    summary: str
-
-
-class ChapterQueries(BaseModel):
-    """LLM query-expansion output: search keywords for one chapter."""
-
-    queries: list[str] = Field(default_factory=list)
-
-
-class VideoSelection(BaseModel):
-    """LLM selection output. chosen_index is 1-based into the presented list;
-    None means no candidate was suitable."""
-
-    chosen_index: int | None = None
-    reason: str
-
-
-# --- 搜索前置: compose (选片 + 组织) ---
-
-
-class ComposedChapter(BaseModel):
-    """One LLM-chosen chapter: a title + a candidate_ref into the presented pool.
+class ComposedPoint(BaseModel):
+    """One LLM-chosen learning point: a title + a candidate_ref into the pool.
 
     candidate_ref MUST be the stable ref we printed for the candidate
     (f"{platform}:{platform_video_id}"), never a positional index — it is
@@ -105,41 +45,71 @@ class ComposedChapter(BaseModel):
     candidate_ref: str
 
 
-class ComposedUnit(BaseModel):
+class ComposedLesson(BaseModel):
     title: str
-    chapters: list[ComposedChapter] = Field(default_factory=list)
+    # A few sentences: what this lesson covers and why it comes here.
+    summary: str = ""
+    points: list[ComposedPoint] = Field(default_factory=list)
+
+
+class ComposedModule(BaseModel):
+    title: str
+    # One short paragraph introducing the module (dashboard header copy).
+    summary: str = ""
+    lessons: list[ComposedLesson] = Field(default_factory=list)
 
 
 class ComposedCourse(BaseModel):
-    """Raw LLM output of course_compose: course title + units→chapters, each
-    chapter bound to a candidate_ref. Number of units/chapters is decided by the
-    model from real supply (诚实交付，宁少勿凑); validated/resolved into a
+    """Raw LLM output of course_compose: title + blurb + modules -> lessons ->
+    points, each point bound to a candidate_ref. How many of each is decided by
+    the model from real supply (诚实交付，宁少凑); validated/resolved into a
     ComposedCourseResult before anything is persisted."""
 
     title: str
-    units: list[ComposedUnit] = Field(default_factory=list)
+    description: str = ""
+    modules: list[ComposedModule] = Field(default_factory=list)
 
 
-class ResolvedChapter(BaseModel):
-    """A validated chapter: title bound to a REAL candidate from the pool."""
+class ResolvedPoint(BaseModel):
+    """A validated point: title bound to a REAL candidate from the pool."""
 
     title: str
     candidate: VideoCandidate
 
 
-class ResolvedUnit(BaseModel):
+class ResolvedLesson(BaseModel):
     title: str
-    chapters: list[ResolvedChapter]
+    summary: str = ""
+    points: list[ResolvedPoint]
+
+
+class ResolvedModule(BaseModel):
+    title: str
+    summary: str = ""
+    lessons: list[ResolvedLesson]
 
 
 class ComposedCourseResult(BaseModel):
-    """Validated compose output — every chapter resolved to a real candidate
-    (fabricated/duplicate/out-of-range refs already dropped). Phase 5 persists
-    this directly. Empty units means nothing valid survived -> course failed."""
+    """Validated compose output — every point resolved to a real candidate
+    (fabricated/duplicate/out-of-range refs already dropped, empty lessons and
+    modules pruned). The build service persists this directly. Empty modules
+    means nothing valid survived -> course failed."""
 
     title: str
-    units: list[ResolvedUnit] = Field(default_factory=list)
+    description: str = ""
+    modules: list[ResolvedModule] = Field(default_factory=list)
 
     @property
-    def chapter_count(self) -> int:
-        return sum(len(unit.chapters) for unit in self.units)
+    def point_count(self) -> int:
+        return sum(
+            len(lesson.points) for module in self.modules for lesson in module.lessons
+        )
+
+
+# --- Internal LLM-IO (never crosses the coursegen boundary) ---
+
+
+class SearchQueries(BaseModel):
+    """LLM query-expansion output: broad search keywords for the user's topic."""
+
+    queries: list[str] = Field(default_factory=list)
