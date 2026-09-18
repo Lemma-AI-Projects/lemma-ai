@@ -121,6 +121,11 @@ export function AppLayout() {
             label="Sandbox(调试)"
             to="/sandbox"
           />
+          <SidebarItem
+            icon={FlaskConical}
+            label="题目 Sandbox(调试)"
+            to="/sandbox/quiz"
+          />
           {conversationsQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">
               <Skeleton className="h-5 w-full" />

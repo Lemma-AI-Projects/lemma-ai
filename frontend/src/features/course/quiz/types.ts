@@ -1,9 +1,9 @@
 // 测验 / 作业的本地类型。
 //
-// 休眠代码：测验能力还没有后端契约（生成、提交、评分都未实现），所以这套组件
-// 当前不挂任何路由。类型原先住在 mock/course/courseItems.ts 里，那份 mock 已随
-// 课程域重构删除，因此就近搬到这里——未来接后端时，以 backend/schemas 为准重新
-// 定义，不要把这些形状当契约。
+// 测验能力还没有后端契约（生成、提交、评分都未实现），所以这套组件
+// 仅在 sandbox 预览，未接入正式课程路由。类型原先住在
+// mock/course/courseItems.ts 里，那份 mock 已随课程域重构删除，因此就近搬到这里。
+// 未来接后端时，以 backend/schemas 为准重新定义，不要把这些形状当契约。
 
 export type CourseQuizQuestionType =
   | 'single-choice'

@@ -6,6 +6,7 @@ import type { CourseQuestionFlowContent } from '@/features/course/quiz/types'
 
 interface CourseQuizViewProps {
   content: CourseQuestionFlowContent
+  nextHref?: string
   /** 说明页「跳过」；省略则不渲染该按钮。 */
   onSkip?: () => void
 }
@@ -26,19 +27,26 @@ function getCourseQuizPageTitles(content: CourseQuestionFlowContent) {
   }
 }
 
-export function CourseQuizView({ content, onSkip }: CourseQuizViewProps) {
+export function CourseQuizView({ content, nextHref, onSkip }: CourseQuizViewProps) {
   // 切换到另一个测验/作业时用 key 重挂答题流程，使页面状态
   // 自然回到说明页，替代先渲染旧页再被 effect 重置的双趟渲染
   return (
-    <CourseQuizFlow key={content.id} content={content} onSkip={onSkip} />
+    <CourseQuizFlow
+      key={content.id}
+      content={content}
+      nextHref={nextHref}
+      onSkip={onSkip}
+    />
   )
 }
 
 function CourseQuizFlow({
   content,
+  nextHref,
   onSkip,
 }: {
   content: CourseQuestionFlowContent
+  nextHref?: string
   onSkip?: () => void
 }) {
   const pageTitles = getCourseQuizPageTitles(content)
@@ -56,7 +64,13 @@ function CourseQuizFlow({
   }
 
   if (currentQuizPage === 'result') {
-    return <CourseQuizResultView content={content} title={pageTitles.result} />
+    return (
+      <CourseQuizResultView
+        content={content}
+        nextHref={nextHref}
+        title={pageTitles.result}
+      />
+    )
   }
 
   return (

@@ -4,11 +4,13 @@ import type { CourseQuestionFlowContent } from '@/features/course/quiz/types'
 
 interface CourseQuizResultViewProps {
   content: CourseQuestionFlowContent
+  nextHref?: string
   title?: string
 }
 
 export function CourseQuizResultView({
   content,
+  nextHref,
   title = '测验结果',
 }: CourseQuizResultViewProps) {
   return (
@@ -16,6 +18,8 @@ export function CourseQuizResultView({
       title={title}
       titleAlign="center"
       contentClassName="max-w-[560px]"
+      nextHref={nextHref}
+      nextLabel="下一章"
     >
       <CourseQuizInstructionsMarkdown>
         {content.data.copy.resultMarkdown ?? ''}

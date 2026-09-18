@@ -22,8 +22,8 @@ import type {
   ConversationToolStage,
 } from '@/features/conversation/types'
 
-// [sandbox] 课程编排工具卡片的「各阶段静态预览」调试页：不连后端，把
-// ConversationToolShell 的每个 stage 用样例数据一次性铺开，方便调样式与交互。
+// [sandbox] 课程工具卡片与 Markdown 样式的静态预览：不连后端，
+// 用样例数据调样式与交互。题目页面另有独立沙盒路由。
 // 真实端到端流程请在对话里开启 Course Planning 开关验证。
 
 const SAMPLE_QUESTIONS: ConversationToolQuestion[] = [

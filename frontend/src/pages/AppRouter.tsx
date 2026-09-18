@@ -6,6 +6,7 @@ import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CourseDashboardPage } from '@/pages/CourseDashboardPage'
 import { CoursePointPage } from '@/pages/CoursePointPage'
+import { CourseQuizSandboxPage } from '@/pages/CourseQuizSandboxPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
@@ -70,6 +71,10 @@ const routes: RouteObject[] = [
             // [sandbox] 临时调试路由，开发完成后可连同沙盒页面整体移除。
             path: 'sandbox',
             element: <ConversationSandboxPage />,
+          },
+          {
+            path: 'sandbox/quiz',
+            element: <CourseQuizSandboxPage />,
           },
           {
             path: 'project/:id',
