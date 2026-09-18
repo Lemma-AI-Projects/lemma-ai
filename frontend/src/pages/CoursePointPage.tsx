@@ -346,23 +346,21 @@ export function CoursePointPage() {
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50">
         <div className="scrollbar-fade h-full min-h-0 overflow-y-auto px-4 pb-14 pt-8">
           <article className="mx-auto w-full max-w-[1040px]">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="-ml-2 h-8 rounded-full px-2.5 text-[13px] font-normal text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-900"
-            >
-              <Link to={`/courses/${courseId}`}>
-                <ArrowLeft className="size-3.5" />
-                返回课程
-              </Link>
-            </Button>
-            <p className="mt-3 text-[13px] leading-5 text-zinc-500">
-              {current.moduleTitle} · {current.lessonTitle}
-            </p>
-            <h1 className="mt-1 text-[32px] font-semibold leading-10 tracking-tight text-zinc-950">
-              {current.title}
-            </h1>
+            <div className="flex items-center justify-between gap-4">
+              <h1 className="min-w-0 text-[32px] font-semibold leading-10 tracking-tight text-zinc-950">
+                {current.title}
+              </h1>
+              <Button
+                asChild
+                variant="outline"
+                className="h-9 shrink-0 rounded-full border-zinc-300 bg-transparent px-4 font-normal text-zinc-700 hover:bg-accent hover:text-accent-foreground"
+              >
+                <Link to={`/courses/${courseId}`}>
+                  <ArrowLeft className="size-3.5" />
+                  返回课程
+                </Link>
+              </Button>
+            </div>
 
             <CoursePointVideo
               courseId={courseId}

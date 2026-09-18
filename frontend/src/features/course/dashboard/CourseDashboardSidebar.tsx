@@ -77,7 +77,8 @@ export function CourseDashboardSidebar({
                 type="button"
                 onClick={() => onModuleChange(module.id)}
                 className={cn(
-                  'min-w-0 flex-1 -translate-y-px rounded-full px-3 text-left text-[15px] leading-8 font-normal transition-colors',
+                  // truncate: 章标题单行，过长省略——换行会把行高撑离左侧 32px 圆环。
+                  'min-w-0 flex-1 -translate-y-px truncate rounded-full px-3 text-left text-[15px] leading-8 font-normal transition-colors',
                   activeModule?.id === module.id
                     ? 'bg-zinc-200/55 text-zinc-900'
                     : 'text-zinc-800 hover:bg-zinc-200/30'
