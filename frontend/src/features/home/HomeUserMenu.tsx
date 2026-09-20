@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import {
   Check,
   ChevronRight,
   CircleHelp,
+  Coins,
   LogOut,
   Palette,
   Plus,
   Settings,
-  Sparkles,
   UserRound,
 } from 'lucide-react'
 import {
@@ -32,6 +33,7 @@ import { currentUserAccountId, userAccounts } from '@/mock/userAccounts'
 
 export function HomeUserMenu() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { session } = useAuth()
   const { data: currentUser } = useCurrentUser()
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
@@ -177,9 +179,9 @@ export function HomeUserMenu() {
         <ActionMenuSeparator />
 
         <ActionMenuItem
-          label="升级套餐"
-          icon={Sparkles}
-          onSelect={() => handleAction('Upgrade plan')}
+          label="Credits"
+          icon={Coins}
+          onSelect={() => navigate('/credits')}
         />
         <ActionMenuItem
           label="个性化"

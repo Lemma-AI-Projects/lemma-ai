@@ -142,6 +142,59 @@ class Settings(BaseSettings):
     # boto3 multipart parallelism (parts uploaded concurrently per file).
     video_download_concurrency: int = 4
 
+    # --- PayPal payments (credits, one-time purchase) ---
+    # Mode: "sandbox" (dev, no real money) | "live" (prod). Stays "sandbox"
+    # until the sandbox loop is verified end to end.
+    paypal_mode: str = "sandbox"
+    paypal_sandbox_client_id: str = ""
+    paypal_sandbox_client_secret: str = ""
+    paypal_live_client_id: str = ""
+    paypal_live_client_secret: str = ""
+    # Webhook ID from the PayPal app's webhook config (used to verify event
+    # signatures). Empty in dev: the endpoint then skips verification.
+    paypal_webhook_id: str = ""
+
+    # --- PayPal helpers (derived from the fields above) ---
+
+    @property
+    def paypal_is_live(self) -> bool:
+        return self.paypal_mode == "live"
+
+    @property
+    def paypal_client_id(self) -> str:
+        return (
+            self.paypal_live_client_id
+            if self.paypal_is_live
+            else self.paypal_sandbox_client_id
+        )
+
+    @property
+    def paypal_client_secret(self) -> str:
+        return (
+            self.paypal_live_client_secret
+            if self.paypal_is_live
+            else self.paypal_sandbox_client_secret
+        )
+
+    @property
+    def paypal_api_base(self) -> str:
+        return (
+            "https://api.paypal.com"
+            if self.paypal_is_live
+            else "https://api.sandbox.paypal.com"
+        )
+
+    @property
+    def paypal_ready(self) -> bool:
+        """True when the active mode's client id + secret are both present."""
+        return bool(self.paypal_client_id and self.paypal_client_secret)
+
+    @property
+    def stripe_ready(self) -> bool:
+        """Stripe is not wired up on this branch — always False, so the frontend
+        keeps the card button disabled and only PayPal goes live."""
+        return False
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
