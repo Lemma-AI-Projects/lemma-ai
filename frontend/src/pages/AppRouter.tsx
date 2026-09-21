@@ -18,7 +18,7 @@ import { SchedulePage } from '@/pages/SchedulePage'
 
 const routes: RouteObject[] = [
   {
-    // 公开落地页：未登录默认停留；已登录在页面内重定向到 /home。
+    // 公开落地页：独立于登录鉴权和产品 AppLayout。
     path: '/',
     element: <LandingPage />,
   },
