@@ -37,8 +37,10 @@ from pydantic import BaseModel, ValidationError
 from ai import (
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
+    READ_PAGE,
     RENDER_DESMOS_3D_GRAPH,
     RENDER_DESMOS_GRAPH,
+    SAVE_NOTE,
     ToolBinding,
     ToolCall,
     ToolProgress,
@@ -47,8 +49,9 @@ from ai import (
 )
 from ai.skills import skill_body, skill_names
 from core.database import AsyncSessionLocal
+from models.doc import Page
 from schemas.desmos import Desmos3DGraphPayload, DesmosGraphPayload
-from services import desmos_graph_service
+from services import desmos_graph_service, doc_service
 
 
 @dataclass
@@ -102,14 +105,50 @@ def _wrapped_spec(skill_name: str) -> str:
     )
 
 
+def _match_space_page(
+    rows: list[tuple[Page, str]], wanted: str
+) -> Page | list[Page] | None:
+    """Resolve the model's `page` argument against one space's pages.
+
+    Returns the Page, a list of pages (ambiguous) or None (no match) — the two
+    failure shapes the model must be able to tell apart. Exact id first, then
+    exact title (case-folded). Substring matching is deliberately absent: a
+    request for 「微积分」 hitting both 「微积分入门」 and 「微积分习题」 is exactly
+    the silent mis-read this rule exists to prevent, and the same "不猜" rule
+    governs the Learner State evidence writer.
+    """
+    try:
+        as_id = uuid.UUID(wanted)
+    except (ValueError, AttributeError, TypeError):
+        as_id = None
+    if as_id is not None:
+        for page, _ in rows:
+            if page.id == as_id:
+                return page
+    key = wanted.strip().casefold()
+    matches = [page for page, _ in rows if page.title.strip().casefold() == key]
+    if len(matches) == 1:
+        return matches[0]
+    return matches or None
+
+
 def build_global_tools(
-    *, user_id: uuid.UUID, conversation_id: uuid.UUID | None
+    *,
+    user_id: uuid.UUID,
+    conversation_id: uuid.UUID | None,
+    project_id: uuid.UUID | None = None,
 ) -> list[ToolBinding]:
     """The plugin ToolBindings for one turn.
 
     conversation_id is None only when the conversation row may not exist yet
     (new conversation's first turn) — graphs are then created unlinked and the
     message tool_json carries the link (course_planning precedent).
+
+    project_id is the learn space this turn runs in (None outside a space).
+    Every space-scoped tool is gated on it: without a space there is no
+    material to read and nowhere to write, and the handlers say so instead of
+    failing — the Learner State evidence tool needs the same argument, so this
+    signature carries both features.
     """
     ctx = TurnToolContext()
 
@@ -227,6 +266,140 @@ def build_global_tools(
             response["spec"] = _wrapped_spec(skill_name)
         yield ToolResult(response=response)
 
+    async def read_page_handler(
+        call: ToolCall,
+    ) -> AsyncIterator[ToolProgress | ToolResult]:
+        """Read one board's text, by title or id, inside THIS space only.
+
+        The scope is project_id, never "any page of this user": the tool exists
+        to answer "what does my space hold", and a cross-space read would let
+        the model mix two spaces' material into one answer.
+        """
+        if project_id is None:
+            yield ToolResult(
+                response={
+                    "status": "no_space",
+                    "note": "当前对话不属于任何空间，读不到板块。",
+                }
+            )
+            return
+        wanted = str(call.args.get("page", "")).strip()
+        if not wanted:
+            yield ToolResult(
+                response={"status": "invalid", "note": "page 不能为空（传标题或 id）。"}
+            )
+            return
+        async with AsyncSessionLocal() as db:
+            rows = await doc_service.list_project_pages(
+                db, user_id=user_id, project_id=project_id
+            )
+            if rows is None:
+                yield ToolResult(response={"status": "no_space"})
+                return
+            match = _match_space_page(rows, wanted)
+            if match is None:
+                yield ToolResult(
+                    response={
+                        "status": "not_found",
+                        "available": [page.title for page, _ in rows],
+                        "note": (
+                            "没有标题匹配的板块。上面是这个空间的全部标题，"
+                            "请从中选一个重试，不要编造内容。"
+                        ),
+                    }
+                )
+                return
+            if isinstance(match, list):
+                yield ToolResult(
+                    response={
+                        "status": "ambiguous",
+                        "candidates": [
+                            {"id": str(page.id), "title": page.title}
+                            for page in match
+                        ],
+                        "note": "标题对上了多块板，请让用户挑，或改用 id 重试。",
+                    }
+                )
+                return
+            loaded = await doc_service.get_page_blocks(
+                db, user_id=user_id, page_id=match.id
+            )
+        if loaded is None:
+            yield ToolResult(response={"status": "not_found"})
+            return
+        page, blocks = loaded
+        titles = [p.title for p, _ in rows]
+        yield ToolResult(
+            response={
+                "status": "ok",
+                "id": str(page.id),
+                "title": page.title,
+                "kind": page.kind,
+                "position": titles.index(page.title) + 1,
+                "total": len(titles),
+                "text": doc_service.blocks_to_text(blocks),
+                "note": "以上是该板正文全文。若还要别的板，用标题再调一次本工具。",
+            }
+        )
+
+    async def save_note_handler(
+        call: ToolCall,
+    ) -> AsyncIterator[ToolProgress | ToolResult]:
+        """Store a conclusion as a NEW board in this space. Never edits one.
+
+        Only-create is the V1 shape of the "永不自动改用户画布" red line: an
+        Agent that can append into a board the user wrote cannot be trusted to
+        leave the user's own words alone. Creating is additive and reversible
+        (the user can delete it); editing is neither.
+        """
+        if project_id is None:
+            yield ToolResult(
+                response={
+                    "status": "no_space",
+                    "note": "当前对话不属于任何空间，没有地方可存。",
+                }
+            )
+            return
+        title = str(call.args.get("title", "")).strip()
+        content = str(call.args.get("content", ""))
+        if not title or not content.strip():
+            yield ToolResult(
+                response={
+                    "status": "invalid",
+                    "note": "title 与 content 都不能为空。",
+                }
+            )
+            return
+        blocks = doc_service.markdown_to_blocks(content)
+        if not blocks:
+            yield ToolResult(
+                response={"status": "invalid", "note": "content 解析后是空的。"}
+            )
+            return
+        async with AsyncSessionLocal() as db:
+            created = await doc_service.create_page_with_blocks(
+                db,
+                user_id=user_id,
+                project_id=project_id,
+                title=title,
+                blocks=blocks,
+            )
+        if created is None:
+            yield ToolResult(response={"status": "no_space"})
+            return
+        page, _ = created
+        yield ToolResult(
+            response={
+                "status": "created",
+                "pageId": str(page.id),
+                "title": page.title,
+                "note": (
+                    "已新建这篇笔记（只新建，没有改动任何已有板块）。"
+                    "请把标题念给用户确认。"
+                ),
+            }
+        )
+
     return [
         ToolBinding(spec=tool_spec(LOAD_SKILL), handler=load_skill_handler),
         *(
@@ -237,4 +410,6 @@ def build_global_tools(
             for config in _RENDER_CONFIGS
         ),
         ToolBinding(spec=tool_spec(READ_CURRENT_GRAPH), handler=read_handler),
+        ToolBinding(spec=tool_spec(READ_PAGE), handler=read_page_handler),
+        ToolBinding(spec=tool_spec(SAVE_NOTE), handler=save_note_handler),
     ]

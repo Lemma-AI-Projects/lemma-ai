@@ -8,8 +8,10 @@ from ai.tools.declarations import (
     LOAD_POINT_VIDEO,
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
+    READ_PAGE,
     RENDER_DESMOS_3D_GRAPH,
     RENDER_DESMOS_GRAPH,
+    SAVE_NOTE,
     tool_spec,
 )
 from ai.tools.types import (
@@ -25,8 +27,10 @@ __all__ = [
     "LOAD_POINT_VIDEO",
     "LOAD_SKILL",
     "READ_CURRENT_GRAPH",
+    "READ_PAGE",
     "RENDER_DESMOS_3D_GRAPH",
     "RENDER_DESMOS_GRAPH",
+    "SAVE_NOTE",
     "ToolBinding",
     "ToolCall",
     "ToolHandler",

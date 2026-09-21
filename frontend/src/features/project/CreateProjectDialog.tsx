@@ -3,15 +3,42 @@ import { Folder, Info, Pencil, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useCreateProjectMutation } from './projectApi'
+import { useCreateProjectMutation, type ProjectItem } from './projectApi'
+
+/** 文案可覆盖：学习空间语境下说的是「空间」而不是「项目」。 */
+export interface CreateProjectDialogCopy {
+  title: string
+  nameLabel: string
+  namePlaceholder: string
+  info: string
+  submit: string
+  pending: string
+  failed: string
+}
+
+const defaultCopy: CreateProjectDialogCopy = {
+  title: '创建项目',
+  nameLabel: '项目名称',
+  namePlaceholder: '哥本哈根之旅',
+  info: '项目功能可将聊天、文件和自定义指令集中保存，以便用于持续进行的工作，或者单纯用于整理内容，让一切更井然有序。',
+  submit: '创建项目',
+  pending: '创建中…',
+  failed: '创建项目失败，请重试',
+}
 
 export function CreateProjectDialog({
   open,
   onOpenChange,
+  copy,
+  onCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  copy?: Partial<CreateProjectDialogCopy>
+  /** 创建成功后的去向（如：直接进入新空间的工作台）。 */
+  onCreated?: (project: ProjectItem) => void
 }) {
+  const text = { ...defaultCopy, ...copy }
   const [projectName, setProjectName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const createMutation = useCreateProjectMutation()
@@ -34,9 +61,10 @@ export function CreateProjectDialog({
     createMutation.mutate(
       { name: trimmed },
       {
-        onSuccess: () => {
+        onSuccess: (project) => {
           setProjectName('')
           onOpenChange(false)
+          onCreated?.(project)
         },
       }
     )
@@ -63,7 +91,7 @@ export function CreateProjectDialog({
           <div className="flex min-h-14 items-start gap-2 p-2 ps-4">
             <div className="mt-1 flex max-w-[calc(100%-100px)] flex-col">
               <DialogPrimitive.Title className="text-lg font-normal text-foreground">
-                创建项目
+                {text.title}
               </DialogPrimitive.Title>
             </div>
             <div className="grow" />
@@ -87,7 +115,7 @@ export function CreateProjectDialog({
                   htmlFor="project-name"
                   className="mb-2 block text-sm text-foreground"
                 >
-                  项目名称
+                  {text.nameLabel}
                 </label>
 
                 {/*
@@ -104,7 +132,7 @@ export function CreateProjectDialog({
                     name="projectName"
                     type="text"
                     autoComplete="off"
-                    placeholder="哥本哈根之旅"
+                    placeholder={text.namePlaceholder}
                     value={projectName}
                     onChange={(event) => setProjectName(event.target.value)}
                     className="col-span-full row-1 h-10 w-full rounded-md border border-zinc-200 bg-background px-3 pe-10 ps-11 text-sm text-foreground outline-none placeholder:text-zinc-400"
@@ -128,14 +156,12 @@ export function CreateProjectDialog({
                   <Info className="size-5" />
                 </div>
                 <p className="text-pretty text-xs text-muted-foreground">
-                  项目功能可将聊天、文件和自定义指令集中保存，以便用于持续进行的工作，或者单纯用于整理内容，让一切更井然有序。
+                  {text.info}
                 </p>
               </aside>
 
               {createMutation.isError && (
-                <p className="mt-2 text-xs text-destructive">
-                  创建项目失败，请重试
-                </p>
+                <p className="mt-2 text-xs text-destructive">{text.failed}</p>
               )}
             </div>
 
@@ -148,7 +174,7 @@ export function CreateProjectDialog({
                   disabled={isSubmitDisabled}
                   className="-translate-x-px -translate-y-px rounded-full"
                 >
-                  {createMutation.isPending ? '创建中…' : '创建项目'}
+                  {createMutation.isPending ? text.pending : text.submit}
                 </Button>
               </div>
             </div>

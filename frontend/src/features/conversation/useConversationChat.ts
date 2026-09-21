@@ -6,6 +6,7 @@ import {
   conversationMessagesQueryKey,
   conversationsQueryKey,
 } from './conversationApi'
+import type { AgentContextDigest } from '@/features/agent/types'
 import { ChatStreamError, streamChat } from './streamChat'
 import type { ConversationToolRef } from './types'
 
@@ -18,6 +19,8 @@ export interface LiveChatMessage {
   createdAt: string
   /** Tool card attached to an assistant turn (course planning, etc.). */
   tool?: ConversationToolRef
+  /** What the agent could see for this answer (dev panel; see the type). */
+  agentContext?: AgentContextDigest
 }
 
 interface ConversationChatState {
@@ -27,6 +30,8 @@ interface ConversationChatState {
   streamingReasoningText: string
   /** Tool card collected mid-stream; attached to the assistant turn on finalize. */
   streamingTool: ConversationToolRef | null
+  /** Context digest collected mid-stream; attached to the assistant turn on finalize. */
+  streamingAgentContext: AgentContextDigest | null
   errorMessage: string | null
   /** 仅首字后出错可一键重试；首字前失败草稿已还原，用户重新发送即重试。 */
   canRetry: boolean
@@ -37,6 +42,7 @@ type ConversationChatAction =
   | { type: 'delta'; text: string }
   | { type: 'reasoning'; text: string }
   | { type: 'tool'; tool: ConversationToolRef }
+  | { type: 'context'; context: AgentContextDigest }
   /** done 与首字后停止共用：已生成内容就是这条消息的最终内容（后端已落库）。 */
   | { type: 'finalize'; createdAt: string }
   /** 首字前停止：整轮未落库，回滚乐观渲染的 user 气泡。 */
@@ -51,6 +57,7 @@ const initialState: ConversationChatState = {
   streamingText: '',
   streamingReasoningText: '',
   streamingTool: null,
+  streamingAgentContext: null,
   errorMessage: null,
   canRetry: false,
 }
@@ -77,6 +84,9 @@ function finalizeStreamingText(
       ...(reasoningText ? { reasoningText: state.streamingReasoningText } : {}),
       createdAt,
       ...(state.streamingTool ? { tool: state.streamingTool } : {}),
+      ...(state.streamingAgentContext
+        ? { agentContext: state.streamingAgentContext }
+        : {}),
     },
   ]
 }
@@ -96,6 +106,7 @@ function reduce(
         streamingText: '',
         streamingReasoningText: '',
         streamingTool: null,
+        streamingAgentContext: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -117,6 +128,12 @@ function reduce(
         status: 'streaming',
         streamingTool: action.tool,
       }
+    case 'context':
+      return {
+        ...state,
+        status: 'streaming',
+        streamingAgentContext: action.context,
+      }
     case 'finalize':
       return {
         status: 'idle',
@@ -124,6 +141,7 @@ function reduce(
         streamingText: '',
         streamingReasoningText: '',
         streamingTool: null,
+        streamingAgentContext: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -134,6 +152,7 @@ function reduce(
         streamingText: '',
         streamingReasoningText: '',
         streamingTool: null,
+        streamingAgentContext: null,
         errorMessage: null,
         canRetry: false,
       }
@@ -144,6 +163,7 @@ function reduce(
         streamingText: '',
         streamingReasoningText: '',
         streamingTool: null,
+        streamingAgentContext: null,
         errorMessage: action.message,
         canRetry: false,
       }
@@ -154,6 +174,7 @@ function reduce(
         streamingText: '',
         streamingReasoningText: '',
         streamingTool: null,
+        streamingAgentContext: null,
         errorMessage: action.message,
         canRetry: true,
       }
@@ -338,6 +359,10 @@ export function useConversationChat({
               adoptPendingId()
             }
             apply({ type: 'tool', tool })
+          },
+          onContext: (context) => {
+            if (requestIdRef.current !== requestId) return
+            apply({ type: 'context', context })
           },
         })
         if (requestIdRef.current !== requestId) return

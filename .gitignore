@@ -3,3 +3,14 @@
 /docs/
 /task-management/
 /temp/
+
+# 密钥：backend 从 CWD 读 .env，所以仓库根的 .env 和 backend/.env 都是
+# 装着真 key 的实体文件（backend/.gitignore 只管后者）。只有 .env.example
+# 是给人看的模板，应当入库；其余一律不入库。
+/.env
+/.env.*
+!/.env.example
+
+# 本地临时文件与备份（*.bak / *.orig）：不属于任何一次改动的一部分。
+*.bak
+*.orig

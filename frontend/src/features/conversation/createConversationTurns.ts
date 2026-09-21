@@ -1,3 +1,4 @@
+import type { AgentContextDigest } from '@/features/agent/types'
 import type {
   ConversationToolRef,
   ConversationTurn,
@@ -14,6 +15,8 @@ export interface ConversationSourceMessage {
   reasoningText?: string | null
   /** Tool card attached to an assistant turn (renders after its text). */
   tool?: ConversationToolRef
+  /** What the agent could see for this answer (rendered last, collapsed). */
+  agentContext?: AgentContextDigest
 }
 
 function createTurnBlocks(
@@ -44,6 +47,14 @@ function createTurnBlocks(
       id: `${baseId}-tool`,
       type: 'tool',
       tool: message.tool,
+    })
+  }
+  // Last: it is evidence about the answer above it, not part of it.
+  if (message.agentContext) {
+    blocks.push({
+      id: `${baseId}-agent-context`,
+      type: 'agent_context',
+      context: message.agentContext,
     })
   }
   // Never emit an empty turn (defensive — assistant turns always carry content).

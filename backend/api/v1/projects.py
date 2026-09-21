@@ -12,7 +12,7 @@ from schemas.project import (
     ProjectOut,
     ProjectUpdateIn,
 )
-from services import conversation_service, project_service
+from services import agent_context_service, conversation_service, project_service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -85,6 +85,53 @@ async def list_project_conversations(
         )
         for conversation, last_message in rows
     ]
+
+
+@router.get("/{project_id}/agent-context")
+async def get_agent_context(
+    project_id: uuid.UUID,
+    conversation_id: uuid.UUID | None = Query(default=None, alias="conversationId"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """What the Global Agent can see for this space — the Context Inspector.
+
+    It calls the SAME assembly the chat turn uses, on purpose: a second
+    implementation would eventually describe a context the agent never got, and
+    the whole point of this endpoint is that the user can trust it. The payload
+    includes the literal prompt block the agent will receive, so "it uses the
+    space" is verifiable by eye rather than asserted.
+
+    Recomputed live, so it describes the space NOW. What a past answer actually
+    saw is recorded on that answer (ai_messages.agent_context_json) — the two
+    are deliberately different questions.
+    """
+    history_messages = 0
+    if conversation_id is not None:
+        conversation = await conversation_service.get_owned_conversation(
+            db, user_id=current_user.id, conversation_id=conversation_id
+        )
+        if conversation is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="conversation_not_found",
+            )
+        history_messages = len(
+            await conversation_service.load_recent_history(
+                db, conversation_id=conversation.id
+            )
+        )
+
+    context = await agent_context_service.build_agent_context(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        current_conversation_id=conversation_id,
+        history_messages=history_messages,
+    )
+    if context is None:
+        raise _NOT_FOUND
+    return context.inspector()
 
 
 @router.patch("/{project_id}", response_model=ProjectOut)

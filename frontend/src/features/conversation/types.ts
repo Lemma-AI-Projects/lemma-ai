@@ -1,4 +1,5 @@
 import type { ChatAttachment, ChatMessage } from '@/mock/chatMessages'
+import type { AgentContextDigest } from '@/features/agent/types'
 
 export type ConversationTurnRole = ChatMessage['role']
 
@@ -70,11 +71,23 @@ export interface ConversationToolBlock {
   tool: ConversationToolRef
 }
 
+/**
+ * The dev-phase record of what the Global Agent could see for one answer.
+ * A thin reference like the tool block: the facts travel with the turn, so
+ * live and reloaded views render identically.
+ */
+export interface ConversationAgentContextBlock {
+  id: string
+  type: 'agent_context'
+  context: AgentContextDigest
+}
+
 export type ConversationTurnBlock =
   | ConversationTextBlock
   | ConversationMarkdownBlock
   | ConversationReasoningBlock
   | ConversationToolBlock
+  | ConversationAgentContextBlock
 
 export interface ConversationTurnMetaData {
   label?: string

@@ -5,6 +5,7 @@ and never follow the framework — the frontend codes against this contract:
     event: reasoning data: {"text": "..."}
     event: usage   data: {"inputTokens": n, "outputTokens": n, "totalTokens": n}
     event: tool    data: {"type": "course_planning", "courseId": "<uuid>"}
+    event: context data: {"space": {...}, "sources": [...], "action": "answer"}
     event: done    data: {}
     event: error   data: {"code": "<business code>", "message": "..."}
 
@@ -12,6 +13,12 @@ The `tool` event attaches an interactive tool card to the current turn (a
 deterministic, client-triggered tool — distinct from the LLM tool_call /
 tool_result events still reserved for later phases, 裁决 10). Its
 payload is already wire-shaped (camelCase) and passed through verbatim.
+
+The `context` event carries the digest of what the Global Agent could see for
+this turn — the space's sources, which of them were excerpted, how much history
+was replayed. It is emitted once, immediately before `done`, so the live view
+shows exactly the digest that was written to the message row and the panel is
+unchanged after a reload.
 """
 
 import json
@@ -54,6 +61,11 @@ def preparing_event() -> str:
     return _encode("preparing", {})
 
 
+def context_event(payload: dict[str, Any]) -> str:
+    # Same contract as tool_event: wire-shaped, Lemma-owned, passed through.
+    return _encode("context", payload)
+
+
 def done_event() -> str:
     return _encode("done", {})
 
@@ -80,6 +92,8 @@ def encode_chunk(chunk: AIChunk) -> str:
         return tool_event(chunk.tool or {})
     if chunk.kind == "preparing":
         return preparing_event()
+    if chunk.kind == "context":
+        return context_event(chunk.context or {})
     if chunk.kind == "done":
         return done_event()
     return error_event(chunk.error_code or "ai_error", chunk.error_message or "")

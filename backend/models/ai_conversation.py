@@ -113,6 +113,16 @@ class AiMessage(Base):
     # where, so history reload can re-render it in place. Discriminated by
     # `type` so future tools (quiz/flashcards) reuse the same column.
     tool_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # What the Global Agent could see when it produced THIS answer: the space,
+    # its sources (titles + kinds + sizes), which of them were excerpted, the
+    # other conversations listed by title, how much history was replayed.
+    # Stored rather than recomputed because the space changes over time —
+    # recomputing later would describe today's space as if it were that turn's.
+    # The prompt text itself is deliberately absent (it is inspectable live and
+    # would cost kilobytes per row).
+    agent_context_json: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB, nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

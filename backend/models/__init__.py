@@ -6,6 +6,9 @@ from models.course import Course, CourseLesson, CourseModule, CoursePoint
 from models.course_point_progress import CoursePointProgress
 from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
+from models.doc import Block, Page
+from models.knowledge import KnowledgeEdge, KnowledgeEvidence, KnowledgeItem
+from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.point_gemini_file import PointGeminiFile
 from models.point_video_asset import PointVideoAsset
 from models.point_video_candidate import PointVideoCandidate
@@ -17,13 +20,21 @@ __all__ = [
     "AiConversation",
     "AiMessage",
     "AiUsageLog",
+    "Block",
     "Course",
     "CourseLesson",
     "CourseModule",
     "CoursePoint",
     "CoursePointProgress",
     "CourseSearchCandidate",
+    "CreditLedger",
     "DesmosGraph",
+    "KnowledgeEdge",
+    "KnowledgeEvidence",
+    "KnowledgeItem",
+    "Page",
+    "Payment",
+    "PaymentWebhookEvent",
     "PointGeminiFile",
     "PointVideoAsset",
     "PointVideoCandidate",
