@@ -1,6 +1,7 @@
 import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { AppLayout } from '@/layouts/AppLayout'
+import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
@@ -28,6 +29,10 @@ const routes: RouteObject[] = [
   {
     element: <RequireAuth />,
     children: [
+      {
+        path: 'sandbox/board',
+        element: <BoardSandboxPage />,
+      },
       {
         element: <AppLayout />,
         children: [
