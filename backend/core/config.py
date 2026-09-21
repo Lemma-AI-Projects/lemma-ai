@@ -142,6 +142,14 @@ class Settings(BaseSettings):
     # boto3 multipart parallelism (parts uploaded concurrently per file).
     video_download_concurrency: int = 4
 
+    # --- Doc layer / Data Layer (pages + blocks = Space Context) ---
+    # The tables are created by migration d5e6f7a8b9c0, which is written but
+    # NOT applied yet. Defaults False on purpose: with the flag off the
+    # /api/v1/pages surface answers 503 ("disabled"), which a client can tell
+    # apart from a 500 ("broken" — a missing table). Flip it to True in .env
+    # once the migration has run.
+    doc_full_api_enabled: bool = False
+
     # --- PayPal payments (credits, one-time purchase) ---
     # Mode: "sandbox" (dev, no real money) | "live" (prod). Stays "sandbox"
     # until the sandbox loop is verified end to end.

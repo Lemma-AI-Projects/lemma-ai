@@ -98,6 +98,14 @@ export function LearnSpaceWorkspacePage() {
     [handleStartConversation, navigate]
   )
 
+  // 从 shelter 抽屉进一块板（资料层）。给了这个回调，dock 上的抽屉按钮才出现。
+  const handleOpenPage = useCallback(
+    (pageId: string) => {
+      navigate(`/learn-spaces/${id}/docs/${pageId}`)
+    },
+    [id, navigate]
+  )
+
   let errorText: string | undefined
   if (projectQuery.isError) {
     errorText = isNotFoundError(projectQuery.error)
@@ -109,6 +117,7 @@ export function LearnSpaceWorkspacePage() {
 
   return (
     <LearnSpaceWorkspace
+      projectId={id as string}
       spaceName={projectQuery.data?.name ?? ''}
       isNameLoading={projectQuery.isPending}
       nodes={nodes}
@@ -118,6 +127,7 @@ export function LearnSpaceWorkspacePage() {
       onStartConversation={handleStartConversation}
       onNewConversation={handleNewConversation}
       onOpenNode={handleOpenNode}
+      onOpenPage={handleOpenPage}
       brief={brief}
       onOpenBriefStep={handleOpenBriefStep}
       onRefreshBrief={refreshBrief}

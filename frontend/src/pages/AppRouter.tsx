@@ -1,5 +1,6 @@
 import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { DocEditorView } from '@/features/docs/DocEditorView'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
@@ -54,6 +55,12 @@ const routes: RouteObject[] = [
         // 所以这条路由不套 AppLayout。
         path: 'learn-spaces/:id',
         element: <LearnSpaceWorkspacePage />,
+      },
+      {
+        // 一块板（资料层）的查看页：全屏布局。块编辑器是下一步，
+        // 这里先给抽屉一个真落点，避免「能点却 404」。
+        path: 'learn-spaces/:id/docs/:pageId',
+        element: <DocEditorView />,
       },
       {
         element: <AppLayout />,

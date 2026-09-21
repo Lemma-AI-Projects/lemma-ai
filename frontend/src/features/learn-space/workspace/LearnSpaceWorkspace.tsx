@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import type { CurrentUser } from '@/features/auth/useCurrentUser'
+import { ShelterDrawer } from '@/features/docs/ShelterDrawer'
 import { LearningBriefPanel } from '@/features/learn-space/brief/LearningBriefPanel'
 import type {
   LearningBrief,
@@ -19,6 +20,11 @@ const ZOOM_STEP = 10
 const ZOOM_RESET = 100
 
 export interface LearnSpaceWorkspaceProps {
+  /**
+   * 当前 learn space 的 id（板块数据按它取、抽屉按它挂）。
+   * 可选：`/preview/` 下的纯 mock 预览页没有真实空间，那里抽屉就该是不可用的。
+   */
+  projectId?: string
   /** 空间名（数据层为 project.name）。 */
   spaceName: string
   isNameLoading?: boolean
@@ -32,6 +38,13 @@ export interface LearnSpaceWorkspaceProps {
   onStartConversation: (text: string) => void
   onNewConversation: () => void
   onOpenNode: (node: WorkspaceNode) => void
+  /**
+   * 从 shelter 抽屉进一块板。**给了才认为抽屉可用** —— 不给则 dock 上那个
+   * 槽位保持占位，不做点了没反应的按钮。
+   */
+  onOpenPage?: (pageId: string) => void
+  /** 从 shelter 抽屉进导入向导；不给则抽屉里的「导入」保持禁用。 */
+  onImport?: () => void
   /**
    * Learning Brief 数据。`undefined` = 板块未启用（dock 槽位退回占位、面板不出现）；
    * `null` = 读取中（面板先出骨架）；对象 = 有数据。默认打开。
@@ -51,11 +64,11 @@ export interface LearnSpaceWorkspaceProps {
  * 布局对齐参考稿：工具条与画布同属左侧一列，右侧面板与工具条顶端齐平、
  * 占满整列高度。侧栏在这里不出现（该路由不套 AppLayout）。
  *
- * 左侧只留一个位置：Brief（我学到哪了）。参考稿里与它互斥的「板块抽屉」
- * （空间里有什么）数据来自文档层，本分支尚未接入 —— 所以 dock 上那个槽位
- * 是占位，不是可点的按钮。
+ * 左侧只留一个位置：shelter（空间里有什么）与 Brief（我学到哪了）互斥 ——
+ * 两个都开会把画布挤成中间一条，而它们回答的是同一类问题（「这个空间里有什么」）。
  */
 export function LearnSpaceWorkspace({
+  projectId,
   spaceName,
   isNameLoading,
   nodes,
@@ -65,6 +78,8 @@ export function LearnSpaceWorkspace({
   onStartConversation,
   onNewConversation,
   onOpenNode,
+  onOpenPage,
+  onImport,
   brief,
   onOpenBriefStep,
   onRefreshBrief,
@@ -78,6 +93,10 @@ export function LearnSpaceWorkspace({
   const isBriefOpen = briefOpenChoice ?? brief !== undefined
   const [isConversationOpen, setIsConversationOpen] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isShelterOpen, setIsShelterOpen] = useState(false)
+  // 抽屉可用与否，取决于调用方给不给「点开一块板」的出口 —— 给了才显示按钮。
+  // 没有 projectId（mock 预览页）就没有可取的板块，按钮同样不出现。
+  const isShelterAvailable = Boolean(onOpenPage && projectId)
 
   const handleZoomIn = useCallback(
     () => setZoom((current) => Math.min(ZOOM_MAX, current + ZOOM_STEP)),
@@ -93,15 +112,31 @@ export function LearnSpaceWorkspace({
     []
   )
   // 左侧只有一个位置：板块抽屉（空间里有什么）与 Brief（我学到哪了）互斥。
-  // 抽屉尚未接入，所以现在这一侧只有 Brief 的开合。
+  // 两个都开会把画布挤成中间一条，而它们回答的是同一类问题。
+  const handleToggleShelter = useCallback(() => {
+    setIsShelterOpen((current) => !current)
+    // Brief 未启用时不动它的选择 —— 否则会把「默认打开」一起关掉。
+    if (brief !== undefined) setBriefOpenChoice(false)
+  }, [brief])
+  const handleCloseShelter = useCallback(() => setIsShelterOpen(false), [])
   const handleToggleBrief = useCallback(() => {
     setBriefOpenChoice(!isBriefOpen)
+    setIsShelterOpen(false)
   }, [isBriefOpen])
   const handleCloseBrief = useCallback(() => setBriefOpenChoice(false), [])
 
   return (
     <div className="h-screen w-screen bg-zinc-100 p-2 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="flex h-full w-full gap-4 overflow-hidden rounded-2xl bg-white p-4 dark:bg-background">
+        {isShelterOpen && onOpenPage && projectId && (
+          <ShelterDrawer
+            projectId={projectId}
+            onClose={handleCloseShelter}
+            onOpenPage={onOpenPage}
+            onImport={onImport}
+          />
+        )}
+
         {isBriefOpen && brief !== undefined && (
           <LearningBriefPanel
             brief={brief}
@@ -143,9 +178,9 @@ export function LearnSpaceWorkspace({
             <WorkspaceDock
               className="absolute inset-x-0 bottom-0"
               onCommandRoom={onNewConversation}
-              // 庇护所（板块抽屉）的数据来自文档层，本分支尚未接入：
-              // 槽位保持占位，接上之后在这里换成状态与回调。
-              isShelterAvailable={false}
+              isShelterAvailable={isShelterAvailable}
+              isShelterOpen={isShelterOpen}
+              onToggleShelter={handleToggleShelter}
               isBriefAvailable={brief !== undefined}
               isBriefOpen={isBriefOpen}
               onToggleBrief={handleToggleBrief}
