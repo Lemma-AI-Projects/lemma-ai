@@ -1,9 +1,13 @@
-import { useState } from 'react'
-import { ChevronLeft, X } from 'lucide-react'
+import { Fragment, useState } from 'react'
+import { ChevronLeft, LogOut, Settings, Volume2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { BoardCanvas } from '@/features/board/BoardCanvas'
 import { CourseAssistantInput } from '@/features/course/CourseAssistantInput'
 import { CourseConversationPills } from '@/features/course/CourseConversationPills'
+import { CourseDashboardProgressMarker } from '@/features/course/dashboard/CourseDashboardProgressMarker'
+
+const PROGRESS_PREVIEW_VALUES = [100, 100, 40, 0, 0]
 
 // [sandbox] board 的独立调试页面；右栏复用学习点页的伴学对话框形态。
 export function BoardSandboxPage() {
@@ -11,9 +15,59 @@ export function BoardSandboxPage() {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
-    <div className="flex h-svh overflow-hidden bg-zinc-100 p-2">
+    <div className="relative isolate flex h-svh overflow-hidden bg-zinc-100 p-2">
+      <BoardCanvas />
+      <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col items-start self-stretch pt-6">
+        <div className="pointer-events-auto flex w-full items-center gap-3 px-6">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            aria-label="退出"
+            className="size-11 rounded-full border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100"
+          >
+            <LogOut className="size-5 -scale-x-100" />
+          </Button>
+          <div className="flex h-11 w-fit items-center rounded-full border border-zinc-200/80 bg-zinc-50 px-5">
+            <span className="whitespace-nowrap text-lg font-medium leading-none text-zinc-900">
+              Python为何是编程入门优选？
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            aria-label="声音"
+            className="ml-auto size-11 rounded-full border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100"
+          >
+            <Volume2 className="size-5" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            aria-label="设置"
+            className="size-11 rounded-full border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100"
+          >
+            <Settings className="size-5" />
+          </Button>
+        </div>
+        <div className="pointer-events-auto mt-6 ml-6 flex w-11 flex-col items-center" aria-label="学习进度预览">
+          {PROGRESS_PREVIEW_VALUES.map((progress, index) => (
+            <Fragment key={index}>
+              {index > 0 && (
+                <div aria-hidden="true" className="h-6 w-px bg-zinc-300" />
+              )}
+              <CourseDashboardProgressMarker
+                label={String(index + 1)}
+                progress={progress}
+              />
+            </Fragment>
+          ))}
+        </div>
+      </div>
       <aside
-        className="relative ml-auto flex w-[360px] shrink-0 flex-col rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform motion-reduce:transition-none"
+        className="relative z-20 ml-auto flex w-[360px] shrink-0 flex-col rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform motion-reduce:transition-none"
         style={{
           // 加上页面右侧的 8px 留白，收起后仍露出 24px 的左侧边缘。
           transform: isCollapsed
@@ -41,7 +95,10 @@ export function BoardSandboxPage() {
         >
           <div className="-mt-1 flex h-7 shrink-0 items-center gap-2">
             <div className="min-w-0 flex-1">
-              <CourseConversationPills conversations={[]} />
+              <CourseConversationPills
+                conversations={[]}
+                emptyLabel="Python为何适合编程入门"
+              />
             </div>
             <div className="-mr-1 ml-auto flex items-center gap-0.5">
               <Button

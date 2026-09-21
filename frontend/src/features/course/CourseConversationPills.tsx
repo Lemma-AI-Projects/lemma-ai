@@ -4,12 +4,15 @@ import type { CourseCompanionConversation } from './courseCompanionApi'
 export function CourseConversationPills({
   activeConversationId,
   conversations,
+  emptyLabel = '新对话',
   isError = false,
   isLoading = false,
   onSelectConversation,
 }: {
   activeConversationId?: string
   conversations: CourseCompanionConversation[]
+  /** 还没有会话时胶囊上的文字。学习点页用「新对话」。 */
+  emptyLabel?: string
   isError?: boolean
   isLoading?: boolean
   onSelectConversation?: (conversationId: string) => void
@@ -33,7 +36,7 @@ export function CourseConversationPills({
   if (conversations.length === 0) {
     return (
       <span className="shrink-0 rounded-full bg-zinc-200/70 px-2.5 py-1 text-xs font-medium text-zinc-600">
-        新对话
+        {emptyLabel}
       </span>
     )
   }

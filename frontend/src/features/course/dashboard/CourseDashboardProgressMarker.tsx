@@ -14,9 +14,10 @@ export function CourseDashboardProgressMarker({
 }: CourseDashboardProgressMarkerProps) {
   return (
     <Button
+      type="button"
       variant="ghost"
       aria-label={`${label} 学习进度`}
-      className="relative size-8 rounded-full p-0"
+      className="relative size-8 rounded-full p-0 hover:bg-zinc-200/40"
     >
       {/* 显式 size-8 避免 Button 的默认 SVG 样式将圆环压缩到 16px。 */}
       <CircularProgress
