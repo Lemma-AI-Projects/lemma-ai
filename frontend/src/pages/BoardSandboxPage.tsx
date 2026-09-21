@@ -8,14 +8,22 @@ import { CourseConversationPills } from '@/features/course/CourseConversationPil
 import { CourseDashboardProgressMarker } from '@/features/course/dashboard/CourseDashboardProgressMarker'
 
 const PROGRESS_PREVIEW_VALUES = [100, 100, 40, 0, 0]
+const CHAT_SLIDE_CLASS_NAME =
+  'transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform motion-reduce:transition-none'
 
 // [sandbox] board 的独立调试页面；右栏复用学习点页的伴学对话框形态。
 export function BoardSandboxPage() {
   const [draft, setDraft] = useState('')
   const [isCollapsed, setIsCollapsed] = useState(false)
+  // 顶部按钮与对话框共用位移，保持按钮到对话框左边缘的间距。
+  const chatSlideStyle = {
+    transform: isCollapsed
+      ? 'translate3d(calc(var(--board-chat-width) - 16px), 0, 0)'
+      : 'translate3d(0, 0, 0)',
+  }
 
   return (
-    <div className="relative isolate flex h-svh overflow-hidden bg-zinc-100 p-2">
+    <div className="relative isolate flex h-svh overflow-hidden bg-zinc-100 p-2 [--board-chat-width:360px]">
       <BoardCanvas />
       <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col items-start self-stretch pt-6">
         <div className="pointer-events-auto flex w-full items-center gap-3 px-6">
@@ -33,24 +41,29 @@ export function BoardSandboxPage() {
               Python为何是编程入门优选？
             </span>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-lg"
-            aria-label="声音"
-            className="ml-auto size-11 rounded-full border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100"
+          <div
+            className={`ml-auto flex shrink-0 items-center gap-3 ${CHAT_SLIDE_CLASS_NAME}`}
+            style={chatSlideStyle}
           >
-            <Volume2 className="size-5" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-lg"
-            aria-label="设置"
-            className="size-11 rounded-full border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100"
-          >
-            <Settings className="size-5" />
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-lg"
+              aria-label="声音"
+              className="size-11 rounded-full border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100"
+            >
+              <Volume2 className="size-5" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-lg"
+              aria-label="设置"
+              className="size-11 rounded-full border-zinc-200/80 bg-zinc-50 hover:bg-zinc-100"
+            >
+              <Settings className="size-5" />
+            </Button>
+          </div>
         </div>
         <div className="pointer-events-auto mt-6 ml-6 flex w-11 flex-col items-center" aria-label="学习进度预览">
           {PROGRESS_PREVIEW_VALUES.map((progress, index) => (
@@ -67,13 +80,8 @@ export function BoardSandboxPage() {
         </div>
       </div>
       <aside
-        className="relative z-20 ml-auto flex w-[360px] shrink-0 flex-col rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform motion-reduce:transition-none"
-        style={{
-          // 加上页面右侧的 8px 留白，收起后仍露出 24px 的左侧边缘。
-          transform: isCollapsed
-            ? 'translate3d(calc(100% - 16px), 0, 0)'
-            : 'translate3d(0, 0, 0)',
-        }}
+        className={`relative z-20 ml-auto flex w-[var(--board-chat-width)] shrink-0 flex-col rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 ${CHAT_SLIDE_CLASS_NAME}`}
+        style={chatSlideStyle}
       >
         {isCollapsed && (
           <button
