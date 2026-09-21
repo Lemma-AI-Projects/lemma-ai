@@ -44,7 +44,14 @@ class AgentContext:
     space_name: str
     sources: list[SpaceSourceRef] = field(default_factory=list)
     excerpts: list[SpaceExcerptRef] = field(default_factory=list)
+    # All of the space's conversations (the inspector shows them, marking the
+    # current one) …
     conversations: list[SpaceConversationRef] = field(default_factory=list)
+    # … and the ones actually NAMED in the prompt, which excludes the current
+    # conversation (its content arrives as chat history instead). The digest
+    # reports this list, so the panel never claims a title-only listing of a
+    # conversation whose messages the model did in fact see.
+    prompt_conversations: list[SpaceConversationRef] = field(default_factory=list)
     history_messages: int = 0
     prompt_block: str = ""
 
@@ -76,7 +83,7 @@ class AgentContext:
             ],
             "conversations": [
                 {"id": conversation.id, "title": conversation.title}
-                for conversation in self.conversations
+                for conversation in self.prompt_conversations
             ],
             "historyMessages": self.history_messages,
             "promptChars": self.prompt_chars,
@@ -324,6 +331,7 @@ async def build_agent_context(
         sources=sources,
         excerpts=excerpts,
         conversations=all_conversations,
+        prompt_conversations=prompt_conversations,
         history_messages=history_messages,
         prompt_block=prompt_block,
     )

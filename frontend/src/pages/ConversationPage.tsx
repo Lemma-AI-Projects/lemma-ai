@@ -78,6 +78,7 @@ export function ConversationPage() {
         date: message.createdAt,
         reasoningText: message.reasoningText,
         tool: message.tool,
+        agentContext: message.agentContext,
       }))
     )
     const liveTurns = createConversationTurns(
@@ -88,6 +89,7 @@ export function ConversationPage() {
         date: message.createdAt,
         reasoningText: message.reasoningText,
         tool: message.tool,
+        agentContext: message.agentContext,
       }))
     )
     return [...historyTurns, ...liveTurns]

@@ -6,6 +6,7 @@ import {
   conversationDetailQueryKey,
   conversationsQueryRootKey,
 } from '@/lib/queryKeys'
+import type { AgentContextDigest } from '@/features/agent/types'
 import type { ConversationToolRef } from './types'
 
 export interface ConversationListItem {
@@ -29,6 +30,8 @@ export interface ConversationMessage {
   createdAt: string
   /** Tool card attached to this turn (present only on tool turns). */
   tool?: ConversationToolRef
+  /** What the agent could see for this answer; recorded at turn time. */
+  agentContext?: AgentContextDigest
 }
 
 /** 主侧边栏列表（仅未归属项目的会话）。 */

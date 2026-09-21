@@ -1,4 +1,4 @@
-import { AlignLeft, ClipboardList, MessageCircle, Plus } from 'lucide-react'
+import { AlignLeft, ClipboardList, MessageCircle, Plus, Radar } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import {
@@ -22,6 +22,13 @@ export interface WorkspaceDockProps {
    * Learning Brief 是否可用。false 时该槽位退回占位 —— 板块没数据就没有开关，
    * 不做「点了没反应」的按钮。
    */
+  /**
+   * 「Space Context」是否可用（要有真实空间）。false 时槽位不渲染 ——
+   * 没数据就没有开关，不做点了没反应的按钮。
+   */
+  isContextAvailable?: boolean
+  isContextOpen?: boolean
+  onToggleContext?: () => void
   isBriefAvailable: boolean
   isBriefOpen: boolean
   onToggleBrief: () => void
@@ -43,6 +50,9 @@ export function WorkspaceDock({
   isShelterAvailable,
   isShelterOpen,
   onToggleShelter,
+  isContextAvailable,
+  isContextOpen,
+  onToggleContext,
   isBriefAvailable,
   isBriefOpen,
   onToggleBrief,
@@ -78,6 +88,22 @@ export function WorkspaceDock({
             )}
           >
             <AlignLeft className="size-[18px]" />
+          </button>
+        )}
+
+        {isContextAvailable && (
+          <button
+            type="button"
+            onClick={onToggleContext}
+            aria-pressed={isContextOpen}
+            aria-label="Space Context"
+            title="Space Context：Agent 到底看到了什么"
+            className={cn(
+              WORKSPACE_PILL_BUTTON,
+              isContextOpen && WORKSPACE_PILL_BUTTON_ACTIVE
+            )}
+          >
+            <Radar className="size-[18px]" />
           </button>
         )}
 

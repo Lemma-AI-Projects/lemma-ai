@@ -39,17 +39,6 @@ export function LearnSpaceWorkspacePreviewPage() {
     [navigate]
   )
 
-  // 与真实页面同一条接力：/chat + 初始消息。预览态未登录，最终由 RequireAuth
-  // 接管跳登录页 —— 所以这里验证的是「发送动作确实发生」。
-  const handleStartConversation = useCallback(
-    (text: string) => {
-      navigate('/chat', {
-        state: { initialMessage: text, messageKey: crypto.randomUUID() },
-      })
-    },
-    [navigate]
-  )
-
   // 「接下来」的两种落点：有课节直接进课；没有对应课节的建议在当前空间开一段对话。
   const handleOpenBriefStep = useCallback(
     (step: LearningBriefNextStep) => {
@@ -77,7 +66,6 @@ export function LearnSpaceWorkspacePreviewPage() {
       brief={brief}
       onOpenBriefStep={handleOpenBriefStep}
       onClose={() => navigate('/preview/learn-spaces')}
-      onStartConversation={handleStartConversation}
       onNewConversation={() => navigate('/chat')}
       onOpenNode={handleOpenNode}
     />

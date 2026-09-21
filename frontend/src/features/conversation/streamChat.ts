@@ -1,5 +1,6 @@
 import { env } from '@/lib/env'
 import { supabase } from '@/lib/supabaseClient'
+import type { AgentContextDigest } from '@/features/agent/types'
 import type { ConversationToolRef } from './types'
 
 export interface ChatStreamUsage {
@@ -38,6 +39,11 @@ export interface StreamChatOptions {
   onUsage?: (usage: ChatStreamUsage) => void
   /** 工具回合：引导语流式输出后，后端发来一个 tool 事件挂载工具卡片。 */
   onTool?: (tool: ConversationToolRef) => void
+  /**
+   * done 之前发来一次：本轮 Agent 实际可看到的上下文摘要。与写进消息行
+   * 的同一份，所以实时看到的与刷新后看到的完全一致。
+   */
+  onContext?: (context: AgentContextDigest) => void
 }
 
 /**
@@ -62,6 +68,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     onReasoning,
     onUsage,
     onTool,
+    onContext,
   } = options
 
   const {
@@ -105,7 +112,13 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     throw new ChatStreamError('stream_interrupted', 'Response has no readable body')
   }
 
-  await consumeSseStream(response.body, { onDelta, onReasoning, onUsage, onTool })
+  await consumeSseStream(response.body, {
+    onDelta,
+    onReasoning,
+    onUsage,
+    onTool,
+    onContext,
+  })
 }
 
 /**
@@ -162,7 +175,7 @@ async function consumeSseStream(
   body: ReadableStream<Uint8Array>,
   handlers: Pick<
     StreamChatOptions,
-    'onDelta' | 'onReasoning' | 'onUsage' | 'onTool'
+    'onDelta' | 'onReasoning' | 'onUsage' | 'onTool' | 'onContext'
   >
 ): Promise<void> {
   const reader = body.getReader()
@@ -196,6 +209,12 @@ async function consumeSseStream(
       }
       case 'tool': {
         handlers.onTool?.(JSON.parse(parsed.data) as ConversationToolRef)
+        return
+      }
+      case 'context': {
+        handlers.onContext?.(
+          JSON.parse(parsed.data) as AgentContextDigest
+        )
         return
       }
       case 'done': {

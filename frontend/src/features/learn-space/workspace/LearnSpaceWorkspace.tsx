@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
+import { AgentContextInspector } from '@/features/agent/AgentContextInspector'
 import type { CurrentUser } from '@/features/auth/useCurrentUser'
 import { ShelterDrawer } from '@/features/docs/ShelterDrawer'
 import { LearningBriefPanel } from '@/features/learn-space/brief/LearningBriefPanel'
@@ -35,7 +36,6 @@ export interface LearnSpaceWorkspaceProps {
   /** 传给设置弹窗；预览态（未登录）为 undefined。 */
   account?: CurrentUser
   onClose: () => void
-  onStartConversation: (text: string) => void
   onNewConversation: () => void
   onOpenNode: (node: WorkspaceNode) => void
   /**
@@ -73,7 +73,6 @@ export function LearnSpaceWorkspace({
   errorText,
   account,
   onClose,
-  onStartConversation,
   onNewConversation,
   onOpenNode,
   onOpenPage,
@@ -91,6 +90,18 @@ export function LearnSpaceWorkspace({
   const [isConversationOpen, setIsConversationOpen] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isShelterOpen, setIsShelterOpen] = useState(false)
+  const [isContextOpen, setIsContextOpen] = useState(false)
+  // undefined = 还没选，跟着这个空间最近的一段对话走；null = 明确要一段新的。
+  // 不额外查一次：画布上的节点就是本空间的对话列表。
+  const [conversationChoice, setConversationChoice] = useState<
+    string | null | undefined
+  >(undefined)
+  const latestConversationId = useMemo(() => {
+    const node = nodes.find((item) => item.href?.startsWith('/chat/'))
+    return node?.id ?? null
+  }, [nodes])
+  const activeConversationId =
+    conversationChoice === undefined ? latestConversationId : conversationChoice
   // 抽屉可用与否，取决于调用方给不给「点开一块板」的出口 —— 给了才显示按钮。
   // 没有 projectId（mock 预览页）就没有可取的板块，按钮同样不出现。
   const isShelterAvailable = Boolean(onOpenPage && projectId)
@@ -112,13 +123,27 @@ export function LearnSpaceWorkspace({
   // 两个都开会把画布挤成中间一条，而它们回答的是同一类问题。
   const handleToggleShelter = useCallback(() => {
     setIsShelterOpen((current) => !current)
+    setIsContextOpen(false)
     // Brief 未启用时不动它的选择 —— 否则会把「默认打开」一起关掉。
     if (brief !== undefined) setBriefOpenChoice(false)
   }, [brief])
   const handleCloseShelter = useCallback(() => setIsShelterOpen(false), [])
+  // 三者互斥：同一侧只放一个面板，同时开会把画布挤成中间一条。
+  const handleToggleContext = useCallback(() => {
+    setIsContextOpen((current) => !current)
+    setIsShelterOpen(false)
+    if (brief !== undefined) setBriefOpenChoice(false)
+  }, [brief])
+  const handleCloseContext = useCallback(() => setIsContextOpen(false), [])
+  // 「指挥室」不再是跳去 /chat：工作台里就有真对话，那就地开一段新的。
+  const handleCommandRoom = useCallback(() => {
+    setConversationChoice(null)
+    setIsConversationOpen(true)
+  }, [])
   const handleToggleBrief = useCallback(() => {
     setBriefOpenChoice(!isBriefOpen)
     setIsShelterOpen(false)
+    setIsContextOpen(false)
   }, [isBriefOpen])
   const handleCloseBrief = useCallback(() => setBriefOpenChoice(false), [])
 
@@ -130,6 +155,14 @@ export function LearnSpaceWorkspace({
             projectId={projectId}
             onClose={handleCloseShelter}
             onOpenPage={onOpenPage}
+          />
+        )}
+
+        {isContextOpen && projectId && (
+          <AgentContextInspector
+            projectId={projectId}
+            conversationId={activeConversationId ?? undefined}
+            onClose={handleCloseContext}
           />
         )}
 
@@ -173,10 +206,13 @@ export function LearnSpaceWorkspace({
 
             <WorkspaceDock
               className="absolute inset-x-0 bottom-0"
-              onCommandRoom={onNewConversation}
+              onCommandRoom={handleCommandRoom}
               isShelterAvailable={isShelterAvailable}
               isShelterOpen={isShelterOpen}
               onToggleShelter={handleToggleShelter}
+              isContextAvailable={Boolean(projectId)}
+              isContextOpen={isContextOpen}
+              onToggleContext={handleToggleContext}
               isBriefAvailable={brief !== undefined}
               isBriefOpen={isBriefOpen}
               onToggleBrief={handleToggleBrief}
@@ -188,10 +224,12 @@ export function LearnSpaceWorkspace({
 
         {isConversationOpen && (
           <ConversationPanel
-            className="w-[17rem]"
+            className="w-[22rem]"
+            projectId={projectId}
             spaceName={spaceName}
+            conversationId={activeConversationId}
+            onConversationChange={setConversationChoice}
             onClose={handleToggleConversation}
-            onSubmit={onStartConversation}
           />
         )}
       </div>

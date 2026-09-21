@@ -1,6 +1,7 @@
 import { DesmosGraphCard } from '@/features/desmos/DesmosGraphCard'
 import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
+import { ConversationAgentContext } from './ConversationAgentContext'
 import { ConversationCourseTool } from './ConversationCourseTool'
 import { ConversationReasoning } from './ConversationReasoning'
 import type { ConversationTurn as ConversationTurnData, ConversationTurnBlock } from './types'
@@ -28,6 +29,10 @@ function renderBlock(block: ConversationTurnBlock) {
         {block.content}
       </AssistantMarkdown>
     )
+  }
+
+  if (block.type === 'agent_context') {
+    return <ConversationAgentContext key={block.id} context={block.context} />
   }
 
   // tool block: render the matching connected card by tool type. Adding a

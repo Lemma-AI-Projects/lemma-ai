@@ -124,7 +124,6 @@ export function LearnSpaceWorkspacePage() {
       errorText={errorText}
       account={currentUserQuery.data}
       onClose={handleClose}
-      onStartConversation={handleStartConversation}
       onNewConversation={handleNewConversation}
       onOpenNode={handleOpenNode}
       onOpenPage={handleOpenPage}

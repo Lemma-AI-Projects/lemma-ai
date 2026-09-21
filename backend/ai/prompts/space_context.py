@@ -150,6 +150,9 @@ def render_space_context(
             "different from a general chatbot.",
             "- An excerpt may be truncated. If the user needs a whole source, call "
             "read_page with its title — do not guess the missing part.",
+            "- Refer to a source by its title EXACTLY as written above: do not "
+            "translate or rename it. The user sees those exact titles in the "
+            "space, and a renamed source is one they cannot find.",
             "- Conversations are listed by title only. If the user asks what was "
             "said in one, say you cannot read other conversations.",
             "- If something is not in the material above, say you do not have it. "
