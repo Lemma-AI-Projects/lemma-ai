@@ -124,7 +124,14 @@ class AIChunk(BaseModel):
     """
 
     kind: Literal[
-        "delta", "reasoning", "usage", "done", "error", "tool", "preparing"
+        "delta",
+        "reasoning",
+        "usage",
+        "done",
+        "error",
+        "tool",
+        "preparing",
+        "context",
     ]
     # delta
     text: str | None = None
@@ -141,6 +148,11 @@ class AIChunk(BaseModel):
     # e.g. {"type": "course_planning", "courseId": "<uuid>"}. Lemma-owned, not
     # framework-shaped; the frontend renders the matching tool block.
     tool: dict[str, Any] | None = None
+    # context: a wire-ready (camelCase) digest of what the agent could see for
+    # this turn — the space's sources, which were excerpted, history size. Emitted
+    # once, just before done, so the UI can show the same digest that was
+    # persisted. Lemma-owned; the ai layer only relays it.
+    context: dict[str, Any] | None = None
 
 
 class ModelRoute(BaseModel):

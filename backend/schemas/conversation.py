@@ -53,6 +53,14 @@ class ConversationMessageOut(BaseModel):
     # {"type": "course_planning", "courseId": "..."}); lets reload re-render the
     # card in place. Sourced from the ai_messages.tool_json column.
     tool: dict[str, Any] | None = Field(default=None, validation_alias="tool_json")
+    # What the Global Agent could see when it produced this answer (the space's
+    # sources, which of them were excerpted, how much history was replayed).
+    # Recorded at turn time because a space changes: recomputing it later would
+    # describe today's space as if it were that turn's. Sourced from
+    # ai_messages.agent_context_json.
+    agent_context: dict[str, Any] | None = Field(
+        default=None, validation_alias="agent_context_json"
+    )
     created_at: datetime
 
 

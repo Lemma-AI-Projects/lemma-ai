@@ -19,6 +19,7 @@ output, nothing is written and a retry starts clean.
 
 import asyncio
 import contextlib
+import logging
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
@@ -29,15 +30,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai import AIChunk, AIUseCase, ChatMessage, ai_client
 from core import aio
+from core.config import settings
 from core.database import AsyncSessionLocal
 from core.security import CurrentUser
 from schemas.ai import ChatRequest
 from services import (
+    agent_context_service,
     conversation_service,
     conversation_tool_service,
     course_planning_service,
     project_service,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -52,6 +57,13 @@ class TurnContext:
     new_conversation_title: str | None = None
     # New conversation born inside a project (ownership already verified).
     new_conversation_project_id: uuid.UUID | None = None
+    # The learn space this turn runs in, filled on BOTH paths (a new
+    # conversation's payload, or the stored conversation's project_id). This is
+    # what every space-scoped tool reads — do not "simplify" it back to the
+    # payload field: filling only the new-conversation path makes the space's
+    # material reachable in fresh chats and unreachable in existing ones, which
+    # the user experiences as "it works sometimes".
+    project_id: uuid.UUID | None = None
 
 
 # The previous turn's write is async (done doesn't wait for it); a fast
@@ -90,6 +102,7 @@ async def prepare_turn(
                 content
             ),
             new_conversation_project_id=payload.project_id,
+            project_id=payload.project_id,
         )
 
     conversation = None
@@ -112,7 +125,53 @@ async def prepare_turn(
         user_content=content,
         user_sent_at=datetime.now(UTC),
         history=[ChatMessage(role=row.role, content=row.content_text) for row in rows],
+        project_id=conversation.project_id,
     )
+
+
+async def _load_agent_context(context: TurnContext):
+    """What the Global Agent can see for this turn (None = nothing to say).
+
+    Best-effort on purpose. Two legitimate ways it comes up empty: the turn
+    isn't in a space, or the doc layer's tables don't exist yet (migration not
+    applied — hence the flag check). A chat turn must not fail because a side
+    channel is missing, and it must never invent material either: None means the
+    prompt receives an empty `space_context`, which renders as nothing at all.
+
+    Cost per turn: the space row, one indexed page list, one aggregate for the
+    sizes, block reads only for the sources that fit the excerpt budget, and the
+    space's conversation list. All read-only.
+    """
+    if context.project_id is None or not settings.doc_full_api_enabled:
+        return None
+    try:
+        async with AsyncSessionLocal() as db:
+            return await agent_context_service.build_agent_context(
+                db,
+                user_id=context.user_id,
+                project_id=context.project_id,
+                current_conversation_id=context.conversation_id,
+                history_messages=len(context.history),
+            )
+    except Exception:  # noqa: BLE001 — a missing side channel must not break chat
+        logger.warning(
+            "agent context unavailable (project=%s)",
+            context.project_id,
+            exc_info=True,
+        )
+        return None
+
+
+def _action_of(tool_ref: dict[str, Any] | None) -> str:
+    """What this turn did, as the Agent Context panel reports it.
+
+    "answer" unless a tool attached a card. Tool CALLS that produce no card
+    (read_page) are not visible here, and naming them would be a guess — the
+    panel states what is known, not what is likely.
+    """
+    if isinstance(tool_ref, dict) and tool_ref.get("type"):
+        return str(tool_ref["type"])
+    return "answer"
 
 
 async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
@@ -138,6 +197,10 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
     raw_parts: dict[str, Any] | None = None
     tool_ref: dict[str, Any] | None = None
     persist_task: asyncio.Task[Any] | None = None
+    # Captured ONCE, before the model runs: the prompt and the recorded digest
+    # must describe the same moment, otherwise the panel would explain this
+    # answer with a space that has changed since.
+    agent_context = await _load_agent_context(context)
 
     def ensure_persist_scheduled() -> asyncio.Task[Any] | None:
         nonlocal persist_task
@@ -156,6 +219,13 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                     assistant_reasoning_text=assistant_reasoning_text,
                     raw_parts=raw_parts,
                     tool_ref=tool_ref,
+                    agent_context=(
+                        agent_context_service.summarise_digest(
+                            agent_context.digest(), action=_action_of(tool_ref)
+                        )
+                        if agent_context is not None
+                        else None
+                    ),
                 )
             )
         return persist_task
@@ -167,12 +237,19 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         conversation_id=(
             None if context.new_conversation_title else context.conversation_id
         ),
+        project_id=context.project_id,
     )
     chunk_stream = ai_client.stream_chat(
         AIUseCase.TEXT_CHAT,
         [*context.history, ChatMessage(role="user", content=context.user_content)],
         user_id=str(context.user_id),
         conversation_id=str(context.conversation_id),
+        # Template and variables land together or not at all: the template is
+        # now the only place $space_context is spelled, and safe_substitute
+        # would leak the literal token if the variable went missing.
+        prompt_vars={
+            "space_context": agent_context.prompt_block if agent_context else ""
+        },
         tools=tools,
     )
     try:
@@ -194,6 +271,16 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                 # "next message races the write" window is covered by
                 # prepare_turn's in-flight grace retry.
                 ensure_persist_scheduled()
+                # Emitted BEFORE done so the live panel shows the same digest
+                # that was persisted (the action depends on tool_ref, which is
+                # only settled once the stream is over).
+                if agent_context is not None:
+                    yield AIChunk(
+                        kind="context",
+                        context=agent_context_service.summarise_digest(
+                            agent_context.digest(), action=_action_of(tool_ref)
+                        ),
+                    )
             yield chunk
     finally:
         # Schedule FIRST and synchronously: under re-cancellation every await

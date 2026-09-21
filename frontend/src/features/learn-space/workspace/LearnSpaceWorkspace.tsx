@@ -43,8 +43,6 @@ export interface LearnSpaceWorkspaceProps {
    * 槽位保持占位，不做点了没反应的按钮。
    */
   onOpenPage?: (pageId: string) => void
-  /** 从 shelter 抽屉进导入向导；不给则抽屉里的「导入」保持禁用。 */
-  onImport?: () => void
   /**
    * Learning Brief 数据。`undefined` = 板块未启用（dock 槽位退回占位、面板不出现）；
    * `null` = 读取中（面板先出骨架）；对象 = 有数据。默认打开。
@@ -79,7 +77,6 @@ export function LearnSpaceWorkspace({
   onNewConversation,
   onOpenNode,
   onOpenPage,
-  onImport,
   brief,
   onOpenBriefStep,
   onRefreshBrief,
@@ -133,7 +130,6 @@ export function LearnSpaceWorkspace({
             projectId={projectId}
             onClose={handleCloseShelter}
             onOpenPage={onOpenPage}
-            onImport={onImport}
           />
         )}
 

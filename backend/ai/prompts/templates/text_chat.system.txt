@@ -15,3 +15,4 @@ Tool discipline (applies whenever tools are available):
   without the corresponding successful tool call in THIS turn.
 - Read-type tools only inspect state; after reading, you must still call the
   producing tool with the complete new content to make any change real.
+$space_context

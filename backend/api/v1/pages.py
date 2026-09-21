@@ -8,11 +8,17 @@ never a silent overwrite.
 Two read surfaces:
   - /pages?project_id=   → one owned learn space's pages (shelter drawer)
   - /pages               → all the caller's pages + project names (/knowledge)
+One write surface beyond plain CRUD: POST /pages/import, which turns a text
+file's bytes into a 「资料」 board (text only, no object storage — see the
+execution plan §8 for why binaries are refused rather than half-supported).
 """
 
+import re
 import uuid
+from pathlib import Path
+from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
@@ -27,6 +33,13 @@ from schemas.doc import (
     PageWithProjectOut,
 )
 from services import doc_service
+
+# One text file, one request. 1 MB is ~500k Chinese characters — far past any
+# board a person reads in a chat, and small enough to decode in memory.
+IMPORT_MAX_BYTES = 1024 * 1024
+
+_LEADING_H1_RE = re.compile(r"^#\s+(.*)$")
+_CHARSET_RE = re.compile(r"charset=([A-Za-z0-9_-]+)", re.IGNORECASE)
 
 _NOT_FOUND = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="page_not_found"
@@ -80,7 +93,11 @@ async def _owned_or_404(
 
 @router.get("", response_model=list[PageWithProjectOut])
 async def list_pages(
-    project_id: uuid.UUID | None = Query(default=None),
+    # alias is load-bearing: the wire format is camelCase everywhere, and a bare
+    # `project_id` here silently IGNORED the client's `projectId` — every space's
+    # drawer then listed the user's pages from ALL spaces (found 2026-09-21 while
+    # verifying, by asking for a space and getting a different one's boards).
+    project_id: uuid.UUID | None = Query(default=None, alias="projectId"),
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[PageWithProjectOut]:
@@ -130,6 +147,117 @@ async def create_page(
             detail="project_not_found",
         )
     return _to_out(page)
+
+
+def _charset_of(content_type: str | None) -> str:
+    """Charset from Content-Type, defaulting to UTF-8 as the whole stack does."""
+    match = _CHARSET_RE.search(content_type or "")
+    return match.group(1) if match else "utf-8"
+
+
+def _split_title(text: str, encoded_filename: str) -> tuple[str, str]:
+    """(title, body) for an imported file.
+
+    A leading `# Heading` names the board — it is consumed rather than kept as
+    a block, otherwise every imported file opens by repeating its own title.
+    With no heading the file name does the naming. Both fall back to a plain
+    label rather than 400: an unnamed note is a cosmetic problem, a refused
+    import is a lost one.
+    """
+    body = text[1:] if text.startswith("\ufeff") else text
+    lines = body.split("\n")
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        heading = _LEADING_H1_RE.match(line.strip())
+        if heading:
+            title = heading.group(1).strip()[: doc_service.PAGE_TITLE_MAX]
+            rest = "\n".join(lines[:index] + lines[index + 1 :])
+            return title or "导入的资料", rest
+        break
+    stem = Path(unquote(encoded_filename)).stem if encoded_filename else ""
+    return stem.strip()[: doc_service.PAGE_TITLE_MAX] or "导入的资料", body
+
+
+@router.post(
+    "/import", response_model=PageBlocksOut, status_code=status.HTTP_201_CREATED
+)
+async def import_page(
+    request: Request,
+    project_id: uuid.UUID = Query(alias="projectId"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PageBlocksOut:
+    """Import one text file as a new 「资料」 board in an owned space.
+
+    Raw body, not multipart: V1 takes text only, and `python-multipart` is not
+    installed on this backend — pulling in a dependency to receive a .md file
+    is a bad trade. The file name travels URL-encoded in X-File-Name so
+    non-ASCII names survive header transport; Content-Type is read only for
+    its charset.
+
+    Refusals are explicit (400 empty / 413 too large / 415 not decodable as
+    text) so the client can say what went wrong. Nothing is written to object
+    storage and the parse happens in memory — see the plan §8 for why binaries
+    are out of scope rather than half-supported.
+    """
+    raw = await request.body()
+    if not raw:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="empty_body"
+        )
+    if len(raw) > IMPORT_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="file_too_large",
+        )
+    try:
+        text = raw.decode(_charset_of(request.headers.get("content-type")))
+    except (UnicodeDecodeError, LookupError):
+        # LookupError covers an unknown charset label; both mean "not text
+        # we can hold", which is the one case V1 genuinely cannot serve.
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="unsupported_encoding",
+        ) from None
+
+    title, body = _split_title(text, request.headers.get("x-file-name", ""))
+    blocks = doc_service.markdown_to_blocks(body)
+    if not blocks:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="empty_text"
+        )
+    created = await doc_service.create_page_with_blocks(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        title=title,
+        blocks=blocks,
+        kind="imported",
+        source="upload",
+    )
+    if created is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="project_not_found"
+        )
+    page, saved = created
+    return PageBlocksOut(
+        id=page.id,
+        project_id=page.project_id,
+        title=page.title,
+        kind=page.kind,
+        updated_at=page.updated_at,
+        blocks=[
+            {
+                "id": block.id,
+                "type": block.type,
+                "position": block.position,
+                "content": block.content,
+                "meta": block.meta,
+            }
+            for block in saved
+        ],
+    )
 
 
 @router.get("/{page_id}", response_model=PageOut)

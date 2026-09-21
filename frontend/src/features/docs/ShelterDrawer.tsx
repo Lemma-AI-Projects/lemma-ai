@@ -3,16 +3,19 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type KeyboardEvent,
   type Ref,
 } from 'react'
 import {
   Archive,
   ChevronRight,
+  CircleAlert,
   Ellipsis,
   FileText,
   Folder,
   LayoutGrid,
+  LoaderCircle,
   Pencil,
   Plus,
   Trash2,
@@ -25,6 +28,7 @@ import { cn } from '@/lib/utils'
 import {
   useCreatePageMutation,
   useDeletePageMutation,
+  useImportPageMutation,
   useProjectPagesQuery,
   useRenamePageMutation,
 } from './docApi'
@@ -36,12 +40,36 @@ interface ShelterDrawerProps {
   onClose: () => void
   /** 点进一块板：交给路由 `/learn-spaces/:id/docs/:pageId`。 */
   onOpenPage: (pageId: string) => void
-  /**
-   * 「导入」入口。**不给就保持禁用** —— 导入还没接后端时，
-   * 一个点开却什么都做不了的向导，比一个禁用按钮更糟。
-   */
-  onImport?: () => void
   className?: string
+}
+
+// 与后端 api/v1/pages.py 的 IMPORT_MAX_BYTES 保持一致。前端先拦一次是为了
+// 省一次往返，后端那一份才是权威（前端拦不住改过的客户端）。
+const IMPORT_MAX_BYTES = 1024 * 1024
+const IMPORT_EXTENSIONS = ['.md', '.markdown', '.txt']
+
+function isImportableName(name: string): boolean {
+  const lower = name.toLowerCase()
+  return IMPORT_EXTENSIONS.some((extension) => lower.endsWith(extension))
+}
+
+function statusOf(error: unknown): number | undefined {
+  return (error as { response?: { status?: number } })?.response?.status
+}
+
+function describeImportError(error: unknown): string {
+  switch (statusOf(error)) {
+    case 503:
+      return '资料层未启用（后端回 503），暂时导不进来。'
+    case 413:
+      return '文件超过 1 MB。'
+    case 415:
+      return '这个文件的编码读不出来 —— V1 只认 UTF-8 文本。'
+    case 404:
+      return '这个空间不在了。'
+    default:
+      return '导入失败，稍后再试。'
+  }
 }
 
 interface GroupDef {
@@ -67,30 +95,36 @@ const GROUPS: GroupDef[] = [
 /**
  * 左侧板块抽屉（learn space 的内容面，与右侧 ConversationPanel 对称）。
  *
- * 按 pages.kind 分组为可折叠 submenu；组内右键新建/重命名/删除。空组不渲染，
- * 全部为空或 API 不可用（门控关闭/未迁移）时退化为同一空态 —— 两项都意味着
- * 「还没有板块」，不把「未启用」伪装成别的。
+ * 按 pages.kind 分组为可折叠 submenu；组内右键新建/重命名/删除。
+ *
+ * 四种状态，**互相不伪装**：
+ *   读取中（骨架）· 读不到（明说原因：503 是「没启用」，不是「你没有板块」）·
+ *   真的空（「还没有板块」）· 有内容。
+ * 「导入」是这里自带的能力（文件选择 → 后端 /pages/import），不再由调用方注入，
+ * 所以入口永远是真的 —— 点了没反应的按钮不做。
  */
 export function ShelterDrawer({
   projectId,
   onClose,
   onOpenPage,
-  onImport,
   className,
 }: ShelterDrawerProps) {
   const pagesQuery = useProjectPagesQuery(projectId)
   const createPage = useCreatePageMutation(projectId)
   const renamePage = useRenamePageMutation(projectId)
   const deletePage = useDeletePageMutation(projectId)
+  const importPage = useImportPageMutation(projectId)
 
   const [collapsed, setCollapsed] = useState<ReadonlySet<PageKind>>(new Set())
   const [creatingIn, setCreatingIn] = useState<PageKind | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [renaming, setRenaming] = useState<DocPage | null>(null)
   const [renameTitle, setRenameTitle] = useState('')
+  const [importError, setImportError] = useState<string | null>(null)
 
   const createInputRef = useRef<HTMLInputElement>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const pages = useMemo(() => pagesQuery.data ?? [], [pagesQuery.data])
 
@@ -156,6 +190,34 @@ export function ShelterDrawer({
     if (event.key === 'Escape') setRenaming(null)
   }
 
+  const handleImportClick = useCallback(() => {
+    setImportError(null)
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFilePicked = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      // 先清 value：选同一个文件两次也要能再次触发 change。
+      event.target.value = ''
+      if (!file) return
+      if (file.size > IMPORT_MAX_BYTES) {
+        setImportError('文件超过 1 MB —— V1 只收 1 MB 以内的文本。')
+        return
+      }
+      if (!isImportableName(file.name)) {
+        setImportError('V1 只收文本（.md / .txt）。PDF、Word 这类还不能进来。')
+        return
+      }
+      setImportError(null)
+      importPage.mutate(
+        { file },
+        { onError: (error) => setImportError(describeImportError(error)) }
+      )
+    },
+    [importPage]
+  )
+
   const groups = useMemo(
     () =>
       GROUPS.map((group) => ({
@@ -164,8 +226,16 @@ export function ShelterDrawer({
       })).filter((group) => group.items.length > 0),
     [pages]
   )
-  // 全空 或 仍未取到数据（加载/失败都被当作「还没有板块」的空态）。
-  const isEmpty = pagesQuery.isError || (pages.length === 0 && !pagesQuery.isPending)
+
+  // 「读不到」与「真的没有」是两件事，必须分开说：503 表示这个功能还没开，
+  // 把它显示成「还没有板块」会让用户以为自己的东西丢了。
+  const unavailableReason = useMemo(() => {
+    if (!pagesQuery.isError) return null
+    if (statusOf(pagesQuery.error) === 503) {
+      return '资料层未启用（后端回了 503）：表还没建，或开关没打开。这不等于「你没有板块」。'
+    }
+    return '读不到板块：后端没有回应。这不等于「你没有板块」。'
+  }, [pagesQuery.error, pagesQuery.isError])
 
   return (
     <aside
@@ -202,20 +272,36 @@ export function ShelterDrawer({
         </button>
         <button
           type="button"
-          onClick={onImport}
-          disabled={!onImport}
+          onClick={handleImportClick}
+          disabled={importPage.isPending}
           aria-label={'导入'}
-          title={'导入'}
+          title={'导入 .md / .txt'}
           className={cn(
             'flex size-8 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-muted-foreground transition-colors',
-            onImport
-              ? 'hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-foreground/10 focus-visible:outline-none'
-              : 'disabled:cursor-default disabled:text-zinc-400'
+            'hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-foreground/10',
+            importPage.isPending && 'cursor-default opacity-60'
           )}
         >
-          <Upload className="size-4" />
+          {importPage.isPending ? (
+            <LoaderCircle className="size-4 animate-spin" />
+          ) : (
+            <Upload className="size-4" />
+          )}
         </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={'.md,.markdown,.txt,text/markdown,text/plain'}
+          className="hidden"
+          onChange={handleFilePicked}
+        />
       </div>
+
+      {importError && (
+        <p className="px-5 pb-2 text-xs text-amber-600 dark:text-amber-400">
+          {importError}
+        </p>
+      )}
 
       <div className="min-h-0 flex-1 scrollbar-fade overflow-y-auto px-2 pb-3">
         {pagesQuery.isPending ? (
@@ -228,14 +314,27 @@ export function ShelterDrawer({
               />
             ))}
           </div>
-        ) : isEmpty ? (
+        ) : unavailableReason ? (
+          <div className="mx-2 mt-1 flex flex-col items-center gap-1 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 px-3 py-6 text-center dark:bg-amber-950/20">
+            <CircleAlert className="size-5 text-amber-500" strokeWidth={1.5} />
+            <p className="text-[13px] text-foreground">{'读不到板块'}</p>
+            <p className="text-xs text-muted-foreground">{unavailableReason}</p>
+            <button
+              type="button"
+              onClick={() => void pagesQuery.refetch()}
+              className="mt-1 rounded-full border border-zinc-200 px-3 py-1 text-xs text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-foreground/10"
+            >
+              {'重试'}
+            </button>
+          </div>
+        ) : pages.length === 0 ? (
           <div className="mx-2 mt-1 flex flex-col items-center gap-1 rounded-lg border border-dashed border-zinc-300 bg-transparent px-3 py-6 text-center">
             <FileText className="size-5 text-zinc-300" strokeWidth={1.5} />
             <p className="text-[13px] text-muted-foreground">
               {'还没有板块'}
             </p>
             <p className="text-xs text-muted-foreground/80">
-              {'新建一篇笔记，或从知识库导入资料'}
+              {'新建一篇笔记，或导入一份 .md / .txt 资料'}
             </p>
           </div>
         ) : (

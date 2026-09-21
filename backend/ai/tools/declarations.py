@@ -23,6 +23,9 @@ LOAD_SKILL = "load_skill"
 RENDER_DESMOS_GRAPH = "render_desmos_graph"
 RENDER_DESMOS_3D_GRAPH = "render_desmos_3d_graph"
 READ_CURRENT_GRAPH = "read_current_graph"
+# Space Context (资料层): the space's own material — read it, and add to it.
+READ_PAGE = "read_page"
+SAVE_NOTE = "save_note"
 
 _REGISTRY: dict[str, ToolSpec] = {
     LOAD_POINT_VIDEO: ToolSpec(
@@ -104,6 +107,49 @@ _REGISTRY: dict[str, ToolSpec] = {
             "才算完成修改。无需任何参数。"
         ),
         parameters={"type": "object", "properties": {}},
+    ),
+    READ_PAGE: ToolSpec(
+        name=READ_PAGE,
+        description=(
+            "读取学习者某个空间里一块板块的正文。系统提示里的空间清单只有标题和类型，"
+            "没有正文。只要回答需要用到某块板的实际内容（解释、引用、比较、总结），"
+            "就必须先调用本工具把正文取回来；取不到时说清取不到，绝不要根据标题猜内容。"
+            "参数 page 传板块标题或它的 id。若返回 ambiguous，说明标题对上了多块板，"
+            "把候选告诉用户或改用 id 重试，不要自己挑一个。"
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "string",
+                    "description": "板块的标题或 id",
+                }
+            },
+            "required": ["page"],
+        },
+    ),
+    SAVE_NOTE: ToolSpec(
+        name=SAVE_NOTE,
+        description=(
+            "把一段结论存成当前空间里的一篇新笔记，之后它会出现在空间清单里、也能被"
+            "read_page 读到。用户说「把这个存下来」「记到空间里」「帮我记一下」这类话时"
+            "调用。本工具只能新建，不会改动用户已有的板。调用成功后必须把返回的标题"
+            "念给用户确认；没有成功返回就绝不要说已经存好了。"
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "笔记标题（简短，一行）",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "笔记正文（Markdown，可含小标题与列表）",
+                },
+            },
+            "required": ["title", "content"],
+        },
     ),
 }
 

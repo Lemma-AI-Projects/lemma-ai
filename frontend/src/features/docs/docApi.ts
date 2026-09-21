@@ -1,31 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 
 import { apiClient } from '@/lib/apiClient'
 import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
 import type { BlockIn, DocBlock, DocPage, PageKind } from './types'
 
+/** 503 是「这功能没开」——一个确定状态，重试不会变。让它立刻显示原因，
+ * 而不是先转两圈再报错；其余沿用通用策略。 */
+function retryPagesQuery(failureCount: number, error: unknown) {
+  if (isAxiosError(error) && error.response?.status === 503) {
+    return false
+  }
+  return retryUnlessClientError(failureCount, error)
+}
+
 export const pagesQueryKey = (projectId: string) =>
   ['doc', 'pages', projectId] as const
-
-export const pageDetailQueryKey = (pageId: string) =>
-  ['doc', 'page', pageId] as const
-
-async function getPage(pageId: string): Promise<DocPage> {
-  const { data } = await signOutOn401(
-    apiClient.get<DocPage>(`/api/v1/pages/${pageId}`)
-  )
-  return data
-}
-
-/** Single page (title/kind) — the editor stub reads this on entry. */
-export function usePageQuery(pageId: string | undefined) {
-  return useQuery({
-    queryKey: pageDetailQueryKey(pageId ?? 'none'),
-    queryFn: () => getPage(pageId as string),
-    enabled: Boolean(pageId),
-    retry: retryUnlessClientError,
-  })
-}
 
 async function listProjectPages(projectId: string): Promise<DocPage[]> {
   const { data } = await signOutOn401(
@@ -42,8 +32,32 @@ export function useProjectPagesQuery(projectId: string | undefined) {
     queryKey: pagesQueryKey(projectId ?? 'none'),
     queryFn: () => listProjectPages(projectId as string),
     enabled: Boolean(projectId),
-    // 4xx 不重试（503 门控关闭同理——把它当「无板块」的空态，而非反复打）。
-    retry: retryUnlessClientError,
+    retry: retryPagesQuery,
+  })
+}
+
+/** Turn a text file (.md/.txt) into a 「资料」 board. */
+export function useImportPageMutation(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (variables: { file: File }) => {
+      const { data } = await signOutOn401(
+        apiClient.post<PageBlocksResponse>('/api/v1/pages/import', variables.file, {
+          params: { projectId },
+          headers: {
+            // 浏览器对 .md 常常给不出 MIME：显式兜一个，后端只看 charset。
+            'Content-Type': variables.file.type || 'text/markdown',
+            // HTTP 头只能放 latin-1，文件名走 URL 编码，后端 unquote 回来。
+            'X-File-Name': encodeURIComponent(variables.file.name),
+          },
+        })
+      )
+      return data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: pagesQueryKey(projectId) })
+    },
   })
 }
 
