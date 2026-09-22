@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Play } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import {
@@ -106,6 +106,18 @@ export function FreeCourseLessonView() {
             {lesson.objective}
           </p>
         </div>
+        {/* 同一节内容的另一种形态：这一页是"读它"，会话是"被讲它"。
+            放在页头而不是正文流里 —— 无论读到哪儿，随时可以切过去。 */}
+        <Button
+          type="button"
+          className="h-8 shrink-0 gap-1.5 rounded-full px-3 text-[13px]"
+          onClick={() =>
+            navigate(`/free-course/${id}/lesson/${chapterId}/session`)
+          }
+        >
+          <Play className="size-3.5" />
+          {t('freeCourse.session.start')}
+        </Button>
       </header>
 
       <LessonRuntime

@@ -147,6 +147,7 @@
     "continueHint": "继续学习该课程"
   },
   "freeCourse": {
+    "session": { "start": "开始学习" },
     "badge": "自由课程",
     "loading": "正在加载课程…",
     "loadFailed": "加载课程失败",

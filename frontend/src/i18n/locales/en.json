@@ -147,6 +147,7 @@
     "continueHint": "Continue this course"
   },
   "freeCourse": {
+    "session": { "start": "Start learning" },
     "badge": "Free course",
     "loading": "Loading course...",
     "loadFailed": "Failed to load this course",

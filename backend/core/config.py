@@ -72,6 +72,21 @@ _DEFAULT_AI_ROUTES_JSON = (
     ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 120,'
     ' "extra": {"media_resolution": "medium", "include_thoughts": true,'
     ' "thinking_budget": 1024}}'
+    # Free-Course teaching session (Hyperknow-style whiteboard + voice). The
+    # opening plan is a once-per-chapter thinking call, so it gets the longer
+    # timeout; every later turn happens in front of the learner and has to feel
+    # immediate. Separate use cases so the two can be routed to different models
+    # without touching any code.
+    '], "free_course_session": ['
+    '{"platform": "aihubmix", "adapter": "openai_compatible",'
+    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 90},'
+    ' {"platform": "openrouter", "adapter": "openrouter",'
+    ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 90}'
+    '], "free_course_session_turn": ['
+    '{"platform": "aihubmix", "adapter": "openai_compatible",'
+    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 60},'
+    ' {"platform": "openrouter", "adapter": "openrouter",'
+    ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 60}'
     "]}"
 )
 

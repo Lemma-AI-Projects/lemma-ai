@@ -4,6 +4,7 @@ import { GoogleOAuthCallback } from '@/features/calendar/OAuthCallbackHandler'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
+import { SandboxLessonPlayerPage } from '@/pages/SandboxLessonPlayerPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CoursePage } from '@/pages/CoursePage'
 import { CourseCenterPreviewPage } from '@/pages/CourseCenterPreviewPage'
@@ -15,6 +16,7 @@ import { DocEditorView } from '@/features/docs/DocEditorView'
 import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBlueprintView'
 import { FreeCourseDetailView } from '@/features/free-course/FreeCourseDetailView'
 import { FreeCourseLessonView } from '@/features/free-course/FreeCourseLessonView'
+import { TeachingSessionView } from '@/features/free-course/session/TeachingSessionView'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
@@ -131,9 +133,14 @@ const routes: RouteObject[] = [
             element: <ConversationPage />,
           },
           {
-            // [sandbox] 临时调试路由，开发完成后可连同沙盒页面整体移除。
+            // [sandbox] 课程编排工具卡各阶段静态预览（原样保留）。
             path: 'sandbox',
             element: <ConversationSandboxPage />,
+          },
+          {
+            // [sandbox] 课堂播放页样式稿（独立路由）。开发完成后可整体移除。
+            path: 'sandbox/classroom',
+            element: <SandboxLessonPlayerPage />,
           },
           {
             path: 'course/:id',
@@ -150,6 +157,12 @@ const routes: RouteObject[] = [
           {
             path: 'free-course/:id/lesson/:chapterId',
             element: <FreeCourseLessonView />,
+          },
+          {
+            // 教学会话（Hyperknow 式：语音 + 白板 + 提问）。
+            // 独立于课节页 —— 课节页是"读这一节"，这里是"被讲这一节"，同一份内容两种形态。
+            path: 'free-course/:id/lesson/:chapterId/session',
+            element: <TeachingSessionView />,
           },
           {
             path: 'project/:id',

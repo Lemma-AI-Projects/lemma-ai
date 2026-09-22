@@ -25,8 +25,16 @@ from schemas.free_course import (
     FreeCourseDetailOut,
     FreeLessonContentOut,
     ObservationIn,
+    SessionProgressIn,
+    TeachingSessionOut,
+    TeachingTurnIn,
+    TeachingTurnOut,
 )
-from services import free_course_events, free_course_service
+from services import (
+    free_course_events,
+    free_course_service,
+    free_course_session_service,
+)
 
 router = APIRouter(prefix="/free-courses", tags=["free-courses"])
 
@@ -236,3 +244,122 @@ async def submit_observation(
     if result is None:
         raise _NOT_FOUND
     return result
+
+# --- Teaching session (Hyperknow-style whiteboard + voice) ------------------
+#
+# A session is a state machine that stops and waits, so it is a REST cycle
+# rather than one long stream: open it, play the plan locally, and come back
+# only when the learner does something the model has to answer. Streaming the
+# board itself would buy nothing here — the whole step (narration + actions)
+# arrives before the first word is spoken, and the *client* is what paces it.
+
+
+@router.post(
+    "/{course_id}/chapters/{chapter_id}/session",
+    response_model=TeachingSessionOut,
+)
+async def start_teaching_session(
+    course_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> TeachingSessionOut:
+    """Open (or resume) this chapter's teaching session.
+
+    Resumes an active session instead of planning a new one: a refresh must not
+    restart the lecture — and must not pay for a second plan.
+    """
+    try:
+        session = await free_course_session_service.start_session(
+            db, user_id=current_user.id, course_id=course_id, chapter_id=chapter_id
+        )
+    except free_course_session_service.SessionUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "session_unavailable", "message": str(exc)},
+        ) from exc
+    if session is None:
+        raise _NOT_FOUND
+    return session
+
+
+@router.get(
+    "/{course_id}/chapters/{chapter_id}/session",
+    response_model=TeachingSessionOut,
+)
+async def get_teaching_session(
+    course_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> TeachingSessionOut:
+    """Read-only: what this chapter's session looks like right now (or 404)."""
+    session = await free_course_session_service.get_session(
+        db, user_id=current_user.id, course_id=course_id, chapter_id=chapter_id
+    )
+    if session is None:
+        raise _NOT_FOUND
+    return session
+
+
+@router.post(
+    "/{course_id}/chapters/{chapter_id}/session/turn",
+    response_model=TeachingTurnOut,
+)
+async def submit_teaching_turn(
+    course_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    payload: TeachingTurnIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> TeachingTurnOut:
+    """The learner did something: answer / "I don't understand" / interrupt.
+
+    One endpoint for all three because they are the same transaction — react,
+    then continue — and only the prompt differs.
+    """
+    try:
+        turn = await free_course_session_service.submit_turn(
+            db,
+            user_id=current_user.id,
+            course_id=course_id,
+            chapter_id=chapter_id,
+            payload=payload,
+        )
+    except free_course_session_service.SessionUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "session_unavailable", "message": str(exc)},
+        ) from exc
+    if turn is None:
+        raise _NOT_FOUND
+    return turn
+
+
+@router.post(
+    "/{course_id}/chapters/{chapter_id}/session/progress",
+    response_model=TeachingSessionOut,
+)
+async def set_teaching_progress(
+    course_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    payload: SessionProgressIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db=Depends(get_db),
+) -> TeachingSessionOut:
+    """Record how far the learner has played, so a refresh resumes there.
+
+    Small and frequent by design: it is the only thing the client reports per
+    step, and it exists so the server can say what was already taught without
+    trusting the client to hold the whole transcript.
+    """
+    session = await free_course_session_service.set_progress(
+        db,
+        user_id=current_user.id,
+        course_id=course_id,
+        chapter_id=chapter_id,
+        cursor=payload.cursor,
+    )
+    if session is None:
+        raise _NOT_FOUND
+    return session

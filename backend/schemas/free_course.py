@@ -230,3 +230,120 @@ class CourseTreeEditIn(BaseModel):
     model_config = ConfigDict(**_ALIAS)
 
     units: list[CourseUnitEditIn] = Field(default_factory=list)
+
+
+# --- Teaching session (Hyperknow-style) -------------------------------------
+#
+# Same zero-trust rule as the lesson read: a question travels with its options
+# (the learner has to see them) but never with `answer` / `expected` — the
+# verdict for a choice question is decided server-side, so the correct option
+# must not be sitting in the network response.
+
+
+class BoardPointOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    x: float
+    y: float
+
+
+class BoardActionOut(BaseModel):
+    """One board action, as the player receives it."""
+
+    model_config = ConfigDict(**_ALIAS)
+
+    kind: str
+    # Render position lives on `points` when the model shaped a curve; a plain
+    # segment uses at -> to. Both are in the abstract 1000x600 board space.
+    at: BoardPointOut | None = None
+    to: BoardPointOut | None = None
+    points: list[BoardPointOut] = Field(default_factory=list)
+    shape: str | None = None
+    text: str | None = None
+    color: str = "ink"
+    size: str = "m"
+    id: str | None = None
+    target: str | None = None
+    duration_ms: int | None = None
+    # Which narration sentence this action belongs to — the sync contract.
+    cue: int = 0
+
+
+class TeachingQuestionOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    kind: Literal["open", "choice"]
+    prompt: str
+    options: list[PracticeOptionOut] = Field(default_factory=list)
+    hint: str | None = None
+
+
+class TeachingStepOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    id: str
+    title: str | None = None
+    branch: str | None = None
+    narration: str
+    actions: list[BoardActionOut] = Field(default_factory=list)
+    question: TeachingQuestionOut | None = None
+
+
+class SessionTranscriptEntryOut(BaseModel):
+    """What the learner did at one stopping point."""
+
+    model_config = ConfigDict(**_ALIAS)
+
+    step_id: str
+    signal: str
+    text: str | None = None
+    option_id: str | None = None
+    verdict: str | None = None
+    feedback: str | None = None
+
+
+class TeachingSessionOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    session_id: uuid.UUID
+    chapter_id: uuid.UUID
+    title: str
+    objective: str
+    status: str
+    # Index of the next step to play. The full plan is returned (not just the
+    # remainder) so a refresh mid-session can restore the transcript too.
+    cursor: int
+    steps: list[TeachingStepOut] = Field(default_factory=list)
+    transcript: list[SessionTranscriptEntryOut] = Field(default_factory=list)
+    # False when the chapter has no generated lesson yet — the caller must run
+    # lesson/stream first, and the UI says so instead of opening an empty board.
+    has_content: bool = True
+
+
+class TeachingTurnIn(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    # answer | confused | interrupt — see ai/free_course/teaching/types.py.
+    signal: Literal["answer", "confused", "interrupt"]
+    # Which step's question is being answered (absent for confused/interrupt).
+    step_id: str | None = None
+    text: str | None = Field(default=None, max_length=2000)
+    option_id: str | None = None
+    # Where the learner had got to. Sent by the client so a turn is enough to
+    # keep the row in step without a second round trip per step.
+    cursor: int | None = None
+
+
+class TeachingTurnOut(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    verdict: str | None = None
+    feedback: str | None = None
+    steps: list[TeachingStepOut] = Field(default_factory=list)
+    cursor: int = 0
+
+
+class SessionProgressIn(BaseModel):
+    model_config = ConfigDict(**_ALIAS)
+
+    cursor: int = Field(ge=0)

@@ -57,6 +57,12 @@ class AIUseCase(StrEnum):
     FREE_COURSE_LESSON = "free_course_lesson"
     # Learner-facing feedback on one answer (客观题本地判定 + LLM 反馈).
     FREE_COURSE_FEEDBACK = "free_course_feedback"
+    # Teaching session (Hyperknow-style: voice + board, step by step). Two cases
+    # because they are two different jobs with different latency budgets — the
+    # opening plan is one thinking call, the later turns happen live in front of
+    # the learner. Each value doubles as its prompt template name.
+    FREE_COURSE_SESSION = "free_course_session"
+    FREE_COURSE_SESSION_TURN = "free_course_session_turn"
 
 
 class VideoInputKind(StrEnum):

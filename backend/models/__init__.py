@@ -12,6 +12,8 @@ from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
 from models.doc import Block, Page
 from models.free_course import CourseLessonObject, CourseLessonObservation
+from models.free_course_session import FreeCourseSession
+from models.knowledge import KnowledgeEdge, KnowledgeEvidence, KnowledgeItem
 from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.profile import Profile
 from models.roster import (
@@ -40,9 +42,13 @@ __all__ = [
     "CourseChapter",
     "CourseLessonObject",
     "CourseLessonObservation",
+    "FreeCourseSession",
     "CourseSearchCandidate",
     "CourseUnit",
     "DesmosGraph",
+    "KnowledgeEdge",
+    "KnowledgeEvidence",
+    "KnowledgeItem",
     "CreditLedger",
     "Payment",
     "PaymentWebhookEvent",

@@ -24,6 +24,7 @@ from ai.coursegen.types import (
     VideoSelection,
 )
 from ai.errors import UnsupportedCapabilityError
+from ai.free_course.teaching.types import TeachingSessionPlan, TeachingTurn
 from ai.free_course.types import (
     AnswerFeedback,
     LearningGap,
@@ -104,6 +105,11 @@ free_course_gap_agent = _build_structured_agent(LearningGap)
 free_course_blueprint_agent = _build_structured_agent(LessonBlueprint)
 free_course_lesson_agent = _build_structured_agent(Lesson)
 free_course_feedback_agent = _build_structured_agent(AnswerFeedback)
+# Teaching session: the opening plan and the later live turns are separate
+# output shapes on purpose — a turn additionally carries a verdict and a
+# short correction, which the opening plan has no business producing.
+free_course_session_agent = _build_structured_agent(TeachingSessionPlan)
+free_course_session_turn_agent = _build_structured_agent(TeachingTurn)
 
 _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_INTAKE: course_intake_agent,
@@ -118,6 +124,8 @@ _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.FREE_COURSE_BLUEPRINT: free_course_blueprint_agent,
     AIUseCase.FREE_COURSE_LESSON: free_course_lesson_agent,
     AIUseCase.FREE_COURSE_FEEDBACK: free_course_feedback_agent,
+    AIUseCase.FREE_COURSE_SESSION: free_course_session_agent,
+    AIUseCase.FREE_COURSE_SESSION_TURN: free_course_session_turn_agent,
 }
 
 
