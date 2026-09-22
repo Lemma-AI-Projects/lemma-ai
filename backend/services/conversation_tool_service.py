@@ -22,6 +22,9 @@ imports services). All handlers share one mutable TurnToolContext:
   single card slot — one drawing per turn, be it 2D or 3D).
 - last_graph_id lets read_current_graph see a graph rendered EARLIER IN THIS
   SAME TURN; otherwise it resolves through the persisted tool_json chain.
+- memories_written collects what `remember` wrote during THIS turn, so the
+  answer's digest can report it separately from the memories the turn started
+  with (see the field's own comment) — nothing in the tool loop reads it.
 
 Handlers never raise for business failures — they return structured statuses
 ({"status": "rejected"/"invalid"/...}) so the model self-corrects inside the
@@ -29,7 +32,7 @@ tool loop instead of killing the stream.
 """
 
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, ValidationError
@@ -38,6 +41,7 @@ from ai import (
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
     READ_PAGE,
+    REMEMBER,
     RENDER_DESMOS_3D_GRAPH,
     RENDER_DESMOS_GRAPH,
     SAVE_NOTE,
@@ -51,7 +55,7 @@ from ai.skills import skill_body, skill_names
 from core.database import AsyncSessionLocal
 from models.doc import Page
 from schemas.desmos import Desmos3DGraphPayload, DesmosGraphPayload
-from services import desmos_graph_service, doc_service
+from services import desmos_graph_service, doc_service, space_memory_service
 
 
 @dataclass
@@ -59,6 +63,12 @@ class TurnToolContext:
     loaded_skills: set[str] = field(default_factory=set)
     card_emitted: bool = False
     last_graph_id: uuid.UUID | None = None
+    # Space Memory written during THIS turn. Reported alongside the memories the
+    # turn already had: the context digest is frozen when the turn starts (so it
+    # describes the same moment as the prompt), which means a memory written now
+    # is by definition NOT in this turn's context. Listing the two separately is
+    # what keeps the panel honest about that.
+    memories_written: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -137,6 +147,7 @@ def build_global_tools(
     user_id: uuid.UUID,
     conversation_id: uuid.UUID | None,
     project_id: uuid.UUID | None = None,
+    on_memory_written: Callable[[dict], None] | None = None,
 ) -> list[ToolBinding]:
     """The plugin ToolBindings for one turn.
 
@@ -149,6 +160,12 @@ def build_global_tools(
     material to read and nowhere to write, and the handlers say so instead of
     failing — the Learner State evidence tool needs the same argument, so this
     signature carries both features.
+
+    on_memory_written is how this turn's memory writes reach the answer's
+    digest. A callback rather than a return value because the bindings are
+    handed to the model loop, not inspected by it; and rather than a field the
+    caller reads off afterwards because the caller (chat_service) already owns
+    the local list it wants filled.
     """
     ctx = TurnToolContext()
 
@@ -400,6 +417,70 @@ def build_global_tools(
             }
         )
 
+    async def remember_handler(
+        call: ToolCall,
+    ) -> AsyncIterator[ToolProgress | ToolResult]:
+        """Record one memory for this space — the only Space Memory write path.
+
+        Scoped by project_id, so a memory always belongs to the space the turn
+        ran in; a turn outside a space has nowhere to put one and says so.
+
+        Honest about being a no-op: when the same text is already remembered,
+        the response says `already_remembered` and the model is told to say so
+        rather than claim a fresh save. The user should be able to trust that
+        "记下了" means something changed (or that nothing needed to).
+        """
+        if project_id is None:
+            yield ToolResult(
+                response={
+                    "status": "no_space",
+                    "note": "当前对话不属于任何空间，没有地方可以记住这件事。",
+                }
+            )
+            return
+        text = str(call.args.get("text", "")).strip()
+        if not text:
+            yield ToolResult(
+                response={"status": "invalid", "note": "text 不能为空。"}
+            )
+            return
+        async with AsyncSessionLocal() as db:
+            result = await space_memory_service.record(
+                db,
+                user_id=user_id,
+                project_id=project_id,
+                text=text,
+                conversation_id=conversation_id,
+            )
+        if result is None:
+            # Ownership failed for a project we were handed — the same
+            # not-yours/no-such collapse as everywhere else.
+            yield ToolResult(response={"status": "no_space"})
+            return
+        memory, created = result
+        written = {
+            "id": str(memory.id),
+            "text": memory.text,
+            "created": created,
+        }
+        ctx.memories_written.append(written)
+        if on_memory_written is not None:
+            on_memory_written(written)
+        yield ToolResult(
+            response={
+                "status": "remembered" if created else "already_remembered",
+                "id": str(memory.id),
+                "text": memory.text,
+                "note": (
+                    "已记进这个空间，之后**别的对话**里也能用到。"
+                    "请在回答里把记下的内容说一遍，让用户看见。"
+                    if created
+                    else "这件事这个空间已经记过了，没有重复记。"
+                    "请在回答里说明它已在记忆中，不要声称是刚刚新记的。"
+                ),
+            }
+        )
+
     return [
         ToolBinding(spec=tool_spec(LOAD_SKILL), handler=load_skill_handler),
         *(
@@ -412,4 +493,5 @@ def build_global_tools(
         ToolBinding(spec=tool_spec(READ_CURRENT_GRAPH), handler=read_handler),
         ToolBinding(spec=tool_spec(READ_PAGE), handler=read_page_handler),
         ToolBinding(spec=tool_spec(SAVE_NOTE), handler=save_note_handler),
+        ToolBinding(spec=tool_spec(REMEMBER), handler=remember_handler),
     ]

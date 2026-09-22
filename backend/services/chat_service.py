@@ -197,10 +197,24 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
     raw_parts: dict[str, Any] | None = None
     tool_ref: dict[str, Any] | None = None
     persist_task: asyncio.Task[Any] | None = None
+    # Space Memory written DURING this turn. Collected via the tool binding's
+    # callback because the digest is frozen before the model runs (see
+    # `_load_agent_context`) — the two lists are disjoint by construction, and
+    # reporting them together would claim the model saw something it did not.
+    memories_written: list[dict] = []
     # Captured ONCE, before the model runs: the prompt and the recorded digest
     # must describe the same moment, otherwise the panel would explain this
     # answer with a space that has changed since.
     agent_context = await _load_agent_context(context)
+
+    def digest_now() -> dict | None:
+        if agent_context is None:
+            return None
+        return agent_context_service.summarise_digest(
+            agent_context.digest(),
+            action=_action_of(tool_ref),
+            memories_written=memories_written,
+        )
 
     def ensure_persist_scheduled() -> asyncio.Task[Any] | None:
         nonlocal persist_task
@@ -219,13 +233,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                     assistant_reasoning_text=assistant_reasoning_text,
                     raw_parts=raw_parts,
                     tool_ref=tool_ref,
-                    agent_context=(
-                        agent_context_service.summarise_digest(
-                            agent_context.digest(), action=_action_of(tool_ref)
-                        )
-                        if agent_context is not None
-                        else None
-                    ),
+                    agent_context=digest_now(),
                 )
             )
         return persist_task
@@ -238,6 +246,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
             None if context.new_conversation_title else context.conversation_id
         ),
         project_id=context.project_id,
+        on_memory_written=memories_written.append,
     )
     chunk_stream = ai_client.stream_chat(
         AIUseCase.TEXT_CHAT,
@@ -275,12 +284,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                 # that was persisted (the action depends on tool_ref, which is
                 # only settled once the stream is over).
                 if agent_context is not None:
-                    yield AIChunk(
-                        kind="context",
-                        context=agent_context_service.summarise_digest(
-                            agent_context.digest(), action=_action_of(tool_ref)
-                        ),
-                    )
+                    yield AIChunk(kind="context", context=digest_now())
             yield chunk
     finally:
         # Schedule FIRST and synchronously: under re-cancellation every await

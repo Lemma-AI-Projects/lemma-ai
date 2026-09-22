@@ -78,6 +78,45 @@ export function ConversationAgentContext({
             </ul>
           </div>
 
+          {/* Space Memory — 唯一跨对话的部分，所以它值得单独一段：
+              上面那些（资料、对话）本来就是这个空间的，下面这些是「过去发生过的」。
+              「用到」与「写入」必须分开显示 —— 这轮新写的记忆不在本轮 prompt 里
+              （digest 在回合开始就固定了），把它们并成一列就是在说模型看见了它
+              自己刚写的东西。 */}
+          <div data-slot="agent-context-memory">
+            <p className="text-muted-foreground">
+              Memory
+              {context.memoriesTotal > context.memories.length &&
+                `（本空间共 ${context.memoriesTotal} 条，本轮可见 ${context.memories.length} 条）`}
+            </p>
+            <ul className="mt-0.5 space-y-0.5 pl-3">
+              {context.memories.map((memory) => (
+                <li key={memory.id}>
+                  <span className="text-foreground">{memory.text}</span>
+                  {memory.fromConversation && (
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · 来自「{memory.fromConversation}」
+                    </span>
+                  )}
+                </li>
+              ))}
+              {context.memories.length === 0 && (
+                <li className="text-muted-foreground">（本轮没有可用的空间记忆）</li>
+              )}
+            </ul>
+            {context.memoriesWritten.length > 0 && (
+              <ul className="mt-1 space-y-0.5 pl-3">
+                {context.memoriesWritten.map((memory) => (
+                  <li key={memory.id} className="text-emerald-700 dark:text-emerald-400">
+                    本次写入：{memory.text}
+                    {memory.created ? '' : '（已记过，未重复记）'}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <p className="text-muted-foreground">
             prompt {context.promptChars} 字
             {excerpted.length > 0 && `（其中摘录 ${context.excerptChars} 字）`} · Action:{' '}

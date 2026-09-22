@@ -26,6 +26,10 @@ READ_CURRENT_GRAPH = "read_current_graph"
 # Space Context (资料层): the space's own material — read it, and add to it.
 READ_PAGE = "read_page"
 SAVE_NOTE = "save_note"
+# Space Memory: what this space should still know in a conversation that has not
+# happened yet. Not the same thing as a note — a note is material, a memory is
+# a conclusion the two of you reached.
+REMEMBER = "remember"
 
 _REGISTRY: dict[str, ToolSpec] = {
     LOAD_POINT_VIDEO: ToolSpec(
@@ -149,6 +153,30 @@ _REGISTRY: dict[str, ToolSpec] = {
                 },
             },
             "required": ["title", "content"],
+        },
+    ),
+    REMEMBER: ToolSpec(
+        name=REMEMBER,
+        description=(
+            "把一件「以后还得记得」的事记进当前空间，让未来**另一个对话**里的你能"
+            "接得上。适合：用户做出的决定、定下的计划、说过的偏好或取舍（例："
+            "「先解决 A，暂时不做 B」）。不适合：闲聊、过程、一次性的问题、"
+            "任何关于他会不会的内容判断。\n"
+            "写法：一到两句；**脱离这次对话也看得懂** —— 不要写「刚才那个」「上面提到"
+            "的」，把对象写全。\n"
+            "用户明确让你记住某事，或你们刚达成一个以后仍然成立的结论时调用。"
+            "调用成功后，必须在回答里把记下的内容说一遍让用户看见；"
+            "没有成功返回就绝不要说已经记住了。"
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "这条记忆本身，一到两句，脱离上下文也看得懂",
+                },
+            },
+            "required": ["text"],
         },
     ),
 }

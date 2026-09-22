@@ -5,9 +5,22 @@ the prompt AND records its digest on the answer, the Context Inspector endpoint
 uses it to show the same thing on screen. Two consumers, one computation — the
 inspector therefore cannot drift from what the agent actually got.
 
-Deliberately NOT here: Learner State, Space Memory, ranking, embeddings,
-retrieval. This version hands the model a bounded, honest view of the space and
-nothing else (see the execution plan: V0 stops before any of that).
+Three parts, and they are different kinds of thing:
+
+  - sources + excerpts — the space's MATERIAL (Space Context proper);
+  - conversations — a title-only list of what else is here;
+  - memories — what this space DECIDED in conversations that already ended.
+    The only part that survives the conversation it came from.
+
+How the digest reports memory has to be read carefully, and it is split for
+that reason: `memories` is the set handed to the model THIS turn (frozen when
+the turn starts, exactly like the prompt), while `memoriesWritten` is what the
+turn produced. They are disjoint by construction — a memory written now cannot
+have been in its own prompt.
+
+Deliberately NOT here: Learner State, ranking, embeddings, retrieval. Memory
+arrives as "the most recent N, verbatim" and nothing more (see
+planning/space-memory-v0-execution-plan.md §7 for what V0 refuses to build).
 """
 
 import uuid
@@ -19,14 +32,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ai.prompts.space_context import (
     EXCERPT_PER_SOURCE_CHARS,
     EXCERPT_TOTAL_CHARS,
+    MEMORY_LIST_CAP,
     SpaceConversationRef,
     SpaceExcerptRef,
+    SpaceMemoryRef,
     SpaceSourceRef,
     render_space_context,
 )
 from models.ai_conversation import AiConversation, AiMessage
 from models.doc import Block, Page
 from models.project import Project
+from services import space_memory_service
 
 # Caps that keep one turn's context bounded and explainable.
 SOURCE_LIST_CAP = 20
@@ -52,6 +68,12 @@ class AgentContext:
     # reports this list, so the panel never claims a title-only listing of a
     # conversation whose messages the model did in fact see.
     prompt_conversations: list[SpaceConversationRef] = field(default_factory=list)
+    # This space's memories, newest first, capped at MEMORY_LIST_CAP. §3.3 of the
+    # execution plan: these went INTO the prompt for this turn.
+    memories: list[SpaceMemoryRef] = field(default_factory=list)
+    # The space's real total, which can exceed the list above — the prompt says
+    # "…and N older memory item(s) not shown", and N has to be true.
+    memory_total: int = 0
     history_messages: int = 0
     prompt_block: str = ""
 
@@ -85,6 +107,19 @@ class AgentContext:
                 {"id": conversation.id, "title": conversation.title}
                 for conversation in self.prompt_conversations
             ],
+            "memories": [
+                {
+                    "id": memory.id,
+                    "text": memory.text,
+                    "fromConversation": memory.from_conversation or None,
+                }
+                for memory in self.memories
+            ],
+            "memoriesTotal": self.memory_total,
+            # Filled at the END of the turn (it is what the turn produced, so it
+            # cannot be known here) — always present so the panel can tell
+            # "nothing was written" from "this build predates the field".
+            "memoriesWritten": [],
             "historyMessages": self.history_messages,
             "promptChars": self.prompt_chars,
             "excerptChars": self.excerpt_chars,
@@ -318,11 +353,31 @@ async def build_agent_context(
         if conversation.id != str(current_conversation_id)
     ][:CONVERSATION_LIST_CAP]
 
+    # Space Memory: the only part of this block that outlives a conversation.
+    # Read even when the space has sources — the two answer different questions.
+    memory_rows = await space_memory_service.list_for_space(
+        db, user_id=user_id, project_id=project_id, limit=MEMORY_LIST_CAP
+    )
+    memories = [
+        SpaceMemoryRef(
+            id=str(memory.id),
+            text=memory.text,
+            from_conversation=title,
+            created_at=memory.created_at.isoformat() if memory.created_at else "",
+        )
+        for memory, title in (memory_rows or [])
+    ]
+    memory_total = await space_memory_service.count_for_space(
+        db, user_id=user_id, project_id=project_id
+    )
+
     prompt_block = render_space_context(
         space_name=space.name,
         sources=sources,
         excerpts=excerpts,
         conversations=prompt_conversations,
+        memories=memories,
+        memory_total=memory_total,
         history_messages=history_messages,
     )
     return AgentContext(
@@ -332,16 +387,29 @@ async def build_agent_context(
         excerpts=excerpts,
         conversations=all_conversations,
         prompt_conversations=prompt_conversations,
+        memories=memories,
+        memory_total=memory_total,
         history_messages=history_messages,
         prompt_block=prompt_block,
     )
 
 
-def summarise_digest(digest: dict, *, action: str) -> dict:
-    """Re-stamp the action on a digest captured before the turn finished.
+def summarise_digest(
+    digest: dict,
+    *,
+    action: str,
+    memories_written: list[dict] | None = None,
+) -> dict:
+    """Re-stamp the two things only the END of a turn can know.
 
-    The action can only be known at the end (a tool card may arrive mid-stream),
-    while the digest is captured at the start — so it is corrected here rather
-    than rebuilt, keeping one source of truth for the rest of the fields.
+    `action` and `memories_written` are both unknowable when the digest is
+    captured (the tool card may arrive mid-stream; a memory write happens during
+    it), while the rest of the digest must be frozen at the start to describe
+    the same moment as the prompt. Re-stamping rather than rebuilding keeps one
+    source of truth for every other field.
     """
-    return {**digest, "action": action}
+    return {
+        **digest,
+        "action": action,
+        "memoriesWritten": list(memories_written or []),
+    }

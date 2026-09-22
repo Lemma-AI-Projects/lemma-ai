@@ -167,6 +167,41 @@ export function AgentContextInspector({
 
             <Section
               icon={Sparkles}
+              title="Space Memory"
+              subtitle={`${context.memoriesTotal} 条`}
+            >
+              {context.memories.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  这个空间还没有记忆 —— 当你们做出一个以后仍然成立的决定时，Agent
+                  会把它记在这里（对话内说「记住…」也一样）。
+                </p>
+              ) : (
+                <>
+                  <ul className="space-y-1">
+                    {context.memories.map((memory) => (
+                      <li key={memory.id} className="text-xs leading-5">
+                        <span className="text-foreground">{memory.text}</span>
+                        {memory.fromConversation && (
+                          <span className="text-muted-foreground">
+                            {' '}
+                            · 来自「{memory.fromConversation}」
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {context.memoriesTotal > context.memories.length && (
+                    <p className="mt-1.5 text-[11px] leading-4 text-muted-foreground/80">
+                      只列出最近 {context.memories.length} 条；更早的{' '}
+                      {context.memoriesTotal - context.memories.length} 条不进 prompt。
+                    </p>
+                  )}
+                </>
+              )}
+            </Section>
+
+            <Section
+              icon={Sparkles}
               title="Current Context"
               subtitle={`prompt ${context.promptChars} 字`}
             >

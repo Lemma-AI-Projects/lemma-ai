@@ -15,6 +15,7 @@ from models.point_video_candidate import PointVideoCandidate
 from models.profile import Profile
 from models.project import Project
 from models.provider_usage_log import ProviderUsageLog
+from models.space_memory import SpaceMemory
 
 __all__ = [
     "AiConversation",
@@ -41,4 +42,5 @@ __all__ = [
     "Profile",
     "Project",
     "ProviderUsageLog",
+    "SpaceMemory",
 ]

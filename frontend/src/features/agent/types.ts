@@ -27,10 +27,31 @@ export interface AgentContextConversation {
   title: string
 }
 
+/** One thing this space remembers from a conversation that already ended. */
+export interface AgentContextMemory {
+  id: string
+  text: string
+  /** Title of the conversation it came from; null if that chat was deleted. */
+  fromConversation: string | null
+}
+
 export interface AgentContextDigest {
   space: { id: string; name: string }
   sources: AgentContextSource[]
   conversations: AgentContextConversation[]
+  /**
+   * The memories that were IN THE PROMPT for this turn — frozen when the turn
+   * started, exactly like the prompt itself.
+   */
+  memories: AgentContextMemory[]
+  /** The space's real total, which can exceed `memories` (the prompt caps it). */
+  memoriesTotal: number
+  /**
+   * Memories written DURING this turn. Disjoint from `memories` by
+   * construction: something written now cannot have been in its own prompt, so
+   * merging the two lists would claim the model saw what it had just produced.
+   */
+  memoriesWritten: { id: string; text: string; created: boolean }[]
   /** How many earlier messages of THIS conversation were replayed. */
   historyMessages: number
   promptChars: number
