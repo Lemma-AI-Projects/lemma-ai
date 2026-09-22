@@ -54,6 +54,8 @@ const routes: RouteObject[] = [
       {
         path: 'sandbox/board',
         element: <BoardSandboxPage />,
+      },
+      {
         // 学习空间工作台：全屏白色画布 + 自带顶栏，参考稿里没有侧栏，
         // 所以这条路由不套 AppLayout。
         path: 'learn-spaces/:id',
