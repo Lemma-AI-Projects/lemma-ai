@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, RotateCw, X } from 'lucide-react'
+import { ArrowRight, Check, Circle, RotateCw, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { useKnowledgeStructureQuery } from './briefApi'
+import {
+  layoutStructure,
+  type KnowledgeStructureRow,
+} from './knowledgeStructure'
 import type {
   LearningBrief,
   LearningBriefNextStep,
@@ -98,6 +103,11 @@ export function LearningBriefPanel({
         ) : brief ? (
           <>
             <GoalBlock brief={brief} />
+
+            {/* Learner State Inspector：把那张图本身摊开 ——
+                ✓ 已具备 / → 接下来可学 / ○ 还没轮到。
+                它严格按先修顺序排，所以「下一步」永远是紧挨着已具备那一段的第一项。 */}
+            <KnowledgeStructureBlock projectId={brief.projectId} />
 
             {brief.doing?.length ? (
               <BriefSection title="你正在做">
@@ -216,6 +226,110 @@ function BriefSection({
       </h3>
       <div className="mt-2">{children}</div>
     </section>
+  )
+}
+
+/**
+ * 知识结构（Learner State Inspector）。
+ *
+ * 三态来自派生，不是来自模型：✓ = 已具备，→ = 前提都在了（接下来可学），
+ * ○ = 还没轮到。每条后面的「N 条记录」是结论背后的证据条数 —— 是计数，不是分数。
+ *
+ * 自我取数而不是由页面传入：`GET /knowledge/structure` 与简报是同一份派生，
+ * 面板自己拿可以少穿两层 props，也让「结构块跟着简报一起出现」这件事不依赖页面
+ * 记得多传一个参数。读不到时只让这一段说话，不连累整个简报。
+ */
+function KnowledgeStructureBlock({ projectId }: { projectId: string }) {
+  const { structure, refetch, isRefreshing } =
+    useKnowledgeStructureQuery(projectId)
+
+  if (structure === undefined) {
+    return (
+      <BriefSection title="知识结构">
+        <div className="rounded-xl border border-dashed border-amber-300 px-3 py-3">
+          <p className="text-[13px] leading-5 text-zinc-600">
+            读不到知识结构（后端没有回应）。
+          </p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            disabled={isRefreshing}
+            className="mt-2 text-xs text-foreground underline-offset-2 hover:underline disabled:opacity-60"
+          >
+            重试
+          </button>
+        </div>
+      </BriefSection>
+    )
+  }
+
+  if (structure === null) {
+    return (
+      <BriefSection title="知识结构">
+        <div className="h-14 animate-pulse rounded-xl bg-muted" />
+      </BriefSection>
+    )
+  }
+
+  const rows = layoutStructure(structure)
+  if (rows.length === 0) {
+    return (
+      <BriefSection title="知识结构">
+        <p className="text-[13px] leading-5 text-zinc-500">
+          这个空间还没有知识结构 —— 有了它，才谈得上「哪些会了、哪些接下来学」。
+        </p>
+      </BriefSection>
+    )
+  }
+
+  return (
+    <BriefSection title="知识结构">
+      <ul className="space-y-1">
+        {rows.map((row) => (
+          <StructureRow key={row.id} row={row} />
+        ))}
+      </ul>
+      <p className="mt-2 text-[11px] leading-4 text-zinc-400">
+        <span className="text-emerald-600">✓</span> 已具备 ·{' '}
+        <span className="text-foreground">→</span> 接下来可学 · ○ 还没轮到
+      </p>
+    </BriefSection>
+  )
+}
+
+function StructureRow({ row }: { row: KnowledgeStructureRow }) {
+  const mastered = row.value === 'mastered'
+  return (
+    <li className="flex items-start gap-2">
+      <span className="mt-[3px] flex size-4 shrink-0 items-center justify-center">
+        {mastered ? (
+          <Check className="size-3.5 text-emerald-600" strokeWidth={3} />
+        ) : row.isReady ? (
+          <ArrowRight className="size-3.5 text-foreground" strokeWidth={2.5} />
+        ) : (
+          <Circle className="size-3 text-zinc-300" strokeWidth={2} />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            'text-[13px] leading-5',
+            row.isReady && !mastered
+              ? 'font-medium text-foreground'
+              : mastered
+                ? 'text-zinc-700'
+                : 'text-zinc-500'
+          )}
+        >
+          {row.label}
+        </span>
+        {row.evidenceCount > 0 && (
+          <span className="ml-1.5 text-[11px] text-zinc-400">
+            {row.evidenceCount} 条记录
+          </span>
+        )}
+      </span>
+    </li>
   )
 }
 

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { apiClient } from '@/lib/apiClient'
 import { retryUnlessClientError, signOutOn401 } from '@/lib/apiUtils'
+import type { KnowledgeStructure } from './knowledgeStructure'
 import type { LearningBrief } from './types'
 
 /**
@@ -72,4 +73,52 @@ export function useLearningBriefQuery(projectId: string | undefined) {
         : query.data
 
   return { brief, refresh, isRefreshing: query.isFetching }
+}
+
+export const knowledgeStructureQueryKey = (projectId: string) =>
+  ['knowledge', 'structure', projectId] as const
+
+async function fetchKnowledgeStructure(
+  projectId: string
+): Promise<KnowledgeStructure> {
+  const { data } = await signOutOn401(
+    apiClient.get<KnowledgeStructure>('/api/v1/knowledge/structure', {
+      params: { projectId },
+    })
+  )
+  return data
+}
+
+/**
+ * Learner State Inspector 的数据源：这个空间的知识结构 + 派生状态。
+ *
+ * 与简报同一个后端、同一份派生（`GET /knowledge/structure` 是审计面），所以两者
+ * 不可能说两套话。刷新时用同一次失效即可 —— 结构块与简报一起重算。
+ *
+ * 失败时返回 `null`（不是 `undefined`）：结构块是面板里的一段，不该因为一次读取
+ * 失败就让整个简报消失。它自己显示「读不到」并给重试。
+ */
+export function useKnowledgeStructureQuery(projectId: string | undefined) {
+  const query = useQuery({
+    queryKey: knowledgeStructureQueryKey(projectId ?? 'none'),
+    queryFn: () => fetchKnowledgeStructure(projectId as string),
+    enabled: Boolean(projectId),
+    retry: retryUnlessClientError,
+    staleTime: 30_000,
+    throwOnError: false,
+  })
+
+  const structure: KnowledgeStructure | null | undefined = !projectId
+    ? undefined
+    : query.isPending
+      ? null
+      : query.isError
+        ? undefined
+        : query.data
+
+  return {
+    structure,
+    refetch: query.refetch,
+    isRefreshing: query.isFetching,
+  }
 }

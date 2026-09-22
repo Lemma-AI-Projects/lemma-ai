@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "ref": "matrix-basics",
+      "label": "矩阵基础",
+      "kind": "concept",
+      "source": { "note": "演示用的极小结构，不是最终知识库" }
+    },
+    {
+      "ref": "linear-independence",
+      "label": "线性无关",
+      "kind": "concept"
+    },
+    {
+      "ref": "eigenvalue",
+      "label": "特征值",
+      "kind": "concept"
+    },
+    {
+      "ref": "eigenvector",
+      "label": "特征向量",
+      "kind": "concept"
+    },
+    {
+      "ref": "diagonalization",
+      "label": "对角化",
+      "kind": "skill"
+    }
+  ],
+  "edges": [
+    {
+      "from": "matrix-basics",
+      "to": "linear-independence",
+      "why": "不会矩阵乘法与秩，就谈不了向量组是否线性无关"
+    },
+    {
+      "from": "linear-independence",
+      "to": "eigenvalue",
+      "why": "特征值定义为 A - λI 奇异，判据就是线性相关"
+    },
+    {
+      "from": "eigenvalue",
+      "to": "eigenvector",
+      "why": "先有 λ 才有满足 Av = λv 的非零 v"
+    },
+    {
+      "from": "eigenvector",
+      "to": "diagonalization",
+      "why": "可对角化的条件就是有足够多线性无关的特征向量"
+    }
+  ]
+}

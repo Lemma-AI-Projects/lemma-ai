@@ -222,6 +222,24 @@ async def summarize_for_prompt(
     Returns the honest empty line rather than raising when the space has no
     structure yet, so a prompt template never grows a branch.
     """
+    block, _ = await state_for_prompt(db, project_id=project_id, user_id=user_id)
+    return block
+
+
+async def state_for_prompt(
+    db: AsyncSession, *, project_id: uuid.UUID, user_id: uuid.UUID
+) -> tuple[str, list[str]]:
+    """(prompt block, outer-fringe labels) — derived once, for the turn assembly.
+
+    Two consumers, one derivation: the block goes into the prompt, the labels go
+    into the answer's digest, so the panel can show what the agent was told was
+    next. Derived here once because the turn needs both — asking twice would
+    re-run the whole derivation (items + edges + evidence) for the same turn.
+
+    The labels come back as text on purpose: the digest must not carry a mastery
+    number, and it does not need to — the titles of what is ready to learn ARE
+    the fact.
+    """
     state, fringes, items, _ = await compute_state(
         db, project_id=project_id, user_id=user_id
     )
@@ -229,7 +247,11 @@ async def summarize_for_prompt(
         Item(id=str(row.id), label=row.label, active=row.status == "active")
         for row in items
     ]
-    return summarize(state, fringes, domain_items)
+    labels = {str(row.id): row.label for row in items}
+    return (
+        summarize(state, fringes, domain_items),
+        [labels.get(i, i) for i in fringes.outer],
+    )
 
 
 # --- brief -------------------------------------------------------------------

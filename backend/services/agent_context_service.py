@@ -5,12 +5,17 @@ the prompt AND records its digest on the answer, the Context Inspector endpoint
 uses it to show the same thing on screen. Two consumers, one computation — the
 inspector therefore cannot drift from what the agent actually got.
 
-Three parts, and they are different kinds of thing:
+Four parts, and they are different kinds of thing:
 
   - sources + excerpts — the space's MATERIAL (Space Context proper);
   - conversations — a title-only list of what else is here;
   - memories — what this space DECIDED in conversations that already ended.
-    The only part that survives the conversation it came from.
+    The only part that survives the conversation it came from;
+  - learner state — what the evidence says this learner can already do, and
+    what that makes ready to learn next. NOT stored here and NOT computed here:
+    it is derived from `knowledge_evidence` by ai/knowledge/state.py, and this
+    module only decides how it reaches the prompt. The agent reads it; it never
+    writes it (the one write path is the `record_evidence` tool).
 
 How the digest reports memory has to be read carefully, and it is split for
 that reason: `memories` is the set handed to the model THIS turn (frozen when
@@ -23,6 +28,7 @@ arrives as "the most recent N, verbatim" and nothing more (see
 planning/space-memory-v0-execution-plan.md §7 for what V0 refuses to build).
 """
 
+import logging
 import uuid
 from dataclasses import dataclass, field
 
@@ -42,7 +48,9 @@ from ai.prompts.space_context import (
 from models.ai_conversation import AiConversation, AiMessage
 from models.doc import Block, Page
 from models.project import Project
-from services import space_memory_service
+from services import knowledge_service, space_memory_service
+
+logger = logging.getLogger(__name__)
 
 # Caps that keep one turn's context bounded and explainable.
 SOURCE_LIST_CAP = 20
@@ -74,6 +82,14 @@ class AgentContext:
     # The space's real total, which can exceed the list above — the prompt says
     # "…and N older memory item(s) not shown", and N has to be true.
     memory_total: int = 0
+    # The derived Learner State block (see ai/knowledge/state.py). Empty when the
+    # space has no knowledge structure, in which case the appended section says
+    # so rather than disappearing — an empty prompt would read as "unknown".
+    learner_state_block: str = ""
+    # Outer-fringe titles as they stood when the turn started: what the agent was
+    # told is ready to learn. Titles, not counts — the digest carries no mastery
+    # number anywhere.
+    learner_ready: list[str] = field(default_factory=list)
     history_messages: int = 0
     prompt_block: str = ""
 
@@ -120,6 +136,14 @@ class AgentContext:
             # cannot be known here) — always present so the panel can tell
             # "nothing was written" from "this build predates the field".
             "memoriesWritten": [],
+            # What the agent was told about this learner THIS turn (frozen with
+            # the prompt, like everything else here). `ready` is the outer
+            # fringe — the answer to "what should I learn next" is derivable
+            # from it, which is the entire point of the KST route.
+            "learnerState": {
+                "included": bool(self.learner_state_block),
+                "ready": list(self.learner_ready),
+            },
             "historyMessages": self.history_messages,
             "promptChars": self.prompt_chars,
             "excerptChars": self.excerpt_chars,
@@ -302,6 +326,29 @@ async def _conversations(
     ]
 
 
+async def _learner_state_block(
+    db: AsyncSession, *, user_id: uuid.UUID, project_id: uuid.UUID
+) -> tuple[str, list[str]]:
+    """The derived Learner State for this turn, or ("", []) if it is unavailable.
+
+    Best-effort like the rest of the assembly, and for the same reason: a chat
+    turn must not fail because a side channel is missing. Two legitimate ways it
+    comes back empty — the space has no knowledge structure (the block then says
+    exactly that, which is itself information), or the knowledge tables do not
+    exist yet in this database. Neither may be reported as "this learner knows
+    nothing": an empty string appended to the prompt adds no claim at all.
+    """
+    try:
+        return await knowledge_service.state_for_prompt(
+            db, project_id=project_id, user_id=user_id
+        )
+    except Exception:  # noqa: BLE001 — a missing side channel must not break chat
+        logger.warning(
+            "learner state unavailable (project=%s)", project_id, exc_info=True
+        )
+        return "", []
+
+
 async def build_agent_context(
     db: AsyncSession,
     *,
@@ -371,7 +418,7 @@ async def build_agent_context(
         db, user_id=user_id, project_id=project_id
     )
 
-    prompt_block = render_space_context(
+    space_block = render_space_context(
         space_name=space.name,
         sources=sources,
         excerpts=excerpts,
@@ -379,6 +426,16 @@ async def build_agent_context(
         memories=memories,
         memory_total=memory_total,
         history_messages=history_messages,
+    )
+    learner_block, learner_ready = await _learner_state_block(
+        db, user_id=user_id, project_id=project_id
+    )
+    # One variable, one block: the model receives ONE context, and the Context
+    # Inspector's promise is that `promptBlock` is the literal text it got —
+    # splitting learner state into a second prompt variable would make the
+    # inspector partial. The split lives in the digest instead, for humans.
+    prompt_block = (
+        f"{space_block}\n\n{learner_block}" if learner_block else space_block
     )
     return AgentContext(
         space_id=space.id,
@@ -389,6 +446,8 @@ async def build_agent_context(
         prompt_conversations=prompt_conversations,
         memories=memories,
         memory_total=memory_total,
+        learner_state_block=learner_block,
+        learner_ready=learner_ready,
         history_messages=history_messages,
         prompt_block=prompt_block,
     )

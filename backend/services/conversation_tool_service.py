@@ -41,6 +41,7 @@ from ai import (
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
     READ_PAGE,
+    RECORD_EVIDENCE,
     REMEMBER,
     RENDER_DESMOS_3D_GRAPH,
     RENDER_DESMOS_GRAPH,
@@ -55,7 +56,13 @@ from ai.skills import skill_body, skill_names
 from core.database import AsyncSessionLocal
 from models.doc import Page
 from schemas.desmos import Desmos3DGraphPayload, DesmosGraphPayload
-from services import desmos_graph_service, doc_service, space_memory_service
+from schemas.knowledge import KnowledgeEvidenceIn
+from services import (
+    desmos_graph_service,
+    doc_service,
+    knowledge_service,
+    space_memory_service,
+)
 
 
 @dataclass
@@ -481,6 +488,148 @@ def build_global_tools(
             }
         )
 
+    async def record_evidence_handler(
+        call: ToolCall,
+    ) -> AsyncIterator[ToolProgress | ToolResult]:
+        """Record what the learner ACTUALLY did on one knowledge item.
+
+        This is the only write path into Learner State, and it is deliberately
+        narrow: the agent may not declare a learner's level, only report an
+        answer it observed. Everything else — mastered, ready, not-yet — is
+        derived from these rows by `ai/knowledge/state.py`.
+
+        Two properties worth not "simplifying" away:
+
+        * An unknown item is refused, not created. The service would happily
+          create one (that is the agent-drafted path of the structure), but a
+          chat tool doing it silently would let the model build a parallel
+          knowledge structure of its own invention — and the state would then
+          rest on a structure nobody reviewed. `resolve_item` first, then write.
+        * `basis` maps to the evidence tier, and the mapping is the model's own
+          claim about how checkable its verdict was. `verified` (tier A) needs a
+          definite fact recorded in `reasoning` and settles an item on its own;
+          `judged` (tier B) is the honest default for "I read the answer and
+          judged it" and needs two independent records. The prompt tells the
+          model not to reach for `verified` to make the state look better.
+        """
+        if project_id is None:
+            yield ToolResult(
+                response={
+                    "status": "no_space",
+                    "note": "当前对话不属于任何空间，没有学习状态可记。",
+                }
+            )
+            return
+        item_label = str(call.args.get("item", "")).strip()
+        verdict = str(call.args.get("verdict", "")).strip().lower()
+        basis = str(call.args.get("basis", "judged")).strip().lower() or "judged"
+        reasoning = str(call.args.get("reasoning", "")).strip()
+        if not item_label or verdict not in ("correct", "incorrect"):
+            yield ToolResult(
+                response={
+                    "status": "invalid",
+                    "note": "item 与 verdict 都要有（verdict 只能是 correct / incorrect）。",
+                }
+            )
+            return
+        if basis not in ("verified", "judged"):
+            yield ToolResult(
+                response={"status": "invalid", "note": "basis 只能是 verified / judged。"}
+            )
+            return
+        if not reasoning:
+            # An unreviewable verdict is not evidence — same rule the service
+            # enforces for tier B, applied here to both tiers.
+            yield ToolResult(
+                response={
+                    "status": "invalid",
+                    "note": (
+                        "reasoning 不能为空：verified 要写出你据以判定的那个确定事实，"
+                        "judged 要写出判断理由。"
+                    ),
+                }
+            )
+            return
+
+        async with AsyncSessionLocal() as db:
+            item, candidates = await knowledge_service.resolve_item(
+                db, project_id=project_id, item_label=item_label
+            )
+            if item is None:
+                available = [
+                    row.label for row in await knowledge_service.list_items(
+                        db, project_id=project_id
+                    )
+                ]
+                yield ToolResult(
+                    response={
+                        "status": "ambiguous_item" if candidates else "unknown_item",
+                        "candidates": candidates,
+                        "available": available,
+                        "note": (
+                            "这个空间的知识结构里没有这个（或对上了不止一个）。"
+                            "请从 available 里选一个；如果确实不在结构里，"
+                            "说明当前结构还没覆盖这件事，不要自己造一个知识点。"
+                        ),
+                    }
+                )
+                return
+
+            try:
+                await knowledge_service.record_evidence(
+                    db,
+                    project_id=project_id,
+                    user_id=user_id,
+                    payload=KnowledgeEvidenceIn(
+                        project_id=project_id,
+                        item_id=item.id,
+                        verdict=verdict,
+                        tier="A" if basis == "verified" else "B",
+                        independent=True,
+                        hint_used=False,
+                        reasoning=reasoning,
+                        response_ref={"conversationId": str(conversation_id)}
+                        if conversation_id
+                        else None,
+                    ),
+                )
+            except knowledge_service.EvidenceRejected as rejected:
+                yield ToolResult(
+                    response={
+                        "status": "rejected",
+                        "reason": str(rejected),
+                        "note": "证据没有被接受，状态未变。",
+                    }
+                )
+                return
+
+            state, fringes, items, _ = await knowledge_service.compute_state(
+                db, project_id=project_id, user_id=user_id
+            )
+
+        labels = {str(row.id): row.label for row in items}
+        value = state.value(str(item.id))
+        yield ToolResult(
+            response={
+                "status": "recorded",
+                "item": item.label,
+                "verdict": verdict,
+                "tier": "A" if basis == "verified" else "B",
+                # The item's state AFTER the write — the model should say this
+                # rather than infer it. Note this is read live, unlike the
+                # learner-state block in the prompt, which was frozen when the
+                # turn started.
+                "itemState": value.value,
+                "readyNext": [labels.get(i, i) for i in fringes.outer],
+                "note": (
+                    "已记录。上一条 itemState 是**写入之后**的状态，请如实告诉用户，"
+                    "而且用词要对上：mastered = 已具备；not_mastered = 这次没做对；"
+                    "unassessed = 还没有定论（judged 类的证据要两条独立记录才定案）。"
+                    "不要把它说成别的状态，也不要替系统宣布掌握程度。"
+                ),
+            }
+        )
+
     return [
         ToolBinding(spec=tool_spec(LOAD_SKILL), handler=load_skill_handler),
         *(
@@ -494,4 +643,5 @@ def build_global_tools(
         ToolBinding(spec=tool_spec(READ_PAGE), handler=read_page_handler),
         ToolBinding(spec=tool_spec(SAVE_NOTE), handler=save_note_handler),
         ToolBinding(spec=tool_spec(REMEMBER), handler=remember_handler),
+        ToolBinding(spec=tool_spec(RECORD_EVIDENCE), handler=record_evidence_handler),
     ]

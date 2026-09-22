@@ -30,6 +30,9 @@ SAVE_NOTE = "save_note"
 # happened yet. Not the same thing as a note — a note is material, a memory is
 # a conclusion the two of you reached.
 REMEMBER = "remember"
+# Learner State: the ONE write path into the knowledge state. The agent may
+# record what the learner actually did; it may never declare what they know.
+RECORD_EVIDENCE = "record_evidence"
 
 _REGISTRY: dict[str, ToolSpec] = {
     LOAD_POINT_VIDEO: ToolSpec(
@@ -177,6 +180,50 @@ _REGISTRY: dict[str, ToolSpec] = {
                 },
             },
             "required": ["text"],
+        },
+    ),
+    RECORD_EVIDENCE: ToolSpec(
+        name=RECORD_EVIDENCE,
+        description=(
+            "记录一条学习证据 —— 用户在某一个知识点上**实际做出来的对或错**。"
+            "这是唯一能改变「学习状态」的写入面；状态由系统按证据算出，"
+            "你既不能直接设置它，也不能凭印象断言某人的水平。\n"
+            "只在有真实作答时调用：你出了题、用户答了、你判定对错；"
+            "**用户自己交上来的一道题和答案同样算**（他做了、你核对了对错，就该记）。"
+            "用户只是说「我会」「我学过」**不是证据** —— 那要出题去验。\n"
+            "basis 的选择很重要：\n"
+            "  verified —— 你能给出一个确定的对照（算得出的数值、可核对的结论），"
+            "把那个对照写进 reasoning；这类证据一条就能定案。\n"
+            "  judged  —— 只能按标准/要点判断（开放式作答），也把判断理由写进 "
+            "reasoning；这类证据需要**两条独立记录**才定案。\n"
+            "不要为了让状态好看而选用 verified。写完把结果如实告诉用户。"
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "string",
+                    "description": "知识点（用空间知识结构里的名称）",
+                },
+                "verdict": {
+                    "type": "string",
+                    "enum": ["correct", "incorrect"],
+                    "description": "用户这次作答的对错",
+                },
+                "basis": {
+                    "type": "string",
+                    "enum": ["verified", "judged"],
+                    "description": "verified=有确定对照；judged=按要点判断",
+                },
+                "reasoning": {
+                    "type": "string",
+                    "description": (
+                        "verified：你据以判定的那个确定事实（答案是什么）；"
+                        "judged：判断理由（按什么要点判的）"
+                    ),
+                },
+            },
+            "required": ["item", "verdict", "reasoning"],
         },
     ),
 }
