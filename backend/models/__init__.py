@@ -7,6 +7,13 @@ from models.course_point_progress import CoursePointProgress
 from models.course_search_candidate import CourseSearchCandidate
 from models.desmos_graph import DesmosGraph
 from models.doc import Block, Page
+from models.free_course import (
+    CourseChapter,
+    CourseLessonObject,
+    CourseLessonObservation,
+    CourseUnit,
+)
+from models.free_course_session import FreeCourseSession
 from models.knowledge import KnowledgeEdge, KnowledgeEvidence, KnowledgeItem
 from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.point_gemini_file import PointGeminiFile
@@ -23,6 +30,11 @@ __all__ = [
     "AiUsageLog",
     "Block",
     "Course",
+    "CourseChapter",
+    "CourseLessonObject",
+    "CourseLessonObservation",
+    "CourseUnit",
+    "FreeCourseSession",
     "CourseLesson",
     "CourseModule",
     "CoursePoint",

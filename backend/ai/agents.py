@@ -16,6 +16,15 @@ from typing import Any
 from pydantic_ai import Agent, RunContext
 
 from ai.coursegen.types import ComposedCourse, Questionnaire, SearchQueries
+from ai.free_course.teaching.types import TeachingSessionPlan, TeachingTurn
+from ai.free_course.types import (
+    AnswerFeedback,
+    LearningGap,
+    LearningIntent,
+    LearningMap,
+    Lesson,
+    LessonBlueprint,
+)
 from ai.errors import UnsupportedCapabilityError
 from ai.types import AIUseCase
 
@@ -73,10 +82,32 @@ course_intake_agent = _build_structured_agent(Questionnaire)
 topic_search_agent = _build_structured_agent(SearchQueries)
 course_compose_agent = _build_structured_agent(ComposedCourse)
 
+# Free Course: one structured agent per pipeline step, each with its own output
+# shape, so a step's schema can never leak into another step's prompt.
+free_course_intake_agent = _build_structured_agent(LearningIntent)
+free_course_map_agent = _build_structured_agent(LearningMap)
+free_course_gap_agent = _build_structured_agent(LearningGap)
+free_course_blueprint_agent = _build_structured_agent(LessonBlueprint)
+free_course_lesson_agent = _build_structured_agent(Lesson)
+free_course_feedback_agent = _build_structured_agent(AnswerFeedback)
+# The teaching session is two output shapes on purpose: a turn additionally
+# carries a verdict and a short correction, which the opening plan has no
+# business producing.
+free_course_session_agent = _build_structured_agent(TeachingSessionPlan)
+free_course_session_turn_agent = _build_structured_agent(TeachingTurn)
+
 _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_INTAKE: course_intake_agent,
     AIUseCase.TOPIC_SEARCH: topic_search_agent,
     AIUseCase.COURSE_COMPOSE: course_compose_agent,
+    AIUseCase.FREE_COURSE_INTAKE: free_course_intake_agent,
+    AIUseCase.FREE_COURSE_MAP: free_course_map_agent,
+    AIUseCase.FREE_COURSE_GAP: free_course_gap_agent,
+    AIUseCase.FREE_COURSE_BLUEPRINT: free_course_blueprint_agent,
+    AIUseCase.FREE_COURSE_LESSON: free_course_lesson_agent,
+    AIUseCase.FREE_COURSE_FEEDBACK: free_course_feedback_agent,
+    AIUseCase.FREE_COURSE_SESSION: free_course_session_agent,
+    AIUseCase.FREE_COURSE_SESSION_TURN: free_course_session_turn_agent,
 }
 
 

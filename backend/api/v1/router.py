@@ -6,6 +6,7 @@ from api.v1 import (
     conversations,
     courses,
     credits,
+    free_courses,
     graphs,
     health,
     knowledge,
@@ -36,3 +37,5 @@ api_router.include_router(knowledge.router)
 # 资料层（Space Context）：空间里放着的资料。写面由 DOC_FULL_API_ENABLED 门控 ——
 # 迁移未 apply 之前，它应当回 503（「未启用」）而不是 500（「表不存在」）。
 api_router.include_router(pages.router)
+# 自由课程（Free Course）：与视频课并行的另一条课程管线（courses.mode='free'）。
+api_router.include_router(free_courses.router)

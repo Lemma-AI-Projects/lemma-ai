@@ -48,6 +48,7 @@ class Course(Base):
             "search_status in ('searching', 'searched', 'failed')",
             name="ck_courses_search_status",
         ),
+        CheckConstraint("mode in ('video', 'free')", name="ck_courses_mode"),
         # Course list is WHERE user_id ORDER BY updated_at DESC; the composite
         # serves filter + order in one pass and (leftmost column) covers plain
         # user_id lookups, so no separate single-column index.
@@ -88,6 +89,17 @@ class Course(Base):
     # Questionnaire + answers, kept together as one JSON blob (阶段一 product
     # data, never queried by column).
     intake_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # Which pipeline this row belongs to. Restored from main-v2: the four-level
+    # rebuild assumed every course was a video course, but a free course is a
+    # different tree (units -> chapters -> lesson objects) and the two MUST be
+    # told apart — a free course must never open the video player, and the video
+    # course center must never try to walk a free course's points.
+    mode: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="video"
+    )
+    # Free-course per-course tunable projections (volume / depth / focus / pace),
+    # one JSON blob. Nullable: an un-tuned course falls back to persona defaults.
+    tuning_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )
@@ -104,6 +116,13 @@ class Course(Base):
     # ai_conversations/ai_messages pair relies on).
     modules: Mapped[list["CourseModule"]] = relationship(
         order_by="CourseModule.order_index",
+        passive_deletes=True,
+    )
+    # The OTHER tree, for mode="free" rows only (see models/free_course.py for why
+    # two trees coexist). Resolved by class name through the declarative
+    # registry, so nothing imports CourseUnit here.
+    units: Mapped[list["CourseUnit"]] = relationship(
+        order_by="CourseUnit.order_index",
         passive_deletes=True,
     )
 

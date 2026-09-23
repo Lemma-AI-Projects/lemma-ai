@@ -45,6 +45,21 @@ class VideoInputKind(StrEnum):
     BASE64 = "base64"
     PROVIDER_FILE_ID = "provider_file_id"
 
+    # Free Course: one use case per pipeline step, so the routing table can point
+    # a step at its own model. Each value doubles as its prompt template name
+    # (ai/prompts/templates/<value>.system.txt).
+    FREE_COURSE_INTAKE = "free_course_intake"
+    FREE_COURSE_MAP = "free_course_map"
+    FREE_COURSE_GAP = "free_course_gap"
+    FREE_COURSE_BLUEPRINT = "free_course_blueprint"
+    FREE_COURSE_LESSON = "free_course_lesson"
+    FREE_COURSE_FEEDBACK = "free_course_feedback"
+    # Teaching session (Hyperknow-style: voice + board, step by step). Two cases
+    # because the opening plan is one thinking call while every later turn happens
+    # live in front of the learner — different latency budgets.
+    FREE_COURSE_SESSION = "free_course_session"
+    FREE_COURSE_SESSION_TURN = "free_course_session_turn"
+
 
 class ChatMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
