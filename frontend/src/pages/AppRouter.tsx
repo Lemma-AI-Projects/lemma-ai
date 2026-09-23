@@ -9,6 +9,12 @@ import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CourseDashboardPage } from '@/pages/CourseDashboardPage'
 import { CoursePointPage } from '@/pages/CoursePointPage'
 import { CourseQuizSandboxPage } from '@/pages/CourseQuizSandboxPage'
+import { FreeCourseBlueprintPreviewPage } from '@/pages/FreeCourseBlueprintPreviewPage'
+import { FreeCourseTuningPreviewPage } from '@/pages/FreeCourseTuningPreviewPage'
+import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBlueprintView'
+import { FreeCourseDetailView } from '@/features/free-course/FreeCourseDetailView'
+import { FreeCourseLessonView } from '@/features/free-course/FreeCourseLessonView'
+import { TeachingSessionView } from '@/features/free-course/session/TeachingSessionView'
 import { CreditsPage } from '@/pages/CreditsPage'
 import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
 import { HomePage } from '@/pages/HomePage'
@@ -47,6 +53,15 @@ const routes: RouteObject[] = [
     // 布局评审入口：Credits 充值页，mock 数据、不登录即可查看。
     path: '/preview/credits',
     element: <CreditsPreviewPage />,
+  },
+  {
+    // 免费课的两个静态预览（与 v2 同形：公开、不挂 AppLayout）。
+    path: '/preview/free-course-tuning',
+    element: <FreeCourseTuningPreviewPage />,
+  },
+  {
+    path: '/preview/free-course-blueprint/:id',
+    element: <FreeCourseBlueprintPreviewPage />,
   },
   {
     element: <RequireAuth />,
@@ -91,6 +106,27 @@ const routes: RouteObject[] = [
           {
             path: 'courses/:courseId/points/:pointId',
             element: <CoursePointPage />,
+          },
+          {
+            // 自由课程（Free Course）：与视频课并行的另一条课程管线。它不走
+            // 仪表盘/学习点，而是「课程 -> 课节 -> 教学会话」。courses.mode
+            // 决定课程中心的卡片往哪边跳。
+            path: 'free-course/:id',
+            element: <FreeCourseDetailView />,
+          },
+          {
+            path: 'free-course/:id/blueprint',
+            element: <FreeCourseBlueprintView />,
+          },
+          {
+            path: 'free-course/:id/lesson/:chapterId',
+            element: <FreeCourseLessonView />,
+          },
+          {
+            // 教学会话（Hyperknow 式：语音 + 白板 + 提问）。与课节页同一份
+            // 内容的另一种形态：那一页是「读它」，这一页是「被讲它」。
+            path: 'free-course/:id/lesson/:chapterId/session',
+            element: <TeachingSessionView />,
           },
           {
             // 学习空间总览（UI 改名层：数据层仍为 projects）。

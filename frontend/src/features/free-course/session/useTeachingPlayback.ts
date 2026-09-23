@@ -35,7 +35,13 @@ import type { TeachingStep } from './types'
 /** Beat between the last stroke of a sentence and the next sentence. */
 const INK_SETTLE_MS = 260
 
-export type PlaybackPhase = 'idle' | 'playing' | 'awaiting'
+export type PlaybackPhase =
+  | 'idle'
+  | 'playing'
+  /** 停在问题上，等学习者回答。 */
+  | 'awaiting'
+  /** 停在白板的某个元素上，等学习者去点它（原文的 Circle 按钮）。 */
+  | 'awaiting_click'
 
 export interface SaidLine {
   stepId: string
@@ -50,6 +56,12 @@ export interface TeachingPlayback {
   activeStepId: string | null
   /** Index of the sentence being spoken, within the active step. */
   sentenceIndex: number
+  /** The board element waiting to be clicked, while `phase === 'awaiting_click'`. */
+  clickTarget: string | null
+  /** What to say while waiting — from the action, or a generic default. */
+  clickHint: string | null
+  /** The learner clicked it: let the timeline continue. Safe to call anytime. */
+  resolveClick: () => void
   muted: boolean
   voiceAvailable: boolean
   setMuted: (muted: boolean) => void
@@ -77,12 +89,18 @@ export function useTeachingPlayback(options?: {
   const [phase, setPhase] = useState<PlaybackPhase>('idle')
   const [activeStepId, setActiveStepId] = useState<string | null>(null)
   const [sentenceIndex, setSentenceIndex] = useState(0)
+  const [clickTarget, setClickTarget] = useState<string | null>(null)
+  const [clickHint, setClickHint] = useState<string | null>(null)
   const [muted, setMutedState] = useState(false)
 
   const browserVoice = useMemo(() => createBrowserVoice(), [])
   const silentVoice = useMemo(() => createSilentVoice(), [])
   const mutedRef = useRef(false)
   const cancelRef = useRef<(() => void) | null>(null)
+  // Resolves the promise the timeline is parked on while waiting for a click.
+  // Held in a ref because `stop()` has to be able to let go of it — a cancel
+  // that leaves a wait pending freezes the lesson with no way back.
+  const clickResolveRef = useRef<(() => void) | null>(null)
   const seqRef = useRef(0)
   const playedRef = useRef(0)
   const onStepDoneRef = useRef(options?.onStepDone)
@@ -113,9 +131,23 @@ export function useTeachingPlayback(options?: {
     }
   }, [browserVoice])
 
+  const resolveClick = useCallback(() => {
+    const resolve = clickResolveRef.current
+    clickResolveRef.current = null
+    setClickTarget(null)
+    setClickHint(null)
+    resolve?.()
+  }, [])
+
   const stop = useCallback(() => {
     cancelRef.current?.()
     cancelRef.current = null
+    // A click wait is the one place the loop can be parked outside `voice.speak`;
+    // releasing it here is what keeps `stop()` from leaving the lesson wedged.
+    clickResolveRef.current?.()
+    clickResolveRef.current = null
+    setClickTarget(null)
+    setClickHint(null)
     setPhase('idle')
   }, [])
 
@@ -193,6 +225,22 @@ export function useTeachingPlayback(options?: {
               })
               seq = base + batch.length
             }
+            // "Now you touch it": the reference session stops here and waits for
+            // a click on a shape it drew, then continues. The wait sits AFTER the
+            // cue's actions, so the thing to click is already on the board.
+            const waits = batch.filter((action) => action.kind === 'awaitClick')
+            if (waits.length > 0) {
+              const wait = waits[waits.length - 1]
+              setClickTarget(wait.target ?? null)
+              setClickHint(wait.text ?? null)
+              setPhase('awaiting_click')
+              await new Promise<void>((resolve) => {
+                clickResolveRef.current = resolve
+              })
+              if (cancelled) return
+              setPhase('playing')
+            }
+
             await sleep(INK_SETTLE_MS)
             if (cancelled) return
           }
@@ -225,5 +273,8 @@ export function useTeachingPlayback(options?: {
     stop,
     clearBoard,
     seedSaid,
+    clickTarget,
+    clickHint,
+    resolveClick,
   }
 }

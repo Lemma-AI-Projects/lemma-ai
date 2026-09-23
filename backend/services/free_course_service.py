@@ -25,9 +25,9 @@ from ai.free_course.types import (
     PathStep,
 )
 from models.course import Course
-# The free-course tree lives in models/free_course.py — this branch's
-# course tables are modules/lessons/points, and units/chapters exist
-# only for mode='free'. See that module's docstring.
+# The free-course tree lives in models/free_course.py — this branch's course
+# tables are modules/lessons/points; units/chapters exist only for mode='free'.
+# See that module's docstring.
 from models.free_course import (
     CourseChapter,
     CourseLessonObject,

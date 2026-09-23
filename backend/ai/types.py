@@ -37,14 +37,6 @@ class AIUseCase(StrEnum):
     # sees the point's re-hosted video via the Gemini Files API and explains it.
     # A video use case (gemini_video channel), streamed with reasoning.
     COURSE_COMPANION = "course_companion"
-
-
-class VideoInputKind(StrEnum):
-    YOUTUBE_URL = "youtube_url"
-    PUBLIC_URL = "public_url"
-    BASE64 = "base64"
-    PROVIDER_FILE_ID = "provider_file_id"
-
     # Free Course: one use case per pipeline step, so the routing table can point
     # a step at its own model. Each value doubles as its prompt template name
     # (ai/prompts/templates/<value>.system.txt).
@@ -59,6 +51,14 @@ class VideoInputKind(StrEnum):
     # live in front of the learner — different latency budgets.
     FREE_COURSE_SESSION = "free_course_session"
     FREE_COURSE_SESSION_TURN = "free_course_session_turn"
+
+
+class VideoInputKind(StrEnum):
+    YOUTUBE_URL = "youtube_url"
+    PUBLIC_URL = "public_url"
+    BASE64 = "base64"
+    PROVIDER_FILE_ID = "provider_file_id"
+
 
 
 class ChatMessage(BaseModel):

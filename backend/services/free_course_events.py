@@ -30,9 +30,9 @@ from ai.free_course.sources import collect_sources, default_sources
 from ai.free_course.types import Lesson
 from core.database import AsyncSessionLocal
 from models.course import Course
-# The free-course tree lives in models/free_course.py — this branch's
-# course tables are modules/lessons/points, and units/chapters exist
-# only for mode='free'. See that module's docstring.
+# The free-course tree lives in models/free_course.py — this branch's course
+# tables are modules/lessons/points; units/chapters exist only for mode='free'.
+# See that module's docstring.
 from models.free_course import (
     CourseChapter,
     CourseLessonObject,

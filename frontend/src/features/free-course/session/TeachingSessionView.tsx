@@ -13,7 +13,7 @@
  * shape and the thing that makes the voice work at all.
  */
 
-import { ArrowLeft, Play, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Award, Play, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -21,6 +21,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
+import { useAppTranslation } from '@/i18n'
 import { CONFUSED_PROMPT, classifyLearnerMessage } from './confusion'
 import { splitSentences } from './sentences'
 import { SessionRail, type RailFeedback } from './SessionRail'
@@ -62,6 +63,14 @@ export function TeachingSessionView() {
   const [error, setError] = useState<string | null>(null)
   const [feedbacks, setFeedbacks] = useState<RailFeedback[]>([])
   const [answeredStepId, setAnsweredStepId] = useState<string | null>(null)
+  /**
+   * 答对之后那张成就卡的名字，以及**被它挡住的后续 step**。
+   *
+   * 原文的顺序是：反馈 -> 成就弹窗 -> 点 "Got it" 之后才继续。所以这一步不能
+   * 和反馈一起放行：它真的拦住了下一段教学，否则那个弹窗只是个装饰。
+   */
+  const [award, setAward] = useState<string | null>(null)
+  const deferredStepsRef = useRef<TeachingStep[]>([])
 
   // Absolute index of the first step in the batch currently playing — what the
   // server needs to know "how far did the learner get" without the client
@@ -136,6 +145,15 @@ export function TeachingSessionView() {
     }
   }, [courseId, chapterId, playback])
 
+  // Declared before `respond` because the award is named after the beat that
+  // was just answered.
+  const questionStep = useMemo<TeachingStep | null>(() => {
+    if (!session || !playback.activeStepId) return null
+    return (
+      session.steps.find((step) => step.id === playback.activeStepId) ?? null
+    )
+  }, [session, playback.activeStepId])
+
   const respond = useCallback(
     async (input: TeachingTurnInput) => {
       if (!courseId || !chapterId || !session) return
@@ -160,6 +178,16 @@ export function TeachingSessionView() {
           cursor: result.cursor,
         })
         baseIndexRef.current = firstNewIndex
+        if (result.verdict === 'correct') {
+          // Named after what they just did: the model's own name when it gave one,
+          // otherwise the beat's own title — never a generic "Well done".
+          const name = result.award || questionStep?.title || session.title
+          if (name) {
+            setAward(name)
+            deferredStepsRef.current = result.steps
+            return
+          }
+        }
         playback.start(result.steps)
       } catch (caught) {
         setError(messageOf(caught, '这一步没有送出去，可以再试一次。'))
@@ -167,15 +195,8 @@ export function TeachingSessionView() {
         setThinking(false)
       }
     },
-    [courseId, chapterId, session, playback]
+    [courseId, chapterId, session, playback, questionStep?.title]
   )
-
-  const questionStep = useMemo<TeachingStep | null>(() => {
-    if (!session || !playback.activeStepId) return null
-    return (
-      session.steps.find((step) => step.id === playback.activeStepId) ?? null
-    )
-  }, [session, playback.activeStepId])
 
   const awaiting = playback.phase === 'awaiting'
   const question = questionStep?.question ?? null
@@ -183,6 +204,13 @@ export function TeachingSessionView() {
     questionStep && answeredStepId === questionStep.id
   )
   const caption = playback.said[playback.said.length - 1]?.text ?? ''
+
+  const dismissAward = useCallback(() => {
+    setAward(null)
+    const pending = deferredStepsRef.current
+    deferredStepsRef.current = []
+    if (pending.length > 0) playback.start(pending)
+  }, [playback])
 
   const handleAnswerChoice = useCallback(
     (optionId: string) => {
@@ -276,7 +304,15 @@ export function TeachingSessionView() {
       ) : (
         <div className="flex min-h-0 flex-1">
           <main className="flex min-w-0 flex-1 flex-col gap-3 p-4">
-            <Whiteboard elements={playback.board} className="min-h-0 flex-1" />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+              <Whiteboard
+                elements={playback.board}
+                className="min-h-0 flex-1"
+                clickTarget={playback.clickTarget}
+                onElementClick={playback.resolveClick}
+              />
+              {award && <AwardCard name={award} onDismiss={dismissAward} />}
+            </div>
             <div className="flex min-h-[2.75rem] shrink-0 items-start gap-3 rounded-xl border border-zinc-200/80 px-4 py-2.5 dark:border-zinc-800">
               <p
                 className="flex-1 text-[13px] leading-5 text-zinc-600 dark:text-zinc-300"
@@ -297,6 +333,8 @@ export function TeachingSessionView() {
             said={playback.said}
             question={question}
             awaiting={awaiting}
+            awaitingClick={playback.phase === 'awaiting_click'}
+            clickHint={playback.clickHint}
             thinking={thinking}
             muted={playback.muted}
             voiceAvailable={playback.voiceAvailable}
@@ -316,16 +354,59 @@ export function TeachingSessionView() {
   )
 }
 
+/**
+ * 成就卡（原文：YOU GOT AN AWARD — Loss Function as a Landscape）。
+ *
+ * 它挡在下一段教学前面，直到学习者点掉它 —— 这是被观察到的顺序，也是这张卡
+ * 唯一的作用：让"我做对了一件事"这句话被看见一次，而不是淹没在反馈文字里。
+ */
+function AwardCard({ name, onDismiss }: { name: string; onDismiss: () => void }) {
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[2px]"
+      data-session-award
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-[19rem] rounded-2xl border border-[#ceddec] bg-white px-5 py-5 text-center shadow-[0_10px_30px_rgba(76,102,148,0.16)]">
+        <span className="mx-auto flex size-9 items-center justify-center rounded-full bg-[#edf4ff] text-[#4c6694]">
+          <Award className="size-4.5" />
+        </span>
+        <p className="mt-2.5 text-[11px] font-semibold tracking-[0.08em] text-[#4c6694] uppercase">
+          {useAppTranslation().t('freeCourse.session.awardTitle')}
+        </p>
+        <p className="mt-1.5 text-[17px] leading-6 font-semibold text-zinc-900">
+          {name}
+        </p>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="mt-4 h-8 rounded-full bg-[#4c6694] px-4 text-[13px] font-medium text-white hover:bg-[#43597f]"
+        >
+          {useAppTranslation().t('freeCourse.session.awardGotIt')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function PhaseChip({ phase }: { phase: string }) {
   return (
     <span
       className={cn(
         'shrink-0 rounded-full border border-zinc-200 px-2.5 py-1 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400',
-        phase === 'awaiting' && 'border-[#4c6694] text-[#4c6694]'
+        (phase === 'awaiting' || phase === 'awaiting_click') &&
+          'border-[#4c6694] text-[#4c6694]'
       )}
       data-session-phase={phase}
     >
-      {phase === 'awaiting' ? '等你回答' : phase === 'playing' ? '讲解中' : '已暂停'}
+      {phase === 'awaiting'
+        ? '等你回答'
+        : phase === 'awaiting_click'
+          ? '等你点一下'
+          : phase === 'playing'
+            ? '讲解中'
+            : '已暂停'}
     </span>
   )
 }

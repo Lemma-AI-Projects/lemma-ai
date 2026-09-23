@@ -63,6 +63,11 @@ export interface CourseListItem {
   description: string | null
   coverUrl: string | null
   status: CourseStatus
+  /**
+   * 'video' | 'free' —— 两条并行的课程管线共用这张表，但不共用任何一个页面。
+   * 自由课程没有学习点，所以卡片不显示学习进度，跳转也走 /free-course/:id。
+   */
+  mode: 'video' | 'free'
   createdAt: string
   updatedAt: string
   /** 已学完的学习点数；与 totalPointCount 一起算进度百分比。 */

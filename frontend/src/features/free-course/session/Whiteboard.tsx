@@ -17,12 +17,13 @@
  *    draws the same line — "the board changed" stays meaningful.
  */
 
-import { memo, useMemo } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
+  boundsOf,
   jittered,
   type BoardElement,
   type BoardMarkElement,
@@ -30,6 +31,7 @@ import {
   type BoardTextElement,
 } from './board'
 import type { BoardColor, BoardSize } from './types'
+import type { ReactNode } from 'react'
 
 /** The reference product's accent, per planning/hyperknow-visual-style-research.html. */
 const COLORS: Record<BoardColor, string> = {
@@ -208,6 +210,100 @@ function elementOf(element: BoardElement) {
   return <BoardShapeElementView key={element.key} element={element} />
 }
 
+/**
+ * 「等他来点」的那个元素。
+ *
+ * 被观察到的产品在白板上放了一个可点的圆圈：点了才出现下一段板书与下一道题。
+ * 这里做三件必须一起做的事，少一件这个交互就成立不了：
+ *
+ * 1. **给足命中面积** —— 模型标的往往是 9 个单位的圆点，直接用它的几何形状当
+ *    热区，人点不中。所以按元素包围盒补一块透明的矩形。
+ * 2. **看得出可以点** —— 等待时有一圈呼吸的提示环 + 指针光标。
+ * 3. **点下去立刻有反应** —— 一圈扩散出去，而不是等下一个动作才开始。原文里
+ *    点击本身就是"画布出现红色圆圈动画"的触发点。
+ */
+function ClickableElement({
+  element,
+  onActivate,
+  children,
+}: {
+  element: BoardElement
+  onActivate: () => void
+  children: ReactNode
+}) {
+  const [flashed, setFlashed] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (timer.current !== null) clearTimeout(timer.current)
+    },
+    []
+  )
+
+  const activate = useCallback(() => {
+    if (flashed) return
+    setFlashed(true)
+    onActivate()
+    timer.current = setTimeout(() => setFlashed(false), 700)
+  }, [flashed, onActivate])
+
+  const box = boundsOf(element)
+  const center = box
+    ? { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    : { x: BOARD_WIDTH / 2, y: BOARD_HEIGHT / 2 }
+  const radius = box ? Math.max(28, Math.hypot(box.width, box.height) / 2 + 16) : 40
+  const pad = 14
+
+  return (
+    <g
+      role="button"
+      tabIndex={0}
+      aria-label="点一下它"
+      className="board-target cursor-pointer"
+      onClick={activate}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          activate()
+        }
+      }}
+    >
+      <circle
+        cx={center.x}
+        cy={center.y}
+        r={radius}
+        fill="none"
+        stroke={COLORS.accent}
+        strokeWidth={2}
+        strokeOpacity={0.5}
+        className="board-ripple"
+      />
+      {flashed && (
+        <circle
+          cx={center.x}
+          cy={center.y}
+          r={radius}
+          fill="none"
+          stroke={COLORS.danger}
+          strokeWidth={3}
+          className="board-flash"
+        />
+      )}
+      {box && (
+        <rect
+          x={box.x - pad}
+          y={box.y - pad}
+          width={box.width + pad * 2}
+          height={box.height + pad * 2}
+          fill="transparent"
+        />
+      )}
+      {children}
+    </g>
+  )
+}
+
 /** The stylesheet that makes "written" and "drawn" possible. Kept local. */
 const BOARD_CSS = `
 .board-write {
@@ -226,17 +322,48 @@ const BOARD_CSS = `
   from { stroke-dashoffset: var(--board-len, 1); }
   to   { stroke-dashoffset: 0; }
 }
+/* 等待点击：呼吸的提示环。说不出口的那句"它在等我点一下"，靠这个说。 */
+.board-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-ripple 1.8s ease-in-out infinite;
+}
+@keyframes board-ripple {
+  0%, 100% { opacity: .35; }
+  50%      { opacity: .95; }
+}
+/* 点下去的那一下：一圈扩散出去。 */
+.board-flash {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: board-flash 700ms ease-out both;
+}
+@keyframes board-flash {
+  from { opacity: .9; transform: scale(.6); }
+  to   { opacity: 0;  transform: scale(1.5); }
+}
+.board-target:focus-visible {
+  outline: 2px solid #4c6694;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
 @media (prefers-reduced-motion: reduce) {
   .board-write, .board-draw { animation-duration: 1ms; }
+  .board-ripple { animation: none; opacity: .8; }
 }
 `
 
 export const Whiteboard = memo(function Whiteboard({
   elements,
   className,
+  clickTarget,
+  onElementClick,
 }: {
   elements: BoardElement[]
   className?: string
+  /** The element the timeline is waiting for a click on, if any. */
+  clickTarget?: string | null
+  onElementClick?: (key: string) => void
 }) {
   return (
     <div
@@ -254,7 +381,18 @@ export const Whiteboard = memo(function Whiteboard({
         role="img"
         aria-label="教学白板"
       >
-        {elements.map((element) => elementOf(element))}
+        {elements.map((element) => {
+          if (!clickTarget || element.key !== clickTarget) return elementOf(element)
+          return (
+            <ClickableElement
+              key={`${element.key}~click`}
+              element={element}
+              onActivate={() => onElementClick?.(element.key)}
+            >
+              {elementOf(element)}
+            </ClickableElement>
+          )
+        })}
       </svg>
     </div>
   )

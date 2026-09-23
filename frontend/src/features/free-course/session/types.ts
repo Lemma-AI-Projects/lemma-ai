@@ -14,6 +14,11 @@ export type BoardActionKind =
   | 'highlight'
   | 'move'
   | 'pause'
+  /**
+   * 「等他来点」：时间线停在这里，直到学习者点了 `target` 指的那个元素。
+   * 被观察到的那个产品就是这样——白板上有个可点的圆圈，点了才出现下一段板书。
+   */
+  | 'awaitClick'
 
 export type BoardShape =
   | 'line'
@@ -40,6 +45,7 @@ export interface BoardAction {
   to?: BoardPoint | null
   points?: BoardPoint[]
   shape?: BoardShape | null
+  /** write / label 是它写的字；awaitClick 是等的时候屏幕上的提示语。 */
   text?: string | null
   color: BoardColor
   size: BoardSize
@@ -99,6 +105,8 @@ export interface TeachingSession {
 export interface TeachingTurnResult {
   verdict?: string | null
   feedback?: string | null
+  /** 只在答对时出现：以概念命名的一张成就卡（原文 "Loss Function as a Landscape"）。 */
+  award?: string | null
   steps: TeachingStep[]
   cursor: number
 }

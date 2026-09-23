@@ -17,6 +17,7 @@
 
 import {
   Lightbulb,
+  MousePointerClick,
   SendHorizontal,
   Square,
   Volume2,
@@ -53,6 +54,8 @@ export function SessionRail({
   said,
   question,
   awaiting,
+  awaitingClick,
+  clickHint,
   thinking,
   muted,
   voiceAvailable,
@@ -69,6 +72,10 @@ export function SessionRail({
   said: SaidLine[]
   question: TeachingQuestion | null
   awaiting: boolean
+  /** 时间线停在白板上的某个元素上，等学习者去点它。 */
+  awaitingClick: boolean
+  /** 等的时候屏幕上要说的话（来自动作本身，或一个默认提示）。 */
+  clickHint: string | null
   thinking: boolean
   muted: boolean
   voiceAvailable: boolean
@@ -186,6 +193,18 @@ export function SessionRail({
       )}
 
       <div className="border-t border-zinc-200/80 px-4 py-3 dark:border-zinc-800">
+        {/* 等点击：提示学习者在白板上动手，而不是在对话框里打字。打断提问的口子
+            依然开着 —— 原文里"随时可以打断"和"停在这里等你点"是同时成立的。 */}
+        {awaitingClick && (
+          <div
+            className="mb-2 flex items-start gap-2 rounded-lg border border-[#ceddec] bg-[#edf4ff] px-3 py-2 text-[12.5px] leading-5 text-[#4c6694]"
+            data-session-awaiting-click
+          >
+            <MousePointerClick className="mt-0.5 size-3.5 shrink-0" />
+            <span>{clickHint || '点一下白板上高亮的那个元素。'}</span>
+          </div>
+        )}
+
         {awaiting && question && !answered ? (
           <div className="flex flex-col gap-2">
             <p className="text-[12px] font-medium text-zinc-900 dark:text-zinc-100">

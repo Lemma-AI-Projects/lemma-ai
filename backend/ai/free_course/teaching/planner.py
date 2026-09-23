@@ -279,6 +279,11 @@ def _bound_turn(turn: TeachingTurn) -> TeachingTurn:
     return TeachingTurn(
         verdict=turn.verdict,
         feedback=(turn.feedback or "").strip() or None,
+        # An award without a correct answer would be a lie about what just
+        # happened, and the UI keys the whole card off the verdict.
+        award=(turn.award or "").strip() or None
+        if turn.verdict == "correct"
+        else None,
         steps=steps,
     )
 
@@ -320,6 +325,17 @@ def _bound_actions(raw_actions: list[BoardAction], cue_count: int) -> list[Board
         if kind == "pause":
             actions.append(BoardAction(kind="pause", cue=_cue(raw.cue, cue_count)))
             continue
+        if kind == "awaitClick":
+            actions.append(
+                BoardAction(
+                    kind="awaitClick",
+                    target=(raw.target or "").strip() or None,
+                    text=text or None,
+                    color=raw.color,
+                    cue=_cue(raw.cue, cue_count),
+                )
+            )
+            continue
         if kind in ("write", "label"):
             if not text:
                 continue
@@ -335,6 +351,13 @@ def _bound_actions(raw_actions: list[BoardAction], cue_count: int) -> list[Board
             # A move that names nothing has no subject; the player would either
             # guess or no-op, and both are worse than not doing it.
             if not (raw.target or raw.id):
+                continue
+        elif kind == "awaitClick":
+            # Same rule, same reason: a click with nothing to click would stall
+            # the lesson with no way out — the one failure this feature cannot
+            # recover from, since the timeline is stopped and the learner is
+            # waiting for a prompt that will never come.
+            if not raw.target:
                 continue
         action = BoardAction(
             kind=kind,

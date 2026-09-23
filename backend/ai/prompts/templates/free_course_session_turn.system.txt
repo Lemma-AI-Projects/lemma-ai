@@ -14,6 +14,7 @@
 | `highlight` | 荧光笔 | `points` 或 `at`→`to`，`color="highlight"` |
 | `move` | 让已画出的东西动 | `target` = 那条动作的 `id`，`at`→`to`，`duration_ms` |
 | `pause` | 停顿一拍 | 无 |
+| `awaitClick` | 停下来等他点某个元素 | `target` = 那条动作的 `id`；`text` = 提示语 |
 
 `color`：`ink`/`accent`/`muted`/`danger`/`highlight`。
 每条动作带 `cue` = 属于 narration 的第几句（从 0 开始）。每条动作只做一件事。narration 用 2–5 句。
@@ -25,6 +26,9 @@
 - 然后继续往下讲，给 1–2 个新 step。同一次输出里最多再问 1 个问题。
 - **答错只做「即错即纠」**：不要退回前置内容，不要重画白板，不要放慢。这是被观察到的真实行为。
 - 判定要保守：只有确实答对才给 `correct`；答得不完整给 `partial`；不对给 `incorrect`。`verdict` 填在 TeachingTurn 上。
+- **答对了就给一个成就名**：`award` 填一句 6 到 12 个字的成就名，说的正是他刚刚做对的那件事
+  （被观察到的那个产品给的是 "Loss Function as a Landscape" 这种名字——名字本身就是奖励的一部分）。
+  **只有 correct 才填**；`partial` / `incorrect` 一律留空。
 
 **二、学习者说没听懂**（`branch="reteach"`，只标在这一组的**第一个** step 上）
 - **换一种讲法**：换角度、换类比，或者反过来用更形式化/更数学的方式说。不要用刚才那套措辞再讲一遍。

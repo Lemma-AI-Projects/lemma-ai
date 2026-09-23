@@ -1,7 +1,7 @@
 import { Streamdown } from 'streamdown'
 import { cjk } from '@streamdown/cjk'
 import { code } from '@streamdown/code'
-import { math } from '@streamdown/math'
+import { createMathPlugin, math } from '@streamdown/math'
 import { mermaid } from '@streamdown/mermaid'
 import 'katex/dist/katex.min.css'
 import { createCalloutRenderers } from '@/components/calloutRenderers'
@@ -26,8 +26,24 @@ const calloutRenderers = createCalloutRenderers(({ code, isIncomplete }) => (
   </AssistantMarkdown>
 ))
 
+// Math with `$...$` enabled. Off by default (see `inlineMath` below); prose
+// that mentions money — "$5 ... $10" — would otherwise be parsed as an
+// equation.
+const mathWithInlineDollars = createMathPlugin({ singleDollarTextMath: true })
+
 type AssistantMarkdownProps = {
   children: string
+  /**
+   * Render `$...$` as inline math in addition to `$$...$$`.
+   *
+   * Off by default: a lone `$` is ordinary punctuation in prose, and the plugin
+   * only recognises `$$` unless told otherwise. Lesson and practice bodies are
+   * math in every subject (the writer model emits `$f$`, `$x^2$` inline as a
+   * matter of course), and a single `$` there is not punctuation but a
+   * swallowed formula — the backslashes get eaten, so `$ar{v}$` reaches the
+   * learner as `$ar{v}$`.
+   */
+  inlineMath?: boolean
   /**
    * When true, render in Streamdown's streaming mode: blocks are split &
    * memoized individually, incomplete markdown is auto-completed, and the
@@ -40,6 +56,7 @@ type AssistantMarkdownProps = {
 
 export function AssistantMarkdown({
   children,
+  inlineMath = false,
   isStreaming = false,
   className,
 }: AssistantMarkdownProps) {
@@ -61,7 +78,7 @@ export function AssistantMarkdown({
       icons={assistantMarkdownIcons}
       plugins={{
         code,
-        math,
+        math: inlineMath ? mathWithInlineDollars : math,
         mermaid,
         cjk,
         renderers: [...toolCodeRenderers, ...calloutRenderers],

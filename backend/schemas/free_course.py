@@ -339,6 +339,11 @@ class TeachingTurnOut(BaseModel):
 
     verdict: str | None = None
     feedback: str | None = None
+    # Present only when the answer was correct: the reference session hands out a
+    # named award at exactly that moment ("Loss Function as a Landscape"), and the
+    # name is the reward. The card is dismissed with "Got it" before the lesson
+    # continues — which is why this rides on the turn and not on the feedback text.
+    award: str | None = None
     steps: list[TeachingStepOut] = Field(default_factory=list)
     cursor: int = 0
 

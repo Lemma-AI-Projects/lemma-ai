@@ -189,7 +189,10 @@ export function applyAction(
   action: BoardAction,
   seq: number
 ): BoardElement[] {
-  if (action.kind === 'pause') return elements
+  // Neither of these draws anything: `pause` is a beat, `awaitClick` is a wait
+  // (the player handles it). Keeping them out of here means the board stays a
+  // pure function of the actions that DO draw.
+  if (action.kind === 'pause' || action.kind === 'awaitClick') return elements
 
   if (action.kind === 'write' || action.kind === 'label') {
     const text = (action.text ?? '').trim()
@@ -294,6 +297,36 @@ export function applyAction(
   }
 
   return elements
+}
+
+/**
+ * The bounding box of an element in board units — used to give a small shape a
+ * clickable area a human can actually hit. Without it, "click the dot" means
+ * hitting a 9-unit circle.
+ */
+export function boundsOf(element: BoardElement): {
+  x: number
+  y: number
+  width: number
+  height: number
+} | null {
+  if (element.kind === 'text') {
+    // Rough glyph metrics: the font size is in board units per line, and a CJK
+    // glyph is about one em wide.
+    const size = element.size === 's' ? 16 : element.size === 'l' ? 32 : element.size === 'xl' ? 42 : 22
+    return {
+      x: element.x + element.dx,
+      y: element.y - size + element.dy,
+      width: Math.max(size, element.text.length * size),
+      height: size * 1.3,
+    }
+  }
+  if (element.points.length === 0) return null
+  const xs = element.points.map((point) => point.x + element.dx)
+  const ys = element.points.map((point) => point.y + element.dy)
+  const minX = Math.min(...xs)
+  const minY = Math.min(...ys)
+  return { x: minX, y: minY, width: Math.max(1, Math.max(...xs) - minX), height: Math.max(1, Math.max(...ys) - minY) }
 }
 
 function firstPoint(element: BoardElement): BoardPoint | null {

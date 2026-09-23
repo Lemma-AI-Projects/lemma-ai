@@ -40,7 +40,14 @@ MAX_ACTIONS_PER_STEP = 24
 MAX_NARRATION_CHARS = 1600
 MAX_LEARNER_INPUT_CHARS = 2000
 
-PropKind = Literal["write", "draw", "label", "highlight", "move", "pause"]
+PropKind = Literal[
+    "write", "draw", "label", "highlight", "move", "pause",
+    # "Now you touch it": the timeline stops on this action until the learner
+    # clicks the element it names. The reference session has exactly this — a
+    # clickable shape on the board that fires an animation and leads into the
+    # next stretch of board and the next question.
+    "awaitClick",
+]
 Shape = Literal["line", "arrow", "curve", "rect", "circle", "dot", "axis"]
 BoardColor = Literal["ink", "accent", "muted", "danger", "highlight"]
 Size = Literal["s", "m", "l", "xl"]
@@ -83,6 +90,9 @@ class BoardAction(BaseModel):
     # move: milliseconds for the transition. The default is a deliberate,
     # watchable roll — not a snap.
     duration_ms: int | None = None
+    # awaitClick only: what to say while waiting. Defaults to a generic hint in
+    # the player, so a plan that omits it still works.
+    text: str | None = None
     cue: int = 0
 
 
@@ -143,6 +153,11 @@ class TeachingTurn(BaseModel):
 
     verdict: Verdict | None = None
     feedback: str | None = None
+    # A short name for what the learner just demonstrated, only when they got it
+    # right. The reference session hands out named awards here ("Loss Function as
+    # a Landscape") — the name is the point, so it is part of the contract rather
+    # than something the UI invents.
+    award: str | None = None
     steps: list[TeachingStep] = Field(default_factory=list)
 
 
