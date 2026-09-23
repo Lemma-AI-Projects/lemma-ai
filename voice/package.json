@@ -1,0 +1,19 @@
+{
+  "name": "@lemma-ai/voice-system",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Lemma AI Voice System Foundation V0 — standalone, provider-independent Voice Runtime",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5174",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8",
+    "vitest": "^2.1.2"
+  }
+}
