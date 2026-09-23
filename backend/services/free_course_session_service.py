@@ -38,9 +38,6 @@ from ai.free_course.teaching import (
 )
 from ai.free_course.types import LearningObject, LessonBlueprint, ObjectPayload
 from models.free_course_session import FreeCourseSession
-# The free-course tree lives in models/free_course.py — this branch's
-# course tables are modules/lessons/points; units/chapters exist only
-# for mode='free'. See that module's docstring.
 # The free-course tree lives in models/free_course.py — this branch's course
 # tables are modules/lessons/points; units/chapters exist only for mode='free'.
 # See that module's docstring.

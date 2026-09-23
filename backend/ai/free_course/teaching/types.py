@@ -78,7 +78,9 @@ class BoardAction(BaseModel):
     to: BoardPoint | None = None
     points: list[BoardPoint] = Field(default_factory=list)
     # write / label / highlight put their own text here (highlight may carry the
-    # word it is marking, label the annotation).
+    # word it is marking, label the annotation). awaitClick puts what to say
+    # while waiting here — the player falls back to a generic hint, so a plan
+    # that omits it still works.
     text: str | None = None
     color: BoardColor = "ink"
     size: Size = "m"
@@ -90,9 +92,6 @@ class BoardAction(BaseModel):
     # move: milliseconds for the transition. The default is a deliberate,
     # watchable roll — not a snap.
     duration_ms: int | None = None
-    # awaitClick only: what to say while waiting. Defaults to a generic hint in
-    # the player, so a plan that omits it still works.
-    text: str | None = None
     cue: int = 0
 
 

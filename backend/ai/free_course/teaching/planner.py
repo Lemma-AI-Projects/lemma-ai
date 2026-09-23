@@ -125,10 +125,12 @@ async def plan_session(
                 "①至少 1 个 step 用 open 提问（具体、能想象出画面的问题）；"
                 "②至少 1 个 step 用 choice 提问（2–4 个选项 + answer）；"
                 "③至少有一条 move 动作，让你已经画出来的东西真的动起来"
-                "（小球滚下坡、点沿曲线滑、参数沿轴移动）。这三条必须都满足。"
+                "（小球滚下坡、点沿曲线滑、参数沿轴移动）；"
+                "④至少有一条 awaitClick 动作，`target` 指向你先前画出来、"
+                "并且给了 `id` 的那个元素（让他点一下才继续）。这四条必须都满足。"
             )
     # The last specific reason travels out with the generic one: without it a
-    # 409 on screen says nothing about which of the three shape requirements the
+    # 409 on screen says nothing about which of the four shape requirements the
     # model kept missing.
     raise FreeCourseError(f"teaching session could not be planned: {last_error}")
 
@@ -265,6 +267,17 @@ def _bound_plan(plan: TeachingSessionPlan) -> TeachingSessionPlan:
     # movement; that is the cheaper error.
     if not any(action.kind == "move" for step in steps for action in step.actions):
         raise FreeCourseError("nothing moves on the board")
+    # And the fourth: the board has to be *touchable* at least once. In the
+    # reference session the lesson does not simply play — it stops on a shape the
+    # learner is invited to click, and that click is what leads into the next
+    # stretch of board and the next question. Same trade as `move`: a plan
+    # without it is a video with a voice-over, which is the one thing this
+    # feature exists to not be. Dropped by the model far less often than `move`,
+    # but it is dropped, so it gets the same guarantee.
+    if not any(
+        action.kind == "awaitClick" for step in steps for action in step.actions
+    ):
+        raise FreeCourseError("nothing on the board waits for the learner to click")
     return TeachingSessionPlan(
         title=plan.title.strip() or "未命名教学会话",
         objective=plan.objective.strip(),
@@ -326,10 +339,16 @@ def _bound_actions(raw_actions: list[BoardAction], cue_count: int) -> list[Board
             actions.append(BoardAction(kind="pause", cue=_cue(raw.cue, cue_count)))
             continue
         if kind == "awaitClick":
+            # A click with nothing to click would stall the lesson with no way
+            # out — the one failure this feature cannot recover from, since the
+            # timeline is stopped and the learner is waiting for a prompt that
+            # will never come. So a targetless awaitClick is dropped, not kept.
+            if not (raw.target or "").strip():
+                continue
             actions.append(
                 BoardAction(
                     kind="awaitClick",
-                    target=(raw.target or "").strip() or None,
+                    target=raw.target.strip(),
                     text=text or None,
                     color=raw.color,
                     cue=_cue(raw.cue, cue_count),
@@ -351,13 +370,6 @@ def _bound_actions(raw_actions: list[BoardAction], cue_count: int) -> list[Board
             # A move that names nothing has no subject; the player would either
             # guess or no-op, and both are worse than not doing it.
             if not (raw.target or raw.id):
-                continue
-        elif kind == "awaitClick":
-            # Same rule, same reason: a click with nothing to click would stall
-            # the lesson with no way out — the one failure this feature cannot
-            # recover from, since the timeline is stopped and the learner is
-            # waiting for a prompt that will never come.
-            if not raw.target:
                 continue
         action = BoardAction(
             kind=kind,
