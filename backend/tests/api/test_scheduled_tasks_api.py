@@ -26,6 +26,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from core.config import settings
 from core.database import AsyncSessionLocal, engine, get_db
@@ -39,7 +40,12 @@ BODY = "Eigenvector proof — worth another look."
 
 
 def run(coro):
-    """asyncio.run with the pool drained on both sides (see test_notifications_db)."""
+    """asyncio.run with the pool drained on both sides (see test_notifications_db).
+
+    Only for work done OUTSIDE the TestClient block (fixtures). Inside a test the
+    client owns the loop and the shared engine's pooled connections belong to it —
+    see `run_private`.
+    """
 
     async def wrapper():
         with contextlib.suppress(Exception):
@@ -53,10 +59,32 @@ def run(coro):
     return asyncio.run(wrapper())
 
 
-async def _create_user() -> uuid.UUID:
+def run_private(work):
+    """Run `work(private_engine)` in its own loop, on its own engine.
+
+    Needed wherever a test has to touch the database directly while a TestClient
+    is open: handing one of the shared engine's pooled connections to a second
+    event loop is what produces "got Future … attached to a different loop" —
+    intermittently, which is worse than always. A one-off engine has no history
+    with any loop.
+    """
+
+    async def wrapper():
+        private = create_async_engine(settings.database_url)
+        try:
+            return await work(private)
+        finally:
+            await private.dispose()
+
+    return asyncio.run(wrapper())
+
+
+async def _create_user(target=None) -> uuid.UUID:
+    """A throwaway user, on `target` (the shared engine by default)."""
     user_id = uuid.uuid4()
     email = f"scheduler-api-test-{user_id}@example.test"
-    async with engine.begin() as conn:
+    bind = target if target is not None else engine
+    async with bind.begin() as conn:
         await conn.execute(
             text("insert into auth.users (id, email) values (:id, :email)"),
             {"id": user_id, "email": email},
@@ -71,8 +99,9 @@ async def _create_user() -> uuid.UUID:
     return user_id
 
 
-async def _drop_user(user_id: uuid.UUID) -> None:
-    async with engine.begin() as conn:
+async def _drop_user(user_id: uuid.UUID, target=None) -> None:
+    bind = target if target is not None else engine
+    async with bind.begin() as conn:
         await conn.execute(text("delete from auth.users where id = :id"), {"id": user_id})
 
 
@@ -289,11 +318,11 @@ def test_the_clock_fires_a_due_task_and_the_feed_shows_it(authed_client):
         "/api/v1/scheduled-tasks", json=_payload(seconds_from_now=-5)
     ).json()
 
-    async def _tick():
-        async with AsyncSessionLocal() as db:
+    async def _tick(target):
+        async with async_sessionmaker(target, expire_on_commit=False)() as db:
             return await scheduler_service.run_due(db)
 
-    fired = run(_tick())
+    fired = run_private(_tick)
     assert [row.id for row in fired] == [uuid.UUID(task["id"])]
     assert fired[0].status == "executed"
 
@@ -313,22 +342,22 @@ def test_a_task_is_invisible_to_another_user(authed_client):
     client, _user = authed_client
     task = client.post("/api/v1/scheduled-tasks", json=_payload()).json()
 
-    stranger = run(_create_user())
+    stranger = run_private(_create_user)
     try:
 
-        async def _stranger_view():
-            async with AsyncSessionLocal() as db:
+        async def _stranger_view(target):
+            async with async_sessionmaker(target, expire_on_commit=False)() as db:
                 one = await scheduler_service.get_for_user(
                     db, user_id=stranger, task_id=uuid.UUID(task["id"])
                 )
                 plan = await scheduler_service.list_for_user(db, user_id=stranger)
                 return one, plan
 
-        one, plan = run(_stranger_view())
+        one, plan = run_private(_stranger_view)
         assert one is None
         assert plan == []
     finally:
-        run(_drop_user(stranger))
+        run_private(lambda target: _drop_user(stranger, target))
 
 
 def test_a_hand_built_task_row_still_goes_through_the_sender(authed_client):
@@ -336,8 +365,8 @@ def test_a_hand_built_task_row_still_goes_through_the_sender(authed_client):
     with a session it already holds, and does not need HTTP at all."""
     client, user_id = authed_client
 
-    async def _schedule_directly():
-        async with AsyncSessionLocal() as db:
+    async def _schedule_directly(target):
+        async with async_sessionmaker(target, expire_on_commit=False)() as db:
             return await scheduler_service.schedule(
                 db,
                 user_id=user_id,
@@ -347,16 +376,16 @@ def test_a_hand_built_task_row_still_goes_through_the_sender(authed_client):
                 ),
             )
 
-    task = run(_schedule_directly())
+    task = run_private(_schedule_directly)
     assert task.status == "pending"
     feed = client.get("/api/v1/notifications").json()
     assert feed == []  # not fired yet — scheduling is not firing
 
-    async def _tick():
-        async with AsyncSessionLocal() as db:
+    async def _tick(target):
+        async with async_sessionmaker(target, expire_on_commit=False)() as db:
             return await scheduler_service.run_due(db)
 
-    run(_tick())
+    run_private(_tick)
     assert [item["title"] for item in client.get("/api/v1/notifications").json()] == [
         TITLE
     ]

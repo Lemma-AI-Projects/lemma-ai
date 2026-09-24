@@ -4,6 +4,7 @@ from api.v1 import (
     chat,
     companion,
     conversations,
+    coordinator,
     courses,
     credits,
     free_courses,
@@ -49,3 +50,6 @@ api_router.include_router(notifications.router)
 # 定时（Scheduler V0）：一个未来事件在指定时间发生；到点调 Notification Sender。
 # 任务落在 scheduled_tasks 表，进程内轮询循环负责「到点了吗」。
 api_router.include_router(scheduled_tasks.router)
+# 协调层（Coordinator V0）：事件驱动的决策层。只读面（决策日志 + 干跑解释）；
+# 它由「真正写了证据」的那两处进程内调用，没有外部触发口。
+api_router.include_router(coordinator.router)

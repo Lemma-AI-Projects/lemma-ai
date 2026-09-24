@@ -116,12 +116,18 @@ async def list_evidence(
     return list(result.scalars().all())
 
 
-def _to_domain(
+def to_domain(
     items: list[KnowledgeItem],
     edges: list[KnowledgeEdge],
     evidence: list[KnowledgeEvidence],
 ) -> tuple[list[Item], list[Edge], list[Evidence]]:
-    """ORM rows -> the pure records `ai/knowledge/state` works on."""
+    """ORM rows -> the pure records `ai/knowledge/state` works on.
+
+    Public because "rows -> domain records" is a translation, not an internal
+    detail: anything that needs to run the derivation over a *subset* of the
+    evidence (the Coordinator recomputes the value an item had before the newest
+    record) must not re-implement it and drift.
+    """
     domain_items = [
         Item(id=str(row.id), label=row.label, active=row.status == "active")
         for row in items
@@ -153,7 +159,7 @@ async def compute_state(
     items = await list_items(db, project_id=project_id)
     edges = await list_edges(db, project_id=project_id)
     evidence = await list_evidence(db, project_id=project_id, user_id=user_id)
-    domain_items, domain_edges, domain_evidence = _to_domain(items, edges, evidence)
+    domain_items, domain_edges, domain_evidence = to_domain(items, edges, evidence)
     state = derive_state(domain_items, domain_edges, domain_evidence)
     fringes = compute_fringes(state, domain_items, domain_edges)
     return state, fringes, items, edges

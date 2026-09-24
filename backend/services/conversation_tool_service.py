@@ -52,12 +52,18 @@ from ai import (
     ToolResult,
     tool_spec,
 )
+from ai.coordinator import (
+    EVENT_LEARNER_STATE_UPDATED,
+    SOURCE_CHAT,
+    CoordinatorEvent,
+)
 from ai.skills import skill_body, skill_names
 from core.database import AsyncSessionLocal
 from models.doc import Page
 from schemas.desmos import Desmos3DGraphPayload, DesmosGraphPayload
 from schemas.knowledge import KnowledgeEvidenceIn
 from services import (
+    coordinator_service,
     desmos_graph_service,
     doc_service,
     knowledge_service,
@@ -576,7 +582,7 @@ def build_global_tools(
                 return
 
             try:
-                await knowledge_service.record_evidence(
+                evidence = await knowledge_service.record_evidence(
                     db,
                     project_id=project_id,
                     user_id=user_id,
@@ -606,29 +612,68 @@ def build_global_tools(
             state, fringes, items, _ = await knowledge_service.compute_state(
                 db, project_id=project_id, user_id=user_id
             )
+            # The write IS the event: the Coordinator is announced to in-process,
+            # on this session, right after the evidence lands. `source="chat"`
+            # because a conversation is live — that is what turns "the next item
+            # is ready" into a step handed back to this turn (INTRODUCE) instead
+            # of a notification (see ai/coordinator/rules.py). A failure inside
+            # the Coordinator cannot fail the record: `handle_event_safely`.
+            decision_record = await coordinator_service.handle_event_safely(
+                db,
+                user_id=user_id,
+                event=CoordinatorEvent(
+                    type=EVENT_LEARNER_STATE_UPDATED,
+                    source=SOURCE_CHAT,
+                    payload={
+                        "projectId": str(project_id),
+                        "evidenceId": str(evidence.id),
+                        "itemId": str(item.id),
+                        "itemLabel": item.label,
+                        "verdict": verdict,
+                        "tier": "A" if basis == "verified" else "B",
+                    },
+                ),
+            )
 
         labels = {str(row.id): row.label for row in items}
         value = state.value(str(item.id))
-        yield ToolResult(
-            response={
-                "status": "recorded",
-                "item": item.label,
-                "verdict": verdict,
-                "tier": "A" if basis == "verified" else "B",
-                # The item's state AFTER the write — the model should say this
-                # rather than infer it. Note this is read live, unlike the
-                # learner-state block in the prompt, which was frozen when the
-                # turn started.
-                "itemState": value.value,
-                "readyNext": [labels.get(i, i) for i in fringes.outer],
+        response: dict = {
+            "status": "recorded",
+            "item": item.label,
+            "verdict": verdict,
+            "tier": "A" if basis == "verified" else "B",
+            # The item's state AFTER the write — the model should say this
+            # rather than infer it. Note this is read live, unlike the
+            # learner-state block in the prompt, which was frozen when the
+            # turn started.
+            "itemState": value.value,
+            "readyNext": [labels.get(i, i) for i in fringes.outer],
+            "note": (
+                "已记录。上一条 itemState 是**写入之后**的状态，请如实告诉用户，"
+                "而且用词要对上：mastered = 已具备；not_mastered = 这次没做对；"
+                "unassessed = 还没有定论（judged 类的证据要两条独立记录才定案）。"
+                "不要把它说成别的状态，也不要替系统宣布掌握程度。"
+            ),
+        }
+        # The Coordinator's decision for this event, handed back to the turn that
+        # produced it (the "executor" for CONTINUE/REVIEW/INTRODUCE is this
+        # conversation). It says WHAT to do next, never how — the Method layer
+        # decides that later, and this tool result must not pre-empt it.
+        if decision_record is not None and decision_record.action != "NO_ACTION":
+            response["coordinator"] = {
+                "action": decision_record.action,
+                "target": decision_record.target,
+                "reason": decision_record.reason,
+                "urgency": decision_record.urgency,
                 "note": (
-                    "已记录。上一条 itemState 是**写入之后**的状态，请如实告诉用户，"
-                    "而且用词要对上：mastered = 已具备；not_mastered = 这次没做对；"
-                    "unassessed = 还没有定论（judged 类的证据要两条独立记录才定案）。"
-                    "不要把它说成别的状态，也不要替系统宣布掌握程度。"
+                    "系统的下一步判断（由状态推导，不是用户的请求）："
+                    f"{decision_record.action}"
+                    + (f"「{decision_record.target}」" if decision_record.target else "")
+                    + "。请按这个方向推进，**怎么讲由你决定**；"
+                    "如果你认为它明显不适用，说明理由，不要假装执行。"
                 ),
             }
-        )
+        yield ToolResult(response=response)
 
     return [
         ToolBinding(spec=tool_spec(LOAD_SKILL), handler=load_skill_handler),

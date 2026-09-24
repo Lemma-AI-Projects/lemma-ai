@@ -24,12 +24,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
+from ai.coordinator import (
+    EVENT_LEARNER_STATE_UPDATED,
+    SOURCE_API,
+    CoordinatorEvent,
+)
 from schemas.knowledge import (
     KnowledgeEvidenceIn,
     KnowledgeEvidenceOut,
     KnowledgeStructureOut,
 )
-from services import knowledge_service, project_service
+from services import coordinator_service, knowledge_service, project_service
 
 _NOT_FOUND = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="project_not_found"
@@ -105,10 +110,19 @@ async def post_evidence(
     Returns 422 with a machine-readable reason when the evidence is ambiguous
     or malformed, so both a human caller and the agent's tool loop can
     self-correct instead of retrying blindly.
+
+    A successful write also **announces the event to the Coordinator** — in
+    process, on this request's own session, in the second half of this function.
+    That is the whole invocation mechanism: the two places evidence is written
+    are the two places an event exists, and a caller cannot announce one that
+    never happened. The decision is recorded in `coordinator_decisions` (and, if
+    it is a NOTIFY, delivered through the Notification Sender); its side effects
+    never change this response, and a failure inside it cannot fail the write
+    that produced it.
     """
     await _require_owned_project(db, current_user, payload.project_id)
     try:
-        return await knowledge_service.record_evidence(
+        evidence = await knowledge_service.record_evidence(
             db,
             project_id=payload.project_id,
             user_id=current_user.id,
@@ -119,3 +133,25 @@ async def post_evidence(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"reason": rejected.reason, **rejected.extra},
         ) from rejected
+
+    await coordinator_service.handle_event_safely(
+        db,
+        user_id=current_user.id,
+        event=CoordinatorEvent(
+            type=EVENT_LEARNER_STATE_UPDATED,
+            # "api": nobody is in a conversation. Evidence written this way comes
+            # from a surface with no room to teach in, which is what makes the
+            # Coordinator deliver a reminder instead of handing a next step to an
+            # agent (see ai/coordinator/rules.py).
+            source=SOURCE_API,
+            payload={
+                "projectId": str(payload.project_id),
+                "evidenceId": str(evidence.id),
+                "itemId": str(evidence.item_id) if evidence.item_id else None,
+                "itemLabel": evidence.item_label,
+                "verdict": evidence.verdict,
+                "tier": evidence.tier,
+            },
+        ),
+    )
+    return evidence

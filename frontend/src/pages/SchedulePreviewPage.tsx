@@ -3,6 +3,7 @@ import { format, setHours, setMinutes, subDays, subHours } from 'date-fns'
 
 import { notificationsQueryKey } from '@/features/notifications/notificationApi'
 import type { Notification } from '@/features/notifications/types'
+import { projectsQueryKey } from '@/features/project/projectApi'
 import { scheduledTasksQueryKey } from '@/features/scheduler/schedulerApi'
 import type { ScheduledTask } from '@/features/scheduler/types'
 import { SchedulePage } from '@/pages/SchedulePage'
@@ -117,11 +118,24 @@ const previewTasks: ScheduledTask[] = [
 
 previewQueryClient.setQueryData(scheduledTasksQueryKey, previewTasks)
 
+// The Coordinator panel needs a space to point at. One fixture space and no
+// decisions or state: in this review page the panel's dry run says "读不到（未登录）",
+// which is on purpose — a fabricated decision log would be the one thing here a
+// reviewer could mistake for evidence. The real chain needs a signed-in session,
+// and it is covered by tests/api/test_coordinator_api.py.
+previewQueryClient.setQueryData(projectsQueryKey, [
+  {
+    id: 'preview-space',
+    name: 'Linear Algebra · Lecture 12',
+    updatedAt: now.toISOString(),
+  },
+])
+
 export function SchedulePreviewPage() {
   return (
     <QueryClientProvider client={previewQueryClient}>
       <div className="h-screen bg-zinc-100 p-2">
-        <SchedulePage />
+        <SchedulePage defaultCoordinatorOpen />
       </div>
     </QueryClientProvider>
   )

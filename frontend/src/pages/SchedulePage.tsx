@@ -2,6 +2,7 @@ import { format } from 'date-fns'
 import { AlarmClock, BellRing, CircleCheckBig, Ellipsis, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CircularProgress } from '@/components/CircularProgress'
+import { CoordinatorPanel } from '@/features/coordinator/CoordinatorPanel'
 import { NotificationCard } from '@/features/notifications/NotificationCard'
 import { SendTestNotificationButton } from '@/features/notifications/SendTestNotificationButton'
 import { useNotificationsQuery } from '@/features/notifications/notificationApi'
@@ -37,7 +38,13 @@ const overallPercent = overallTotal > 0 ? Math.round((overallDone / overallTotal
  * hitting refresh — which is exactly what the acceptance test is not supposed to
  * need.
  */
-export function SchedulePage() {
+export function SchedulePage({
+  defaultCoordinatorOpen = false,
+}: {
+  /** Only the layout-review page sets this: the Coordinator panel is collapsed
+   *  by default because the Today column is narrow. */
+  defaultCoordinatorOpen?: boolean
+} = {}) {
   const { data: notifications = [] } = useNotificationsQuery()
   const { data: scheduledTasks = [] } = useScheduledTasksQuery()
   const cancelTask = useCancelScheduledTask()
@@ -74,12 +81,16 @@ export function SchedulePage() {
             </Button>
           </div>
         </div>
-        {/* Dev-only: exercise the Notification Sender and the Scheduler without
-            waiting for a Global Agent. Deleted with the V0 scaffolding. */}
+        {/* Dev-only: exercise the Notification Sender, the Scheduler and the
+            Coordinator without waiting for a Global Agent. Deleted with the V0
+            scaffolding. The Coordinator panel is the one place the whole chain
+            is visible: record a real answer -> state changes -> a decision is
+            made -> the effect shows up in the Feed on this same page. */}
         {import.meta.env.DEV && (
           <div className="mt-2 flex flex-col gap-2">
             <SendTestNotificationButton />
             <ScheduleTestButton />
+            <CoordinatorPanel defaultOpen={defaultCoordinatorOpen} />
           </div>
         )}
         <div className="scrollbar-hidden mt-2 flex flex-1 flex-col gap-3 overflow-y-auto">
