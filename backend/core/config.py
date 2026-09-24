@@ -196,6 +196,18 @@ class Settings(BaseSettings):
     # once the migration has run.
     doc_full_api_enabled: bool = False
 
+    # --- Scheduler (a future event happening at its time) ---
+    # The clock is an in-process poll loop started by the app's lifespan: it asks
+    # "is anything due?" every `scheduler_poll_seconds`. The tasks themselves are
+    # rows in `scheduled_tasks`, so the loop owns no state and a restart recovers
+    # whatever came due meanwhile. Off only for tests / one-off scripts that must
+    # not fire anything behind their back.
+    scheduler_enabled: bool = True
+    # Five seconds is the resolution of "the time has come" in V0: short enough
+    # that a "30 seconds from now" demo fires while the learner is still looking
+    # at the page, long enough to be one indexed SELECT every five seconds.
+    scheduler_poll_seconds: float = 5.0
+
     # --- PayPal payments (credits, one-time purchase) ---
     # Mode: "sandbox" (dev, no real money) | "live" (prod). Stays "sandbox"
     # until the sandbox loop is verified end to end.

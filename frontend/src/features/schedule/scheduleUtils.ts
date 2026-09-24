@@ -1,8 +1,21 @@
-import { addDays, startOfWeek } from 'date-fns'
+import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 
 export const HOUR_HEIGHT = 80
 export const TIME_LABEL_WIDTH = 65
 export const HOURS_24 = Array.from({ length: 24 }, (_, i) => i)
+
+/**
+ * Which day an item belongs to, in the month grid's own terms.
+ *
+ * The one implementation both feed item types use — a notification and a
+ * scheduled task have to land in the same cell for the same timestamp, and two
+ * copies of "which day is this" is exactly how they would drift apart. Local
+ * time on purpose: the cell the learner sees is a local day.
+ */
+export function dayKey(iso: string): string {
+  const when = parseISO(iso)
+  return Number.isNaN(when.getTime()) ? '' : format(when, 'yyyy-MM-dd')
+}
 
 export function getWeekDays(referenceDate: Date = new Date()) {
   const monday = startOfWeek(referenceDate, { weekStartsOn: 1 })

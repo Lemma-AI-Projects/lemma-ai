@@ -41,5 +41,10 @@ export function useNotificationsQuery() {
     queryKey: notificationsQueryKey,
     queryFn: fetchNotifications,
     retry: retryUnlessClientError,
+    // It polls while the page is open: V0 has no push channel for in-app items,
+    // and the Scheduler fires a task SERVER-side — without this, the reminder for
+    // a scheduled task would only appear on the next manual refresh, which is
+    // precisely what the "wait 30 seconds and watch it arrive" test must not need.
+    refetchInterval: 5_000,
   })
 }

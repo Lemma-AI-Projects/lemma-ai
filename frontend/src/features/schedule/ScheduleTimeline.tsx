@@ -14,9 +14,11 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { NotificationChip } from '@/features/notifications/NotificationChip'
-import { notificationDayKey } from '@/features/notifications/presentation'
 import type { Notification } from '@/features/notifications/types'
+import { ScheduledTaskChip } from '@/features/scheduler/ScheduledTaskChip'
+import type { ScheduledTask } from '@/features/scheduler/types'
 import { cn } from '@/lib/utils'
+import { dayKey } from './scheduleUtils'
 
 /** A month cell is ~70px tall: two items then a count, never a scrollbar. */
 const MAX_ITEMS_PER_DAY = 2
@@ -33,43 +35,55 @@ function getMonthWeeks(month: Date) {
   )
 }
 
-function groupByDay(notifications: readonly Notification[]) {
-  const byDay = new Map<string, Notification[]>()
-  for (const notification of notifications) {
-    const key = notificationDayKey(notification.timestamp)
+function groupByDay<T>(items: readonly T[], keyOf: (item: T) => string) {
+  const byDay = new Map<string, T[]>()
+  for (const item of items) {
+    const key = keyOf(item)
     const bucket = byDay.get(key)
     if (bucket) {
-      bucket.push(notification)
+      bucket.push(item)
     } else {
-      byDay.set(key, [notification])
+      byDay.set(key, [item])
     }
   }
   // Newest first inside a day as well — the order the feed already arrives in.
   // Deliberately NOT reversed into chronological order: a cell renders only the
-  // first two (MAX_ITEMS_PER_DAY), so an oldest-first reading would push the
-  // newest item into "+N more" — hiding exactly what the learner just received.
+  // first MAX_ITEMS_PER_DAY, so an oldest-first reading would push the newest
+  // item into "+N more" — hiding exactly what the learner just received.
   return byDay
 }
 
 /**
  * The month grid — the calendar half of the Feed.
  *
- * It renders whatever the feed gave it as items inside the day they belong to.
- * Notifications are the first such items: they come from the Notification Sender
- * (`features/notifications`) through this prop and nothing else in this file
- * knows where they came from. The grid stays a presentation surface; it does not
- * fetch, and it does not decide what a notification means.
+ * It renders whatever it was given as items inside the day they belong to, and
+ * it knows two kinds: notifications (things that happened, from the Notification
+ * Sender) and scheduled tasks (things that will happen, from the Scheduler).
+ * Both arrive as props from `features/notifications` and `features/scheduler`;
+ * nothing here fetches, and nothing here decides what either one means.
+ *
+ * A cell shows the scheduled tasks first: "what is still coming today" belongs
+ * above "what already arrived", and it also keeps a pending promise visible
+ * instead of trailing behind a few notifications.
  */
 export function ScheduleTimeline({
   notifications = [],
+  scheduledTasks = [],
+  onCancelTask,
 }: {
   notifications?: readonly Notification[]
+  scheduledTasks?: readonly ScheduledTask[]
+  onCancelTask?: (id: string) => void
 }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const weeks = useMemo(() => getMonthWeeks(month), [month])
   const notificationsByDay = useMemo(
-    () => groupByDay(notifications),
+    () => groupByDay(notifications, (item) => dayKey(item.timestamp)),
     [notifications]
+  )
+  const tasksByDay = useMemo(
+    () => groupByDay(scheduledTasks, (item) => dayKey(item.runAt)),
+    [scheduledTasks]
   )
 
   return (
@@ -132,12 +146,26 @@ export function ScheduleTimeline({
                 {week.map((day) => {
                   const today = isToday(day)
                   const inMonth = isSameMonth(day, month)
-                  const dayKey = format(day, 'yyyy-MM-dd')
-                  const dayNotifications = notificationsByDay.get(dayKey) ?? []
+                  const cellKey = format(day, 'yyyy-MM-dd')
+                  const dayTaskItems = (tasksByDay.get(cellKey) ?? []).map(
+                    (task) => ({ kind: 'task' as const, task })
+                  )
+                  const dayNotificationItems = (
+                    notificationsByDay.get(cellKey) ?? []
+                  ).map((notification) => ({
+                    kind: 'notification' as const,
+                    notification,
+                  }))
+                  // Scheduled first: a promise still to be kept reads above
+                  // something that already happened, and it is what the learner
+                  // can still act on (the × on the chip).
+                  const dayItems = [...dayTaskItems, ...dayNotificationItems]
+                  const shown = dayItems.slice(0, MAX_ITEMS_PER_DAY)
+                  const overflow = dayItems.length - shown.length
 
                   return (
                     <div
-                      key={dayKey}
+                      key={cellKey}
                       role="cell"
                       aria-label={format(day, 'EEEE, MMMM d, yyyy')}
                       className={cn(
@@ -149,7 +177,7 @@ export function ScheduleTimeline({
                       )}
                     >
                       <time
-                        dateTime={dayKey}
+                        dateTime={cellKey}
                         aria-current={today ? 'date' : undefined}
                         className={cn(
                           'ml-auto flex size-5 items-center justify-center rounded-full text-[11px] font-medium leading-4 tabular-nums',
@@ -158,19 +186,25 @@ export function ScheduleTimeline({
                       >
                         {format(day, 'd')}
                       </time>
-                      {dayNotifications.length > 0 && (
+                      {shown.length > 0 && (
                         <div className="mt-1 flex flex-col gap-[3px]">
-                          {dayNotifications
-                            .slice(0, MAX_ITEMS_PER_DAY)
-                            .map((notification) => (
-                              <NotificationChip
-                                key={notification.id}
-                                notification={notification}
+                          {shown.map((item) =>
+                            item.kind === 'task' ? (
+                              <ScheduledTaskChip
+                                key={item.task.id}
+                                task={item.task}
+                                onCancel={onCancelTask}
                               />
-                            ))}
-                          {dayNotifications.length > MAX_ITEMS_PER_DAY && (
+                            ) : (
+                              <NotificationChip
+                                key={item.notification.id}
+                                notification={item.notification}
+                              />
+                            )
+                          )}
+                          {overflow > 0 && (
                             <span className="pl-1 text-[10px] leading-4 text-zinc-400">
-                              +{dayNotifications.length - MAX_ITEMS_PER_DAY} more
+                              +{overflow} more
                             </span>
                           )}
                         </div>

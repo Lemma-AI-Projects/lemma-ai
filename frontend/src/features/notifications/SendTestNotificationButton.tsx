@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { format, subDays } from 'date-fns'
 import { BellPlus, Loader2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -20,12 +21,19 @@ import { notificationSender } from './notificationSender'
  */
 
 /** The demo content: the same shape a Scheduler would produce for a review. */
-const DEMO_NOTIFICATION = {
-  title: 'Review reminder',
-  body: 'You studied Eigenvectors three days ago — worth re-checking the proof.',
-  type: 'reminder',
-  metadata: { source: 'manual_test' },
-} as const
+function demoNotification() {
+  // The date is part of the payload, not only the card's stamp: a real Scheduler
+  // knows WHEN the learner studied and says so. Three days back is the classic
+  // first review interval, and it is a mock date the reviewer can check against
+  // the card's own date chip.
+  const studiedOn = format(subDays(new Date(), 3), 'MMM d')
+  return {
+    title: 'Review reminder',
+    body: `You studied Eigenvectors on ${studiedOn} — worth re-checking the proof.`,
+    type: 'reminder',
+    metadata: { source: 'manual_test' },
+  } as const
+}
 
 type Status = 'idle' | 'sending' | 'sent' | 'error'
 
@@ -42,7 +50,7 @@ export function SendTestNotificationButton() {
     // would mean this click never produces a system notification.
     await browserNotificationAdapter.ensurePermission()
     try {
-      await notificationSender.send({ ...DEMO_NOTIFICATION })
+      await notificationSender.send({ ...demoNotification() })
       setStatus('sent')
     } catch {
       setStatus('error')

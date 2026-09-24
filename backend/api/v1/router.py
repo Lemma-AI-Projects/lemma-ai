@@ -16,6 +16,7 @@ from api.v1 import (
     payments,
     progress,
     projects,
+    scheduled_tasks,
     users,
     webhooks,
 )
@@ -43,6 +44,8 @@ api_router.include_router(pages.router)
 api_router.include_router(free_courses.router)
 # 学习方法（Method V0）：注册表只读；本轮用哪个 Method 由 chat 请求携带并记在会话上。
 api_router.include_router(methods.router)
-# 通知（Notification V0）：Feed 的通知项。读=列表，写=send()；Scheduler 尚未存在，
-# 目前唯一的调用方是日程页上的开发测试按钮。
+# 通知（Notification V0）：Feed 的通知项。读=列表，写=send()。
 api_router.include_router(notifications.router)
+# 定时（Scheduler V0）：一个未来事件在指定时间发生；到点调 Notification Sender。
+# 任务落在 scheduled_tasks 表，进程内轮询循环负责「到点了吗」。
+api_router.include_router(scheduled_tasks.router)

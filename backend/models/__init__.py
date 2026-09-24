@@ -23,6 +23,7 @@ from models.point_video_candidate import PointVideoCandidate
 from models.profile import Profile
 from models.project import Project
 from models.provider_usage_log import ProviderUsageLog
+from models.scheduled_task import ScheduledTask
 from models.space_memory import SpaceMemory
 
 __all__ = [
@@ -56,5 +57,6 @@ __all__ = [
     "Profile",
     "Project",
     "ProviderUsageLog",
+    "ScheduledTask",
     "SpaceMemory",
 ]
