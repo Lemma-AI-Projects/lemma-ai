@@ -60,6 +60,18 @@ class AiConversation(Base):
         nullable=True,
     )
     title: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Which teaching method this conversation runs under (Method V0). Lives on
+    # the conversation rather than on the message because "how this thread is
+    # being taught" is a property of the thread — the per-answer record of what
+    # the agent could see already rides on ai_messages.
+    # No CHECK constraint and no enum type on purpose: valid names come from the
+    # registry in `ai/methods`, and pinning them in the schema would mean a
+    # migration every time a method is added. NOT NULL with a default so an
+    # answer is never ambiguous about which method produced it; the default is
+    # Direct Explanation (see ai/methods/__init__.py for why).
+    method: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="direct_explanation"
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

@@ -15,6 +15,7 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import AsyncSessionLocal, engine
+from ai.methods import DEFAULT_METHOD
 from models.ai_conversation import AiConversation, AiMessage
 
 logger = logging.getLogger(__name__)
@@ -181,9 +182,10 @@ _PERSIST_TURN_NEW_CONVERSATION = text(
     """
     WITH conv AS (
         INSERT INTO ai_conversations
-            (id, user_id, title, project_id, course_id, created_at, updated_at)
+            (id, user_id, title, project_id, course_id, method,
+             created_at, updated_at)
         VALUES (:conversation_id, :user_id, :title, :project_id, :course_id,
-                now(), now())
+                :method, now(), now())
     )
     INSERT INTO ai_messages
         (id, conversation_id, role, content_text, reasoning_text,
@@ -210,7 +212,8 @@ _PERSIST_TURN_EXISTING_CONVERSATION = text(
              :assistant_reasoning_text, CAST(:raw_parts AS jsonb),
              CAST(:tool_json AS jsonb), CAST(:agent_context AS jsonb), :assistant_at)
     )
-    UPDATE ai_conversations SET updated_at = now()
+    UPDATE ai_conversations
+    SET updated_at = now(), method = COALESCE(:method, method)
     WHERE id = :conversation_id
     """
 )
@@ -230,6 +233,7 @@ async def persist_turn(
     assistant_reasoning_text: str | None = None,
     tool_ref: dict[str, Any] | None = None,
     agent_context: dict[str, Any] | None = None,
+    method: str | None = None,
 ) -> None:
     """Write one finished turn (user + assistant) atomically, in one roundtrip.
 
@@ -269,9 +273,16 @@ async def persist_turn(
             "title": new_conversation_title,
             "project_id": new_conversation_project_id,
             "course_id": new_conversation_course_id,
+            # A brand-new row has no earlier turn to preserve, and the column is
+            # NOT NULL — so the default stands in when the caller did not run a
+            # method (the course-planning intro is not a method turn).
+            "method": method or DEFAULT_METHOD,
         }
     else:
         statement = _PERSIST_TURN_EXISTING_CONVERSATION
+        # COALESCE on purpose: a caller that does not run a method must not
+        # silently reset a Socratic thread back to the default.
+        params["method"] = method
     try:
         async with engine.connect() as connection:
             autocommit = await connection.execution_options(

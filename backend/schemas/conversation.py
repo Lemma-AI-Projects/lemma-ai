@@ -33,6 +33,10 @@ class ConversationDetailOut(BaseModel):
     id: uuid.UUID
     title: str | None
     project_id: uuid.UUID | None
+    # Which teaching method this thread is running under (Method V0). The
+    # composer reads it on load so the picker shows the method the next turn
+    # will actually use; it is written by the chat turn, never by this endpoint.
+    method: str
     updated_at: datetime
 
 

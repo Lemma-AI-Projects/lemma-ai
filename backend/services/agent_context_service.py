@@ -458,17 +458,23 @@ def summarise_digest(
     *,
     action: str,
     memories_written: list[dict] | None = None,
+    method: dict | None = None,
 ) -> dict:
-    """Re-stamp the two things only the END of a turn can know.
+    """Re-stamp the things only the END of a turn can know.
 
     `action` and `memories_written` are both unknowable when the digest is
     captured (the tool card may arrive mid-stream; a memory write happens during
     it), while the rest of the digest must be frozen at the start to describe
     the same moment as the prompt. Re-stamping rather than rebuilding keeps one
     source of truth for every other field.
+
+    `method` (Method V0) is pushed in by the chat service because the method
+    layer sits above this module — the alternative would be a service cycle, and
+    the field is a plain dict by the time it arrives.
     """
     return {
         **digest,
         "action": action,
         "memoriesWritten": list(memories_written or []),
+        "method": method,
     }

@@ -10,6 +10,8 @@ from api.v1 import (
     graphs,
     health,
     knowledge,
+    methods,
+    notifications,
     pages,
     payments,
     progress,
@@ -39,3 +41,8 @@ api_router.include_router(knowledge.router)
 api_router.include_router(pages.router)
 # 自由课程（Free Course）：与视频课并行的另一条课程管线（courses.mode='free'）。
 api_router.include_router(free_courses.router)
+# 学习方法（Method V0）：注册表只读；本轮用哪个 Method 由 chat 请求携带并记在会话上。
+api_router.include_router(methods.router)
+# 通知（Notification V0）：Feed 的通知项。读=列表，写=send()；Scheduler 尚未存在，
+# 目前唯一的调用方是日程页上的开发测试按钮。
+api_router.include_router(notifications.router)

@@ -15,6 +15,7 @@ from models.free_course import (
 )
 from models.free_course_session import FreeCourseSession
 from models.knowledge import KnowledgeEdge, KnowledgeEvidence, KnowledgeItem
+from models.notification import Notification
 from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.point_gemini_file import PointGeminiFile
 from models.point_video_asset import PointVideoAsset
@@ -45,6 +46,7 @@ __all__ = [
     "KnowledgeEdge",
     "KnowledgeEvidence",
     "KnowledgeItem",
+    "Notification",
     "Page",
     "Payment",
     "PaymentWebhookEvent",

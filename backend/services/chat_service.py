@@ -39,6 +39,7 @@ from services import (
     conversation_service,
     conversation_tool_service,
     course_planning_service,
+    method_service,
     project_service,
 )
 
@@ -64,6 +65,12 @@ class TurnContext:
     # material reachable in fresh chats and unreachable in existing ones, which
     # the user experiences as "it works sometimes".
     project_id: uuid.UUID | None = None
+    # The teaching method this turn runs under, already resolved to a runnable
+    # name (Method V0). Always set — a turn always ran under *some* method, and
+    # the record of which one must not depend on the client having sent it.
+    # Persisted with the turn, which is what makes "the conversation's method is
+    # whatever the last turn ran with" true.
+    method: str = method_service.runnable_name(None)
 
 
 # The previous turn's write is async (done doesn't wait for it); a fast
@@ -103,6 +110,9 @@ async def prepare_turn(
             ),
             new_conversation_project_id=payload.project_id,
             project_id=payload.project_id,
+            # A brand-new conversation has no stored method: the request's
+            # choice (already validated by the schema) or the default.
+            method=method_service.resolve_name(payload.method),
         )
 
     conversation = None
@@ -126,6 +136,15 @@ async def prepare_turn(
         user_sent_at=datetime.now(UTC),
         history=[ChatMessage(role=row.role, content=row.content_text) for row in rows],
         project_id=conversation.project_id,
+        # The request wins when it carries a choice (the learner switched in the
+        # composer and this is the next turn); otherwise the thread keeps the
+        # method it was last taught with. `runnable_name` for the stored value —
+        # a name that was valid when written must not 500 an old conversation.
+        method=(
+            method_service.resolve_name(payload.method)
+            if payload.method
+            else method_service.runnable_name(conversation.method)
+        ),
     )
 
 
@@ -206,6 +225,15 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
     # must describe the same moment, otherwise the panel would explain this
     # answer with a space that has changed since.
     agent_context = await _load_agent_context(context)
+    # The Method decides this turn's teaching move, from the same context the
+    # model is about to receive. Computed once, before the model runs, so the
+    # prompt and the recorded digest describe the same decision.
+    directive = method_service.directive_for_turn(
+        method_name=context.method,
+        user_message=context.user_content,
+        agent_context=agent_context,
+        history_messages=len(context.history),
+    )
 
     def digest_now() -> dict | None:
         if agent_context is None:
@@ -214,6 +242,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
             agent_context.digest(),
             action=_action_of(tool_ref),
             memories_written=memories_written,
+            method=method_service.method_digest(directive),
         )
 
     def ensure_persist_scheduled() -> asyncio.Task[Any] | None:
@@ -234,6 +263,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
                     raw_parts=raw_parts,
                     tool_ref=tool_ref,
                     agent_context=digest_now(),
+                    method=context.method,
                 )
             )
         return persist_task
@@ -255,9 +285,12 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         conversation_id=str(context.conversation_id),
         # Template and variables land together or not at all: the template is
         # now the only place $space_context is spelled, and safe_substitute
-        # would leak the literal token if the variable went missing.
+        # would leak the literal token if the variable went missing. Same for
+        # $method_block — it carries this turn's method discipline, and a leaked
+        # "$method_block" in the prompt would be worse than an empty string.
         prompt_vars={
-            "space_context": agent_context.prompt_block if agent_context else ""
+            "space_context": agent_context.prompt_block if agent_context else "",
+            "method_block": directive.prompt_block,
         },
         tools=tools,
     )

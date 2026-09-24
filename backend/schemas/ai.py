@@ -5,6 +5,11 @@ exactly one new user message; pass conversationId to continue an existing
 conversation, omit it to start a new one. The response carries the
 conversation id in the X-Conversation-Id header.
 
+`method` (Method V0) is the teaching method for this turn; it is persisted onto
+the conversation, so a client that never sends it still gets the method the
+thread was last taught with. `tool` remains the deterministic turn-level switch
+for conversation tools (course planning).
+
 The response body of POST /api/v1/chat is an SSE stream, not JSON. The wire
 protocol is owned by ai/streaming.py; for reference the events are:
 
@@ -24,6 +29,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
+
+from ai.methods import get_method, method_names
 
 
 class ChatMessageIn(BaseModel):
@@ -49,7 +56,25 @@ class ChatRequest(BaseModel):
     # a short intro then attaches a course-planning card. Adding a tool here is
     # how new conversation tools (quiz/flashcards) are dispatched later.
     tool: Literal["course_planning"] | None = None
+    # Which teaching method this turn runs under (Method V0). Omitted -> the
+    # conversation's own stored method, or the default when there is none yet.
+    # Validated against the registry (GET /api/v1/methods) rather than a Literal
+    # here: one source of truth for "which methods exist", and an unknown name
+    # becomes a 422 at the edge instead of silently answering in a different
+    # teaching style than the caller asked for.
+    method: str | None = None
     messages: list[ChatMessageIn] = Field(min_length=1, max_length=1)
+
+    @field_validator("method")
+    @classmethod
+    def known_method(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if get_method(value) is None:
+            raise ValueError(
+                f"unknown method {value!r}; known: {', '.join(method_names())}"
+            )
+        return value
 
     @field_validator("messages")
     @classmethod
