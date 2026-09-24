@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
 import { ConversationAgentContext } from './ConversationAgentContext'
 import { ConversationCourseTool } from './ConversationCourseTool'
+import { ConversationQuizTool } from './ConversationQuizTool'
 import { ConversationReasoning } from './ConversationReasoning'
 import type { ConversationTurn as ConversationTurnData, ConversationTurnBlock } from './types'
 
@@ -53,6 +54,9 @@ function renderBlock(block: ConversationTurnBlock) {
     return (
       <ConversationFreeCourseTool key={block.id} courseId={block.tool.courseId} />
     )
+  }
+  if (block.tool.type === 'quiz') {
+    return <ConversationQuizTool key={block.id} questionSetId={block.tool.questionSetId} />
   }
   return <ConversationCourseTool key={block.id} courseId={block.tool.courseId} />
 }

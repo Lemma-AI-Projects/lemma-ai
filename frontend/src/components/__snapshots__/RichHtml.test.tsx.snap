@@ -1,0 +1,263 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`文档样例经 RichHtml 渲染 > f01ChineseIdiomSingle 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:left"><span>下列句子中加点词语</span><span data-decor="wave">运用恰当</span><span>的是（<span data-space="3">     </span>）</span></p>
+        <span data-og-id="q_f01:og1"></span></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f02BiologyLabBlanks 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:left"><span>请回答下列有关实验和探究的问题</span></p>
+        <p style="text-align:left">
+            <span>（1）某同学同时制作人的口腔上皮细胞和洋葱鳞片叶内表皮细胞临时装片时，先在两张载玻片中央分别滴了一滴</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk1"></span><span>和</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk2"></span>
+            <span>，由于没有编号，导致两种材料刚好放反了。此时用显微镜观察到人的口腔上皮细胞与正常情况下的细胞大小相比应</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk3"></span><span>（更大或更小或不变）；此时观察到洋葱缺片叶内表皮细胞与正常情况下的细胞大小相比应</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk4"></span><span>（更大或更小或不变），主要原因是它有</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk5"></span><span>。</span>
+        </p>
+        <p style="text-align:left"><span>（2）在“探究馒头在口腔中的变化”时，对3支试管作了以下处理。</span></p>
+        <p style="text-align:left"><img src="https://img.xkw.com/dksih/QBM/2018/7/22/1993982483308544/1999623782162432/STEM/ec479f59c87e4d90afdc34b87030390a.png?resizew=135" width="135" height="159" alt="" loading="lazy" class="rich-html-image"/></p>
+        <div class="rich-html-table-scroll"><table style="border-width:0px 0px 0px 0px;border-style:solid;border-collapse:collapse"><tbody><tr><td style="width:62px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid" data-cell="slash">
+                    <p style="text-align:right"><span>事件  </span></p>
+					<p style="text-align:left"><span>  编号</span></p>
+                </td><td style="width:102px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>放入物体</span></p>
+                </td><td style="width:120px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>液体</span></p>
+                </td><td style="width:113px;vertical-align:center;border-width:1px 1px 0px 1px;border-style:solid solid none solid">
+                    <p style="text-align:left"><span>处理</span></p>
+                </td></tr><tr><td style="width:62px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>①</span></p>
+                </td><td style="width:102px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>馒头碎屑</span></p>
+                </td><td style="width:120px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>2毫升唾液</span></p>
+                </td><td style="width:113px;vertical-align:center;border-width:1px 1px 0px 1px;border-style:solid solid none solid">
+                    <p style="text-align:left"><span>充分搅拌</span></p>
+                </td></tr><tr><td style="width:62px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>②</span></p>
+                </td><td style="width:102px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>馒头碎屑</span></p>
+                </td><td style="width:120px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid">
+                    <p style="text-align:left"><span>2毫升清水</span></p>
+                </td><td style="width:113px;vertical-align:center;border-width:1px 1px 0px 1px;border-style:solid solid none solid">
+                    <p style="text-align:left"><span>充分搅拌</span></p>
+                </td></tr><tr><td style="width:62px;vertical-align:center;border-width:1px 0px 1px 1px;border-style:solid none solid solid">
+                    <p style="text-align:left"><span>③</span></p>
+                </td><td style="width:102px;vertical-align:center;border-width:1px 0px 1px 1px;border-style:solid none solid solid">
+                    <p style="text-align:left"><span>馒头块</span></p>
+                </td><td style="width:120px;vertical-align:center;border-width:1px 0px 1px 1px;border-style:solid none solid solid">
+                    <p style="text-align:left"><span>2毫升唾液</span></p>
+                </td><td style="width:113px;vertical-align:center;border-width:1px 1px 1px 1px;border-style:solid solid solid solid">
+                    <p style="text-align:left"><span>不搅拌</span></p>
+                </td></tr></tbody></table></div>
+        <p style="text-align:left">
+            <span>将3支试管一起放到37℃的温水中，5—10分钟后取出，各滴加2滴碘液，摇匀，观察颜色的变化，3支试管中不变蓝的是</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk6"></span><span>试管，原因是唾液中的</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk7"></span><span>将粉分解成了</span>
+            <span class="qml-bk" data-slot-id="q_f02:bk8"></span><span>，它遇碘不变蓝。</span>
+        </p>
+        <p style="text-align:left">
+            <span>如果以唾液的有无作为变量，形成对照的是编号</span><span class="qml-bk" data-slot-id="q_f02:bk9"></span>
+            <span>试管，设置③号试管的目的是验证</span><span class="qml-bk" data-slot-id="q_f02:bk10"></span><span>在消化中的作用。</span>
+        </p></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f03ListeningSingle 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:left"><span class="rich-html-audio"><audio title="" src="https://img.xkw.com/dksih/QBM/2020/4/22/2446810145964032/2446836295442432/STEM/17f4974913624373ada3ee58adef479c.mp3" preload="metadata" controls="" class="max-w-full"></audio></span></p>
+        <span data-og-id="q_f03:og1"></span></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f04ChemistrySingle 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:left">
+            <span>下列有关说法中不正确的是</span><span>(</span><span> </span><span>)</span>
+        </p>
+        <span data-og-id="q_f04:og1"></span></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f05ClassicReadingBlanks 的题面快照 1`] = `
+"<div class="rich-html"><p><span>1. </span><span>名著阅读。</span></p>
+        <p><span>“理想是石，敲出星星之火；理想是火，点燃希望的灯；理想是灯，照亮前行的路。”名著中一些人物勇于追求理想，奏响了生命的乐章！请从下面的人物中任选其一，然后仿照示例写一句话。</span>
+        </p>
+        <p><span>① 祥子            ② 简•爱          ③ 唐僧</span></p>
+        <p><span>示例：尼摩船长是《海底两万里》中的人物，他用巨额财富支援被压迫的民众，追求正义、平等的理想。</span></p>
+        <p><span class="qml-bk" data-slot-id="q_f05:bk1"></span><span>是《</span><span class="qml-bk" data-slot-id="q_f05:bk2"></span><span>》中的人物，</span><span class="qml-bk" data-slot-id="q_f05:bk3"></span><span>。</span></p></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f06ReadingCompound 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:left;text-indent:28px"><span>People celebrate birthdays in almost every country all over the world. Some ways are similar from country to country: candles, cakes, and birthday wishes. But there are also different ways to celebrate birthdays. Here are some:</span></p>
+        <p style="text-align:left;text-indent:28px"><span>In Denmark (</span><span>丹麦</span><span>), parents always prepare a birthday cake with the national flag on it for their birthday child. And they also put a flag outside their window. It means a child in the house is having a birthday.</span></p>
+        <p style="text-align:left;text-indent:28px"><span>In Holland (</span><span>荷兰</span><span>), all the people at the party must cover (</span><span>遮盖</span><span>) their eyes with cloth. And then, they look for the gifts in the house. The one who finds the gift can have it.</span></p>
+        <p style="text-align:left;text-indent:28px"><span>In Argentina (</span><span>阿根廷</span><span>), girls’ fifteenth birthday is the most important. Parents always have a big party to celebrate. At the party, the birthday girl must dance with her father first, and then the boys.</span></p>
+        <p style="text-align:left;text-indent:28px"><span>In India, children usually wear white clothes to school. But on their birthdays, children wear colourful clothes to school and give out chocolate to everyone in the class. Their best friends help them do this.</span></p>
+        <p style="text-align:left;text-indent:28px"><span>In Israel (</span><span>以色列</span><span>), the birthday child sits in a chair with lots of flowers. The friends and parents will </span><span data-decor="u">lift</span><span> the chair. The times they lift are the birthday child’s age.</span></p>
+        <span data-sq-id="q_f06:sq1"></span>
+        <span data-sq-id="q_f06:sq2"></span>
+        <span data-sq-id="q_f06:sq3"></span>
+        <span data-sq-id="q_f06:sq4"></span>
+        <span data-sq-id="q_f06:sq5"></span></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f07Cloze 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-indent:28px"><span>Over the past 38 years, Mr. Wang has pretended to be someone else many times,and has even learned to </span><span class="qml-bk" data-slot-id="q_f07:sq1:bk"></span><span> different dialects (</span><span>方言</span><span>), leading to him being described as an “Oscar-winning actor”. </span></p>
+        <p style="text-indent:28px"><span>The 60-year-old is not an actor, but a </span><span class="qml-bk" data-slot-id="q_f07:sq2:bk"></span><span> However,he is more devoted to his “</span><span class="qml-bk" data-slot-id="q_f07:sq3:bk"></span><span> ” than any real actor. </span></p>
+        <p style="text-indent:28px"><span>In the 1990s, a group of thieves often sold stolen goods with the help of some beggars. To look into the </span><span class="qml-bk" data-slot-id="q_f07:sq4:bk"></span><span>, Wang disguised (</span><span>伪装</span><span>) himself and </span><span class="qml-bk" data-slot-id="q_f07:sq5:bk"></span><span> the beggars. Dirty shorts and old shoes gave him the </span><span class="qml-bk" data-slot-id="q_f07:sq6:bk"></span><span> of a real beggar and his convincing dialect soon won him the </span><span class="qml-bk" data-slot-id="q_f07:sq7:bk"></span><span> of the beggars. </span></p>
+        <p style="text-indent:28px"><span>“I often </span><span class="qml-bk" data-slot-id="q_f07:sq8:bk"></span><span> them to drink alcohol. Once they were </span><span class="qml-bk" data-slot-id="q_f07:sq9:bk"></span><span>,they began to talk a lot,&quot;Wang said. “I&#x27;d then </span><span class="qml-bk" data-slot-id="q_f07:sq10:bk"></span><span> myself to use the toilet, </span><span class="qml-bk" data-slot-id="q_f07:sq11:bk"></span><span> what the beggars said, and send the </span><span class="qml-bk" data-slot-id="q_f07:sq12:bk"></span><span> to my teammates.” </span></p>
+        <p style="text-indent:28px"><span>Wang, who is often in </span><span class="qml-bk" data-slot-id="q_f07:sq13:bk"></span><span> situations, is also a judo (</span><span>柔道</span><span>) master.<span data-space="2">   </span>“As long as I get close enough, no criminal can </span><span class="qml-bk" data-slot-id="q_f07:sq14:bk"></span><span> from me,” he said. </span></p>
+        <p style="text-indent:28px"><span>Wang&#x27;s </span><span class="qml-bk" data-slot-id="q_f07:sq15:bk"></span><span> won him several honors, including a National May Day Labor Medal and 11 Citations of Merit.</span></p>
+        <span data-sq-id="q_f07:sq1"></span>
+        <span data-sq-id="q_f07:sq2"></span>
+        <span data-sq-id="q_f07:sq3"></span>
+        <span data-sq-id="q_f07:sq4"></span>
+        <span data-sq-id="q_f07:sq5"></span>
+        <span data-sq-id="q_f07:sq6"></span>
+        <span data-sq-id="q_f07:sq7"></span>
+        <span data-sq-id="q_f07:sq8"></span>
+        <span data-sq-id="q_f07:sq9"></span>
+        <span data-sq-id="q_f07:sq10"></span>
+        <span data-sq-id="q_f07:sq11"></span>
+        <span data-sq-id="q_f07:sq12"></span>
+        <span data-sq-id="q_f07:sq13"></span>
+        <span data-sq-id="q_f07:sq14"></span>
+        <span data-sq-id="q_f07:sq15"></span></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f08PoemSubquestions 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:left"><span>阅读下面的首宋诗，完成下面小题。</span></p>
+        <p style="text-align:center"><span><span>怀嵩楼新开南轩与郡僚小饮</span><sup>①</sup></span>
+        </p>
+        <p style="text-align:center"><span>欧阳修</span></p>
+        <p style="text-align:center"><span>绕郭云烟匝几重，昔人曾此感怀嵩。</span></p>
+        <p style="text-align:center"><span>霜林落后山争出，野菊开时酒正浓。</span></p>
+        <p style="text-align:center"><span><span>解带西风飘画角</span><sup>②</sup><span>，倚栏斜日照青松。</span></span>
+        </p>
+        <p style="text-align:center"><span>会须乘兴携佳客，踏雪来看群玉峰。</span></p>
+        <p style="text-align:left"><span>【注释】①此诗写于欧阳修被贬滁州期间。怀嵩楼为唐代名相李德裕被贬滁州时所建。②画角：乐器名，发声高亢。</span>
+        </p>
+        <span data-sq-id="q_f08:sq1"></span>
+        <span data-sq-id="q_f08:sq2"></span></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f09Judge 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:justify">
+        <span>走进叶圣陶笔下《稻草人》的世界，判断下列说法的正误，正确的打“√”，错误的打“×”。</span>
+    </p>
+    <span data-sq-id="q_f09:sq1"></span>
+    <span data-sq-id="q_f09:sq2"></span></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f10SevenChooseFive 的题面快照 1`] = `
+"<div class="rich-html"><p><span>If the only reading you ever do is the novel or magazine, the speed at which you read -probably does not matter very much. But if you have to read a great deal for study, you will appreciate the benefits of being able to read more quickly. </span><span class="qml-bk" data-slot-id="q_f10:bk1"></span>
+        </p>
+        <p><span>·Before you open the book, make sure that you are comfortable. You need a seat which supports your back and the book should be at the right distance from your eyes. </span><span class="qml-bk" data-slot-id="q_f10:bk2"></span>
+        </p>
+        <p><span class="qml-bk" data-slot-id="q_f10:bk3"></span><span> Look at the table of contents, the preface, the chapter heading,etc.This will help you to decide whether you really need to read the whole book or only certain parts of it. Ten minutes spent in this way could save you quite a lot of time in the long run.</span>
+        </p>
+        <p><span>If you decide that you need to read the whole book, decide how much you can read at a time. </span><span class="qml-bk" data-slot-id="q_f10:bk4"></span><span> A history book which may contain the facts in story form will be easier to read than one dealing with scientific subjects. In the former case you may be able to read a chapter. In the latter you may only be able to read one page.</span>
+        </p>
+        <p><span>Always keep a pencil and paper beside you. </span><span class="qml-bk" data-slot-id="q_f10:bk5"></span><span>Note also the facts important for your purpose as well as anything which leads you to further research. You don&#x27;t have to write these things in detail. It is enough to put the page number and one or two words as a reminder .</span>
+        </p>
+        <div>
+            <span data-og-id="q_f10:og1"></span>
+        </div></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f11ExactBlanks 的题面快照 1`] = `
+"<div class="rich-html"><p>
+            <span>根据短文内容和所给中文提示</span>
+            <span>,
+            <span data-space="2">   </span>
+        </span>
+            <span>用单词的正确形式完成以下短文。</span>
+        </p>
+        <p>
+            <span>Mr. Brown had an umbrella shop in a small town. People </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk1"></span>
+            <span>（有时候）</span>
+            <span>brought him broken umbrellas. He repaired some of them by himself and took the others to a big shop in London. They were usually repaired there in </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk2"></span>
+            <span>（十二）</span>
+            <span>days.</span>
+        </p>
+        <p>
+            <span>One day Mr. Brown went to London by train. He </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk3"></span>
+            <span>（忘记）</span>
+            <span>to take an umbrella with him that day. Sitting in front of him was an old man with an umbrella standing </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk4"></span>
+            <span>（在……旁边）</span>
+            <span>the seat. When the train </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk5"></span>
+            <span>（到达）</span>
+            <span>in London, Mr. Brown picked up the umbrella as he often did during his </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk6"></span>
+            <span>（旅途）</span>
+            <span> by train. Just as he was getting off, he was stopped by the old man. He said angrily, “That’s </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk7"></span>
+            <span>（我的）</span>
+            <span>!” Mr. Brown’s face turned red. He gave it back to the old man at once. When Mr. Brown got to the big shop, the shopkeeper had got his six umbrellas ready. After a good look at each of them, he was </span>s
+            <span class="qml-bk" data-slot-id="q_f11:bk8"></span>
+            <span>（满意的）</span>
+            <span>.</span>
+        </p>
+        <p>
+            <span>In the afternoon, with the repaired umbrellas, he got into the train again back to his town. </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk9"></span>
+            <span>（令人惊讶地）</span>
+            <span>,
+            <span data-space="2">   </span>the same old man was sitting next to him. He looked at Mr. Brown and his six umbrellas, “You’ve had a
+        </span>
+            <span class="qml-bk" data-slot-id="q_f11:bk10"></span>
+            <span>（幸运的）</span>
+            <span>day today.” he said.</span>
+        </p></div>"
+`;
+
+exports[`文档样例经 RichHtml 渲染 > f12MathmlSubquestions 的题面快照 1`] = `
+"<div class="rich-html"><p style="text-align:left">
+            <span>在直角坐标系</span>
+            <math latex="$xOy$">
+                <mrow><mi>x</mi><mi>O</mi><mi>y</mi></mrow>
+            </math>
+            <span>中，已知圆</span>
+            <math latex="$C:5{{x}^{2}}+5{{y}^{2}}+10y-4=0$">
+                <mrow>
+                    <mi>C</mi><mo>:</mo><mn>5</mn><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>5</mn><msup><mi>y</mi><mn>2</mn></msup><mo>+</mo><mn>10</mn><mi>y</mi><mo>−</mo><mn>4</mn><mo>=</mo><mn>0</mn>
+                </mrow>
+            </math>
+            <span>，</span><span style="font-style:italic">A</span><span>、</span>
+            <span style="font-style:italic">B</span><span>是抛物线</span>
+            <math latex="$S:{{x}^{2}}=2py\\\\left( p&gt;0 \\\\right)$">
+                <mrow>
+                    <mi>S</mi><mo>:</mo><msup><mi>x</mi><mn>2</mn></msup><mo>=</mo><mn>2</mn><mi>p</mi><mi>y</mi>
+                    <mrow>
+                        <mo>(</mo><mrow><mi>p</mi><mo>&gt;</mo><mn>0</mn></mrow><mo>)</mo>
+                    </mrow>
+                </mrow>
+            </math>
+            <span>上两点，</span>
+            <math latex="$\\\\vartriangle OAB$">
+                <mrow><mo>△</mo><mi>O</mi><mi>A</mi><mi>B</mi></mrow>
+            </math>
+            <span>的重心恰好为抛物线</span><span style="font-style:italic">S</span><span>的焦点</span>
+            <span style="font-style:italic">F</span><span>，且</span>
+            <math latex="$\\\\vartriangle OAB$">
+                <mrow><mo>△</mo><mi>O</mi><mi>A</mi><mi>B</mi></mrow>
+            </math>
+            <span>的面积为</span>
+            <math latex="$\\\\frac{3\\\\sqrt{6}}{2}$">
+                <mrow>
+                    <mfrac>
+                        <mrow>
+                            <mn>3</mn><msqrt><mn>6</mn></msqrt>
+                        </mrow>
+                        <mn>2</mn>
+                    </mfrac>
+                </mrow>
+            </math>
+            <span>.</span>
+        </p>
+        <span data-sq-id="q_f12:sq1"></span>
+        <span data-sq-id="q_f12:sq2"></span></div>"
+`;
