@@ -152,6 +152,128 @@
   }
 }
 
+/* 受限词汇 HTML（题库题面等）。归一化后的装饰语义由 data-* 表达，见 lib/richHtml。 */
+@layer components {
+  .rich-html {
+    overflow-wrap: anywhere;
+  }
+
+  .rich-html p + p,
+  .rich-html p + div,
+  .rich-html div + p,
+  .rich-html-table-scroll + p,
+  .rich-html p + .rich-html-table-scroll {
+    margin-top: 0.5em;
+  }
+
+  .rich-html [data-decor~='wave'] {
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+
+  .rich-html [data-decor~='u'] {
+    text-decoration-line: underline;
+    text-underline-offset: 3px;
+  }
+
+  .rich-html [data-decor~='em'] {
+    text-emphasis: filled dot;
+    text-emphasis-position: under right;
+    -webkit-text-emphasis: filled dot;
+    -webkit-text-emphasis-position: under right;
+  }
+
+  .rich-html [data-decor~='wave'][data-decor~='u'] {
+    text-decoration-style: wavy;
+  }
+
+  .rich-html-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .rich-html table {
+    border-collapse: collapse;
+  }
+
+  .rich-html table[data-align='center'] {
+    margin-inline: auto;
+  }
+
+  .rich-html table[data-align='right'] {
+    margin-left: auto;
+  }
+
+  .rich-html td,
+  .rich-html th {
+    border-color: hsl(var(--foreground) / 0.35);
+    padding: 4px 8px;
+    vertical-align: middle;
+  }
+
+  .rich-html td[data-cell='slash'] {
+    background-image: linear-gradient(
+      to bottom right,
+      transparent calc(50% - 0.5px),
+      hsl(var(--foreground) / 0.35) calc(50% - 0.5px),
+      hsl(var(--foreground) / 0.35) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    );
+  }
+
+  .rich-html .rich-html-image {
+    display: inline-block;
+    max-width: 100%;
+    height: auto;
+    vertical-align: middle;
+  }
+
+  .rich-html .rich-html-audio {
+    display: inline-flex;
+    max-width: 100%;
+    flex-direction: column;
+    gap: 4px;
+    vertical-align: middle;
+  }
+
+  .rich-html .rich-html-video {
+    display: block;
+    width: 100%;
+    max-width: 640px;
+    border-radius: 12px;
+    background: #000;
+  }
+
+  .rich-html math {
+    font-size: 1.05em;
+  }
+
+  .rich-html math[display='block'] {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  /* 只读降级（structure: raw）时仍保留学科网原始结构，这里只保证可读。 */
+  .rich-html .qml-bk {
+    display: inline-block;
+    min-width: 3em;
+    border-bottom: 1px solid currentColor;
+  }
+
+  .rich-html .qml-sq {
+    margin-top: 0.75em;
+  }
+
+  .rich-html .qml-og,
+  .rich-html .qml-seg,
+  .rich-html .qml-exps-sq {
+    margin-top: 0.5em;
+  }
+}
+
 /* Streamdown's code-block action buttons (copy/download) live inside a wrapper
    with `position: sticky; top: 2; -mt-10` so they pin to the top of the scroll
    container. We want them anchored to the code block instead, scrolling with

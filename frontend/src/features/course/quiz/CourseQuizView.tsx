@@ -1,84 +1,35 @@
-import { useState } from 'react'
-import { CourseQuizInstructionsView } from '@/features/course/quiz/CourseQuizInstructionsView'
-import { CourseQuizQuestionsView } from '@/features/course/quiz/CourseQuizQuestionsView'
-import { CourseQuizResultView } from '@/features/course/quiz/CourseQuizResultView'
-import type { CourseQuestionFlowContent } from '@/features/course/quiz/types'
+import { QuizFlow, type QuizFlowPhase } from '@/features/question'
+import { CourseQuizInstructionsMarkdown } from './CourseQuizInstructionsMarkdown'
 
-interface CourseQuizViewProps {
-  content: CourseQuestionFlowContent
-  nextHref?: string
-  /** 说明页「跳过」；省略则不渲染该按钮。 */
-  onSkip?: () => void
-}
+// 课程章节测验的场景文案；题量、作答方式由题组本身决定，不在这里写死。
+const COURSE_QUIZ_RULES = `### 规则
 
-type CourseQuizPage = 'instructions' | 'questions' | 'result'
+- 测验期间右侧 AI 伴学会暂时关闭。
+- 如果现在不方便，可以先跳过，但建议趁内容还新鲜时完成。`
 
-function getCourseQuizPageTitles(content: CourseQuestionFlowContent) {
-  if (content.type === 'assignment') {
-    return {
-      instructions: '作业',
-      result: '作业结果',
-    }
-  }
-
-  return {
-    instructions: '测验',
-    result: '测验结果',
-  }
-}
-
-export function CourseQuizView({ content, nextHref, onSkip }: CourseQuizViewProps) {
-  // 切换到另一个测验/作业时用 key 重挂答题流程，使页面状态
-  // 自然回到说明页，替代先渲染旧页再被 effect 重置的双趟渲染
-  return (
-    <CourseQuizFlow
-      key={content.id}
-      content={content}
-      nextHref={nextHref}
-      onSkip={onSkip}
-    />
-  )
-}
-
-function CourseQuizFlow({
-  content,
+/**
+ * 课程场景下的测验：题库流程 + 课程规则 +「下一章」。页面据 onPhaseChange
+ * 在作答期间禁用伴学输入框。
+ */
+export function CourseQuizView({
+  questionSetId,
   nextHref,
-  onSkip,
+  onExit,
+  onPhaseChange,
 }: {
-  content: CourseQuestionFlowContent
+  questionSetId: string
   nextHref?: string
-  onSkip?: () => void
+  onExit?: () => void
+  onPhaseChange?: (phase: QuizFlowPhase) => void
 }) {
-  const pageTitles = getCourseQuizPageTitles(content)
-  const [currentQuizPage, setCurrentQuizPage] =
-    useState<CourseQuizPage>('instructions')
-
-  if (currentQuizPage === 'questions') {
-    return (
-      <CourseQuizQuestionsView
-        content={content}
-        currentContentId={content.id}
-        onSubmit={() => setCurrentQuizPage('result')}
-      />
-    )
-  }
-
-  if (currentQuizPage === 'result') {
-    return (
-      <CourseQuizResultView
-        content={content}
-        nextHref={nextHref}
-        title={pageTitles.result}
-      />
-    )
-  }
-
   return (
-    <CourseQuizInstructionsView
-      content={content}
-      onSkip={onSkip}
-      onStart={() => setCurrentQuizPage('questions')}
-      title={pageTitles.instructions}
+    <QuizFlow
+      setId={questionSetId}
+      instructions={<CourseQuizInstructionsMarkdown>{COURSE_QUIZ_RULES}</CourseQuizInstructionsMarkdown>}
+      nextHref={nextHref}
+      nextLabel="下一章"
+      onExit={onExit}
+      onPhaseChange={onPhaseChange}
     />
   )
 }

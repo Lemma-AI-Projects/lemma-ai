@@ -59,6 +59,8 @@ export type ConversationToolRef =
   | { type: 'course_planning'; courseId: string }
   | { type: 'desmos_graph'; graphId: string }
   | { type: 'desmos_3d_graph'; graphId: string }
+  // 测验卡片（提案）：后端 schemas/ai.py 的 tool 枚举尚未加入 quiz，目前不会下发。
+  | { type: 'quiz'; questionSetId: string }
 
 // A tool block is a thin REFERENCE: which tool sits in this turn and which
 // resource it drives. The card hydrates its own live data from that id, so the
