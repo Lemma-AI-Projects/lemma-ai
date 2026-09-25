@@ -57,6 +57,39 @@ export interface BoardAction {
   cue: number
 }
 
+/**
+ * One block of board content. Shape is the contract: `kind` says which fields
+ * matter. Placement is deliberately absent — the board flows blocks top to
+ * bottom at a fixed width, so a block cannot collide with its neighbour.
+ * `figure` is the only kind carrying geometry, in 0..1 coordinates *inside its
+ * own block* (what makes "the teacher still draws" and "the renderer places"
+ * both true).
+ */
+export type BoardBlockKind =
+  | 'heading'
+  | 'text'
+  | 'bullets'
+  | 'definition'
+  | 'table'
+  | 'formula'
+  | 'figure'
+
+export interface BoardBlock {
+  kind: BoardBlockKind
+  /** Index of the narration sentence this block appears on — the sync contract. */
+  cue: number
+  text?: string | null
+  items: string[]
+  term?: string | null
+  meaning?: string | null
+  columns: string[]
+  rows: string[][]
+  caption?: string | null
+  /** figure only: draw primitives in 0..1 block-local coordinates. */
+  actions: BoardAction[]
+  color?: BoardColor | null
+}
+
 export interface TeachingQuestion {
   kind: 'open' | 'choice'
   prompt: string
@@ -69,6 +102,11 @@ export interface TeachingStep {
   title?: string | null
   branch?: string | null
   narration: string
+  /**
+   * The board for this beat. New plans carry `blocks`; plans written before the
+   * block contract carry only `actions` and still play through the legacy path.
+   */
+  blocks?: BoardBlock[]
   actions: BoardAction[]
   question?: TeachingQuestion | null
 }

@@ -27,7 +27,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { applyAction, type BoardElement } from './board'
+import {
+  EMPTY_BLOCK_STATE,
+  applyAction,
+  applyBlockCue,
+  figureWaitAt,
+  type BoardBlockState,
+  type BoardElement,
+} from './board'
 import { splitSentences } from './sentences'
 import { createBrowserVoice, createSilentVoice, type Voice } from './speech'
 import type { TeachingStep } from './types'
@@ -49,7 +56,10 @@ export interface SaidLine {
 }
 
 export interface TeachingPlayback {
+  /** The legacy board's elements (empty for block plans). */
   board: BoardElement[]
+  /** The block board's content, in reveal order (empty for legacy plans). */
+  blocks: BoardBlockState['blocks']
   said: SaidLine[]
   phase: PlaybackPhase
   /** The step being taught, or the one waiting for an answer. */
@@ -85,6 +95,7 @@ export function useTeachingPlayback(options?: {
   onStepDone?: (playedSteps: number) => void
 }): TeachingPlayback {
   const [board, setBoard] = useState<BoardElement[]>([])
+  const [blockState, setBlockState] = useState<BoardBlockState>(EMPTY_BLOCK_STATE)
   const [said, setSaid] = useState<SaidLine[]>([])
   const [phase, setPhase] = useState<PlaybackPhase>('idle')
   const [activeStepId, setActiveStepId] = useState<string | null>(null)
@@ -153,6 +164,7 @@ export function useTeachingPlayback(options?: {
 
   const clearBoard = useCallback(() => {
     setBoard([])
+    setBlockState(EMPTY_BLOCK_STATE)
     seqRef.current = 0
   }, [])
 
@@ -191,6 +203,7 @@ export function useTeachingPlayback(options?: {
           // interrupt it, and wipes it when it re-teaches).
           if (step.branch === 'reteach') {
             setBoard([])
+            setBlockState(EMPTY_BLOCK_STATE)
             seqRef.current = 0
           }
           const sentences = splitSentences(step.narration)
@@ -211,6 +224,13 @@ export function useTeachingPlayback(options?: {
               (action) =>
                 Math.max(0, Math.min(sentences.length - 1, action.cue)) === cue
             )
+            // Blocks (current plans): reveal this cue's blocks and fold the
+            // figure geometry that belongs to this sentence. Legacy `actions`
+            // are folded just below — a plan uses one contract or the other,
+            // never both, and both paths are cheap no-ops when empty.
+            setBlockState((previous) =>
+              applyBlockCue(previous, step.blocks, cue)
+            )
             if (batch.length > 0) {
               // Folded inside the state updater: the board is a function of the
               // action stream, so it must be advanced from whatever is actually
@@ -229,10 +249,11 @@ export function useTeachingPlayback(options?: {
             // a click on a shape it drew, then continues. The wait sits AFTER the
             // cue's actions, so the thing to click is already on the board.
             const waits = batch.filter((action) => action.kind === 'awaitClick')
-            if (waits.length > 0) {
+            const figureWait = figureWaitAt(step.blocks, cue)
+            if (waits.length > 0 || figureWait) {
               const wait = waits[waits.length - 1]
-              setClickTarget(wait.target ?? null)
-              setClickHint(wait.text ?? null)
+              setClickTarget(wait?.target ?? figureWait?.target ?? null)
+              setClickHint(wait?.text ?? figureWait?.hint ?? null)
               setPhase('awaiting_click')
               await new Promise<void>((resolve) => {
                 clickResolveRef.current = resolve
@@ -262,6 +283,7 @@ export function useTeachingPlayback(options?: {
 
   return {
     board,
+    blocks: blockState.blocks,
     said,
     phase,
     activeStepId,

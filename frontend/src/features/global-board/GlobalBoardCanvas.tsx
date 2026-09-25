@@ -1,3 +1,23 @@
+/**
+ * Global Board: the learn space's board surface.
+ *
+ * The name says which board this is, because "board" alone stopped meaning one
+ * thing in this codebase:
+ *
+ * - **Global Board** (this file) — the surface the learn space lives on. It owns
+ *   the viewport (pan, zoom, grid) and draws nothing itself: whatever sits on it
+ *   arrives as `children`. The Global Agent belongs to this side of the product,
+ *   not to any single course.
+ * - **Teaching board** — `features/free-course/session/Whiteboard.tsx`, the board
+ *   one lesson is taught on. The model writes on it, the learner can only click
+ *   what it is waiting for, and it renders one lesson's action stream.
+ *
+ * Two separate implementations on purpose (different data models, different
+ * interactions). The teaching board is written as a self-contained component so
+ * it *could* be placed on this surface later; until that is decided, neither
+ * imports the other.
+ */
+
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { Minus, Plus } from 'lucide-react'
 
@@ -28,7 +48,7 @@ function zoomAround(viewport: Viewport, factor: number, x: number, y: number): V
   }
 }
 
-export function BoardCanvas({ children }: { children?: ReactNode }) {
+export function GlobalBoardCanvas({ children }: { children?: ReactNode }) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
   const [viewport, setViewport] = useState(INITIAL_VIEWPORT)
@@ -132,7 +152,7 @@ export function BoardCanvas({ children }: { children?: ReactNode }) {
       <div
         ref={surfaceRef}
         role="region"
-        aria-label="白板画布"
+        aria-label="Global Board 画布"
         tabIndex={0}
         onPointerDown={startDrag}
         onPointerMove={moveDrag}

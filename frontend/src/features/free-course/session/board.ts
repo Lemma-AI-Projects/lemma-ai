@@ -7,6 +7,18 @@
  * element list, and the renderer draws the list. Nothing here knows about React
  * or about time; the player calls it, and that is the whole contract.
  *
+ * **Two layers live here**, deliberately rather than transitionally:
+ *
+ * - **Blocks** (`applyBlockCue`) — the current contract. The model says *what*
+ *   the board shows (a heading, a table, a figure) and the renderer decides
+ *   where: blocks flow top to bottom at a fixed width, so two of them cannot
+ *   collide. A `figure` block still carries geometry, but in 0..1 coordinates
+ *   *inside its own box*, which this module maps onto the same abstract 1000x600
+ *   space as before — so every drawing helper below is reused unchanged.
+ * - **Actions** (`applyAction`) — the pre-block contract, kept so sessions
+ *   planned before the change still replay. It positions everything in absolute
+ *   1000x600 coordinates, which is exactly what made text overlap.
+ *
  * Coordinates are the server's abstract 1000x600 space. Keeping them as numbers
  * rather than pixels is what lets the same plan play on a laptop and a
  * projector, and it is why the jitter below is deterministic: the same plan must
@@ -15,6 +27,7 @@
 
 import type {
   BoardAction,
+  BoardBlock,
   BoardColor,
   BoardPoint,
   BoardShape,
@@ -339,3 +352,150 @@ function firstPoint(element: BoardElement): BoardPoint | null {
 }
 
 export { jittered }
+
+// --- blocks (the current contract) ------------------------------------------
+
+/**
+ * A figure's own drawing box. It is the same abstract 1000x600 space the legacy
+ * board used, which is why nothing about drawing had to change: the block-local
+ * 0..1 coordinates are mapped onto this box, and every helper below works on it
+ * exactly as before (bounds, jitter, stroke widths, the Catmull-Rom smoothing).
+ */
+export const FIGURE_WIDTH = BOARD_WIDTH
+export const FIGURE_HEIGHT = BOARD_HEIGHT
+
+export interface BoardBlockView {
+  key: string
+  cue: number
+  block: BoardBlock
+  /** figure only: what has been drawn inside it so far, in its own box. */
+  elements: BoardElement[]
+  /** figure only: element-key counter, so a figure that grows keeps stable keys. */
+  seq: number
+  /** figure only: the element this figure is waiting for a click on (local key). */
+  clickKey: string | null
+  clickHint: string | null
+}
+
+export interface BoardBlockState {
+  blocks: BoardBlockView[]
+}
+
+export const EMPTY_BLOCK_STATE: BoardBlockState = { blocks: [] }
+
+/** Keys must be stable across replays: the same block gets the same key. */
+function blockKey(block: BoardBlock, index: number): string {
+  return `${block.kind}-${block.cue}-${index}`
+}
+
+function mapPoint(point: BoardPoint): BoardPoint {
+  return { x: point.x * FIGURE_WIDTH, y: point.y * FIGURE_HEIGHT }
+}
+
+/** Block-local 0..1 geometry -> the figure's own box. */
+function mapAction(action: BoardAction): BoardAction {
+  return {
+    ...action,
+    at: action.at ? mapPoint(action.at) : null,
+    to: action.to ? mapPoint(action.to) : null,
+    points: (action.points ?? []).map(mapPoint),
+  }
+}
+
+function foldFigure(
+  view: BoardBlockView,
+  cue: number,
+  { catchUp = false }: { catchUp?: boolean } = {}
+): BoardBlockView {
+  if (view.block.kind !== 'figure') return view
+  const batch = view.block.actions.filter((action) => {
+    const actionCue = Math.max(0, action.cue)
+    return catchUp ? actionCue <= cue : actionCue === cue
+  })
+  if (batch.length === 0) return view
+  let elements = view.elements
+  let seq = view.seq
+  let clickKey = view.clickKey
+  let clickHint = view.clickHint
+  for (const action of batch) {
+    if (action.kind === 'awaitClick') {
+      clickKey = action.target ?? clickKey
+      clickHint = action.text ?? clickHint
+      continue
+    }
+    seq += 1
+    elements = applyAction(elements, mapAction(action), seq)
+  }
+  return { ...view, elements, seq, clickKey, clickHint }
+}
+
+/**
+ * Fold one cue of a step's blocks into the board.
+ *
+ * For the cue that just arrived: blocks carrying that cue appear, in the order
+ * the model gave them, and inside every figure the actions carrying that cue are
+ * drawn. So a figure can grow and animate across sentences exactly like a legacy
+ * board could, while its *position* stays with the layout.
+ *
+ * A newly revealed figure catches up on **all** its actions up to this cue: the
+ * model may well write the figure's cue on the caption while the geometry sits
+ * on earlier sentences ("show the curve, then name it"), and dropping those
+ * would leave an empty box.
+ */
+export function applyBlockCue(
+  state: BoardBlockState,
+  blocks: BoardBlock[] | undefined,
+  cue: number
+): BoardBlockState {
+  const next = state.blocks.map((view) => foldFigure(view, cue))
+  const known = new Set(next.map((view) => view.key))
+  ;(blocks ?? []).forEach((block, index) => {
+    if (block.cue !== cue) return
+    const key = blockKey(block, index)
+    if (known.has(key)) return
+    known.add(key)
+    next.push(
+      foldFigure(
+        {
+          key,
+          cue: block.cue,
+          block,
+          elements: [],
+          seq: 0,
+          clickKey: null,
+          clickHint: null,
+        },
+        cue,
+        { catchUp: true }
+      )
+    )
+  })
+  return { blocks: next }
+}
+
+/**
+ * The figure waiting for a click in this cue, if any — the player pauses there.
+ * Returned separately from the state because the wait has to happen *after* the
+ * cue's drawing lands, and because a state updater cannot hand back a value.
+ */
+export function figureWaitAt(
+  blocks: BoardBlock[] | undefined,
+  cue: number
+): { target: string | null; hint: string | null } | null {
+  for (const block of blocks ?? []) {
+    if (block.kind !== 'figure') continue
+    const waits = block.actions.filter(
+      (action) => action.kind === 'awaitClick' && Math.max(0, action.cue) === cue
+    )
+    const wait = waits[waits.length - 1]
+    if (wait) return { target: wait.target ?? null, hint: wait.text ?? null }
+  }
+  return null
+}
+
+/** Whether a plan uses the block contract at all (drives which board renders). */
+export function planUsesBlocks(
+  steps: { blocks?: BoardBlock[] }[] | undefined
+): boolean {
+  return Boolean(steps?.some((step) => (step.blocks?.length ?? 0) > 0))
+}

@@ -269,6 +269,31 @@ class BoardActionOut(BaseModel):
     cue: int = 0
 
 
+class BoardBlockOut(BaseModel):
+    """One block of board content, as the player receives it.
+
+    Shape is the contract: `kind` says which fields are meaningful. Placement is
+    deliberately absent — the renderer flows blocks at a fixed width, so a block
+    cannot collide with its neighbour. `figure` is the one kind that still carries
+    geometry, in 0..1 coordinates *inside its own block*.
+    """
+
+    model_config = ConfigDict(**_ALIAS)
+
+    kind: str
+    # Which narration sentence this block appears on — the sync contract.
+    cue: int = 0
+    text: str | None = None
+    items: list[str] = Field(default_factory=list)
+    term: str | None = None
+    meaning: str | None = None
+    columns: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+    caption: str | None = None
+    actions: list[BoardActionOut] = Field(default_factory=list)
+    color: str | None = None
+
+
 class TeachingQuestionOut(BaseModel):
     model_config = ConfigDict(**_ALIAS)
 
@@ -285,6 +310,9 @@ class TeachingStepOut(BaseModel):
     title: str | None = None
     branch: str | None = None
     narration: str
+    # Blocks are the current board contract; `actions` is the pre-block one, kept
+    # on the wire so sessions planned before the change still replay.
+    blocks: list[BoardBlockOut] = Field(default_factory=list)
     actions: list[BoardActionOut] = Field(default_factory=list)
     question: TeachingQuestionOut | None = None
 

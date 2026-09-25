@@ -20,9 +20,11 @@ from ai.errors import FreeCourseError
 from ai.free_course.sources import SourceMaterial
 from ai.free_course.teaching.types import (
     MAX_ACTIONS_PER_STEP,
+    MAX_BLOCKS_PER_STEP,
     MAX_NARRATION_CHARS,
     MAX_STEPS_PER_PLAN,
     BoardAction,
+    BoardBlock,
     SessionSignal,
     SessionStepRef,
     TeachingQuestion,
@@ -265,7 +267,7 @@ def _bound_plan(plan: TeachingSessionPlan) -> TeachingSessionPlan:
     # gets the same treatment as the two question kinds. Downside, recorded
     # honestly: a genuinely non-spatial topic is nudged into inventing one
     # movement; that is the cheaper error.
-    if not any(action.kind == "move" for step in steps for action in step.actions):
+    if not any(action.kind == "move" for step in steps for action in _actions_of(step)):
         raise FreeCourseError("nothing moves on the board")
     # And the fourth: the board has to be *touchable* at least once. In the
     # reference session the lesson does not simply play — it stops on a shape the
@@ -275,7 +277,7 @@ def _bound_plan(plan: TeachingSessionPlan) -> TeachingSessionPlan:
     # feature exists to not be. Dropped by the model far less often than `move`,
     # but it is dropped, so it gets the same guarantee.
     if not any(
-        action.kind == "awaitClick" for step in steps for action in step.actions
+        action.kind == "awaitClick" for step in steps for action in _actions_of(step)
     ):
         raise FreeCourseError("nothing on the board waits for the learner to click")
     return TeachingSessionPlan(
@@ -309,6 +311,7 @@ def _bound_steps(raw_steps: list[TeachingStep]) -> list[TeachingStep]:
             continue
         cues = len(split_sentences(narration))
         actions = _bound_actions(raw.actions, cues)
+        blocks = _bound_blocks(raw.blocks, cues)
         if raw.question is not None and raw.question.kind == "choice":
             # A choice question with no options (or no correct one among them)
             # cannot be graded, and an ungradable Quick Check stops the session
@@ -321,12 +324,115 @@ def _bound_steps(raw_steps: list[TeachingStep]) -> list[TeachingStep]:
                 id=(raw.id or "").strip() or f"s{index + 1}",
                 title=(raw.title or "").strip() or None,
                 narration=narration,
+                blocks=blocks,
                 actions=actions,
                 question=question,
                 branch=raw.branch,
             )
         )
     return steps
+
+
+def _bound_blocks(raw_blocks: list[BoardBlock], cue_count: int) -> list[BoardBlock]:
+    """Keep the blocks that can be rendered, drop the rest.
+
+    Per-block repair, never a whole-turn failure: one malformed table is not a
+    reason to lose the beat. What gets dropped is what the renderer could not
+    draw at all — an empty heading, a table with no columns, a bullet list with
+    nothing in it — plus anything beyond `MAX_BLOCKS_PER_STEP`.
+    """
+    blocks: list[BoardBlock] = []
+    for raw in raw_blocks[:MAX_BLOCKS_PER_STEP]:
+        kind = raw.kind
+        text = (raw.text or "").strip()
+        cue = _cue(raw.cue, cue_count)
+        if kind in ("heading", "text"):
+            if not text:
+                continue
+            blocks.append(
+                BoardBlock(kind=kind, cue=cue, text=text, color=raw.color)
+            )
+        elif kind == "formula":
+            if not text:
+                continue
+            blocks.append(
+                BoardBlock(kind="formula", cue=cue, text=text, color=raw.color)
+            )
+        elif kind == "bullets":
+            items = [item.strip() for item in raw.items if item.strip()]
+            if not items:
+                continue
+            blocks.append(
+                BoardBlock(kind="bullets", cue=cue, items=items[:5], color=raw.color)
+            )
+        elif kind == "definition":
+            term = (raw.term or "").strip()
+            meaning = (raw.meaning or "").strip()
+            # A definition is the pair; half of it is not a definition.
+            if not term or not meaning:
+                continue
+            blocks.append(
+                BoardBlock(
+                    kind="definition",
+                    cue=cue,
+                    term=term,
+                    meaning=meaning,
+                    color=raw.color,
+                )
+            )
+        elif kind == "table":
+            columns = [column.strip() for column in raw.columns if column.strip()]
+            if not columns:
+                continue
+            rows = [
+                [cell.strip() for cell in row][: len(columns)]
+                for row in raw.rows
+                if any(cell.strip() for cell in row)
+            ]
+            if not rows:
+                continue
+            # Pad short rows rather than dropping them: a missing cell is a typo,
+            # an absent row is missing content.
+            rows = [row + [""] * (len(columns) - len(row)) for row in rows]
+            blocks.append(
+                BoardBlock(
+                    kind="table",
+                    cue=cue,
+                    columns=columns,
+                    rows=rows[:8],
+                    color=raw.color,
+                )
+            )
+        elif kind == "figure":
+            # Figure geometry is the same action language as before, only in
+            # 0..1 block-local coordinates — so it gets the same bounding.
+            actions = _bound_actions(raw.actions, cue_count)
+            if not actions:
+                continue
+            blocks.append(
+                BoardBlock(
+                    kind="figure",
+                    cue=cue,
+                    caption=(raw.caption or "").strip() or None,
+                    actions=actions,
+                    color=raw.color,
+                )
+            )
+    return blocks
+
+
+def _actions_of(step: TeachingStep) -> list[BoardAction]:
+    """Every action a step puts on the board, wherever it sits.
+
+    Motion and the clickable moment live inside `figure` blocks now, so the
+    plan-level guarantees below have to look there too — otherwise a session
+    built entirely from blocks would look like it never moves.
+    """
+    actions = list(step.actions)
+    for block in step.blocks:
+        if block.kind == "figure":
+            actions.extend(block.actions)
+    return actions
 
 
 def _bound_actions(raw_actions: list[BoardAction], cue_count: int) -> list[BoardAction]:

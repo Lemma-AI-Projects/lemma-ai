@@ -27,6 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.errors import FreeCourseError
 from ai.free_course.teaching import (
+    BoardAction,
+    BoardBlock,
     SessionSignal,
     SessionStepRef,
     TeachingQuestion,
@@ -49,6 +51,7 @@ from models.free_course import (
 )
 from schemas.free_course import (
     BoardActionOut,
+    BoardBlockOut,
     BoardPointOut,
     PracticeOptionOut,
     SessionTranscriptEntryOut,
@@ -117,6 +120,41 @@ def _to_learning_objects(rows: list[CourseLessonObject]) -> list[LearningObject]
     return objects
 
 
+def _wire_action(action: BoardAction) -> BoardActionOut:
+    return BoardActionOut(
+        kind=action.kind,
+        at=BoardPointOut(x=action.at.x, y=action.at.y) if action.at else None,
+        to=BoardPointOut(x=action.to.x, y=action.to.y) if action.to else None,
+        points=[BoardPointOut(x=p.x, y=p.y) for p in action.points],
+        shape=action.shape,
+        text=action.text,
+        color=action.color,
+        size=action.size,
+        id=action.id,
+        target=action.target,
+        duration_ms=action.duration_ms,
+        cue=action.cue,
+    )
+
+
+def _wire_block(block: BoardBlock) -> BoardBlockOut:
+    return BoardBlockOut(
+        kind=block.kind,
+        cue=block.cue,
+        text=block.text,
+        items=list(block.items),
+        term=block.term,
+        meaning=block.meaning,
+        columns=list(block.columns),
+        rows=[list(row) for row in block.rows],
+        caption=block.caption,
+        # Figure geometry travels as-is (0..1 inside the block); the renderer
+        # maps it to pixels once it knows how wide the block is.
+        actions=[_wire_action(action) for action in block.actions],
+        color=block.color,
+    )
+
+
 def _wire_step(step: TeachingStep) -> TeachingStepOut:
     question = None
     if step.question is not None:
@@ -134,23 +172,8 @@ def _wire_step(step: TeachingStep) -> TeachingStepOut:
         title=step.title,
         branch=step.branch,
         narration=step.narration,
-        actions=[
-            BoardActionOut(
-                kind=action.kind,
-                at=BoardPointOut(x=action.at.x, y=action.at.y) if action.at else None,
-                to=BoardPointOut(x=action.to.x, y=action.to.y) if action.to else None,
-                points=[BoardPointOut(x=p.x, y=p.y) for p in action.points],
-                shape=action.shape,
-                text=action.text,
-                color=action.color,
-                size=action.size,
-                id=action.id,
-                target=action.target,
-                duration_ms=action.duration_ms,
-                cue=action.cue,
-            )
-            for action in step.actions
-        ],
+        blocks=[_wire_block(block) for block in step.blocks],
+        actions=[_wire_action(action) for action in step.actions],
         question=question,
     )
 

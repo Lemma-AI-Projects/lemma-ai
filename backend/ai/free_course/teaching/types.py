@@ -37,6 +37,10 @@ MAX_STEPS_PER_PLAN = 8
 # peaks, roll a ball" and still small enough that a pathological plan cannot
 # freeze the board.
 MAX_ACTIONS_PER_STEP = 24
+# A beat is meant to be readable at a glance, and the board scrolls: more blocks
+# than this means the model is writing an article on the board, which is the
+# failure mode the block contract exists to prevent.
+MAX_BLOCKS_PER_STEP = 6
 MAX_NARRATION_CHARS = 1600
 MAX_LEARNER_INPUT_CHARS = 2000
 
@@ -95,6 +99,56 @@ class BoardAction(BaseModel):
     cue: int = 0
 
 
+BlockKind = Literal[
+    "heading",
+    "text",
+    "bullets",
+    "definition",
+    "table",
+    "formula",
+    "figure",
+]
+
+
+class BoardBlock(BaseModel):
+    """What the board shows, without saying where on the board it goes.
+
+    A block is content with a *shape* — a heading, a definition, a table — and
+    the renderer decides placement: blocks flow top to bottom at a fixed width,
+    so two of them cannot collide. That is the whole reason the model stopped
+    giving coordinates: it cannot see how wide its own words are (Chinese and
+    formulas most of all), and the old absolute-position contract turned every
+    second block into a guess.
+
+    `cue` keeps the sync contract unchanged: the block appears while the
+    narration is on that sentence.
+
+    Fields by kind (everything optional, so one model is enough):
+
+    - `heading` / `text` — `text` (markdown; inline math allowed in `text`)
+    - `formula` — `text`, KaTeX, block level, centred
+    - `bullets` — `items`
+    - `definition` — `term` + `meaning`
+    - `table` — `columns` + `rows`
+    - `figure` — `actions` (the draw primitives above) whose coordinates are
+      **0..1 inside the block**, plus an optional `caption`. Relative coordinates
+      are what let the teacher keep drawing while the *placement* stays with the
+      renderer.
+    """
+
+    kind: BlockKind
+    cue: int = 0
+    text: str | None = None
+    items: list[str] = Field(default_factory=list)
+    term: str | None = None
+    meaning: str | None = None
+    columns: list[str] = Field(default_factory=list)
+    rows: list[list[str]] = Field(default_factory=list)
+    caption: str | None = None
+    actions: list[BoardAction] = Field(default_factory=list)
+    color: BoardColor | None = None
+
+
 class TeachingQuestion(BaseModel):
     """A stopping point. The session does not advance past it by itself.
 
@@ -121,6 +175,10 @@ class TeachingStep(BaseModel):
     # The spoken text. Sentences are the timeline unit — there is no separate
     # per-word timing, because inventing one would be fake precision.
     narration: str
+    # The board for this beat, as a list of blocks (placement left to the
+    # renderer). New plans carry `blocks`; plans generated before the block
+    # contract carry `actions` and still play through the legacy path.
+    blocks: list[BoardBlock] = Field(default_factory=list)
     actions: list[BoardAction] = Field(default_factory=list)
     question: TeachingQuestion | None = None
     branch: Branch | None = None

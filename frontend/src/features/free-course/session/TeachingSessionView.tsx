@@ -307,6 +307,7 @@ export function TeachingSessionView() {
             <div className="relative flex min-h-0 flex-1 flex-col">
               <Whiteboard
                 elements={playback.board}
+                blocks={playback.blocks}
                 className="min-h-0 flex-1"
                 clickTarget={playback.clickTarget}
                 onElementClick={playback.resolveClick}

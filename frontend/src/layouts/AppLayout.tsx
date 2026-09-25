@@ -129,8 +129,8 @@ export function AppLayout() {
           />
           <SidebarItem
             icon={FlaskConical}
-            label="Board Sandbox(调试)"
-            to="/sandbox/board"
+            label="Global Board(调试)"
+            to="/sandbox/global-board"
           />
           {conversationsQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">

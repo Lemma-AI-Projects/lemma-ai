@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import { ChevronLeft, LogOut, Settings, Volume2, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { BoardCanvas } from '@/features/board/BoardCanvas'
+import { GlobalBoardCanvas } from '@/features/global-board/GlobalBoardCanvas'
 import { CourseAssistantInput } from '@/features/course/CourseAssistantInput'
 import { CourseConversationPills } from '@/features/course/CourseConversationPills'
 import { CourseDashboardProgressMarker } from '@/features/course/dashboard/CourseDashboardProgressMarker'
@@ -11,20 +11,20 @@ const PROGRESS_PREVIEW_VALUES = [100, 100, 40, 0, 0]
 const CHAT_SLIDE_CLASS_NAME =
   'transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform motion-reduce:transition-none'
 
-// [sandbox] board 的独立调试页面；右栏复用学习点页的伴学对话框形态。
-export function BoardSandboxPage() {
+// [sandbox] Global Board 的独立调试页面；右栏复用学习点页的伴学对话框形态。
+export function GlobalBoardSandboxPage() {
   const [draft, setDraft] = useState('')
   const [isCollapsed, setIsCollapsed] = useState(false)
   // 顶部按钮与对话框共用位移，保持按钮到对话框左边缘的间距。
   const chatSlideStyle = {
     transform: isCollapsed
-      ? 'translate3d(calc(var(--board-chat-width) - 16px), 0, 0)'
+      ? 'translate3d(calc(var(--global-board-chat-width) - 16px), 0, 0)'
       : 'translate3d(0, 0, 0)',
   }
 
   return (
-    <div className="relative isolate flex h-svh overflow-hidden bg-zinc-100 p-2 [--board-chat-width:360px]">
-      <BoardCanvas />
+    <div className="relative isolate flex h-svh overflow-hidden bg-zinc-100 p-2 [--global-board-chat-width:360px]">
+      <GlobalBoardCanvas />
       <div className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col items-start self-stretch pt-6">
         <div className="pointer-events-auto flex w-full items-center gap-3 px-6">
           <Button
@@ -80,7 +80,7 @@ export function BoardSandboxPage() {
         </div>
       </div>
       <aside
-        className={`relative z-20 ml-auto flex w-[var(--board-chat-width)] shrink-0 flex-col rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 ${CHAT_SLIDE_CLASS_NAME}`}
+        className={`relative z-20 ml-auto flex w-[var(--global-board-chat-width)] shrink-0 flex-col rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 ${CHAT_SLIDE_CLASS_NAME}`}
         style={chatSlideStyle}
       >
         {isCollapsed && (

@@ -1,6 +1,15 @@
 /**
- * The whiteboard: a 1000x600 SVG that draws whatever the action stream has
- * accumulated so far.
+ * The whiteboard. It renders one of two boards, and which one is not a setting:
+ *
+ * - **Blocks** (current plans) — content flows top to bottom at a fixed width,
+ *   so blocks cannot overlap. Placement is the renderer's job; the model only
+ *   says what each block is. A `figure` block is still drawn by the code below
+ *   (same strokes, same animations), inside its own box.
+ * - **Legacy board** (plans written before blocks) — one absolute 1000x600 SVG
+ *   drawing whatever the action stream accumulated. Kept exactly as it was, so
+ *   those sessions still replay.
+ *
+ * The old description of the legacy path, still true of it:
  *
  * Three deliberate choices, all in service of "this looks like a person wrote
  * it, and it is still visibly a screen":
@@ -19,12 +28,16 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { AssistantMarkdown } from '@/features/conversation/markdown'
 import { cn } from '@/lib/utils'
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
+  FIGURE_HEIGHT,
+  FIGURE_WIDTH,
   boundsOf,
   jittered,
+  type BoardBlockView,
   type BoardElement,
   type BoardMarkElement,
   type BoardShapeElement,
@@ -347,42 +360,58 @@ const BOARD_CSS = `
   outline-offset: 3px;
   border-radius: 6px;
 }
+/* 块入场：整块淡入上浮，不是打字机。 */
+.board-block-in {
+  animation: board-block-in 380ms cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes board-block-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+/* 标题仍然「写出来」：从左往右扫过，块里唯一保留手写感的那一笔。 */
+.board-sweep {
+  clip-path: inset(0 100% 0 0);
+  animation: board-sweep 620ms linear both;
+}
+@keyframes board-sweep {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .board-write, .board-draw { animation-duration: 1ms; }
+  .board-write, .board-draw, .board-block-in, .board-sweep { animation-duration: 1ms; }
   .board-ripple { animation: none; opacity: .8; }
 }
 `
 
-export const Whiteboard = memo(function Whiteboard({
-  elements,
-  className,
+/** One figure's own SVG box — the same drawing code, a smaller coordinate space. */
+function FigureBox({
+  view,
   clickTarget,
   onElementClick,
 }: {
-  elements: BoardElement[]
-  className?: string
-  /** The element the timeline is waiting for a click on, if any. */
+  view: BoardBlockView
   clickTarget?: string | null
   onElementClick?: (key: string) => void
 }) {
+  // The wait is per figure: only one block can be waiting at a time, so the
+  // local element key is unambiguous.
+  const waiting =
+    view.clickKey && view.clickKey === clickTarget ? view.clickKey : null
   return (
     <div
-      className={cn(
-        'relative size-full overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950',
-        className
-      )}
-      data-board-actions={elements.length}
+      className="relative w-full"
+      style={{ aspectRatio: `${FIGURE_WIDTH} / ${FIGURE_HEIGHT}` }}
+      data-board-figure
     >
-      <style>{BOARD_CSS}</style>
       <svg
-        viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
+        viewBox={`0 0 ${FIGURE_WIDTH} ${FIGURE_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
         className="size-full"
         role="img"
-        aria-label="教学白板"
+        aria-label={view.block.caption ?? '图示'}
       >
-        {elements.map((element) => {
-          if (!clickTarget || element.key !== clickTarget) return elementOf(element)
+        {view.elements.map((element) => {
+          if (!waiting || element.key !== waiting) return elementOf(element)
           return (
             <ClickableElement
               key={`${element.key}~click`}
@@ -394,6 +423,223 @@ export const Whiteboard = memo(function Whiteboard({
           )
         })}
       </svg>
+    </div>
+  )
+}
+
+/**
+ * One block of board content.
+ *
+ * Prose goes through the same markdown renderer the conversation uses — which is
+ * where KaTeX and tables already work — while the *chrome* (headings, terms,
+ * captions) keeps the hand font. That split is deliberate: a formula has to look
+ * like a formula, and KaTeX brings its own fonts, so forcing handwriting on the
+ * prose would fight the math for the same glyphs.
+ */
+function BlockCard({
+  view,
+  clickTarget,
+  onElementClick,
+}: {
+  view: BoardBlockView
+  clickTarget?: string | null
+  onElementClick?: (key: string) => void
+}) {
+  const block = view.block
+  switch (block.kind) {
+    case 'heading':
+      return (
+        <h3
+          className="board-sweep text-[25px] font-medium leading-9 tracking-tight text-zinc-900 dark:text-zinc-100"
+          style={{ fontFamily: HAND_FONT }}
+        >
+          {block.text}
+        </h3>
+      )
+    case 'text':
+      return (
+        <AssistantMarkdown
+          inlineMath
+          className="text-[16px] leading-7 text-zinc-800 [&_p]:my-0 dark:text-zinc-200"
+        >
+          {block.text ?? ''}
+        </AssistantMarkdown>
+      )
+    case 'bullets':
+      return (
+        <ul className="flex flex-col gap-1">
+          {block.items.map((item, index) => (
+            <li key={index} className="flex gap-2.5">
+              <span
+                aria-hidden
+                className="mt-[10px] size-1.5 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-600"
+              />
+              <AssistantMarkdown
+                inlineMath
+                className="text-[15.5px] leading-7 text-zinc-800 [&_p]:my-0 dark:text-zinc-200"
+              >
+                {item}
+              </AssistantMarkdown>
+            </li>
+          ))}
+        </ul>
+      )
+    case 'definition':
+      return (
+        <div className="border-l-2 border-zinc-300 pl-3 dark:border-zinc-700">
+          <p
+            className="text-[16px] font-medium text-zinc-900 dark:text-zinc-100"
+            style={{ fontFamily: HAND_FONT }}
+          >
+            {block.term}
+          </p>
+          <AssistantMarkdown
+            inlineMath
+            className="text-[15px] leading-7 text-zinc-700 [&_p]:my-0 dark:text-zinc-300"
+          >
+            {block.meaning ?? ''}
+          </AssistantMarkdown>
+        </div>
+      )
+    case 'formula': {
+      const latex = block.text ?? ''
+      return (
+        <div className="flex w-full justify-center py-1">
+          <AssistantMarkdown className="text-[17px] text-zinc-900 [&_p]:my-0 dark:text-zinc-100">
+            {`$$\n${latex}\n$$`}
+          </AssistantMarkdown>
+        </div>
+      )
+    }
+    case 'table':
+      return (
+        <div className="w-full overflow-x-auto">
+          <table className="w-full border-collapse text-[14.5px]">
+            <thead>
+              <tr>
+                {block.columns.map((column, index) => (
+                  <th
+                    key={index}
+                    className="border-b border-zinc-300 px-2.5 py-1.5 text-left font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
+                  >
+                    {column}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row, rowIndex) => (
+                <tr key={rowIndex}>
+                  {row.map((cell, cellIndex) => (
+                    <td
+                      key={cellIndex}
+                      className="border-b border-zinc-200/70 px-2.5 py-1.5 align-top text-zinc-700 dark:border-zinc-800 dark:text-zinc-300"
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    case 'figure':
+      return (
+        <figure className="flex w-full flex-col gap-1.5">
+          <FigureBox
+            view={view}
+            clickTarget={clickTarget}
+            onElementClick={onElementClick}
+          />
+          {block.caption ? (
+            <figcaption
+              className="text-center text-[12.5px] text-zinc-500 dark:text-zinc-400"
+              style={{ fontFamily: HAND_FONT }}
+            >
+              {block.caption}
+            </figcaption>
+          ) : null}
+        </figure>
+      )
+    default:
+      return null
+  }
+}
+
+export const Whiteboard = memo(function Whiteboard({
+  elements,
+  blocks,
+  className,
+  clickTarget,
+  onElementClick,
+}: {
+  /** The legacy board's elements (plans written before blocks). */
+  elements: BoardElement[]
+  /** Block-contract content. Non-empty -> this board renders instead. */
+  blocks?: BoardBlockView[]
+  className?: string
+  /** The element the timeline is waiting for a click on, if any. */
+  clickTarget?: string | null
+  onElementClick?: (key: string) => void
+}) {
+  const blockList = blocks ?? []
+  const usesBlocks = blockList.length > 0
+  return (
+    <div
+      className={cn(
+        'relative size-full overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950',
+        className
+      )}
+      data-board-mode={usesBlocks ? 'blocks' : 'legacy'}
+      data-board-actions={usesBlocks ? blockList.length : elements.length}
+    >
+      <style>{BOARD_CSS}</style>
+      {usesBlocks ? (
+        // The board scrolls inside its own frame: content only grows, and the
+        // viewport stays put (that was the agreed board shape).
+        <div className="scrollbar-fade h-full overflow-y-auto px-6 py-6">
+          <div
+            className="mx-auto flex w-full max-w-[38rem] flex-col gap-5"
+            data-board-flow
+          >
+            {blockList.map((view) => (
+              <div
+                key={view.key}
+                className="board-block-in"
+                data-board-block={view.block.kind}
+              >
+                <BlockCard
+                  view={view}
+                  clickTarget={clickTarget}
+                  onElementClick={onElementClick}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <svg
+          viewBox={`0 0 ${BOARD_WIDTH} ${BOARD_HEIGHT}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="size-full"
+          role="img"
+          aria-label="教学白板"
+        >
+          {elements.map((element) => {
+            if (!clickTarget || element.key !== clickTarget) return elementOf(element)
+            return (
+              <ClickableElement
+                key={`${element.key}~click`}
+                element={element}
+                onActivate={() => onElementClick?.(element.key)}
+              >
+                {elementOf(element)}
+              </ClickableElement>
+            )
+          })}
+        </svg>
+      )}
     </div>
   )
 })
