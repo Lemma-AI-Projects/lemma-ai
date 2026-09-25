@@ -257,11 +257,6 @@ function PoolOptions({ group, slots }: { group: OptionGroup; slots: readonly Res
 
   return (
     <div id={domIdOf(group.id)} className={optionGroupWrapperClassName}>
-      <p className="mb-2 text-xs text-zinc-500">
-        {group.reuse === 'exclusive'
-          ? '点击文中的空，从下列选项中选择；每个选项只能用一次。'
-          : '点击文中的空，从下列选项中选择。'}
-      </p>
       <div ref={ref} role="list" className="grid gap-2.5" style={style}>
         {group.options.map((option) => {
           const names = usedBy.get(option.id) ?? []

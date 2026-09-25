@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Check, X } from 'lucide-react'
 
 import type { ResponseSlot } from '@/types/question'
 import { Textarea } from '@/components/ui/textarea'
@@ -90,14 +91,20 @@ export function BlankInput({ slot }: { slot: ResponseSlot }) {
   )
 }
 
-/** 判断题：√ / ×，再点一次回到未作答。 */
+/** 判断题的对、错符号。作答按钮和复盘文案共用，避免一边是字符、一边是图标。 */
+export function JudgeSymbol({ value, className }: { value: boolean; className?: string }) {
+  const Icon = value ? Check : X
+  return <Icon aria-hidden strokeWidth={2.25} className={cn('size-4 shrink-0', className)} />
+}
+
+/** 判断题：对 / 错，再点一次回到未作答。 */
 export function JudgeToggle({ slot }: { slot: ResponseSlot }) {
   const { value, setValue, readOnly, result, label } = useSlotValue(slot.id)
   const current = value?.kind === 'judge' ? value.value : null
 
   return (
     <Bracketed slot={slot}>
-      <span className="mx-1 inline-flex items-center gap-1 align-middle">
+      <span className="relative -top-0.5 mx-1 inline-flex items-center gap-1 align-middle">
         <span
           role="radiogroup"
           aria-label={label}
@@ -115,13 +122,13 @@ export function JudgeToggle({ slot }: { slot: ResponseSlot }) {
                 disabled={readOnly}
                 onClick={() => setValue(selected ? null : { kind: 'judge', value: option })}
                 className={cn(
-                  'flex size-7 items-center justify-center rounded-full text-sm transition-colors',
+                  'flex size-6 items-center justify-center rounded-full transition-colors',
                   selected ? 'bg-zinc-900 text-white' : 'text-zinc-600',
                   !readOnly && !selected && 'hover:bg-zinc-100',
                   readOnly && 'cursor-default'
                 )}
               >
-                {option ? '√' : '×'}
+                <JudgeSymbol value={option} className="size-3.5" />
               </button>
             )
           })}

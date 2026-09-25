@@ -3,8 +3,6 @@ import { useState } from 'react'
 import { BottomActionBarButton } from '@/components/BottomActionBar'
 import { Spinner } from '@/components/ui/spinner'
 import { AttemptProvider } from '../attempt/AttemptProvider'
-import { answerProgress } from '../attempt/responses'
-import { useAttemptResponses } from '../attempt/useAttempt'
 import type { QuestionPlayerMode } from '../content/renderModel'
 import { useQuestionSetQuery } from '../questionApi'
 import { QuestionPage } from './QuestionPage'
@@ -12,7 +10,6 @@ import { QuestionPage } from './QuestionPage'
 function BrowserBody({ setId, mode }: { setId: string; mode: Exclude<QuestionPlayerMode, 'review'> }) {
   const [index, setIndex] = useState(0)
   const setQuery = useQuestionSetQuery(setId)
-  const responses = useAttemptResponses()
 
   if (setQuery.isPending) {
     return (
@@ -41,17 +38,11 @@ function BrowserBody({ setId, mode }: { setId: string; mode: Exclude<QuestionPla
     )
   }
 
-  const progress = answerProgress(question, responses)
-
   return (
     <QuestionPage
       question={question}
       index={safeIndex}
-      total={questions.length}
       mode={mode}
-      progress={
-        mode === 'answer' && progress.total > 0 ? `已答 ${progress.answered}/${progress.total}` : '预览'
-      }
       left={
         safeIndex > 0 ? (
           <BottomActionBarButton type="button" tone="light" onClick={() => setIndex(safeIndex - 1)}>

@@ -22,13 +22,9 @@ export function PoolAssignBlank({ slot }: { slot: ResponseSlot }) {
 
   const chosenId = value?.kind === 'pool-assign' ? value.optionId : null
   const chosen = group?.options.find((option) => option.id === chosenId)
-  const inlineLabel = slot.blank?.inlineLabel ?? ''
 
   const chip = (
-    <span className="inline-flex items-baseline gap-1">
-      <span className="text-xs text-zinc-400">{inlineLabel}</span>
-      <span className={cn(!chosen && 'text-zinc-400')}>{chosen ? chosen.label : '选择'}</span>
-    </span>
+    <span className={cn(!chosen && 'text-zinc-400')}>{chosen ? chosen.label : '选择'}</span>
   )
   const chipClassName = cn(
     'mx-1 inline-flex min-w-[4.5em] items-baseline justify-center gap-1 border-b px-2 align-baseline',
