@@ -53,9 +53,12 @@ class ChatRequest(BaseModel):
     project_id: uuid.UUID | None = None
     # Deterministic, client-triggered tool for THIS turn (the input-menu
     # toggle). None -> a plain text turn. "course_planning" -> the turn streams
-    # a short intro then attaches a course-planning card. Adding a tool here is
-    # how new conversation tools (quiz/flashcards) are dispatched later.
-    tool: Literal["course_planning"] | None = None
+    # a short intro then attaches a course-planning card (video courses).
+    # "free_course" -> same shape, but the card builds a video-less course from
+    # the user's own sentence and hands back a free-course tool card. Adding a
+    # tool here is how new conversation tools (quiz/flashcards) are dispatched
+    # later.
+    tool: Literal["course_planning", "free_course"] | None = None
     # Which teaching method this turn runs under (Method V0). Omitted -> the
     # conversation's own stored method, or the default when there is none yet.
     # Validated against the registry (GET /api/v1/methods) rather than a Literal

@@ -58,6 +58,10 @@ export interface ConversationToolModule {
 // `tool` event and ai_messages.tool_json). `type` discriminates the tool.
 export type ConversationToolRef =
   | { type: 'course_planning'; courseId: string }
+  // A video-less course, generated from the learner's own sentence. Same ref
+  // shape as course_planning (a courseId the card hydrates from) because the
+  // card is a reference, not a payload: what differs is which card renders.
+  | { type: 'free_course'; courseId: string }
   | { type: 'desmos_graph'; graphId: string }
   | { type: 'desmos_3d_graph'; graphId: string }
 

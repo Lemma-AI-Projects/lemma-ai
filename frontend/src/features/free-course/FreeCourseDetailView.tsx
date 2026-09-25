@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { useAppTranslation } from '@/i18n'
 import { useFreeCourseDetail } from './freeCourseApi'
+import { ConversationFreeCourseTool } from './ConversationFreeCourseTool'
 import type { FreeCourseIntent } from './types'
 import { ErrorState } from './FreeCourseBlueprintView'
 
@@ -68,6 +69,14 @@ export function FreeCourseDetailView() {
 
   const course = detailQuery.data
   const blueprintHref = `/free-course/${course.id}/blueprint`
+  // A course is `ready` when the whole pipeline has landed. Anything else is
+  // still being generated (the backend calls that state "materializing") or
+  // gave up ("failed") — and the card below handles both, including the retry,
+  // so this page only has to decide between "enter the course" and "the build
+  // card". More than half the time a learner opens this page it is because they
+  // left mid-build, so this page has to be the way back in, not a dead end with
+  // an empty tree.
+  const isReady = course.status === 'ready'
 
   return (
     <div className="scrollbar-fade h-full overflow-y-auto px-6 py-8">
@@ -87,10 +96,12 @@ export function FreeCourseDetailView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12.5px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-            {lessonCount} {t('freeCourse.lessons')} · {course.units.length}{' '}
-            {t('freeCourse.units')}
-          </span>
+          {isReady ? (
+            <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12.5px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+              {lessonCount} {t('freeCourse.lessons')} · {course.units.length}{' '}
+              {t('freeCourse.units')}
+            </span>
+          ) : null}
           {course.audience ? (
             <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[12.5px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
               {course.audience}
@@ -111,35 +122,44 @@ export function FreeCourseDetailView() {
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            disabled={!firstLessonHref}
-            className="h-[38px] rounded-full px-5 text-[14px] font-normal bg-zinc-950 text-white hover:bg-zinc-800"
-            asChild={Boolean(firstLessonHref)}
-          >
-            {firstLessonHref ? (
-              <Link to={firstLessonHref}>
-                {t('freeCourse.enterFirstLesson')}
-                <ArrowRight className="size-4" />
-              </Link>
-            ) : (
-              <span>{t('freeCourse.enterFirstLesson')}</span>
-            )}
-          </Button>
+        {isReady ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              disabled={!firstLessonHref}
+              className="h-[38px] rounded-full px-5 text-[14px] font-normal bg-zinc-950 text-white hover:bg-zinc-800"
+              asChild={Boolean(firstLessonHref)}
+            >
+              {firstLessonHref ? (
+                <Link to={firstLessonHref}>
+                  {t('freeCourse.enterFirstLesson')}
+                  <ArrowRight className="size-4" />
+                </Link>
+              ) : (
+                <span>{t('freeCourse.enterFirstLesson')}</span>
+              )}
+            </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="h-[38px] rounded-full px-5 text-[14px] font-normal border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            asChild
-          >
-            <Link to={blueprintHref}>
-              {t('freeCourse.viewBlueprint')}
-              <ArrowUpRight className="size-4" />
-            </Link>
-          </Button>
-        </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-[38px] rounded-full px-5 text-[14px] font-normal border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              asChild
+            >
+              <Link to={blueprintHref}>
+                {t('freeCourse.viewBlueprint')}
+                <ArrowUpRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          // Still generating (or failed): the build card IS the "continue" —
+          // it resumes the stream, asks the questionnaire when the pipeline
+          // stops for one, and offers the blueprint once the course is ready.
+          // Same component as in the conversation, because it is the same
+          // thing: a card that hydrates itself from a courseId.
+          <ConversationFreeCourseTool courseId={course.id} />
+        )}
       </div>
     </div>
   )

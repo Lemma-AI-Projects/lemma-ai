@@ -28,7 +28,10 @@ export function ChatInput({
   onSend,
 }: {
   className?: string
-  onSend: (text: string, options?: { tool?: 'course_planning' }) => void
+  onSend: (
+    text: string,
+    options?: { tool?: 'course_planning' | 'free_course' }
+  ) => void
 }) {
   const [value, setValue] = useState('')
   const [composerMode, setComposerMode] = useState<HomeComposerMode>('chat')
@@ -39,14 +42,17 @@ export function ChatInput({
     if (!text) {
       return
     }
-    // 视频课程沿用现有 Course Planning 工具；自由课程尚无已交接契约，
-    // 在该功能落地前不发送任何新 tool/字段。
-    onSend(
-      text,
+    // The mode decides which course tool this turn runs under, and the two are
+    // separate tools on purpose: 视频课程 goes through Course Planning (a plan
+    // built from real videos), 自由课程 goes through the free-course pipeline
+    // (a course generated from the sentence itself). 聊天 sends neither.
+    const tool: 'course_planning' | 'free_course' | undefined =
       composerMode === 'video-course'
-        ? { tool: 'course_planning' }
-        : undefined
-    )
+        ? 'course_planning'
+        : composerMode === 'free-course'
+          ? 'free_course'
+          : undefined
+    onSend(text, tool ? { tool } : undefined)
     setValue('')
   }
 

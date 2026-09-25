@@ -17,8 +17,12 @@ interface ConversationLocationState {
   messageKey?: string
   /** 项目页发起的新会话：直接诞生在该项目里。 */
   projectId?: string
-  /** 首页选择“视频课程”后带入：本条消息走 Course Planning 工具回合。 */
-  tool?: 'course_planning'
+  /**
+   * 首页的「课程来源」开关带入，决定这条消息走哪个工具回合：
+   * `course_planning` = 视频课程（从真实视频里选课），
+   * `free_course` = 自由课程（从这句话本身生成一门课）。
+   */
+  tool?: 'course_planning' | 'free_course'
 }
 
 // 模块级防重：StrictMode 双挂载与重渲染下，同一条首页带入的消息只发送一次

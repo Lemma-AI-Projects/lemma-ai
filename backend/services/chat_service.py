@@ -39,6 +39,7 @@ from services import (
     conversation_service,
     conversation_tool_service,
     course_planning_service,
+    free_course_service,
     method_service,
     project_service,
 )
@@ -342,6 +343,8 @@ def run_turn(
     API layer wraps it straight into the SSE response."""
     if tool == "course_planning":
         return stream_course_planning_turn(context, user)
+    if tool == "free_course":
+        return stream_free_course_turn(context, user)
     return stream_turn(context)
 
 
@@ -453,6 +456,120 @@ async def stream_course_planning_turn(
         yield AIChunk(
             kind="tool",
             tool={"type": "course_planning", "courseId": str(course_id)},
+        )
+        ensure_persist_scheduled()
+        yield AIChunk(kind="done")
+    finally:
+        ensure_persist_scheduled()
+        with contextlib.suppress(Exception):
+            await intro_stream.aclose()
+        if persist_task is not None and not persist_task.done():
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.shield(persist_task)
+
+
+async def stream_free_course_turn(
+    context: TurnContext, user: CurrentUser
+) -> AsyncIterator[AIChunk]:
+    """Free-course tool turn: create the course shell, stream a short intro,
+    then attach the card with one `tool` chunk.
+
+    The same shape as `stream_course_planning_turn` above, minus the two halves
+    that only make sense for a video course:
+
+    - **no questionnaire generation here.** The free-course pipeline asks its
+      questions by *stopping* at a questionnaire event on
+      `GET /free-courses/{id}/build/stream`, and the card consumes that
+      directly — running a second questionnaire generator on the backend would
+      be a second source of the same questions.
+    - **no broad search** (`tasks.course_search`). A free course is generated
+      from the request itself; there is no candidate pool to search, which is
+      why `create_free_course` already writes `search_status="searched"`.
+
+    What is left is the whole job: create the shell, hand the card its id. Every
+    later step — the five build phases, the questionnaire, the blueprint — is
+    driven by the card, which reads the intent from `course.title` (set by
+    `create_free_course` to the learner's own sentence).
+
+    Ordering, unchanged from the video turn and for the same reasons: the shell
+    exists BEFORE the intro streams (closing the tab mid-intro still leaves a
+    course that can be resumed), and a NEW conversation is not in the DB yet, so
+    the course links through the message's tool_json rather than
+    `course.conversation_id` (which would violate the FK pre-persist).
+    """
+    intro_parts: list[str] = []
+    reasoning_parts: list[str] = []
+    reasoning_text: str | None = None
+    raw_parts: dict[str, Any] | None = None
+    persist_task: asyncio.Task[Any] | None = None
+
+    plan_conversation_id = (
+        None if context.new_conversation_title else context.conversation_id
+    )
+    async with AsyncSessionLocal() as db:
+        course = await free_course_service.create_free_course(
+            db,
+            user_id=user.id,
+            intent=context.user_content,
+            conversation_id=plan_conversation_id,
+        )
+    course_id = course.id
+
+    def ensure_persist_scheduled() -> None:
+        nonlocal persist_task
+        intro_text = "".join(intro_parts)
+        assistant_reasoning_text = reasoning_text or "".join(reasoning_parts) or None
+        if persist_task is None and intro_text:
+            persist_task = aio.spawn_protected(
+                conversation_service.persist_turn(
+                    conversation_id=context.conversation_id,
+                    user_id=context.user_id,
+                    new_conversation_title=context.new_conversation_title,
+                    new_conversation_project_id=context.new_conversation_project_id,
+                    user_content=context.user_content,
+                    user_sent_at=context.user_sent_at,
+                    assistant_content=intro_text,
+                    assistant_reasoning_text=assistant_reasoning_text,
+                    raw_parts=raw_parts,
+                    tool_ref={
+                        "type": "free_course",
+                        "courseId": str(course_id),
+                    },
+                )
+            )
+
+    intro_stream = ai_client.stream_chat(
+        AIUseCase.COURSE_PLAN_INTRO,
+        [*context.history, ChatMessage(role="user", content=context.user_content)],
+        user_id=str(context.user_id),
+        conversation_id=str(context.conversation_id),
+    )
+    try:
+        async for chunk in intro_stream:
+            if chunk.kind == "delta":
+                if chunk.text:
+                    intro_parts.append(chunk.text)
+                yield chunk
+            elif chunk.kind == "reasoning":
+                if chunk.reasoning_text:
+                    reasoning_parts.append(chunk.reasoning_text)
+                yield chunk
+            elif chunk.kind == "usage":
+                yield chunk
+            elif chunk.kind == "done":
+                # Captured for the history rebuild; NOT forwarded — the turn
+                # isn't done until the card is attached below.
+                raw_parts = chunk.raw_parts
+                reasoning_text = chunk.reasoning_text
+            elif chunk.kind == "error":
+                # Intro failed before producing output: surface it and stop. The
+                # orphan shell is swept later; nothing is persisted.
+                yield chunk
+                return
+
+        yield AIChunk(
+            kind="tool",
+            tool={"type": "free_course", "courseId": str(course_id)},
         )
         ensure_persist_scheduled()
         yield AIChunk(kind="done")

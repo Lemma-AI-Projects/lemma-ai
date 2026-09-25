@@ -1,4 +1,5 @@
 import { DesmosGraphCard } from '@/features/desmos/DesmosGraphCard'
+import { ConversationFreeCourseTool } from '@/features/free-course/ConversationFreeCourseTool'
 import { cn } from '@/lib/utils'
 import { AssistantMarkdown } from './markdown'
 import { ConversationAgentContext } from './ConversationAgentContext'
@@ -44,6 +45,14 @@ function renderBlock(block: ConversationTurnBlock) {
     block.tool.type === 'desmos_3d_graph'
   ) {
     return <DesmosGraphCard key={block.id} graphId={block.tool.graphId} />
+  }
+  // Free course: its own card. Both course tools carry a courseId, so this
+  // branch has to be explicit — the fallback below is the VIDEO course card,
+  // which would hydrate from a free course's id and show the wrong build.
+  if (block.tool.type === 'free_course') {
+    return (
+      <ConversationFreeCourseTool key={block.id} courseId={block.tool.courseId} />
+    )
   }
   return <ConversationCourseTool key={block.id} courseId={block.tool.courseId} />
 }
