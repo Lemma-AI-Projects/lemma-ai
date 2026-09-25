@@ -1,0 +1,138 @@
+{
+  "name": "f17Anomalies",
+  "view": {
+    "id": "q_f17",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p>已知集合 <math latex=\"$A=\\{1,2,3\\}$\"><mrow><mi>A</mi><mo>=</mo><mo>{</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo>}</mo></mrow></math>，则 A 的真子集个数为<span class=\"qml-bk\" data-slot-id=\"q_f17:bk9\"></span>，画出韦恩图<span class=\"qml-bk\" data-slot-id=\"q_f17:bk2\"></span>。</p><p>下列说法正确的是：</p>"
+    },
+    "slots": [
+      {
+        "id": "q_f17:bk1",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 4,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f17:bk2",
+        "mechanism": "unsupported",
+        "grading": "none",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 6,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f17:bk3",
+        "mechanism": "choice",
+        "grading": "auto",
+        "optionGroupId": "q_f17:og1",
+        "select": "single",
+        "blank": null,
+        "anchored": false
+      }
+    ],
+    "optionGroups": [
+      {
+        "id": "q_f17:og1",
+        "options": [
+          {
+            "id": "q_f17:og1:A",
+            "label": "A",
+            "content": {
+              "html": "空集是任何集合的真子集"
+            }
+          },
+          {
+            "id": "q_f17:og1:B",
+            "label": "B",
+            "content": {
+              "html": "空集是任何非空集合的真子集"
+            }
+          }
+        ],
+        "cols": null,
+        "layout": "unknown",
+        "reuse": null,
+        "anchored": true
+      }
+    ],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "constructed-f17",
+        "sourceKind": "other"
+      },
+      "typeId": null,
+      "typeName": "填空题",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "高中数学"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f17",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f17:bk1",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "7"
+          ],
+          "display": {
+            "html": "7"
+          }
+        }
+      },
+      {
+        "slotId": "q_f17:bk2",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f17:bk3",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f17:og1:B"
+          ]
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "备注",
+        "content": {
+          "html": "<p>这段解析的归属无法判定（scope: unknown），归入整题解析。</p>"
+        },
+        "scope": {
+          "kind": "unknown"
+        }
+      }
+    ],
+    "media": []
+  }
+}

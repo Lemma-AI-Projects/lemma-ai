@@ -14,18 +14,18 @@ function BrowserBody({ setId, mode }: { setId: string; mode: Exclude<QuestionPla
   const setQuery = useQuestionSetQuery(setId)
   const responses = useAttemptResponses()
 
-  if (setQuery.isPending) {
+  if (setQuery.isPending || setQuery.data?.status === 'generating') {
     return (
       <div className="flex h-full items-center justify-center bg-zinc-50 text-sm text-zinc-500">
         <Spinner className="mr-2" />
-        题目加载中…
+        {setQuery.isPending ? '题目加载中…' : '正在出题…'}
       </div>
     )
   }
-  if (setQuery.isError) {
+  if (setQuery.isError || setQuery.data.status === 'failed') {
     return (
       <div className="flex h-full items-center justify-center bg-zinc-50 text-sm text-zinc-500">
-        题目加载失败
+        {setQuery.isError ? '题目加载失败' : '出题失败'}
       </div>
     )
   }

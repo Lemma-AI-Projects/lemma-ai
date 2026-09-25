@@ -1,0 +1,296 @@
+{
+  "name": "f11ExactBlanks",
+  "rawFile": "f11-exact-blanks.html",
+  "view": {
+    "id": "q_f11",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p style=\"\">\n            <span style=\"font-family: 宋体;\">根据短文内容和所给中文提示</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">,\n            <span style=\"font-family: &#x27;Times New Roman&#x27;\" qml-space-size=\"2\">   </span>\n        </span>\n            <span style=\"font-family: 宋体;\">用单词的正确形式完成以下短文。</span>\n        </p>\n        <p style=\"\">\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">Mr. Brown had an umbrella shop in a small town. People </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk1\"></span>\n            <span style=\"font-family: 宋体;\">（有时候）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">brought him broken umbrellas. He repaired some of them by himself and took the others to a big shop in London. They were usually repaired there in </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk2\"></span>\n            <span style=\"font-family: 宋体;\">（十二）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">days.</span>\n        </p>\n        <p style=\"\">\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">One day Mr. Brown went to London by train. He </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk3\"></span>\n            <span style=\"font-family: 宋体;\">（忘记）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">to take an umbrella with him that day. Sitting in front of him was an old man with an umbrella standing </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk4\"></span>\n            <span style=\"font-family: 宋体;\">（在……旁边）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">the seat. When the train </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk5\"></span>\n            <span style=\"font-family: 宋体;\">（到达）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">in London, Mr. Brown picked up the umbrella as he often did during his </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk6\"></span>\n            <span style=\"font-family: 宋体;\">（旅途）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\"> by train. Just as he was getting off, he was stopped by the old man. He said angrily, “That’s </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk7\"></span>\n            <span style=\"font-family: 宋体;\">（我的）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">!” Mr. Brown’s face turned red. He gave it back to the old man at once. When Mr. Brown got to the big shop, the shopkeeper had got his six umbrellas ready. After a good look at each of them, he was </span>s\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk8\"></span>\n            <span style=\"font-family: 宋体;\">（满意的）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">.</span>\n        </p>\n        <p style=\"\">\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">In the afternoon, with the repaired umbrellas, he got into the train again back to his town. </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk9\"></span>\n            <span style=\"font-family: 宋体;\">（令人惊讶地）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">,\n            <span style=\"font-family: &#x27;Times New Roman&#x27;\" qml-space-size=\"2\">   </span>the same old man was sitting next to him. He looked at Mr. Brown and his six umbrellas, “You’ve had a\n        </span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f11:bk10\"></span>\n            <span style=\"font-family: 宋体;\">（幸运的）</span>\n            <span style=\"font-family: &#x27;Times New Roman&#x27;;\">day today.” he said.</span>\n        </p>"
+    },
+    "slots": [
+      {
+        "id": "q_f11:bk1",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "1"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk2",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "2"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk3",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "3"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk4",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "4"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk5",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "5"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk6",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "6"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk7",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "7"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk8",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "8"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk9",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "9"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f11:bk10",
+        "mechanism": "text",
+        "grading": "auto",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": "10"
+        },
+        "anchored": true
+      }
+    ],
+    "optionGroups": [],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f11",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "语法填空",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "初中英语"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f11",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f11:bk1",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "sometimes"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">sometimes</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk2",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "twelve"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">twelve</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk3",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "forgot"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">forgot</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk4",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "beside"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">beside</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk5",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "arrived"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">arrived</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk6",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "trip",
+            "journey"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">trip##journey</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk7",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "mine"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">mine</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk8",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "(s)atisfied"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">(s)atisfied</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk9",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "Surprisingly",
+            "Amazingly"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">Surprisingly##Amazingly</span>"
+          }
+        }
+      },
+      {
+        "slotId": "q_f11:bk10",
+        "answer": {
+          "kind": "exact",
+          "accepted": [
+            "lucky",
+            "fortunate"
+          ],
+          "display": {
+            "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">lucky##fortunate</span>"
+          }
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [],
+    "media": []
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "name": "f03ListeningSingle",
+  "rawFile": "f03-listening-single.html",
+  "view": {
+    "id": "q_f03",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p style=\"text-align: left;\"><audio file-size=\"93401\" duration=\"11\" title=\"\" src=\"https://img.xkw.com/dksih/QBM/2020/4/22/2446810145964032/2446836295442432/STEM/17f4974913624373ada3ee58adef479c.mp3\" preload=\"metadata\" controls></audio></p>\n        <span data-og-id=\"q_f03:og1\"></span>"
+    },
+    "slots": [
+      {
+        "id": "q_f03:bk",
+        "mechanism": "choice",
+        "grading": "unknown",
+        "optionGroupId": "q_f03:og1",
+        "select": "single",
+        "blank": null,
+        "anchored": false
+      }
+    ],
+    "optionGroups": [
+      {
+        "id": "q_f03:og1",
+        "options": [
+          {
+            "id": "q_f03:og1:A",
+            "label": "A",
+            "content": {
+              "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">It’s too late for the man to go to the concert .</span>"
+            }
+          },
+          {
+            "id": "q_f03:og1:B",
+            "label": "B",
+            "content": {
+              "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">The man can buy a standing-room ticket tomorrow .</span>"
+            }
+          },
+          {
+            "id": "q_f03:og1:C",
+            "label": "C",
+            "content": {
+              "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">The man must wait for two hours to buy a ticket .</span>"
+            }
+          },
+          {
+            "id": "q_f03:og1:D",
+            "label": "D",
+            "content": {
+              "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">People have already been standing in line for two hours;</span>"
+            }
+          }
+        ],
+        "cols": 1,
+        "layout": "table",
+        "reuse": null,
+        "anchored": true
+      }
+    ],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f03",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "听力选择题",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "初中英语"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f03",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f03:bk",
+        "answer": {
+          "kind": "missing"
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [],
+    "media": []
+  }
+}

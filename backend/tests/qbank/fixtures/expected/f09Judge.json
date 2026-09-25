@@ -1,0 +1,126 @@
+{
+  "name": "f09Judge",
+  "rawFile": "f09-judge.html",
+  "view": {
+    "id": "q_f09",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "sequential",
+    "stem": {
+      "html": "<p style=\"text-align:justify;word-break:break-word\">\n        <span style=\"font-family: 宋体;\">走进叶圣陶笔下《稻草人》的世界，判断下列说法的正误，正确的打“√”，错误的打“×”。</span>\n    </p>\n    <span data-sq-id=\"q_f09:sq1\"></span>\n    <span data-sq-id=\"q_f09:sq2\"></span>"
+    },
+    "slots": [],
+    "optionGroups": [],
+    "subQuestions": [
+      {
+        "id": "q_f09:sq1",
+        "label": "1.",
+        "stem": {
+          "html": "<p style=\"\">\n                <span style=\"font-family: 宋体;\">稻草人的主人公是生病的孩子。</span><span class=\"qml-bk\" data-slot-id=\"q_f09:sq1:bk1\"></span>\n            </p>"
+        },
+        "slots": [
+          {
+            "id": "q_f09:sq1:bk1",
+            "mechanism": "judge",
+            "grading": "auto",
+            "optionGroupId": null,
+            "select": null,
+            "blank": {
+              "style": "bracket",
+              "size": 6,
+              "inlineLabel": null
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [],
+        "media": []
+      },
+      {
+        "id": "q_f09:sq2",
+        "label": "2.",
+        "stem": {
+          "html": "<p style=\"\">\n                <span style=\"font-family: 宋体;\">稻草人发现自己看守的稻田里出现了小蛾产卵吃稻叶的问题，他非常焦急。 </span><span class=\"qml-bk\" data-slot-id=\"q_f09:sq2:bk2\"></span>\n            </p>"
+        },
+        "slots": [
+          {
+            "id": "q_f09:sq2:bk2",
+            "mechanism": "judge",
+            "grading": "auto",
+            "optionGroupId": null,
+            "select": null,
+            "blank": {
+              "style": "bracket",
+              "size": 6,
+              "inlineLabel": null
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [],
+        "media": []
+      }
+    ],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f09",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "判断题",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "小学语文"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f09",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f09:sq1:bk1",
+        "answer": {
+          "kind": "judge",
+          "value": false
+        }
+      },
+      {
+        "slotId": "q_f09:sq2:bk2",
+        "answer": {
+          "kind": "judge",
+          "value": true
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "(1)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"font-family: 宋体;\">本题考查名著阅读。</span></p>\n        <p style=\"\">\n            <span style=\"font-family: 宋体;\"><span>《稻草人》</span><span>是叶圣陶1922年发表的中国现代童话。通过一个富有同情心而又无能为力的稻草人的所见所思，真实地描写了二十世纪二十年代中国农村风雨飘摇的人间百态，展现了当时劳动人民的苦难。《稻草人》的主人公是稻草人。题干表述错误。</span></span>\n        </p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f09:sq1"
+        }
+      },
+      {
+        "name": "(2)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"font-family: 宋体;\">本题考查名著阅读。</span></p>\n        <p style=\"\">\n            <span style=\"font-family: 宋体;\">根据《稻草人》原文可知：小蛾是“稻子的仇敌，也是主人的仇敌”稻草人需要保护稻田，发现小蛾出在稻田中，但是自己却无法驱赶小蛾，而小蛾会在稻田中产卵吃稻叶，会破坏稻田，所以稻草人才会十分着急。题干表述正确。</span>\n        </p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f09:sq2"
+        }
+      }
+    ],
+    "media": []
+  }
+}

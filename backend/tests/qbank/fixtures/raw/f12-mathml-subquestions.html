@@ -1,0 +1,488 @@
+<!-- 原文：docs/题目系统相关（学科网API文档）/题库API/02-试题HTML渲染说明.md 第 2011–2498 行，未作任何修改 -->
+<div class="qml-ques">
+    <div class="qml-stem">
+        <p style="text-align: left;">
+            <span style="font-family: 宋体;">在直角坐标系</span>
+            <math latex="$xOy$">
+                <mrow><mi>x</mi><mi>O</mi><mi>y</mi></mrow>
+            </math>
+            <span style="font-family: 宋体;">中，已知圆</span>
+            <math latex="$C:5{{x}^{2}}+5{{y}^{2}}+10y-4=0$">
+                <mrow>
+                    <mi>C</mi><mo>:</mo><mn>5</mn><msup><mi>x</mi><mn>2</mn></msup><mo>+</mo><mn>5</mn><msup><mi>y</mi><mn>2</mn></msup><mo>+</mo><mn>10</mn><mi>y</mi><mo>−</mo><mn>4</mn><mo>=</mo><mn>0</mn>
+                </mrow>
+            </math>
+            <span style="font-family: 宋体;">，</span><span style="font-family: 'Times New Roman';font-style: italic;">A</span><span style="font-family: 宋体;">、</span>
+            <span style="font-family: 'Times New Roman';font-style: italic;">B</span><span style="font-family: 宋体;">是抛物线</span>
+            <math latex="$S:{{x}^{2}}=2py\\left(&#32;p&gt;0&#32;\\right)$">
+                <mrow>
+                    <mi>S</mi><mo>:</mo><msup><mi>x</mi><mn>2</mn></msup><mo>=</mo><mn>2</mn><mi>p</mi><mi>y</mi>
+                    <mrow>
+                        <mo>(</mo><mrow><mi>p</mi><mo>&gt;</mo><mn>0</mn></mrow><mo>)</mo>
+                    </mrow>
+                </mrow>
+            </math>
+            <span style="font-family: 宋体;">上两点，</span>
+            <math latex="$\\vartriangle&#32;OAB$">
+                <mrow><mo>△</mo><mi>O</mi><mi>A</mi><mi>B</mi></mrow>
+            </math>
+            <span style="font-family: 宋体;">的重心恰好为抛物线</span><span style="font-family: 'Times New Roman';font-style: italic;">S</span><span style="font-family: 宋体;">的焦点</span>
+            <span style="font-family: 'Times New Roman';font-style: italic;">F</span><span style="font-family: 宋体;">，且</span>
+            <math latex="$\\vartriangle&#32;OAB$">
+                <mrow><mo>△</mo><mi>O</mi><mi>A</mi><mi>B</mi></mrow>
+            </math>
+            <span style="font-family: 宋体;">的面积为</span>
+            <math latex="$\\frac{3\\sqrt{6}}{2}$">
+                <mrow>
+                    <mfrac>
+                        <mrow>
+                            <mn>3</mn><msqrt><mn>6</mn></msqrt>
+                        </mrow>
+                        <mn>2</mn>
+                    </mfrac>
+                </mrow>
+            </math>
+            <span style="font-family: 'Times New Roman';">.</span>
+        </p>
+        <div class="qml-sq" id-container="question">
+            <div class="qml-stem">
+                <span class="ques-no">（1）</span><span style="font-family: 宋体;">求</span><span style="font-family: 'Times New Roman';font-style: italic;">p</span><span style="font-family: 宋体;">的值；</span>
+            </div>
+        </div>
+        <div class="qml-sq" id-container="question">
+            <div class="qml-stem">
+                <span class="ques-no">（2）</span><span style="font-family: 宋体;">求</span>
+                <math latex="$\\odot&#32;C$">
+                    <mrow><mo>⊙</mo><mi>C</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">与抛物线</span><span style="font-family: 'Times New Roman';font-style: italic;">S</span><span style="font-family: 宋体;">的公切线的方程</span>
+                <span style="font-family: 'Times New Roman';">.</span>
+                <br>
+            </div>
+        </div>
+    </div>
+    <div class="spliter">答案</div>
+    <div class="qml-answer">
+        （1）
+        <span class="qml-an-sq" id-container="question">
+			<span class="qml-an">
+				<math latex="$p=2$">
+					<mrow><mi>p</mi><mo>=</mo><mn>2</mn></mrow>
+				</math>
+			</span>
+		</span>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;（2）
+        <span class="qml-an-sq" id-container="question">
+			<span class="qml-an">
+				<math latex="$y=2x-4$">
+					<mrow><mi>y</mi><mo>=</mo><mn>2</mn><mi>x</mi><mo>−</mo><mn>4</mn></mrow>
+				</math>
+				<span style="font-family: 宋体;">或</span>
+				<math latex="$y=-2x-4$">
+					<mrow><mi>y</mi><mo>=</mo><mo>−</mo><mn>2</mn><mi>x</mi><mo>−</mo><mn>4</mn></mrow>
+				</math>
+				<span style="font-family: 'Times New Roman';">.</span>
+			</span>
+		</span>
+        <br>
+    </div>
+    <div class="spliter">解析</div>
+    <div class="qml-explanation">
+        <div class="qml-seg" seg-name="分析">
+            【分析】
+            <p style="">
+                <span style="font-family: 宋体;">（</span><span style="font-family: \'Times New Roman\';">1</span><span style="font-family: 宋体;">）设</span>
+                <math latex="$A\\left(&#32;{{x}_{1}},\\frac{x_{1}^{2}}{2p}&#32;\\right),B\\left(&#32;{{x}_{2}},\\frac{x_{2}^{2}}{2p}&#32;\\right)$">
+                    <mrow>
+                        <mi>A</mi>
+                        <mrow>
+                            <mo>(</mo>
+                            <mrow>
+                                <msub><mi>x</mi><mn>1</mn></msub><mo>,</mo>
+                                <mfrac>
+                                    <mrow>
+                                        <msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup>
+                                    </mrow>
+                                    <mrow><mn>2</mn><mi>p</mi></mrow>
+                                </mfrac>
+                            </mrow>
+                            <mo>)</mo>
+                        </mrow>
+                        <mo>,</mo><mi>B</mi>
+                        <mrow>
+                            <mo>(</mo>
+                            <mrow>
+                                <msub><mi>x</mi><mn>2</mn></msub><mo>,</mo>
+                                <mfrac>
+                                    <mrow>
+                                        <msubsup><mi>x</mi><mn>2</mn><mn>2</mn></msubsup>
+                                    </mrow>
+                                    <mrow><mn>2</mn><mi>p</mi></mrow>
+                                </mfrac>
+                            </mrow>
+                            <mo>)</mo>
+                        </mrow>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，可根据</span>
+                <math latex="$\\vartriangle&#32;OAB$">
+                    <mrow><mo>△</mo><mi>O</mi><mi>A</mi><mi>B</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">的重心恰好为抛物线</span><span style="font-style: italic;font-family: \'Times New Roman\';">S</span><span style="font-family: 宋体;">的焦点</span>
+                <span style="font-style: italic;font-family: \'Times New Roman\';">F</span><span style="font-family: 宋体;">得到坐标的关系，再根据面积可求</span>
+                <math latex="$p=2$">
+                    <mrow><mi>p</mi><mo>=</mo><mn>2</mn></mrow>
+                </math>
+                <span style="font-family: \'Times New Roman\';">.</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">（</span><span style="font-family: \'Times New Roman\';">2</span><span style="font-family: 宋体;">）设公切线为</span>
+                <math latex="$y=kx+b$">
+                    <mrow><mi>y</mi><mo>=</mo><mi>k</mi><mi>x</mi><mo>+</mo><mi>b</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">，则可得</span>
+                <math latex="$k,b$">
+                    <mrow><mi>k</mi><mo>,</mo><mi>b</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">的方程组，求出其解后可得公切线的方程</span><span style="font-family: \'Times New Roman\';">.</span>
+            </p>
+        </div>
+        <div class="qml-exps-sq" id-container="question">
+            (1)小问详解：
+            <p style="">
+                <span style="font-family: 宋体;">设</span>
+                <math latex="$A\\left(&#32;{{x}_{1}},\\frac{x_{1}^{2}}{2p}&#32;\\right),B\\left(&#32;{{x}_{2}},\\frac{x_{2}^{2}}{2p}&#32;\\right)$">
+                    <mrow>
+                        <mi>A</mi>
+                        <mrow>
+                            <mo>(</mo>
+                            <mrow>
+                                <msub><mi>x</mi><mn>1</mn></msub><mo>,</mo>
+                                <mfrac>
+                                    <mrow>
+                                        <msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup>
+                                    </mrow>
+                                    <mrow><mn>2</mn><mi>p</mi></mrow>
+                                </mfrac>
+                            </mrow>
+                            <mo>)</mo>
+                        </mrow>
+                        <mo>,</mo><mi>B</mi>
+                        <mrow>
+                            <mo>(</mo>
+                            <mrow>
+                                <msub><mi>x</mi><mn>2</mn></msub><mo>,</mo>
+                                <mfrac>
+                                    <mrow>
+                                        <msubsup><mi>x</mi><mn>2</mn><mn>2</mn></msubsup>
+                                    </mrow>
+                                    <mrow><mn>2</mn><mi>p</mi></mrow>
+                                </mfrac>
+                            </mrow>
+                            <mo>)</mo>
+                        </mrow>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">因为</span>
+                <math latex="$\\vartriangle&#32;OAB$">
+                    <mrow><mo>△</mo><mi>O</mi><mi>A</mi><mi>B</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">的重心恰好为抛物线</span><span style="font-style: italic;font-family: \'Times New Roman\';">S</span><span style="font-family: 宋体;">的焦点</span>
+                <span style="font-style: italic;font-family: \'Times New Roman\';">F</span><span style="font-family: 宋体;">，故</span>
+                <math latex="$\\left\\{ \\begin{align}  &amp; \\frac{{{x}_{1}}+{{x}_{2}}+0}{3}=0 \\\\  &amp; \\frac{\\frac{x_{1}^{2}}{2p}+\\frac{x_{2}^{2}}{2p}+0}{3}=\\frac{p}{2} \\\\ \\end{align} \\right.$">
+                    <mrow>
+                        <mrow>
+                            <mo>{</mo>
+                            <mtable columnalign="left">
+                                <mtr>
+                                    <mtd>
+                                        <mfrac>
+                                            <mrow>
+                                                <msub><mi>x</mi><mn>1</mn></msub><mo>+</mo><msub><mi>x</mi><mn>2</mn></msub><mo>+</mo><mn>0</mn>
+                                            </mrow>
+                                            <mn>3</mn>
+                                        </mfrac>
+                                        <mo>=</mo><mn>0</mn>
+                                    </mtd>
+                                </mtr>
+                                <mtr>
+                                    <mtd>
+                                        <mfrac>
+                                            <mrow>
+                                                <mfrac>
+                                                    <mrow>
+                                                        <msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup>
+                                                    </mrow>
+                                                    <mrow><mn>2</mn><mi>p</mi></mrow>
+                                                </mfrac>
+                                                <mo>+</mo>
+                                                <mfrac>
+                                                    <mrow>
+                                                        <msubsup><mi>x</mi><mn>2</mn><mn>2</mn></msubsup>
+                                                    </mrow>
+                                                    <mrow><mn>2</mn><mi>p</mi></mrow>
+                                                </mfrac>
+                                                <mo>+</mo><mn>0</mn>
+                                            </mrow>
+                                            <mn>3</mn>
+                                        </mfrac>
+                                        <mo>=</mo><mfrac><mi>p</mi><mn>2</mn></mfrac>
+                                    </mtd>
+                                </mtr>
+                            </mtable>
+                        </mrow>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">所以</span>
+                <math latex="$\\left\\{ \\begin{align}  &amp; {{x}_{1}}+{{x}_{2}}=0 \\\\  &amp; x_{1}^{2}+x_{2}^{2}=3{{p}^{2}} \\\\ \\end{align} \\right.$">
+                    <mrow>
+                        <mrow>
+                            <mo>{</mo>
+                            <mtable columnalign="left">
+                                <mtr>
+                                    <mtd>
+                                        <msub><mi>x</mi><mn>1</mn></msub><mo>+</mo><msub><mi>x</mi><mn>2</mn></msub><mo>=</mo><mn>0</mn>
+                                    </mtd>
+                                </mtr>
+                                <mtr>
+                                    <mtd>
+                                        <msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup><mo>+</mo><msubsup><mi>x</mi><mn>2</mn><mn>2</mn></msubsup><mo>=</mo><mn>3</mn><msup><mi>p</mi><mn>2</mn></msup>
+                                    </mtd>
+                                </mtr>
+                            </mtable>
+                        </mrow>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，故</span>
+                <math latex="$\\left\\{ \\begin{align}  &amp; {{x}_{1}}=-{{x}_{2}} \\\\  &amp; x_{1}^{2}=\\frac{3{{p}^{2}}}{2} \\\\ \\end{align} \\right.$">
+                    <mrow>
+                        <mrow>
+                            <mo>{</mo>
+                            <mtable columnalign="left">
+                                <mtr>
+                                    <mtd>
+                                        <msub><mi>x</mi><mn>1</mn></msub><mo>=</mo><mo>−</mo><msub><mi>x</mi><mn>2</mn></msub>
+                                    </mtd>
+                                </mtr>
+                                <mtr>
+                                    <mtd>
+                                        <msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup><mo>=</mo>
+                                        <mfrac>
+                                            <mrow>
+                                                <mn>3</mn><msup><mi>p</mi><mn>2</mn></msup>
+                                            </mrow>
+                                            <mn>2</mn>
+                                        </mfrac>
+                                    </mtd>
+                                </mtr>
+                            </mtable>
+                        </mrow>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，所以</span>
+                <math latex="$AB$">
+                    <mrow><mi>A</mi><mi>B</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">与</span><math latex="$x$"><mi>x</mi></math><span style="font-family: 宋体;">轴平行，</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">故</span>
+                <math latex="$\\vartriangle&#32;OAB$">
+                    <mrow><mo>△</mo><mi>O</mi><mi>A</mi><mi>B</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">的面积为</span>
+                <math latex="$\\frac{1}{2}\\times&#32;\\left|&#32;2{{x}_{1}}&#32;\\right|\\times&#32;\\frac{x_{1}^{2}}{2p}=\\frac{\\sqrt{6}}{2}p\\times&#32;\\frac{3}{4}p=\\frac{3\\sqrt{6}}{2}$">
+                    <mrow>
+                        <mfrac><mn>1</mn><mn>2</mn></mfrac><mo>×</mo>
+                        <mrow>
+                            <mo>|</mo>
+                            <mrow>
+                                <mn>2</mn><msub><mi>x</mi><mn>1</mn></msub>
+                            </mrow>
+                            <mo>|</mo>
+                        </mrow>
+                        <mo>×</mo>
+                        <mfrac>
+                            <mrow>
+                                <msubsup><mi>x</mi><mn>1</mn><mn>2</mn></msubsup>
+                            </mrow>
+                            <mrow><mn>2</mn><mi>p</mi></mrow>
+                        </mfrac>
+                        <mo>=</mo>
+                        <mfrac>
+                            <mrow>
+                                <msqrt><mn>6</mn></msqrt>
+                            </mrow>
+                            <mn>2</mn>
+                        </mfrac>
+                        <mi>p</mi><mo>×</mo><mfrac><mn>3</mn><mn>4</mn></mfrac><mi>p</mi><mo>=</mo>
+                        <mfrac>
+                            <mrow>
+                                <mn>3</mn><msqrt><mn>6</mn></msqrt>
+                            </mrow>
+                            <mn>2</mn>
+                        </mfrac>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，故</span>
+                <math latex="$p=2$">
+                    <mrow><mi>p</mi><mo>=</mo><mn>2</mn></mrow>
+                </math>
+                <span style="font-family: \'Times New Roman\';">.</span>
+            </p>
+        </div>
+        <div class="qml-exps-sq" id-container="question">
+            (2)小问详解：
+            <p style="">
+                <span style="font-family: 宋体;">由（</span><span style="font-family: \'Times New Roman\';">1</span><span style="font-family: 宋体;">）可得</span>
+                <math latex="$S:{{x}^{2}}=4y$">
+                    <mrow>
+                        <mi>S</mi><mo>:</mo><msup><mi>x</mi><mn>2</mn></msup><mo>=</mo><mn>4</mn><mi>y</mi>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">又</span>
+                <math latex="$\\odot&#32;C$">
+                    <mrow><mo>⊙</mo><mi>C</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">：</span>
+                <math latex="${{x}^{2}}+{{\\left(&#32;y+1&#32;\\right)}^{2}}=\\frac{9}{5}$">
+                    <mrow>
+                        <msup><mi>x</mi><mn>2</mn></msup><mo>+</mo>
+                        <msup>
+                            <mrow>
+                                <mrow>
+                                    <mo>(</mo><mrow><mi>y</mi><mo>+</mo><mn>1</mn></mrow><mo>)</mo>
+                                </mrow>
+                            </mrow>
+                            <mn>2</mn>
+                        </msup>
+                        <mo>=</mo><mfrac><mn>9</mn><mn>5</mn></mfrac>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，其圆心坐标为</span>
+                <math latex="$\\left(&#32;0,-1&#32;\\right)$">
+                    <mrow>
+                        <mrow>
+                            <mo>(</mo><mrow><mn>0</mn><mo>,</mo><mo>−</mo><mn>1</mn></mrow><mo>)</mo>
+                        </mrow>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，半径为</span>
+                <math latex="$\\frac{3\\sqrt{5}}{5}$">
+                    <mrow>
+                        <mfrac>
+                            <mrow>
+                                <mn>3</mn><msqrt><mn>5</mn></msqrt>
+                            </mrow>
+                            <mn>5</mn>
+                        </mfrac>
+                    </mrow>
+                </math>
+                <span style="font-family: \'Times New Roman\';">.</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">由题设可知公切线的斜率必存在，设公切线为</span>
+                <math latex="$y=kx+b$">
+                    <mrow><mi>y</mi><mo>=</mo><mi>k</mi><mi>x</mi><mo>+</mo><mi>b</mi></mrow>
+                </math>
+                <span style="font-family: 宋体;">，</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">由</span>
+                <math latex="$\\left\\{ \\begin{align}  &amp; {{x}^{2}}=4y \\\\  &amp; y=kx+b \\\\ \\end{align} \\right.$">
+                    <mrow>
+                        <mrow>
+                            <mo>{</mo>
+                            <mtable columnalign="left">
+                                <mtr>
+                                    <mtd>
+                                        <msup><mi>x</mi><mn>2</mn></msup><mo>=</mo><mn>4</mn><mi>y</mi>
+                                    </mtd>
+                                </mtr>
+                                <mtr>
+                                    <mtd><mi>y</mi><mo>=</mo><mi>k</mi><mi>x</mi><mo>+</mo><mi>b</mi></mtd>
+                                </mtr>
+                            </mtable>
+                        </mrow>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">可得</span>
+                <math latex="${{x}^{2}}-4kx-4b=0$">
+                    <mrow>
+                        <msup><mi>x</mi><mn>2</mn></msup><mo>−</mo><mn>4</mn><mi>k</mi><mi>x</mi><mo>−</mo><mn>4</mn><mi>b</mi><mo>=</mo><mn>0</mn>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，故</span>
+                <math latex="$\\Delta&#32;=16{{k}^{2}}+16b=0$">
+                    <mrow>
+                        <mi mathvariant="normal">Δ</mi><mo>=</mo><mn>16</mn><msup><mi>k</mi><mn>2</mn></msup><mo>+</mo><mn>16</mn><mi>b</mi><mo>=</mo><mn>0</mn>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">即</span>
+                <math latex="$b=-{{k}^{2}}$">
+                    <mrow>
+                        <mi>b</mi><mo>=</mo><mo>−</mo><msup><mi>k</mi><mn>2</mn></msup>
+                    </mrow>
+                </math>
+                <span style="font-family: \'Times New Roman\';">.</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">又</span>
+                <math latex="$\\frac{\\left|&#32;b+1&#32;\\right|}{\\sqrt{1+{{k}^{2}}}}=\\frac{3\\sqrt{5}}{5}$">
+                    <mrow>
+                        <mfrac>
+                            <mrow>
+                                <mrow>
+                                    <mo>|</mo><mrow><mi>b</mi><mo>+</mo><mn>1</mn></mrow><mo>|</mo>
+                                </mrow>
+                            </mrow>
+                            <mrow>
+                                <msqrt>
+                                    <mrow>
+                                        <mn>1</mn><mo>+</mo><msup><mi>k</mi><mn>2</mn></msup>
+                                    </mrow>
+                                </msqrt>
+                            </mrow>
+                        </mfrac>
+                        <mo>=</mo>
+                        <mfrac>
+                            <mrow>
+                                <mn>3</mn><msqrt><mn>5</mn></msqrt>
+                            </mrow>
+                            <mn>5</mn>
+                        </mfrac>
+                    </mrow>
+                </math>
+                <span style="font-family: 宋体;">，故</span>
+                <math latex="$b=-4$">
+                    <mrow><mi>b</mi><mo>=</mo><mo>−</mo><mn>4</mn></mrow>
+                </math>
+                <span style="font-family: 宋体;">，</span>
+                <math latex="$k=\\pm&#32;2$">
+                    <mrow><mi>k</mi><mo>=</mo><mo>±</mo><mn>2</mn></mrow>
+                </math>
+                <span style="font-family: 宋体;">，</span>
+            </p>
+            <p style="">
+                <span style="font-family: 宋体;">故公切线的方程为：</span>
+                <math latex="$y=2x-4$">
+                    <mrow><mi>y</mi><mo>=</mo><mn>2</mn><mi>x</mi><mo>−</mo><mn>4</mn></mrow>
+                </math>
+                <span style="font-family: 宋体;">或</span>
+                <math latex="$y=-2x-4$">
+                    <mrow><mi>y</mi><mo>=</mo><mo>−</mo><mn>2</mn><mi>x</mi><mo>−</mo><mn>4</mn></mrow>
+                </math>
+                <span style="font-family: \'Times New Roman\';">.</span>
+            </p>
+        </div>
+    </div>
+</div>

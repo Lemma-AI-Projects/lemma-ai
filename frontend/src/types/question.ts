@@ -1,4 +1,4 @@
-// 题库 wire 类型（提案）：契约真相将在后端 backend/schemas/question.py，这里只做镜像。
+// 题库 wire 类型：契约真相在后端 backend/schemas/question.py，这里只做镜像。
 // 字段名是 Lemma 的应用契约，不是学科网字段；学科网原始 HTML 由后端解析、清洗、
 // 铸造稳定 id 后才下发。前端不得按下标或显示题号去对齐答案、空和解析。
 //
@@ -99,7 +99,8 @@ export interface SubQuestion {
 
 export interface QuestionMeta {
   source: {
-    provider: 'xkw'
+    /** 目前只有 'xkw'；契约留作开放字符串，以后接 AI 生成题等来源。 */
+    provider: 'xkw' | (string & {})
     externalId: string
     /** 决定能力边界：massive = 只读 */
     sourceKind: 'premium' | 'massive' | 'paper' | 'other'
@@ -152,22 +153,29 @@ export type QuestionSetKind = 'quiz' | 'assignment' | 'practice' | 'paper'
 /** batch = 统一提交；immediate = 逐题提交并即时反馈 */
 export type QuestionSetMode = 'batch' | 'immediate'
 
+/** 题组生成状态：generating 期间没有题目（前端轮询）；empty = 学科网可用题不足。 */
+export type QuestionSetStatus = 'generating' | 'ready' | 'empty' | 'failed'
+
 export interface QuestionSetView {
   id: string
   title: string
   kind: QuestionSetKind
   mode: QuestionSetMode
+  status: QuestionSetStatus
   sections: QuestionSetSection[]
   questions: QuestionView[]
+  /** 当前未关闭的作答会话里已判分的结果（逐题模式刷新后据此恢复锁定）。 */
+  openAttempt?: { attemptSessionId: string; results: AttemptResult[] } | null
 }
 
-/** 题组列表项（提案补充，供题组入口列出可做的题组）。 */
+/** 题组列表项，供题组入口列出可做的题组。 */
 export interface QuestionSetSummary {
   id: string
   title: string
   kind: QuestionSetKind
   mode: QuestionSetMode
   questionCount: number
+  status: QuestionSetStatus
 }
 
 // ---------- 作答提交（前端 → 后端） ----------
@@ -266,4 +274,6 @@ export interface AttemptResult {
   slots: SlotResult[]
   /** 下发时机：只随判分结果；未到可见时机为 null */
   review: QuestionReview | null
+  submittedAt?: string | null
+  attemptSessionId?: string | null
 }

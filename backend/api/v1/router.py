@@ -9,6 +9,8 @@ from api.v1 import (
     health,
     progress,
     projects,
+    qbank_admin,
+    question_sets,
     users,
 )
 
@@ -22,3 +24,5 @@ api_router.include_router(courses.router)
 api_router.include_router(companion.router)
 api_router.include_router(graphs.router)
 api_router.include_router(progress.router)
+api_router.include_router(question_sets.router)
+api_router.include_router(qbank_admin.router)

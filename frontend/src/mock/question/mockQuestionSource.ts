@@ -6,7 +6,7 @@ import type { QuestionSetView } from '@/types/question'
 import { assertCurrentVersion, gradeSubmission } from './grading'
 import { questionSetFixtures, type QuestionSetFixture } from './sets'
 
-// fixture 适配器：模拟后端的题组读取与判分。只被 features/question/questionApi.ts 引用。
+// fixture 适配器：模拟后端的题组读取与判分。业务代码已改用真实后端，这里只留给 vitest。
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
@@ -22,6 +22,7 @@ function toView(set: QuestionSetFixture): QuestionSetView {
     title: set.title,
     kind: set.kind,
     mode: set.mode,
+    status: 'ready',
     sections: [
       {
         id: `${set.id}:section1`,
@@ -44,6 +45,7 @@ export const mockQuestionSource: QuestionSource = {
       kind: set.kind,
       mode: set.mode,
       questionCount: set.questions.length,
+      status: 'ready' as const,
     }))
   },
 

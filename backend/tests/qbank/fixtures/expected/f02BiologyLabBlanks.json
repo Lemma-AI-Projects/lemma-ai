@@ -1,0 +1,233 @@
+{
+  "name": "f02BiologyLabBlanks",
+  "rawFile": "f02-biology-lab-blanks.html",
+  "view": {
+    "id": "q_f02",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">请回答下列有关实验和探究的问题</span></p>\n        <p style=\"text-align: left;\">\n            <span style=\"font-family: 宋体;\">（1）某同学同时制作人的口腔上皮细胞和洋葱鳞片叶内表皮细胞临时装片时，先在两张载玻片中央分别滴了一滴</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk1\"></span><span style=\"font-family: 宋体;\">和</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk2\"></span>\n            <span style=\"font-family: 宋体;\">，由于没有编号，导致两种材料刚好放反了。此时用显微镜观察到人的口腔上皮细胞与正常情况下的细胞大小相比应</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk3\"></span><span style=\"font-family: 宋体;\">（更大或更小或不变）；此时观察到洋葱缺片叶内表皮细胞与正常情况下的细胞大小相比应</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk4\"></span><span style=\"font-family: 宋体;\">（更大或更小或不变），主要原因是它有</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk5\"></span><span style=\"font-family: 宋体;\">。</span>\n        </p>\n        <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">（2）在“探究馒头在口腔中的变化”时，对3支试管作了以下处理。</span></p>\n        <p style=\"text-align: left;\"><img src=\"https://img.xkw.com/dksih/QBM/2018/7/22/1993982483308544/1999623782162432/STEM/ec479f59c87e4d90afdc34b87030390a.png?resizew=135\" width=\"135\" height=\"159\"></p>\n        <table style=\"border-width:0px 0px 0px 0px;border-style:solid;border-color:black;border-collapse: collapse;\">\n            <tbody><tr height=\"35px\">\n                <td class=\"slash-1\" style=\"width:62px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: right;\"><span style=\"font-family: 宋体;\">事件  </span></p>\n\t\t\t\t\t<p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">  编号</span></p>\n                </td>\n                <td style=\"width:102px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">放入物体</span></p>\n                </td>\n                <td style=\"width:120px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">液体</span></p>\n                </td>\n                <td style=\"width:113px;vertical-align:center;border-width:1px 1px 0px 1px;border-style:solid solid none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">处理</span></p>\n                </td>\n            </tr>\n            <tr height=\"34px\">\n                <td style=\"width:62px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">①</span></p>\n                </td>\n                <td style=\"width:102px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">馒头碎屑</span></p>\n                </td>\n                <td style=\"width:120px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">2毫升唾液</span></p>\n                </td>\n                <td style=\"width:113px;vertical-align:center;border-width:1px 1px 0px 1px;border-style:solid solid none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">充分搅拌</span></p>\n                </td>\n            </tr>\n            <tr height=\"34px\">\n                <td style=\"width:62px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">②</span></p>\n                </td>\n                <td style=\"width:102px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">馒头碎屑</span></p>\n                </td>\n                <td style=\"width:120px;vertical-align:center;border-width:1px 0px 0px 1px;border-style:solid none none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">2毫升清水</span></p>\n                </td>\n                <td style=\"width:113px;vertical-align:center;border-width:1px 1px 0px 1px;border-style:solid solid none solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">充分搅拌</span></p>\n                </td>\n            </tr>\n            <tr height=\"40px\">\n                <td style=\"width:62px;vertical-align:center;border-width:1px 0px 1px 1px;border-style:solid none solid solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">③</span></p>\n                </td>\n                <td style=\"width:102px;vertical-align:center;border-width:1px 0px 1px 1px;border-style:solid none solid solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">馒头块</span></p>\n                </td>\n                <td style=\"width:120px;vertical-align:center;border-width:1px 0px 1px 1px;border-style:solid none solid solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">2毫升唾液</span></p>\n                </td>\n                <td style=\"width:113px;vertical-align:center;border-width:1px 1px 1px 1px;border-style:solid solid solid solid;border-color:black;\">\n                    <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">不搅拌</span></p>\n                </td>\n            </tr>\n        </tbody></table>\n        <p style=\"text-align: left;\">\n            <span style=\"font-family: 宋体;\">将3支试管一起放到37℃的温水中，5—10分钟后取出，各滴加2滴碘液，摇匀，观察颜色的变化，3支试管中不变蓝的是</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk6\"></span><span style=\"font-family: 宋体;\">试管，原因是唾液中的</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk7\"></span><span style=\"font-family: 宋体;\">将粉分解成了</span>\n            <span class=\"qml-bk\" data-slot-id=\"q_f02:bk8\"></span><span style=\"font-family: 宋体;\">，它遇碘不变蓝。</span>\n        </p>\n        <p style=\"text-align: left;\">\n            <span style=\"font-family: 宋体;\">如果以唾液的有无作为变量，形成对照的是编号</span><span class=\"qml-bk\" data-slot-id=\"q_f02:bk9\"></span>\n            <span style=\"font-family: 宋体;\">试管，设置③号试管的目的是验证</span><span class=\"qml-bk\" data-slot-id=\"q_f02:bk10\"></span><span style=\"font-family: 宋体;\">在消化中的作用。</span>\n        </p>"
+    },
+    "slots": [
+      {
+        "id": "q_f02:bk1",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk2",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk3",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk4",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 8,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk5",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 16,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk6",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk7",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk8",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk9",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": null
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f02:bk10",
+        "mechanism": "text",
+        "grading": "unknown",
+        "optionGroupId": null,
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": null
+        },
+        "anchored": true
+      }
+    ],
+    "optionGroups": [],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f02",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "实验探究题",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "初中生物"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f02",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f02:bk1",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk2",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk3",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk4",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk5",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk6",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk7",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk8",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk9",
+        "answer": {
+          "kind": "missing"
+        }
+      },
+      {
+        "slotId": "q_f02:bk10",
+        "answer": {
+          "kind": "missing"
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [],
+    "media": []
+  }
+}

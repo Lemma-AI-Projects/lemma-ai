@@ -1,0 +1,109 @@
+{
+  "name": "f14MultipleChoice",
+  "view": {
+    "id": "q_f14a",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p>下列函数中，既是奇函数又在 <math latex=\"$(0,+\\infty )$\"><mrow><mo>(</mo><mn>0</mn><mo>,</mo><mo>+</mo><mi>∞</mi><mo>)</mo></mrow></math> 上单调递增的是（<span qml-space-size=\"3\">&nbsp;&nbsp;&nbsp;</span>）</p><span data-og-id=\"q_f14a:og1\"></span>"
+    },
+    "slots": [
+      {
+        "id": "q_f14a:bk",
+        "mechanism": "choice",
+        "grading": "auto",
+        "optionGroupId": "q_f14a:og1",
+        "select": "multiple",
+        "blank": null,
+        "anchored": false
+      }
+    ],
+    "optionGroups": [
+      {
+        "id": "q_f14a:og1",
+        "options": [
+          {
+            "id": "q_f14a:og1:A",
+            "label": "A",
+            "content": {
+              "html": "<math latex=\"$y={{x}^{3}}$\"><mrow><mi>y</mi><mo>=</mo><msup><mi>x</mi><mn>3</mn></msup></mrow></math>"
+            }
+          },
+          {
+            "id": "q_f14a:og1:B",
+            "label": "B",
+            "content": {
+              "html": "<math latex=\"$y=x-\\frac{1}{x}$\"><mrow><mi>y</mi><mo>=</mo><mi>x</mi><mo>−</mo><mfrac><mn>1</mn><mi>x</mi></mfrac></mrow></math>"
+            }
+          },
+          {
+            "id": "q_f14a:og1:C",
+            "label": "C",
+            "content": {
+              "html": "<math latex=\"$y=\\sin x$\"><mrow><mi>y</mi><mo>=</mo><mi>sin</mi><mo>&#x2061;</mo><mi>x</mi></mrow></math>"
+            }
+          },
+          {
+            "id": "q_f14a:og1:D",
+            "label": "D",
+            "content": {
+              "html": "<math latex=\"$y={{x}^{2}}$\"><mrow><mi>y</mi><mo>=</mo><msup><mi>x</mi><mn>2</mn></msup></mrow></math>"
+            }
+          }
+        ],
+        "cols": 4,
+        "layout": "table",
+        "reuse": null,
+        "anchored": true
+      }
+    ],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "constructed-q_f14a",
+        "sourceKind": "other"
+      },
+      "typeId": null,
+      "typeName": "多选题",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "高中数学"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f14a",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f14a:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f14a:og1:A",
+            "q_f14a:og1:B"
+          ]
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "详解",
+        "content": {
+          "html": "<p>A、B 都是奇函数，且导数在 <math latex=\"$(0,+\\infty )$\"><mrow><mo>(</mo><mn>0</mn><mo>,</mo><mo>+</mo><mi>∞</mi><mo>)</mo></mrow></math> 上恒为正；C 不单调；D 是偶函数。故选 AB。</p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      }
+    ],
+    "media": []
+  }
+}

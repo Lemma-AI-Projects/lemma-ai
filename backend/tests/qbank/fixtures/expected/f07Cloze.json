@@ -1,0 +1,1277 @@
+{
+  "name": "f07Cloze",
+  "rawFile": "f07-cloze.html",
+  "view": {
+    "id": "q_f07",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "sequential",
+    "stem": {
+      "html": "<p style=\"text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">Over the past 38 years, Mr. Wang has pretended to be someone else many times,and has even learned to </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq1:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> different dialects (</span><span style=\"font-family: 宋体;\">方言</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">), leading to him being described as an “Oscar-winning actor”. </span></p>\n        <p style=\"text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">The 60-year-old is not an actor, but a </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq2:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> However,he is more devoted to his “</span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq3:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> ” than any real actor. </span></p>\n        <p style=\"text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">In the 1990s, a group of thieves often sold stolen goods with the help of some beggars. To look into the </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq4:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">, Wang disguised (</span><span style=\"font-family: 宋体;\">伪装</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">) himself and </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq5:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> the beggars. Dirty shorts and old shoes gave him the </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq6:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> of a real beggar and his convincing dialect soon won him the </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq7:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> of the beggars. </span></p>\n        <p style=\"text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">“I often </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq8:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> them to drink alcohol. Once they were </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq9:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">,they began to talk a lot,\"Wang said. “I'd then </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq10:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> myself to use the toilet, </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq11:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> what the beggars said, and send the </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq12:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> to my teammates.” </span></p>\n        <p style=\"text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">Wang, who is often in </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq13:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> situations, is also a judo (</span><span style=\"font-family: 宋体;\">柔道</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">) master.<span style=\"font-family: &#x27;Times New Roman&#x27;\" qml-space-size=\"2\">   </span>“As long as I get close enough, no criminal can </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq14:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> from me,” he said. </span></p>\n        <p style=\"text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">Wang's </span><span class=\"qml-bk\" data-slot-id=\"q_f07:sq15:bk\"></span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> won him several honors, including a National May Day Labor Medal and 11 Citations of Merit.</span></p>\n        <span data-sq-id=\"q_f07:sq1\"></span>\n        <span data-sq-id=\"q_f07:sq2\"></span>\n        <span data-sq-id=\"q_f07:sq3\"></span>\n        <span data-sq-id=\"q_f07:sq4\"></span>\n        <span data-sq-id=\"q_f07:sq5\"></span>\n        <span data-sq-id=\"q_f07:sq6\"></span>\n        <span data-sq-id=\"q_f07:sq7\"></span>\n        <span data-sq-id=\"q_f07:sq8\"></span>\n        <span data-sq-id=\"q_f07:sq9\"></span>\n        <span data-sq-id=\"q_f07:sq10\"></span>\n        <span data-sq-id=\"q_f07:sq11\"></span>\n        <span data-sq-id=\"q_f07:sq12\"></span>\n        <span data-sq-id=\"q_f07:sq13\"></span>\n        <span data-sq-id=\"q_f07:sq14\"></span>\n        <span data-sq-id=\"q_f07:sq15\"></span>"
+    },
+    "slots": [],
+    "optionGroups": [],
+    "subQuestions": [
+      {
+        "id": "q_f07:sq1",
+        "label": "1.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq1:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq1:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq1:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "1"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq1:og1",
+            "options": [
+              {
+                "id": "q_f07:sq1:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">teach</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq1:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">compare</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq1:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">assess</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq1:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">speak</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq2",
+        "label": "2.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq2:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq2:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq2:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "2"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq2:og1",
+            "options": [
+              {
+                "id": "q_f07:sq2:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">lawyer</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq2:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">doctor</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq2:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">policeman</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq2:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">businessman</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq3",
+        "label": "3.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq3:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq3:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq3:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "3"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq3:og1",
+            "options": [
+              {
+                "id": "q_f07:sq3:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">role</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq3:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">study</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq3:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">family</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq3:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">audience</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq4",
+        "label": "4.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq4:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq4:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq4:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "4"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq4:og1",
+            "options": [
+              {
+                "id": "q_f07:sq4:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">minor</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq4:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">case</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq4:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">future</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq4:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">question</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq5",
+        "label": "5.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq5:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq5:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq5:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "5"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq5:og1",
+            "options": [
+              {
+                "id": "q_f07:sq5:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">interviewed</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq5:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">joined</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq5:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">arrested</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq5:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">assisted</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq6",
+        "label": "6.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq6:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq6:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq6:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "6"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq6:og1",
+            "options": [
+              {
+                "id": "q_f07:sq6:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">challenge</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq6:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">experience</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq6:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">appearance</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq6:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">freedom</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq7",
+        "label": "7.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq7:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq7:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq7:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "7"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq7:og1",
+            "options": [
+              {
+                "id": "q_f07:sq7:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">vote</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq7:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">sympathy</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq7:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">permission</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq7:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">trust</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq8",
+        "label": "8.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq8:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq8:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq8:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "8"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq8:og1",
+            "options": [
+              {
+                "id": "q_f07:sq8:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">invited</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq8:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">forced</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq8:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">helped</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq8:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">expected</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq9",
+        "label": "9.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq9:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq9:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq9:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "9"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq9:og1",
+            "options": [
+              {
+                "id": "q_f07:sq9:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">drunk</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq9:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">deserted</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq9:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">bored</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq9:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">lost</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq10",
+        "label": "10.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq10:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq10:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq10:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "10"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq10:og1",
+            "options": [
+              {
+                "id": "q_f07:sq10:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">guide</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq10:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">persuade</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq10:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">excuse</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq10:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">allow</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq11",
+        "label": "11.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq11:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq11:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq11:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "11"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq11:og1",
+            "options": [
+              {
+                "id": "q_f07:sq11:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">refer to</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq11:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">note down</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq11:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">ask about</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq11:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">miss out</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq12",
+        "label": "12.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq12:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq12:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq12:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "12"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq12:og1",
+            "options": [
+              {
+                "id": "q_f07:sq12:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">plan</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq12:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">agreement</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq12:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">direction</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq12:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">information</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq13",
+        "label": "13.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq13:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq13:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq13:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "13"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq13:og1",
+            "options": [
+              {
+                "id": "q_f07:sq13:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">awkward</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq13:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">dangerous</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq13:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">unfortunate</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq13:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">strange</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq14",
+        "label": "14.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq14:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq14:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq14:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "14"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq14:og1",
+            "options": [
+              {
+                "id": "q_f07:sq14:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">separate</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq14:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">recover</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq14:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">escape</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq14:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">hear</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f07:sq15",
+        "label": "15.",
+        "stem": {
+          "html": "<span data-og-id=\"q_f07:sq15:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f07:sq15:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f07:sq15:og1",
+            "select": "single",
+            "blank": {
+              "style": "underline",
+              "size": 8,
+              "inlineLabel": "15"
+            },
+            "anchored": true
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f07:sq15:og1",
+            "options": [
+              {
+                "id": "q_f07:sq15:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">courage</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq15:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">honesty</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq15:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">kindness</span>"
+                }
+              },
+              {
+                "id": "q_f07:sq15:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">optimism</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "inline",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      }
+    ],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f07",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "完形填空",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "高中英语"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f07",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f07:sq1:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq1:og1:D"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq2:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq2:og1:C"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq3:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq3:og1:A"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq4:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq4:og1:B"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq5:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq5:og1:B"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq6:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq6:og1:C"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq7:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq7:og1:D"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq8:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq8:og1:A"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq9:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq9:og1:A"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq10:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq10:og1:C"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq11:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq11:og1:B"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq12:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq12:og1:D"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq13:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq13:og1:B"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq14:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq14:og1:C"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f07:sq15:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f07:sq15:og1:A"
+          ]
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "分析",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">本文是记叙文。讲述了警察王先生在过去的38年里，多次假扮别人，甚至学会了说不同的方言，不顾危险混入犯罪团伙，成功破案的故事。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      },
+      {
+        "name": "(1)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查动词词义辨析。句意：在过去的38年里，王先生多次假扮别人，甚至学会了说不同的方言，这让他被称为“奥斯卡获奖演员”。A.teach 教授；B.compare 比较；C.assess评估； D.speak讲话 。根据“Mr. Wang has pretended to be someone else many times”可知，能扮成别人，还会讲不同的方言。故填D。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq1"
+        }
+      },
+      {
+        "name": "(2)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查名词词义辨析。句意：这位60岁的老人不是演员，而是警察 。A.lawyer 律师；B.doctor医生； C.policeman 警察；D.businessman 商人。根据“To look into the 　　　　　　　　，Wang disguised（伪装）himself”以及“including a National May Day Labor Medal and 11 Citations of Merit.Paris.”可知，王先生是一名警察。故填C。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq2"
+        }
+      },
+      {
+        "name": "(3)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查名词词义辨析。句意：然而，他比任何真正的演员都更专注于</span><span style=\"\">他的“角色”</span><span style=\"\">。A.role 角色；B.study学习； C.family 家庭；D.audience观众 。根据“than any real actor.”可知，王投身于演员的角色中。故填A。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq3"
+        }
+      },
+      {
+        "name": "(4)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查名词词义辨析。句意：为了调查这个案子,王伪装自己并加入了乞丐中。A.minor 未成年人，辅修；B.case 情况,案件；C.future 未来；D.question问题 。根据“In the 1990s, a group of thieves often sold stolen goods with the help of some beggars. ”可知，这是一起犯罪案件。故填B。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq4"
+        }
+      },
+      {
+        "name": "(5)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查动词词义辨析。句意：为了调查这个案子,王伪装自己并加入了乞丐中。A.interviewed采访； B.joined 加入；C.arrested 逮捕；D.assisted协助。根据“To look into the”可知，他混入乞丐中。故填B。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq5"
+        }
+      },
+      {
+        "name": "(6)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查名词词义辨析。句意：肮脏的短裤和旧鞋子使他看起来像一个真正的乞丐，他那令人信服的方言很快赢得了乞丐们的信任。A.challenge 挑战；B.experience 经历；C.appearance出现，外表； D.freedom自由 。根据“ Dirty shorts and old shoes”可知，这是描述外表。故填C。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq6"
+        }
+      },
+      {
+        "name": "(7)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查名词词义辨析。句意：肮脏的短裤和旧鞋子使他看起来像一个真正的乞丐，他那令人信服的方言很快赢得了乞丐们的信任。A.vote 投票；B.sympathy 同情；C.permission 批准；D.trust 信任。根据“ his convincing dialect soon won him the”可知，他的方言讲得好，赢得乞丐们信任。故填D。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq7"
+        }
+      },
+      {
+        "name": "(8)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查动词词义辨析。句意：“我经常邀请他们喝酒。一旦他们喝醉了，他们就开始说很多话。A.invited 邀请；B.forced 强迫；C.helped 帮助；D.expected期待。根据“them to drink alcohol”可知，为了套话，王先生请他们喝酒。故填A。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq8"
+        }
+      },
+      {
+        "name": "(9)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查形容词词义辨析。句意：“我经常邀请他们喝酒。一旦他们喝醉了，他们就开始说很多话。A.drunk喝醉的； B.deserted抛弃的； C.bored 无聊的；D.lost失去的 。根据“them to drink alcohol”可知，话多是在喝醉后。故填A。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq9"
+        }
+      },
+      {
+        "name": "(10)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查动词词义辨析。句意：然后我会借口自己去厕所，记下乞丐说了什么，然后把信息发给我的队友。A.guide 引导；B.persuade劝说； C.excuse 找借口；D.allow允许 。根据“and send the 　　　　　　　　 to my teammates.”可知，为了发送出信息，王借口去厕所。故填C。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq10"
+        }
+      },
+      {
+        "name": "(11)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查动词短语词义辨析。句意：然后我会借口自己去厕所，记下乞丐说了什么，然后把信息发给我的队友。A.refer to 指的是；B.note down作记录; C.ask about 询问；D.miss out 错过，遗漏。根据“what the beggars said, ”可知，王把乞丐醉后真言记下来。故填B。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq11"
+        }
+      },
+      {
+        "name": "(12)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查名词词义辨析。句意：然后我会借口自己去厕所，记下乞丐说了什么，然后把信息发给我的队友。A.plan 计划；B.agreement 同意；C.direction 指导；D.information 信息。根据“what the beggars said, ”可知，这是重要信息。故填D。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq12"
+        }
+      },
+      {
+        "name": "(13)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查形容词词义辨析。句意：王是经常在危险的情况下,也是一个柔道大师。A.awkward 尴尬的；B.dangerous危险的； C.unfortunate 不幸的；D.strange奇怪的 。根据“ no criminal can 　　　　　　　　 from me,\"”可知，经常处于犯罪分子中，这是很危险的情况。故填B。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq13"
+        }
+      },
+      {
+        "name": "(14)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查动词词义辨析。句意：“只要我离得够近，任何罪犯都逃不掉，”他说。A.separate 分离；B.recover恢复； C.escape 逃避；D.hear 听到。根据“ is also a judo （柔道） master. ”可知，身为柔道大师，他不放过罪犯。故填C。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq14"
+        }
+      },
+      {
+        "name": "(15)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">考查名词词义辨析。句意：王的勇气为他赢得了许多荣誉，包括一枚全国五一劳动奖章和11项嘉奖。A.courage 勇气；B.honesty 诚实；C.kindness 善良；D.optimism 乐观。根据“Wang disguised（伪装）himself”可知，王乔装打扮混入罪犯团伙，勇气可嘉。故填A。</span>\n\t\t\t</p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f07:sq15"
+        }
+      },
+      {
+        "name": "点睛",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\"></span></p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      }
+    ],
+    "media": []
+  }
+}

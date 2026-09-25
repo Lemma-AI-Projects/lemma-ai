@@ -26,6 +26,8 @@ celery_app = Celery(
         "tasks.point_gemini_ingest",
         "tasks.course_materialize",
         "tasks.video_cleanup",
+        "tasks.question_set_build",
+        "tasks.qbank_catalog_sync",
     ],
 )
 
@@ -48,6 +50,12 @@ celery_app.conf.update(
         "cleanup-expired-video-assets": {
             "task": "video.cleanup_expired",
             "schedule": crontab(hour=3, minute=0),
+        },
+        # XKW basic data changes rarely; refresh the cached course / type
+        # dictionaries once a month (~30 days) off-peak.
+        "sync-qbank-catalog": {
+            "task": "qbank.catalog_sync",
+            "schedule": crontab(day_of_month=1, hour=4, minute=0),
         },
     },
 )
