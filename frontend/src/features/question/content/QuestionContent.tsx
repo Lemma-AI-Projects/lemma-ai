@@ -128,7 +128,7 @@ function SubQuestionBlock({ sub }: { sub: SubQuestion }) {
       aria-label={model.slotLabels.get(sub.slots[0]?.id ?? '') ?? sub.label}
       className="mt-7 scroll-mt-24"
     >
-      <div className="flex gap-2 text-[17px] leading-8 text-zinc-900">
+      <div className="flex gap-1 text-[17px] leading-8 text-zinc-900">
         <span className="shrink-0 font-medium">{sub.label}</span>
         <div className="min-w-0 flex-1">
           {stemHtml ? <QuestionRichHtml html={stemHtml} /> : null}

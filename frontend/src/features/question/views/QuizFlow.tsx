@@ -15,7 +15,7 @@ import {
   useSubmitAttemptsMutation,
 } from '../questionApi'
 import { QuestionApiError } from '../questionSource'
-import { questionSetKindTitle, questionSetModeLabel } from './labels'
+import { questionSetKindTitle } from './labels'
 import { QuestionPage } from './QuestionPage'
 import { QuizResultView } from './QuizResultView'
 import { UnansweredDialog, type UnansweredItem } from './UnansweredDialog'
@@ -114,9 +114,6 @@ function QuizFlowSession({
     return (
       <ContentPageLayout title={kindTitle} titleAlign="center" showFooter={false} contentClassName="max-w-[560px]">
         <h2 className="text-[22px] font-semibold leading-7 tracking-tight text-zinc-950">{set.title}</h2>
-        <p className="mt-2 text-sm text-zinc-500">
-          共 {questions.length} 题 · {questionSetModeLabel[set.mode]}
-        </p>
         {sectionInstructions.map((entry, entryIndex) => (
           <RichHtml key={entryIndex} html={entry.html} className="mt-5 text-[16px] leading-[26px] text-zinc-700" />
         ))}
@@ -173,7 +170,6 @@ function QuizFlowSession({
       <QuestionPage
         question={question}
         index={index}
-        total={questions.length}
         mode="review"
         result={results.get(question.id) ?? null}
         left={previousButton}
@@ -195,7 +191,6 @@ function QuizFlowSession({
 
   // ---- answering ----
   const progress = answerProgress(question, responses)
-  const progressText = progress.total > 0 ? `已答 ${progress.answered}/${progress.total}` : null
   const isRaw = question.structure === 'raw'
   const questionResult = results.get(question.id)
   const locked = set.mode === 'immediate' && Boolean(questionResult)
@@ -286,10 +281,8 @@ function QuizFlowSession({
       <QuestionPage
         question={question}
         index={index}
-        total={questions.length}
         mode={locked ? 'review' : 'answer'}
         result={questionResult ?? null}
-        progress={locked ? '已提交' : progressText}
         notice={notice}
         left={previousButton}
         right={right}
