@@ -7,6 +7,7 @@ import type {
   ResponseSlot,
   SlotVerdict,
 } from '@/types/question'
+import { JudgeSymbol } from '../content/InlineSlots'
 import { formatResponse, hasVisibleContent, optionLabelOf, verdictText } from '../content/format'
 import { MediaList } from '../content/MediaList'
 import { useQuestionRender } from '../content/renderModel'
@@ -27,7 +28,11 @@ function ReferenceAnswerView({ answer }: { answer: ReferenceAnswer | undefined }
     case 'exact':
       return <span>{answer.accepted.join(' / ')}</span>
     case 'judge':
-      return <span>{answer.value === null ? '未指定' : answer.value ? '√' : '×'}</span>
+      return answer.value === null ? (
+        <span>未指定</span>
+      ) : (
+        <JudgeSymbol value={answer.value} className="inline size-3.5 align-middle" />
+      )
     case 'rich':
       return <RichHtml html={answer.content.html} className="text-[15px] leading-7" />
     case 'missing':
@@ -75,6 +80,7 @@ function SlotReviewRow({ slot }: { slot: ResponseSlot }) {
   const model = useQuestionRender()
   const result = model.results.get(slot.id)
   const response = formatResponse(model, result?.response)
+  const judgeValue = result?.response?.kind === 'judge' ? result.response.value : undefined
   const explanations = useExplanations('slot', slot.id)
   const isEssay = slot.mechanism === 'essay'
 
@@ -88,7 +94,12 @@ function SlotReviewRow({ slot }: { slot: ResponseSlot }) {
       </div>
       {!isEssay && slot.mechanism !== 'unsupported' ? (
         <div className="text-sm text-zinc-600">
-          你的答案：<span className={cn(!response && 'text-zinc-400')}>{response ?? '未作答'}</span>
+          你的答案：
+          {judgeValue === true || judgeValue === false ? (
+            <JudgeSymbol value={judgeValue} className="inline size-3.5 align-middle" />
+          ) : (
+            <span className={cn(!response && 'text-zinc-400')}>{response ?? '未作答'}</span>
+          )}
         </div>
       ) : null}
       <div className="flex gap-1 text-sm text-zinc-600">

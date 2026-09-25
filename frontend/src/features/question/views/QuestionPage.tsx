@@ -5,24 +5,20 @@ import type { AttemptResult, QuestionView } from '@/types/question'
 import type { QuestionPlayerMode } from '../content/renderModel'
 import { QuestionPlayer } from './QuestionPlayer'
 
-/** 一页一大题：标题、进度、题面，底部固定操作栏。切题后焦点落到题干容器。 */
+/** 一页一大题：标题、题面，底部固定操作栏。切题后焦点落到题干容器。 */
 export function QuestionPage({
   question,
   index,
-  total,
   mode,
   result,
-  progress,
   notice,
   left,
   right,
 }: {
   question: QuestionView
   index: number
-  total: number
   mode: QuestionPlayerMode
   result?: AttemptResult | null
-  progress?: string | null
   /** 底栏上方的提示（提交失败等） */
   notice?: ReactNode
   left?: ReactNode
@@ -47,10 +43,6 @@ export function QuestionPage({
           >
             {index + 1}.{question.meta.typeName ?? '题目'}
           </h1>
-          <p className="mt-2 text-xs text-zinc-500">
-            第 {index + 1} / {total} 题
-            {progress ? ` · ${progress}` : null}
-          </p>
           <QuestionPlayer question={question} mode={mode} result={result} className="mt-6" />
         </article>
       </div>
