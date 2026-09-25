@@ -5,8 +5,11 @@ import {
   differenceInCalendarDays,
   endOfMonth,
   format,
+  isAfter,
+  isSameDay,
   isSameMonth,
   isToday,
+  startOfDay,
   startOfMonth,
   startOfWeek,
   subMonths,
@@ -14,6 +17,8 @@ import {
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { DayTaskLanes } from './DayTaskLanes'
+import { dayKey, type ScheduleTask } from './getScheduleTasks'
 
 function getMonthWeeks(month: Date) {
   const firstDay = startOfWeek(startOfMonth(month), { weekStartsOn: 1 })
@@ -27,9 +32,18 @@ function getMonthWeeks(month: Date) {
   )
 }
 
-export function ScheduleTimeline() {
+export function ScheduleTimeline({
+  tasksByDay,
+  selectedDate,
+  onSelectDate,
+}: {
+  tasksByDay: ReadonlyMap<string, readonly ScheduleTask[]>
+  selectedDate: Date
+  onSelectDate: (date: Date) => void
+}) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()))
   const weeks = useMemo(() => getMonthWeeks(month), [month])
+  const todayStart = startOfDay(new Date())
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -91,30 +105,40 @@ export function ScheduleTimeline() {
                 {week.map((day) => {
                   const today = isToday(day)
                   const inMonth = isSameMonth(day, month)
+                  const selected = isSameDay(day, selectedDate)
+                  const tasks = tasksByDay.get(dayKey(day)) ?? []
 
                   return (
-                    <div
-                      key={format(day, 'yyyy-MM-dd')}
-                      role="cell"
-                      aria-label={format(day, 'EEEE, MMMM d, yyyy')}
-                      className={cn(
-                        'min-w-0 rounded-[12px] border p-[6px] transition-[background-color,border-color,box-shadow] duration-200',
-                        inMonth
-                          ? 'border-zinc-200/60 bg-zinc-100/25 text-zinc-700 hover:border-zinc-300/70 hover:bg-zinc-100/70'
-                          : 'border-zinc-200/50 bg-zinc-100/20 text-zinc-400 opacity-45',
-                        today && 'border-zinc-300 bg-white shadow-[inset_0_0_0_1.5px_#71717a] hover:border-zinc-300 hover:bg-white'
-                      )}
-                    >
-                      <time
-                        dateTime={format(day, 'yyyy-MM-dd')}
-                        aria-current={today ? 'date' : undefined}
+                    <div key={dayKey(day)} role="cell" className="flex min-w-0">
+                      <button
+                        type="button"
+                        aria-label={`${format(day, 'EEEE, MMMM d, yyyy')}${
+                          tasks.length > 0 ? `, ${tasks.length} tasks` : ''
+                        }`}
+                        aria-pressed={selected}
+                        onClick={() => onSelectDate(day)}
                         className={cn(
-                          'ml-auto flex size-5 items-center justify-center rounded-full text-[11px] font-medium leading-4 tabular-nums',
-                          today && 'bg-zinc-700 font-semibold text-white'
+                          'flex min-w-0 flex-1 flex-col rounded-[12px] border p-[6px] text-left outline-none transition-[background-color,border-color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-zinc-300',
+                          inMonth
+                            ? 'border-zinc-200/60 bg-zinc-100/25 text-zinc-700 hover:border-zinc-300/70 hover:bg-zinc-100/70'
+                            : 'border-zinc-200/50 bg-zinc-100/20 text-zinc-400 opacity-45',
+                          selected && !today && 'border-zinc-400 bg-white hover:border-zinc-400 hover:bg-white',
+                          today && 'border-zinc-300 bg-white shadow-[inset_0_0_0_1.5px_#71717a] hover:border-zinc-300 hover:bg-white'
                         )}
                       >
-                        {format(day, 'd')}
-                      </time>
+                        <time
+                          dateTime={dayKey(day)}
+                          aria-current={today ? 'date' : undefined}
+                          className={cn(
+                            'ml-auto flex size-6 shrink-0 items-center justify-center rounded-full text-[13px] font-medium leading-none tabular-nums',
+                            today && 'bg-zinc-700 font-semibold text-white'
+                          )}
+                        >
+                          {format(day, 'd')}
+                        </time>
+                        <div className="min-h-1 flex-1" />
+                        <DayTaskLanes tasks={tasks} isFuture={isAfter(day, todayStart)} />
+                      </button>
                     </div>
                   )
                 })}
