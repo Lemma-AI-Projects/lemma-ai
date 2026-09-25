@@ -17,6 +17,8 @@ from api.v1 import (
     payments,
     progress,
     projects,
+    qbank_admin,
+    question_sets,
     scheduled_tasks,
     users,
     webhooks,
@@ -53,3 +55,6 @@ api_router.include_router(scheduled_tasks.router)
 # 协调层（Coordinator V0）：事件驱动的决策层。只读面（决策日志 + 干跑解释）；
 # 它由「真正写了证据」的那两处进程内调用，没有外部触发口。
 api_router.include_router(coordinator.router)
+# 题库（Question Bank）：题组读取 + 开发者构建入口。
+api_router.include_router(question_sets.router)
+api_router.include_router(qbank_admin.router)

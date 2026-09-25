@@ -22,6 +22,13 @@ import { cn } from '@/lib/utils'
 
 type SandboxView = 'flow' | 'answer' | 'preview'
 
+const QUESTION_SET_STATUS_LABEL = {
+  generating: '出题中',
+  ready: '就绪',
+  empty: '题目不足',
+  failed: '出题失败',
+} as const
+
 const SANDBOX_VIEWS: { value: SandboxView; label: string }[] = [
   { value: 'flow', label: '流程' },
   { value: 'answer', label: '逐题作答' },
@@ -32,8 +39,8 @@ function isSandboxView(value: string | null): value is SandboxView {
   return value === 'flow' || value === 'answer' || value === 'preview'
 }
 
-// [sandbox] 题库调试页：题组来自 fixture 适配器，沿用学习点页的双栏尺寸；伴学栏不发请求，
-// 窄视口下收起，把宽度留给题面。
+// [sandbox] 题库调试页：列出当前用户的真实题组（后端开发者入口生成），沿用学习点页的
+// 双栏尺寸；伴学栏不发请求，窄视口下收起，把宽度留给题面。
 export function CourseQuizSandboxPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -72,7 +79,11 @@ export function CourseQuizSandboxPage() {
             <SelectContent>
               {sets.map((set) => (
                 <SelectItem key={set.id} value={set.id}>
-                  {set.title}（{set.questionCount} 题 · {set.mode === 'batch' ? '统一提交' : '逐题'}）
+                  {set.title}（
+                  {set.status === 'ready'
+                    ? `${set.questionCount} 题`
+                    : QUESTION_SET_STATUS_LABEL[set.status]}{' '}
+                  · {set.mode === 'batch' ? '统一提交' : '逐题'}）
                 </SelectItem>
               ))}
             </SelectContent>

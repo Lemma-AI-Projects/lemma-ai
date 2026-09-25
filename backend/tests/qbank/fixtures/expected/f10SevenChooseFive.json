@@ -1,0 +1,272 @@
+{
+  "name": "f10SevenChooseFive",
+  "rawFile": "f10-seven-choose-five.html",
+  "view": {
+    "id": "q_f10",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p style=\"\"><span style=\"\">If the only reading you ever do is the novel or magazine, the speed at which you read -probably does not matter very much. But if you have to read a great deal for study, you will appreciate the benefits of being able to read more quickly. </span><span class=\"qml-bk\" data-slot-id=\"q_f10:bk1\"></span>\n        </p>\n        <p style=\"\"><span style=\"\">·Before you open the book, make sure that you are comfortable. You need a seat which supports your back and the book should be at the right distance from your eyes. </span><span class=\"qml-bk\" data-slot-id=\"q_f10:bk2\"></span>\n        </p>\n        <p style=\"\"><span class=\"qml-bk\" data-slot-id=\"q_f10:bk3\"></span><span style=\"\"> Look at the table of contents, the preface, the chapter heading,etc.This will help you to decide whether you really need to read the whole book or only certain parts of it. Ten minutes spent in this way could save you quite a lot of time in the long run.</span>\n        </p>\n        <p style=\"\"><span style=\"\">If you decide that you need to read the whole book, decide how much you can read at a time. </span><span class=\"qml-bk\" data-slot-id=\"q_f10:bk4\"></span><span style=\"\"> A history book which may contain the facts in story form will be easier to read than one dealing with scientific subjects. In the former case you may be able to read a chapter. In the latter you may only be able to read one page.</span>\n        </p>\n        <p style=\"\"><span style=\"\">Always keep a pencil and paper beside you. </span><span class=\"qml-bk\" data-slot-id=\"q_f10:bk5\"></span><span style=\"\">Note also the facts important for your purpose as well as anything which leads you to further research. You don't have to write these things in detail. It is enough to put the page number and one or two words as a reminder .</span>\n        </p>\n        <div class=\"\">\n            <span data-og-id=\"q_f10:og1\"></span>\n        </div>"
+    },
+    "slots": [
+      {
+        "id": "q_f10:bk1",
+        "mechanism": "pool-assign",
+        "grading": "auto",
+        "optionGroupId": "q_f10:og1",
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": "1"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f10:bk2",
+        "mechanism": "pool-assign",
+        "grading": "auto",
+        "optionGroupId": "q_f10:og1",
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": "2"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f10:bk3",
+        "mechanism": "pool-assign",
+        "grading": "auto",
+        "optionGroupId": "q_f10:og1",
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": "3"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f10:bk4",
+        "mechanism": "pool-assign",
+        "grading": "auto",
+        "optionGroupId": "q_f10:og1",
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": "4"
+        },
+        "anchored": true
+      },
+      {
+        "id": "q_f10:bk5",
+        "mechanism": "pool-assign",
+        "grading": "auto",
+        "optionGroupId": "q_f10:og1",
+        "select": null,
+        "blank": {
+          "style": "underline",
+          "size": 9,
+          "inlineLabel": "5"
+        },
+        "anchored": true
+      }
+    ],
+    "optionGroups": [
+      {
+        "id": "q_f10:og1",
+        "options": [
+          {
+            "id": "q_f10:og1:A",
+            "label": "A",
+            "content": {
+              "html": "<span style=\"\">Stop to have a rest now and then.</span>"
+            }
+          },
+          {
+            "id": "q_f10:og1:B",
+            "label": "B",
+            "content": {
+              "html": "<span style=\"\">Spend a few minutes looking through the book.</span>"
+            }
+          },
+          {
+            "id": "q_f10:og1:C",
+            "label": "C",
+            "content": {
+              "html": "<span style=\"\">This depends on the type of book you are reading.</span>"
+            }
+          },
+          {
+            "id": "q_f10:og1:D",
+            "label": "D",
+            "content": {
+              "html": "<span style=\"\">Here are some tips to help improve your reading speed.</span>"
+            }
+          },
+          {
+            "id": "q_f10:og1:E",
+            "label": "E",
+            "content": {
+              "html": "<span style=\"\">Make a note of any page which is of special importance.</span>"
+            }
+          },
+          {
+            "id": "q_f10:og1:F",
+            "label": "F",
+            "content": {
+              "html": "<span style=\"\">You may find yourself having to leam something by heart.</span>"
+            }
+          },
+          {
+            "id": "q_f10:og1:G",
+            "label": "G",
+            "content": {
+              "html": "<span style=\"\">Keep the room cool rather than warm to avoid feeling sleepy.</span>"
+            }
+          }
+        ],
+        "cols": 1,
+        "layout": "table",
+        "reuse": "exclusive",
+        "anchored": true
+      }
+    ],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f10",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "七选五",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "高中英语"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f10",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f10:bk1",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f10:og1:D"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f10:bk2",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f10:og1:G"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f10:bk3",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f10:og1:B"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f10:bk4",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f10:og1:C"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f10:bk5",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f10:og1:E"
+          ]
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "分析",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">这是一篇说明文。文章主要介绍了一些帮助提高阅读速度的建议。</span></p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      },
+      {
+        "name": "(1)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">根据上文“</span><span style=\"\">If the only reading you ever do is the novel or magazine, the speed at which you read -probably does not matter very much. But if you have to read a great deal for study, you will appreciate the benefits of being able to read more quickly.</span><span style=\"\">（如果你唯一的阅读是小说或杂志，那么你阅读的速度可能并不重要。但是，如果你必须大量阅读来学习，你就会感激能够更快地阅读的好处。）”可知，接下来要介绍提高阅读速度的方法。</span><span style=\"\">D</span><span style=\"\">项：</span><span style=\"\">Here are some tips to help improve your reading speed.</span><span style=\"\">（这里有一些帮助提高阅读速度的建议。）符合语境。故选</span><span style=\"\">D</span><span style=\"\">。</span></p>"
+        },
+        "scope": {
+          "kind": "slot",
+          "slotId": "q_f10:bk1"
+        }
+      },
+      {
+        "name": "(2)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">根据本段主题句“</span><span style=\"\">Before you open the book, make sure that you are comfortable.</span><span style=\"\">（在你打开书之前，确保你感到舒服。）”可知，本段主要说明要给自己创造舒适的阅读环境。</span><span style=\"\">G</span><span style=\"\">项：</span><span style=\"\">Keep the room cool rather than warm to avoid feeling sleepy.</span><span style=\"\">（保持房间凉爽而不是温暖以避免困倦。）符合语境。故选</span><span style=\"\">G</span><span style=\"\">。</span></p>"
+        },
+        "scope": {
+          "kind": "slot",
+          "slotId": "q_f10:bk2"
+        }
+      },
+      {
+        "name": "(3)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">空处为段落主题句。根据下文“</span><span style=\"\">Look at the table of contents, the preface, the chapter heading,etc</span><span style=\"\">（查看目录、前言、章节标题等。）”可知，本段主要讲述在阅读一本书之前要先浏览一下大致内容。</span><span style=\"\">B</span><span style=\"\">项：</span><span style=\"\">Spend a few minutes looking through the book.</span><span style=\"\">（花几分钟浏览一下这本书。）符合语境。故选</span><span style=\"\">B</span><span style=\"\">。</span></p>"
+        },
+        "scope": {
+          "kind": "slot",
+          "slotId": "q_f10:bk3"
+        }
+      },
+      {
+        "name": "(4)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">根据上文“</span><span style=\"\">If you decide that you need to read the whole book, decide how much you can read at a time.</span><span style=\"\">（如果你决定要读完整本书，决定一下你一次能读多少。）”和下文“</span><span style=\"\">A history book which may contain the facts in story form will be easier to read than one dealing with scientific subjects.</span><span style=\"\">（以故事形式包含事实的历史书比科学题材的书更容易阅读。）</span><span style=\"\">”</span><span style=\"\">可知，看书时间的长短取决于书的类型。</span><span style=\"\">C</span><span style=\"\">项：</span><span style=\"\">This depends on the type of book you are reading.</span><span style=\"\">（这取决于你读的书的类型。）符合语境。故选</span><span style=\"\">C</span><span style=\"\">。</span>\n            </p>"
+        },
+        "scope": {
+          "kind": "slot",
+          "slotId": "q_f10:bk4"
+        }
+      },
+      {
+        "name": "(5)题详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"\">根据段落主题句</span><span style=\"\">“Always keep a pencil and paper beside you.</span><span style=\"\">（总是在身边放一支铅笔和一张纸。）</span><span style=\"\">”</span><span style=\"\">可知，本段强调要随时注意记笔记。</span><span style=\"\">E</span><span style=\"\">项：</span><span style=\"\">Make a note of any page which is of special importance.</span><span style=\"\">（把任何有特别重要的一页都记下来。）符合语境。故选</span><span style=\"\">E</span><span style=\"\">。</span></p>"
+        },
+        "scope": {
+          "kind": "slot",
+          "slotId": "q_f10:bk5"
+        }
+      }
+    ],
+    "media": []
+  }
+}

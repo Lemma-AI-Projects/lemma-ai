@@ -1,0 +1,438 @@
+{
+  "name": "f06ReadingCompound",
+  "rawFile": "f06-reading-compound.html",
+  "view": {
+    "id": "q_f06",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "sequential",
+    "stem": {
+      "html": "<p style=\"text-align: left;text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">People celebrate birthdays in almost every country all over the world. Some ways are similar from country to country: candles, cakes, and birthday wishes. But there are also different ways to celebrate birthdays. Here are some:</span></p>\n        <p style=\"text-align: left;text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">In Denmark (</span><span style=\"font-family: 宋体;\">丹麦</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">), parents always prepare a birthday cake with the national flag on it for their birthday child. And they also put a flag outside their window. It means a child in the house is having a birthday.</span></p>\n        <p style=\"text-align: left;text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">In Holland (</span><span style=\"font-family: 宋体;\">荷兰</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">), all the people at the party must cover (</span><span style=\"font-family: 宋体;\">遮盖</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">) their eyes with cloth. And then, they look for the gifts in the house. The one who finds the gift can have it.</span></p>\n        <p style=\"text-align: left;text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">In Argentina (</span><span style=\"font-family: 宋体;\">阿根廷</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">), girls’ fifteenth birthday is the most important. Parents always have a big party to celebrate. At the party, the birthday girl must dance with her father first, and then the boys.</span></p>\n        <p style=\"text-align: left;text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">In India, children usually wear white clothes to school. But on their birthdays, children wear colourful clothes to school and give out chocolate to everyone in the class. Their best friends help them do this.</span></p>\n        <p style=\"text-align: left;text-indent: 28px;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">In Israel (</span><span style=\"font-family: 宋体;\">以色列</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">), the birthday child sits in a chair with lots of flowers. The friends and parents will </span><span style=\"text-decoration: underline;text-underline-position: underfont-family: &#x27;Times New Roman&#x27;;\" u=\"\">lift</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\"> the chair. The times they lift are the birthday child’s age.</span></p>\n        <span data-sq-id=\"q_f06:sq1\"></span>\n        <span data-sq-id=\"q_f06:sq2\"></span>\n        <span data-sq-id=\"q_f06:sq3\"></span>\n        <span data-sq-id=\"q_f06:sq4\"></span>\n        <span data-sq-id=\"q_f06:sq5\"></span>"
+    },
+    "slots": [],
+    "optionGroups": [],
+    "subQuestions": [
+      {
+        "id": "q_f06:sq1",
+        "label": "1.",
+        "stem": {
+          "html": "<p style=\"\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">People in Denmark celebrate the children’s birthday by ________.</span></p>\n                <span data-og-id=\"q_f06:sq1:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f06:sq1:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f06:sq1:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f06:sq1:og1",
+            "options": [
+              {
+                "id": "q_f06:sq1:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">putting a national flag on the birthday cake</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq1:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">blowing out all the candles in one go</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq1:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">lifting the chair with the birthday child on it</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq1:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">having a big party</span>"
+                }
+              }
+            ],
+            "cols": 1,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f06:sq2",
+        "label": "2.",
+        "stem": {
+          "html": "<p style=\"\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">In ________, the 15th birthday girl must dance with her father first.</span></p>\n                <span data-og-id=\"q_f06:sq2:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f06:sq2:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f06:sq2:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f06:sq2:og1",
+            "options": [
+              {
+                "id": "q_f06:sq2:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">Argentina</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq2:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">Holland</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq2:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">Israel</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq2:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">India</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f06:sq3",
+        "label": "3.",
+        "stem": {
+          "html": "<p style=\"\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">What does the underlined word “lift” mean in Chinese?</span></p>\n                <span data-og-id=\"q_f06:sq3:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f06:sq3:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f06:sq3:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f06:sq3:og1",
+            "options": [
+              {
+                "id": "q_f06:sq3:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">举起</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq3:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">庆祝</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq3:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">列举</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq3:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">长大</span>"
+                }
+              }
+            ],
+            "cols": 4,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f06:sq4",
+        "label": "4.",
+        "stem": {
+          "html": "<p style=\"\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">What can we learn from the passage?</span></p>\n                <span data-og-id=\"q_f06:sq4:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f06:sq4:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f06:sq4:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f06:sq4:og1",
+            "options": [
+              {
+                "id": "q_f06:sq4:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">Different countries have different ways to celebrate New Year.</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq4:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">In India, children can wear colourful clothes to school on their birthdays.</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq4:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">Only birthday children can look for the gifts in the house in Holland.</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq4:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">In Israel, the birthday child sits in a chair. Only their parents can lift the chair.</span>"
+                }
+              }
+            ],
+            "cols": 1,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f06:sq5",
+        "label": "5.",
+        "stem": {
+          "html": "<p style=\"\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">What does the passage mainly tell us?</span></p>\n                <span data-og-id=\"q_f06:sq5:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f06:sq5:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f06:sq5:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f06:sq5:og1",
+            "options": [
+              {
+                "id": "q_f06:sq5:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">People celebrate birthdays all over the world.</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq5:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">People always celebrate birthdays for their children.</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq5:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">People in different countries celebrate birthdays in similar ways.</span>"
+                }
+              },
+              {
+                "id": "q_f06:sq5:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: &#x27;Times New Roman&#x27;;\">There are different ways to celebrate birthdays in different countries.</span>"
+                }
+              }
+            ],
+            "cols": 1,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      }
+    ],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f06",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "阅读理解",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "初中英语"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f06",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f06:sq1:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f06:sq1:og1:A"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f06:sq2:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f06:sq2:og1:A"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f06:sq3:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f06:sq3:og1:A"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f06:sq4:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f06:sq4:og1:B"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f06:sq5:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f06:sq5:og1:D"
+          ]
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "导语",
+        "content": {
+          "html": "<p style=\"\"><span>本文主要介绍了不同国家庆祝生日的不同方式。</span></p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      },
+      {
+        "name": "(1)题详解",
+        "content": {
+          "html": "<p style=\"\"><span>细节理解题。根据第二段中的“In Denmark (丹麦), parents always prepare a birthday cake with the national flag on it for their birthday child.”可知，丹麦人会在生日蛋糕上放一面国旗。故选A。</span></p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f06:sq1"
+        }
+      },
+      {
+        "name": "(2)题详解",
+        "content": {
+          "html": "<p style=\"\"><span>细节理解题。根据第四段中的“In Argentina (阿根廷), girls’ fifteenth birthday is the most important.”及“At the party, the birthday girl must dance with her father first”可知，在阿根廷，过十五岁生日的女孩在派对上必须先跟父亲跳舞。故选A。</span></p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f06:sq2"
+        }
+      },
+      {
+        "name": "(3)题详解",
+        "content": {
+          "html": "<p style=\"\"><span>词义猜测题。根据文中的“the birthday child sits in a chair with lots of flowers. The friends and parents will lift the chair.”可知，过生日的孩子坐在一把有很多花的椅子上。朋友和父母会把椅子抬起来。划线词的意思是“举起”。故选A。</span></p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f06:sq3"
+        }
+      },
+      {
+        "name": "(4)题详解",
+        "content": {
+          "html": "<p style=\"\"><span>细节理解题。根据第五段中的“In India...But on their birthdays, children wear colourful clothes to school”可知，在印度，孩子们在生日的时候可以穿五颜六色的衣服去上学。故选B。</span></p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f06:sq4"
+        }
+      },
+      {
+        "name": "(5)题详解",
+        "content": {
+          "html": "<p style=\"\"><span>主旨大意题。本文主要介绍不同国家庆祝生日的方式不同。故选D。</span></p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f06:sq5"
+        }
+      }
+    ],
+    "media": []
+  }
+}

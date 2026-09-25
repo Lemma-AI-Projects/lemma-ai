@@ -6,9 +6,8 @@ import type {
 } from '@/types/question'
 
 /**
- * 题库数据来源的唯一边界。questionApi 的 hooks 只依赖这个接口：
- * 现在由 fixture 适配器实现，后端题库接口交付后换成 apiClient 实现，
- * hooks 签名与组件都不用改。
+ * 题库数据来源的唯一边界。questionApi 的 hooks 只依赖这个接口：业务代码用
+ * httpQuestionSource（真实后端）；mock/question 的 fixture 适配器只留给测试。
  */
 export interface QuestionSource {
   listQuestionSets(): Promise<QuestionSetSummary[]>

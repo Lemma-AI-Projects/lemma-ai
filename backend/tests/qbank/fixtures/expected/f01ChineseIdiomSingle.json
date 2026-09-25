@@ -1,0 +1,118 @@
+{
+  "name": "f01ChineseIdiomSingle",
+  "rawFile": "f01-chinese-idiom-single.html",
+  "view": {
+    "id": "q_f01",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">下列句子中加点词语</span><span style=\"font-family: 宋体;\" wave=\"\">运用恰当</span><span style=\"font-family: 宋体;\">的是（<span style=\"font-family: &#x27;Times New Roman&#x27;\" qml-space-size=\"3\">     </span>）</span></p>\n        <span data-og-id=\"q_f01:og1\"></span>"
+    },
+    "slots": [
+      {
+        "id": "q_f01:bk",
+        "mechanism": "choice",
+        "grading": "auto",
+        "optionGroupId": "q_f01:og1",
+        "select": "single",
+        "blank": null,
+        "anchored": false
+      }
+    ],
+    "optionGroups": [
+      {
+        "id": "q_f01:og1",
+        "options": [
+          {
+            "id": "q_f01:og1:A",
+            "label": "A",
+            "content": {
+              "html": "<span style=\"font-family: 宋体;\">一曲《春江花月夜》</span><span style=\"font-family: 宋体;\" em=\"\">轻歌曼舞</span><span style=\"font-family: 宋体;\">，让人觉得意犹未尽。</span>"
+            }
+          },
+          {
+            "id": "q_f01:og1:B",
+            "label": "B",
+            "content": {
+              "html": "<span style=\"font-family: 宋体;\">仙女们</span><span style=\";font-family: 宋体;\" em=\"\">余音绕梁</span><span style=\"font-family: 宋体;\">，婀娜多姿，把幸福的花瓣撒向人间。</span>"
+            }
+          },
+          {
+            "id": "q_f01:og1:C",
+            "label": "C",
+            "content": {
+              "html": "<span style=\"font-family: 宋体;\">殿内泥塑的舜帝坐像，头戴冕旒，身着衮服，神态庄严，</span><span style=\"font-family: 宋体;\" em=\"\">栩栩如生</span><span style=\"font-family: 宋体;\">。</span>"
+            }
+          },
+          {
+            "id": "q_f01:og1:D",
+            "label": "D",
+            "content": {
+              "html": "<span style=\"font-family: 宋体;\">他的文章</span><span style=\"font-family: 宋体;\" em=\"\">高山流水</span><span style=\"font-family: 宋体;\">，不拘一格。</span>"
+            }
+          }
+        ],
+        "cols": 1,
+        "layout": "table",
+        "reuse": null,
+        "anchored": true
+      }
+    ],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f01",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "单选题",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "初中语文"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f01",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f01:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f01:og1:C"
+          ]
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"font-family: 宋体;\" u=\"\">本题考查学生对具体语境中成语的运用正误的辨析能力。</span></p>\n            <p style=\"text-align: left;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">A.</span><span style=\"font-family: 宋体;\">不恰当。轻歌曼舞：轻松愉快的音乐，柔和优美的舞蹈。《春江花月夜》只是音乐。</span></p>\n            <p style=\"text-align: left;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">B.</span><span style=\"font-family: 宋体;\">不恰当。余音绕梁：形容歌声或音乐优美，余音回旋不绝。也比喻诗文意味深长，耐人寻味。不能用来形容仙女们。</span></p>\n            <p style=\"text-align: left;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">C.</span><span style=\"font-family: 宋体;\">恰当。栩栩如生：形容艺术形象非常生动逼真，像活的一样。</span></p>\n            <p style=\"text-align: left;\"><span style=\"font-family: &#x27;Times New Roman&#x27;;\">D.</span><span style=\"font-family: 宋体;\">不恰当。高山流水：比喻知己或知音。也比喻乐曲高妙。不能用来形容文章，适用对象错误。</span></p>\n            <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">故选C。</span></p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      },
+      {
+        "name": "点睛",
+        "content": {
+          "html": "<p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">要结合积累的成语来分析，在平时的学习中，首先我们对于遇到的成语要做好积累，其次是注意可以从词义、词语的感情色彩、习惯用法等方面进行归纳。成语常见的错误有：望文生义、褒贬不当、搭配不当、用错对象、重复冗赘、谦敬错位、自相矛盾、不合语境等。</span></p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      }
+    ],
+    "media": []
+  }
+}

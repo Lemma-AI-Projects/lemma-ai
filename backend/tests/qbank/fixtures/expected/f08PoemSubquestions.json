@@ -1,0 +1,178 @@
+{
+  "name": "f08PoemSubquestions",
+  "rawFile": "f08-poem-subquestions.html",
+  "view": {
+    "id": "q_f08",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "per-question",
+    "stem": {
+      "html": "<p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">阅读下面的首宋诗，完成下面小题。</span></p>\n        <p style=\"text-align: center;\"><span style=\"font-family: 楷体;\"><span>怀嵩楼新开南轩与郡僚小饮</span><sup>①</sup></span>\n        </p>\n        <p style=\"text-align: center;\"><span style=\"font-family: 楷体;\">欧阳修</span></p>\n        <p style=\"text-align: center;\"><span style=\"font-family: 楷体;\">绕郭云烟匝几重，昔人曾此感怀嵩。</span></p>\n        <p style=\"text-align: center;\"><span style=\"font-family: 楷体;\">霜林落后山争出，野菊开时酒正浓。</span></p>\n        <p style=\"text-align: center;\"><span style=\"font-family: 楷体;\"><span>解带西风飘画角</span><sup>②</sup><span>，倚栏斜日照青松。</span></span>\n        </p>\n        <p style=\"text-align: center;\"><span style=\"font-family: 楷体;\">会须乘兴携佳客，踏雪来看群玉峰。</span></p>\n        <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">【注释】①此诗写于欧阳修被贬滁州期间。怀嵩楼为唐代名相李德裕被贬滁州时所建。②画角：乐器名，发声高亢。</span>\n        </p>\n        <span data-sq-id=\"q_f08:sq1\"></span>\n        <span data-sq-id=\"q_f08:sq2\"></span>"
+    },
+    "slots": [],
+    "optionGroups": [],
+    "subQuestions": [
+      {
+        "id": "q_f08:sq1",
+        "label": "（1）",
+        "stem": {
+          "html": "<span style=\"font-family: 宋体;\">下列对这首诗的理解和赏析，</span><span style=\"font-family: 宋体;\" em=\"\">不恰当</span><span style=\"font-family: 宋体;\">的一项是（<span style=\"font-family: &#x27;Times New Roman&#x27;\" qml-space-size=\"3\">     </span>）</span>\n                <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">【</span><span style=\"font-family: 宋体;\" em=\"\">提示</span><span style=\"font-family: 宋体;\">：请用2B铅笔将本题答案填涂在答题卡选择题区域的对应题号后】</span>\n                </p>\n                <span data-og-id=\"q_f08:sq1:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f08:sq1:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f08:sq1:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f08:sq1:og1",
+            "options": [
+              {
+                "id": "q_f08:sq1:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">这是一首七言律诗，写景自然流畅，于景物描绘中可以看出诗人的精神面貌。</span>"
+                }
+              },
+              {
+                "id": "q_f08:sq1:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">“野菊开时酒正浓”描绘了深秋时节野菊竞相开放、诗人与郡僚举杯畅饮的画面。</span>"
+                }
+              },
+              {
+                "id": "q_f08:sq1:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">颈联中“青松”意象耐人寻味，在斜日映照下，给人苍翠挺拔之感。</span>"
+                }
+              },
+              {
+                "id": "q_f08:sq1:og1:D",
+                "label": "D",
+                "content": {
+                  "html": "<span style=\"font-family: 宋体;\">本诗采用了虚实结合的手法，表达了诗人被贬后的抑郁悲愤之情。</span>"
+                }
+              }
+            ],
+            "cols": 1,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": []
+      },
+      {
+        "id": "q_f08:sq2",
+        "label": "（2）",
+        "stem": {
+          "html": "<span style=\"font-family: 宋体;\">赏析“霜林落后山</span><span style=\"font-family: 宋体;\" em=\"\">争</span><span style=\"font-family: 宋体;\">出”中“争”的妙处。</span>"
+        },
+        "slots": [
+          {
+            "id": "q_f08:sq2:bk",
+            "mechanism": "essay",
+            "grading": "none",
+            "optionGroupId": null,
+            "select": null,
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [],
+        "media": []
+      }
+    ],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "doc-sample-f08",
+        "sourceKind": "premium"
+      },
+      "typeId": null,
+      "typeName": "诗歌鉴赏",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "高中语文"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f08",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f08:sq1:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f08:sq1:og1:D"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f08:sq2:bk",
+        "answer": {
+          "kind": "rich",
+          "content": {
+            "html": "<span style=\"font-family: 宋体;\">示例1：“争”，运用了拟人的修辞手法，赋予群山人的情态，生动描绘出深秋霜林木落、景象萧疏，而群山仿佛争先恐后出现的画面，表现了诗人昂扬向上、傲岸不屈的精神。</span>\n            <p style=\"text-align: left;\"><span style=\"font-family: 宋体;\">示例2：“争”，化静为动，把静止的群山写活了，生动描绘出深秋霜林木落、景象萧疏，而群山仿佛争先恐后出现的画面，表现了诗人昂扬向上、傲岸不屈的精神。</span></p>"
+          }
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "分析",
+        "content": {
+          "html": "<span></span>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      },
+      {
+        "name": "(1)小问详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"font-family: 宋体;\">本题考查对诗歌内容的理解与赏析。</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">D.</span><span style=\"font-family: 宋体;\">有误，本诗采用了虚实结合的手法，特别是从“会须乘兴携佳客，踏雪来看群玉峰”可以看出，表达了诗人从容面对政治风雨的潇洒和从容。故选</span><span style=\"font-family: &#x27;Times New Roman&#x27;;\">D</span><span style=\"font-family: 宋体;\">。</span></p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f08:sq1"
+        }
+      },
+      {
+        "name": "(2)小问详解",
+        "content": {
+          "html": "<p style=\"\"><span style=\"font-family: 宋体;\">考查对词语的赏析。对于词语的赏析，要在把握诗文内容的基础上，结合诗文的主旨和具体的诗句分析作答。这类试题涉及到古诗的“炼字”技巧。采用答题格式是：先解释词语的意思，再结合诗句分析表达的内容，最后写其表达效果。诗句“霜林落后山争出”的“争”，是争相恐后的意思，这里运用拟人的修辞手法，同时又化静为动，赋予了“山”人的情态，生动形象地写出了秋霜下树林里木叶凋尽，众山显现的情景，表达了一种昂扬向上、傲岸不屈、豪放达观的精神，从而表现出诗人不畏政治风霜的风骨。据此理解赏析作答。</span>\n        </p>"
+        },
+        "scope": {
+          "kind": "sub-question",
+          "subQuestionId": "q_f08:sq2"
+        }
+      },
+      {
+        "name": "点睛",
+        "content": {
+          "html": "<p style=\"\"><span style=\"font-family: 宋体;\">赏析与译文：</span>\n        </p>\n            <p style=\"text-indent: 28px;\"><span style=\"font-family: 宋体;\">《怀嵩楼新开南轩与郡僚小饮》是北宋文学家欧阳修创作的一首七言律诗。首联写登上高楼，于云烟弥漫之中追怀历史、遥想古人，借古伤今，气氛凝重。中间两联回到现实，写眼前所见所闻，这两联视野开阔，人与物浑融无间。诗人把个人独特的精神气质寓于精炼的景物描写之中：颔联写霜后“争出”的峭拔山峰和凌霜盛开的菊花，表现出作者不畏政治风霜的嶙峋风骨；颈联则以“解带西风”的举止和暮色中挺立的青松，透射出自己从容面对政治风雨的那份潇洒和从容。尾联遥想冬日重游，气象恢宏，群山银妆素裹冰清玉洁之态，仍是以景物暗喻人品。</span>\n            </p>\n            <p style=\"\"><span style=\"font-family: 宋体;\">译文：</span></p>\n            <p style=\"text-indent: 28px;\"><span style=\"font-family: 宋体;\">环绕城郭的浓浓云烟，迷迷朦朦不知有多少重，唐时的名相曾经在此地怀念嵩洛感慨无穷。秋霜下树林里木叶凋尽，众山争相显露各自面容，野菊开放的美好时令，我们畅饮醇酒逸兴正浓。西风中飘来画角清哀的声音，我解开衣带胸怀更加豪雄，斜倚着楼上高栏观赏夕阳照在苍翠的青松。我将要乘着醉意带领佳客，冬雪皑皑时再踏上如玉的群峰。</span>\n            </p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      }
+    ],
+    "media": []
+  }
+}

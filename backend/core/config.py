@@ -261,6 +261,35 @@ class Settings(BaseSettings):
         keeps the card button disabled and only PayPal goes live."""
         return False
 
+    # --- Question bank (学科网 XOP) ---
+    # Credentials default empty so the app boots without an account; the http
+    # provider refuses to run until they are set.
+    xkw_app_id: str = ""
+    xkw_secret: str = ""
+    xkw_base_url: str = "https://openapi.xkw.com"
+    # 1 = documented sha1 scheme (Xop-Sign); 2 = hmac-sha256 (Xop-Sign-V2),
+    # only present in the official Java client — verify with a real account.
+    xkw_sign_version: int = 1
+    xkw_timeout_seconds: float = 15
+    # fixture | http. fixture serves the doc samples offline and never bills.
+    qbank_xkw_provider: str = "fixture"
+    # Master switch for building question sets (every build may cost money).
+    qbank_xkw_enabled: bool = True
+    qbank_max_calls_per_set: int = 2
+    qbank_global_daily_call_cap: int = 200
+    # Comma-separated profile UUIDs allowed to use the developer entry points.
+    qbank_admin_user_ids: str = ""
+    # Salt for the client_user_id sent to XKW (never the raw user UUID).
+    qbank_client_user_salt: str = ""
+
+    @property
+    def qbank_admin_user_id_set(self) -> frozenset[str]:
+        return frozenset(
+            part.strip().lower()
+            for part in self.qbank_admin_user_ids.split(",")
+            if part.strip()
+        )
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

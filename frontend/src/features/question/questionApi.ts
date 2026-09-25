@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { retryUnlessClientError } from '@/lib/apiUtils'
-import { mockQuestionSource } from '@/mock/question/mockQuestionSource'
 import type { AttemptResult, AttemptSubmission } from '@/types/question'
+import { httpQuestionSource } from './httpQuestionSource'
 import { QuestionApiError, type QuestionSource } from './questionSource'
 
-// 后端题库接口尚未交付（契约仍是提案），数据暂由 fixture 适配器提供。
-// 接口交付后在这里换成基于 apiClient 的实现；hooks 签名不变。
-const source: QuestionSource = mockQuestionSource
+const source: QuestionSource = httpQuestionSource
+
+// 题组还在后台出题（status = generating）时的轮询间隔；就绪/空/失败后自停。
+const GENERATING_POLL_MS = 2000
 
 export const questionSetsQueryRootKey = ['question-sets'] as const
 
@@ -43,15 +44,25 @@ export function useQuestionSetQuery(setId: string | undefined) {
     enabled: Boolean(setId),
     // 作答期间题面不应在背后被替换；版本变化由提交时的 contentVersion 校验兜住。
     staleTime: Infinity,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'generating' ? GENERATING_POLL_MS : false,
     retry: retryUnlessBusinessError,
   })
 }
 
-export function useAttemptResultsQuery(setId: string, sessionId: string) {
+/**
+ * 服务端当前作答会话里已判分的结果作为初值（逐题模式刷新后恢复锁定）；
+ * 之后的结果只由提交成功时写入（见 useSubmitAttemptsMutation）。
+ */
+export function useAttemptResultsQuery(
+  setId: string,
+  sessionId: string,
+  initialResults: AttemptResult[] = []
+) {
   return useQuery({
     queryKey: attemptResultsQueryKey(setId, sessionId),
-    // 新会话没有结果；结果只由提交成功时写入（见 useSubmitAttemptsMutation）。
-    queryFn: (): AttemptResult[] => [],
+    queryFn: (): AttemptResult[] => initialResults,
+    initialData: initialResults,
     staleTime: Infinity,
   })
 }

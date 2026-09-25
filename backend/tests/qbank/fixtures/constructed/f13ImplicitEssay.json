@@ -1,0 +1,70 @@
+{
+  "name": "f13ImplicitEssay",
+  "view": {
+    "id": "q_f13",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "none",
+    "stem": {
+      "html": "<p>一辆汽车从静止开始做匀加速直线运动，经过 <math latex=\"$t=10\\,\\mathrm{s}$\"><mrow><mi>t</mi><mo>=</mo><mn>10</mn><mtext>&nbsp;s</mtext></mrow></math> 速度达到 <math latex=\"$v=20\\,\\mathrm{m/s}$\"><mrow><mi>v</mi><mo>=</mo><mn>20</mn><mtext>&nbsp;m/s</mtext></mrow></math>。求：</p><p>汽车的加速度大小，以及这段时间内通过的位移。</p>"
+    },
+    "slots": [
+      {
+        "id": "q_f13:bk",
+        "mechanism": "essay",
+        "grading": "none",
+        "optionGroupId": null,
+        "select": null,
+        "blank": null,
+        "anchored": false
+      }
+    ],
+    "optionGroups": [],
+    "subQuestions": [],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "constructed-f13",
+        "sourceKind": "other"
+      },
+      "typeId": null,
+      "typeName": "解答题",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "高中物理"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f13",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f13:bk",
+        "answer": {
+          "kind": "rich",
+          "content": {
+            "html": "<p>加速度 <math latex=\"$a=2\\,\\mathrm{m/s^2}$\"><mrow><mi>a</mi><mo>=</mo><mn>2</mn><mtext>&nbsp;m/s²</mtext></mrow></math>，位移 <math latex=\"$x=100\\,\\mathrm{m}$\"><mrow><mi>x</mi><mo>=</mo><mn>100</mn><mtext>&nbsp;m</mtext></mrow></math>。</p>"
+          }
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [
+      {
+        "name": "详解",
+        "content": {
+          "html": "<p>由 <math latex=\"$v=at$\"><mrow><mi>v</mi><mo>=</mo><mi>a</mi><mi>t</mi></mrow></math> 得 <math latex=\"$a=\\frac{v}{t}=\\frac{20}{10}=2\\,\\mathrm{m/s^2}$\"><mrow><mi>a</mi><mo>=</mo><mfrac><mi>v</mi><mi>t</mi></mfrac><mo>=</mo><mfrac><mn>20</mn><mn>10</mn></mfrac><mo>=</mo><mn>2</mn></mrow></math>；</p><p>由 <math latex=\"$x=\\frac{1}{2}at^2$\"><mrow><mi>x</mi><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>a</mi><msup><mi>t</mi><mn>2</mn></msup></mrow></math> 得 <math latex=\"$x=100\\,\\mathrm{m}$\"><mrow><mi>x</mi><mo>=</mo><mn>100</mn></mrow></math>。</p>"
+        },
+        "scope": {
+          "kind": "question"
+        }
+      }
+    ],
+    "media": []
+  }
+}

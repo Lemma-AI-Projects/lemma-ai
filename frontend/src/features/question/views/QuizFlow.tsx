@@ -86,7 +86,7 @@ function QuizFlowSession({
   const [index, setIndex] = useState(0)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const responses = useAttemptResponses()
-  const resultsQuery = useAttemptResultsQuery(set.id, sessionId)
+  const resultsQuery = useAttemptResultsQuery(set.id, sessionId, set.openAttempt?.results)
   const submitMutation = useSubmitAttemptsMutation(set.id, sessionId)
 
   const results = useMemo(
@@ -317,7 +317,13 @@ function QuizFlowLoader({ setId, onPhaseChange, ...rest }: QuizFlowProps) {
   const [sessionId] = useState(() => crypto.randomUUID())
   const [stage, setStage] = useState<Stage>('instructions')
   const setQuery = useQuestionSetQuery(setId)
-  const phase: QuizFlowPhase = setQuery.isPending ? 'loading' : setQuery.isError ? 'error' : stage
+  const setStatus = setQuery.data?.status
+  const phase: QuizFlowPhase =
+    setQuery.isPending || setStatus === 'generating'
+      ? 'loading'
+      : setQuery.isError || setStatus === 'empty' || setStatus === 'failed'
+        ? 'error'
+        : stage
 
   useEffect(() => {
     onPhaseChange?.(phase)
@@ -341,6 +347,21 @@ function QuizFlowLoader({ setId, onPhaseChange, ...rest }: QuizFlowProps) {
             重试
           </Button>
         ) : null}
+      </CenteredNotice>
+    )
+  }
+  if (setStatus === 'generating') {
+    return (
+      <CenteredNotice>
+        <Spinner className="size-5" />
+        正在出题…
+      </CenteredNotice>
+    )
+  }
+  if (setStatus === 'empty' || setStatus === 'failed') {
+    return (
+      <CenteredNotice>
+        <p>{setStatus === 'empty' ? '没有找到足够的可作答题目' : '出题失败'}</p>
       </CenteredNotice>
     )
   }

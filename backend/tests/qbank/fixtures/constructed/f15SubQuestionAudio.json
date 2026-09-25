@@ -1,0 +1,178 @@
+{
+  "name": "f15SubQuestionAudio",
+  "view": {
+    "id": "q_f15",
+    "contentVersion": "fixture-v1",
+    "structure": "parsed",
+    "numbering": "sequential",
+    "stem": {
+      "html": "<p>听下面一段对话，回答两个小题。</p><span data-sq-id=\"q_f15:sq1\"></span><span data-sq-id=\"q_f15:sq2\"></span>"
+    },
+    "slots": [],
+    "optionGroups": [],
+    "subQuestions": [
+      {
+        "id": "q_f15:sq1",
+        "label": "1.",
+        "stem": {
+          "html": "<p>Where does the conversation most probably take place?</p><span data-og-id=\"q_f15:sq1:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f15:sq1:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f15:sq1:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f15:sq1:og1",
+            "options": [
+              {
+                "id": "q_f15:sq1:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "At a ticket office."
+                }
+              },
+              {
+                "id": "q_f15:sq1:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "In a concert hall."
+                }
+              },
+              {
+                "id": "q_f15:sq1:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "At a bus stop."
+                }
+              }
+            ],
+            "cols": 3,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": [
+          {
+            "kind": "audio",
+            "src": "https://img.xkw.com/dksih/QBM/2020/4/22/2446810145964032/2446836295442432/STEM/17f4974913624373ada3ee58adef479c.mp3",
+            "title": null,
+            "durationSeconds": 11,
+            "poster": null
+          }
+        ]
+      },
+      {
+        "id": "q_f15:sq2",
+        "label": "2.",
+        "stem": {
+          "html": "<p>How long have people been waiting in line?</p><span data-og-id=\"q_f15:sq2:og1\"></span>"
+        },
+        "slots": [
+          {
+            "id": "q_f15:sq2:bk",
+            "mechanism": "choice",
+            "grading": "auto",
+            "optionGroupId": "q_f15:sq2:og1",
+            "select": "single",
+            "blank": null,
+            "anchored": false
+          }
+        ],
+        "optionGroups": [
+          {
+            "id": "q_f15:sq2:og1",
+            "options": [
+              {
+                "id": "q_f15:sq2:og1:A",
+                "label": "A",
+                "content": {
+                  "html": "For one hour."
+                }
+              },
+              {
+                "id": "q_f15:sq2:og1:B",
+                "label": "B",
+                "content": {
+                  "html": "For two hours."
+                }
+              },
+              {
+                "id": "q_f15:sq2:og1:C",
+                "label": "C",
+                "content": {
+                  "html": "For three hours."
+                }
+              }
+            ],
+            "cols": 3,
+            "layout": "table",
+            "reuse": null,
+            "anchored": true
+          }
+        ],
+        "media": [
+          {
+            "kind": "audio",
+            "src": "https://img.xkw.com/dksih/QBM/2020/4/22/2446810145964032/2446836295442432/STEM/17f4974913624373ada3ee58adef479c.mp3",
+            "title": null,
+            "durationSeconds": 11,
+            "poster": null
+          }
+        ]
+      }
+    ],
+    "media": [],
+    "meta": {
+      "source": {
+        "provider": "xkw",
+        "externalId": "constructed-f15",
+        "sourceKind": "other"
+      },
+      "typeId": null,
+      "typeName": "听力理解",
+      "difficulty": null,
+      "difficultyLevel": null,
+      "knowledgePoints": [],
+      "years": [],
+      "sourcePapers": [],
+      "courseName": "初中英语"
+    },
+    "raw": null
+  },
+  "review": {
+    "questionId": "q_f15",
+    "contentVersion": "fixture-v1",
+    "referenceAnswers": [
+      {
+        "slotId": "q_f15:sq1:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f15:sq1:og1:A"
+          ]
+        }
+      },
+      {
+        "slotId": "q_f15:sq2:bk",
+        "answer": {
+          "kind": "options",
+          "optionIds": [
+            "q_f15:sq2:og1:B"
+          ]
+        }
+      }
+    ],
+    "answerFallback": null,
+    "explanation": [],
+    "media": []
+  }
+}
