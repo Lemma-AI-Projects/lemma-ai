@@ -2,7 +2,7 @@ import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { DocEditorView } from '@/features/docs/DocEditorView'
 import { AppLayout } from '@/layouts/AppLayout'
-import { GlobalBoardSandboxPage } from '@/pages/GlobalBoardSandboxPage'
+import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
@@ -73,8 +73,8 @@ const routes: RouteObject[] = [
     element: <RequireAuth />,
     children: [
       {
-        path: 'sandbox/global-board',
-        element: <GlobalBoardSandboxPage />,
+        path: 'sandbox/board',
+        element: <BoardSandboxPage />,
       },
       {
         // 学习空间工作台：全屏白色画布 + 自带顶栏，参考稿里没有侧栏，

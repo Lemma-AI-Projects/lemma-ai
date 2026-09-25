@@ -1,21 +1,21 @@
 /**
- * Global Board: the learn space's board surface.
+ * Board: a pan/zoom board surface (dot grid, drag to pan, zoom controls).
  *
- * The name says which board this is, because "board" alone stopped meaning one
- * thing in this codebase:
+ * Naming, because two different things in this codebase have been called
+ * "Board" and it cost us a wrong rename once — read this before renaming again:
  *
- * - **Global Board** (this file) — the surface the learn space lives on. It owns
- *   the viewport (pan, zoom, grid) and draws nothing itself: whatever sits on it
- *   arrives as `children`. The Global Agent belongs to this side of the product,
- *   not to any single course.
- * - **Teaching board** — `features/free-course/session/Whiteboard.tsx`, the board
- *   one lesson is taught on. The model writes on it, the learner can only click
- *   what it is waiting for, and it renders one lesson's action stream.
+ * - **This file** — a generic board *surface*: it owns the viewport (pan, zoom,
+ *   grid) and draws nothing itself, whatever sits on it arrives as `children`.
+ *   Added 2026-09-22 (`625e6869`) for the board sandbox page; its only consumer
+ *   is `pages/BoardSandboxPage.tsx`.
+ * - **The learn space board** — `features/board/{BoardCanvas,board.css,
+ *   BoardDemoPage}.tsx` on the `main` branch: a tldraw-based board embedded in
+ *   learn space, with per-space snapshots (`lemma-board-{id}`) and autosave.
+ *   That file sat at *this same path* in August (`6f7370e6`, `3cb29ad6`) and was
+ *   later replaced here; it does **not** exist on `LS-lab`.
  *
- * Two separate implementations on purpose (different data models, different
- * interactions). The teaching board is written as a self-contained component so
- * it *could* be placed on this surface later; until that is decided, neither
- * imports the other.
+ * So the two are same-name-different-thing, and the learn space board is the
+ * one people mean by "Global Board".
  */
 
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
@@ -48,7 +48,7 @@ function zoomAround(viewport: Viewport, factor: number, x: number, y: number): V
   }
 }
 
-export function GlobalBoardCanvas({ children }: { children?: ReactNode }) {
+export function BoardCanvas({ children }: { children?: ReactNode }) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
   const [viewport, setViewport] = useState(INITIAL_VIEWPORT)
@@ -152,7 +152,7 @@ export function GlobalBoardCanvas({ children }: { children?: ReactNode }) {
       <div
         ref={surfaceRef}
         role="region"
-        aria-label="Global Board 画布"
+        aria-label="白板画布"
         tabIndex={0}
         onPointerDown={startDrag}
         onPointerMove={moveDrag}
