@@ -33,6 +33,11 @@ REMEMBER = "remember"
 # Learner State: the ONE write path into the knowledge state. The agent may
 # record what the learner actually did; it may never declare what they know.
 RECORD_EVIDENCE = "record_evidence"
+# User Home (Global User Layer): the agent's ONLY way to reach the layer that
+# follows the learner between spaces — and it can only PROPOSE. Confirming is the
+# user's own act on their Home page; no tool exists that confirms, and no tool
+# writes a confirmed line. One-off requests are not proposals.
+PROPOSE_HOME_PREFERENCE = "propose_home_preference"
 
 _REGISTRY: dict[str, ToolSpec] = {
     LOAD_POINT_VIDEO: ToolSpec(
@@ -224,6 +229,38 @@ _REGISTRY: dict[str, ToolSpec] = {
                 },
             },
             "required": ["item", "verdict", "reasoning"],
+        },
+    ),
+    PROPOSE_HOME_PREFERENCE: ToolSpec(
+        name=PROPOSE_HOME_PREFERENCE,
+        description=(
+            "提议把一条**长期**信息记进用户的 Home —— 那一层跨空间跟着他走："
+            "换到别的学习空间、别的对话，都还成立。\n"
+            "适合：他明确说这是长期的（例：「以后都尽量简洁一点」「我一直对"
+            "哲学感兴趣」「我是做前端的」）。\n"
+            "**不适合**：一次性的要求（例：「这次讲详细一点」「这道题用中文讲」）"
+            "—— 那属于这次对话，不要提议。也不适合：关于他会不会的判断"
+            "（那是 record_evidence）、这个空间里发生过的事（那是 remember）。\n"
+            "kind：preference = 他希望你怎么教他；interest = 他长期关注的方向。\n"
+            "text 写成**他的口吻、脱离上下文也看得懂**的一句话，别写「刚才说的那个」。\n"
+            "调用成功后：**这只是提议，没有生效**。必须如实告诉用户「我先记着，"
+            "你去 Home 页确认一下才会长期生效」，**绝不能说已经记住了**。"
+            "已经提议过（返回 already_proposed）就不要再说了。"
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": ["preference", "interest"],
+                    "description": "preference=教学偏好；interest=长期兴趣",
+                },
+                "text": {
+                    "type": "string",
+                    "description": "这条长期信息本身，一句话，脱离上下文也看得懂",
+                },
+            },
+            "required": ["kind", "text"],
         },
     ),
 }

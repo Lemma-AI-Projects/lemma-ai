@@ -43,6 +43,10 @@ EXCERPT_PER_SOURCE_CHARS = 2400
 MEMORY_LIST_CAP = 20
 MEMORY_ITEM_CHARS = 400
 
+# Space preferences are one-liners and there are rarely more than a few; past
+# this the list has stopped being a setting and become a rules document.
+PREFERENCE_LIST_CAP = 10
+
 KIND_LABELS: dict[str, str] = {
     "note": "note",
     "canvas": "canvas",
@@ -97,6 +101,21 @@ class SpaceMemoryRef:
     created_at: str = ""
 
 
+@dataclass(frozen=True)
+class SpacePreferenceRef:
+    """One standing preference of this space, as the agent sees it.
+
+    Deliberately separate from Space Memory: a memory is something that HAPPENED
+    here, a preference is how the user wants to be taught HERE. It is the middle
+    layer of conversation > space > Home, and the only layer that may contradict
+    Home without changing it.
+    """
+
+    id: str
+    text: str
+    created_at: str = ""
+
+
 def _size(chars: int) -> str:
     if chars >= 1000:
         return f"{chars / 1000:.1f}k chars"
@@ -111,6 +130,7 @@ def render_space_context(
     conversations: list[SpaceConversationRef],
     memories: list[SpaceMemoryRef] | None = None,
     memory_total: int = 0,
+    preferences: list[SpacePreferenceRef] | None = None,
     history_messages: int = 0,
 ) -> str:
     """The Global Agent's context block for one turn.
@@ -182,6 +202,21 @@ def render_space_context(
                 f"  …and {hidden} older memory item(s) not shown here."
             )
 
+    if preferences:
+        sections.extend(
+            [
+                "",
+                "- This space's standing preferences — how the user wants to be "
+                "taught HERE. They outrank their Home (which is global) and are "
+                "outranked by what they ask for in this turn:",
+            ]
+        )
+        for preference in preferences[:PREFERENCE_LIST_CAP]:
+            text = preference.text.strip()
+            if len(text) > MEMORY_ITEM_CHARS:
+                text = text[:MEMORY_ITEM_CHARS] + "…"
+            sections.append(f"  - {text}")
+
     if conversations:
         sections.extend(
             [
@@ -213,6 +248,10 @@ def render_space_context(
             "Use it when it bears on the request (continuing a plan, a reason "
             "behind an earlier choice); when it does not, do not force it into "
             "the answer and do not recite the list unprompted.",
+            "- A learner's Home is GLOBAL and this space's preferences are LOCAL. "
+            "If they disagree, follow the space here (and the current turn above "
+            "both) — but never rewrite Home to match a space or a single turn. "
+            "Nothing you can call writes Home without the user confirming it.",
             "- When the user makes a decision, sets a plan, states a preference, "
             "or asks you to remember something, call remember FIRST (one or two "
             "sentences that still make sense out of context), then answer. Say "

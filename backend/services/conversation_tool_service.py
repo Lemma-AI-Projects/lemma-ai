@@ -39,6 +39,7 @@ from pydantic import BaseModel, ValidationError
 
 from ai import (
     LOAD_SKILL,
+    PROPOSE_HOME_PREFERENCE,
     READ_CURRENT_GRAPH,
     READ_PAGE,
     RECORD_EVIDENCE,
@@ -68,6 +69,7 @@ from services import (
     doc_service,
     knowledge_service,
     space_memory_service,
+    user_home_service,
 )
 
 
@@ -675,6 +677,67 @@ def build_global_tools(
             }
         yield ToolResult(response=response)
 
+    async def propose_home_preference_handler(
+        call: ToolCall,
+    ) -> AsyncIterator[ToolProgress | ToolResult]:
+        """Propose a line for the learner's Home — and never write one.
+
+        The only tool that reaches the GLOBAL layer, and it deliberately cannot
+        make anything true: the row lands as `status="candidate"`,
+        `origin="agent"`, and every prompt reads confirmed rows only. Confirming
+        is the user's own act on their Home page; there is no tool for it, and
+        that is the design rather than a gap.
+
+        So the wording here matters as much as the write: the model is told to
+        say it is a *proposal* and point at Home. A learner who believes a
+        preference is already in effect gets a surprise on the next turn, when
+        the context still does not contain it.
+
+        No `project_id` gate — Home is the one thing that is true outside a
+        space, so this is the only write tool that works in a space-less
+        conversation.
+        """
+        kind = str(call.args.get("kind", "")).strip()
+        text = str(call.args.get("text", "")).strip()
+        if kind not in ("preference", "interest") or not text:
+            yield ToolResult(
+                response={
+                    "status": "invalid",
+                    "note": "kind 必须是 preference 或 interest，text 不能为空。",
+                }
+            )
+            return
+        async with AsyncSessionLocal() as db:
+            try:
+                item, created = await user_home_service.add_item(
+                    db,
+                    user_id=user_id,
+                    kind=kind,
+                    text=text,
+                    status="candidate",
+                    origin="agent",
+                    conversation_id=conversation_id,
+                    project_id=project_id,
+                )
+            except ValueError as exc:
+                yield ToolResult(response={"status": "invalid", "note": str(exc)})
+                return
+        yield ToolResult(
+            response={
+                "status": "proposed" if created else "already_proposed",
+                "id": str(item.id),
+                "text": item.text,
+                "note": (
+                    "已作为**待确认**项放进他的 Home 页，现在**还没有生效**。"
+                    "请告诉他：去 Home 页（左侧 Home）确认一下才会长期生效。"
+                    "不要说「已经记住了」。"
+                    if created
+                    else "这条之前已经提议过，还在等他确认，没有重复添加。"
+                    "不要再提这件事。"
+                ),
+            }
+        )
+
     return [
         ToolBinding(spec=tool_spec(LOAD_SKILL), handler=load_skill_handler),
         *(
@@ -689,4 +752,9 @@ def build_global_tools(
         ToolBinding(spec=tool_spec(SAVE_NOTE), handler=save_note_handler),
         ToolBinding(spec=tool_spec(REMEMBER), handler=remember_handler),
         ToolBinding(spec=tool_spec(RECORD_EVIDENCE), handler=record_evidence_handler),
+        # The global layer's only door, and it only opens a proposal.
+        ToolBinding(
+            spec=tool_spec(PROPOSE_HOME_PREFERENCE),
+            handler=propose_home_preference_handler,
+        ),
     ]

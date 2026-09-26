@@ -42,13 +42,20 @@ from ai.prompts.space_context import (
     SpaceConversationRef,
     SpaceExcerptRef,
     SpaceMemoryRef,
+    SpacePreferenceRef,
     SpaceSourceRef,
     render_space_context,
 )
+from ai.prompts.user_home import render_preference_stack, render_user_home
 from models.ai_conversation import AiConversation, AiMessage
 from models.doc import Block, Page
 from models.project import Project
-from services import knowledge_service, space_memory_service
+from services import (
+    knowledge_service,
+    space_memory_service,
+    space_preference_service,
+    user_home_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +98,18 @@ class AgentContext:
     # number anywhere.
     learner_ready: list[str] = field(default_factory=list)
     history_messages: int = 0
+    # The learner's Home — the only GLOBAL layer in this turn. Read on every turn
+    # in every space, so "the agent knows the same person in Space A and Space B"
+    # is a property of the assembly rather than of the caller. Empty when the
+    # learner has not filled anything in.
+    home_block: str = ""
+    home_summary: dict = field(default_factory=dict)
+    # This space's standing preferences (the middle layer).
+    space_preferences: list[SpacePreferenceRef] = field(default_factory=list)
+    # The concrete stacking of conversation > space > Home for THIS turn. Only
+    # the layers that are actually set appear; a single layer produces no stack,
+    # because nothing can conflict with it.
+    preference_layers: list[dict] = field(default_factory=list)
     prompt_block: str = ""
 
     @property
@@ -144,6 +163,17 @@ class AgentContext:
                 "included": bool(self.learner_state_block),
                 "ready": list(self.learner_ready),
             },
+            # Home is GLOBAL: it is the same in every space, so the panel can
+            # show it next to the space block and the difference is visible.
+            "home": self.home_summary,
+            "spacePreferences": [
+                {"id": preference.id, "text": preference.text}
+                for preference in self.space_preferences
+            ],
+            # Most specific first. Order IS the rule (conversation > space >
+            # home); the panel prints them in this order for the same reason the
+            # prompt does.
+            "preferenceLayers": list(self.preference_layers),
             "historyMessages": self.history_messages,
             "promptChars": self.prompt_chars,
             "excerptChars": self.excerpt_chars,
@@ -418,6 +448,32 @@ async def build_agent_context(
         db, user_id=user_id, project_id=project_id
     )
 
+    # Home is read HERE, on every turn, in every space — that is the whole
+    # mechanism behind "the agent knows the same person in Space A and Space B".
+    # It goes FIRST in the block below because it is the least specific layer in
+    # it, and the prompt states that order rather than leaving it to be guessed.
+    home = await user_home_service.read_user_home(db, user_id=user_id)
+    home_block = render_user_home(home)
+    home_summary = {
+        # `global: True` is not decoration: the panel shows Home and the space
+        # side by side, and the reader has to know which one follows the learner.
+        "global": True,
+        "language": home.language,
+        "background": home.background,
+        "interests": home.interests,
+        "preferences": home.preferences,
+        # A COUNT, not the texts: a candidate is a question for the user, and
+        # quoting it here would let the model answer it on their behalf.
+        "candidates": len(home.candidates),
+    }
+
+    preference_rows = await space_preference_service.list_for_space(
+        db, user_id=user_id, project_id=project_id
+    )
+    space_preferences = [
+        SpacePreferenceRef(id=str(row.id), text=row.text) for row in preference_rows
+    ]
+
     space_block = render_space_context(
         space_name=space.name,
         sources=sources,
@@ -425,17 +481,37 @@ async def build_agent_context(
         conversations=prompt_conversations,
         memories=memories,
         memory_total=memory_total,
+        preferences=space_preferences,
         history_messages=history_messages,
     )
     learner_block, learner_ready = await _learner_state_block(
         db, user_id=user_id, project_id=project_id
     )
+
+    # conversation > space > Home, most specific first. The conversation's own
+    # layer is `ai_conversations.method` — the only conversation-scoped
+    # preference the product stores. A one-off request ("explain THIS in
+    # detail") needs no row of its own: it is already the last thing in the chat
+    # history, and the block below spells out which layer wins so the model does
+    # not have to guess. Nothing here writes anything, which is what makes
+    # "a conversation can override Home but never edit it" structural.
+    layers = user_home_service.preference_layers(
+        home=home.preferences,
+        space=[row.text for row in preference_rows],
+        conversation=await user_home_service.conversation_note(
+            db, conversation_id=current_conversation_id
+        ),
+    )
+    preference_block = render_preference_stack(layers)
+
     # One variable, one block: the model receives ONE context, and the Context
     # Inspector's promise is that `promptBlock` is the literal text it got —
     # splitting learner state into a second prompt variable would make the
     # inspector partial. The split lives in the digest instead, for humans.
-    prompt_block = (
-        f"{space_block}\n\n{learner_block}" if learner_block else space_block
+    prompt_block = "\n\n".join(
+        part
+        for part in (home_block, space_block, learner_block, preference_block)
+        if part
     )
     return AgentContext(
         space_id=space.id,
@@ -449,6 +525,12 @@ async def build_agent_context(
         learner_state_block=learner_block,
         learner_ready=learner_ready,
         history_messages=history_messages,
+        home_block=home_block,
+        home_summary=home_summary,
+        space_preferences=space_preferences,
+        preference_layers=[
+            {"scope": layer.scope, "text": layer.text} for layer in layers
+        ],
         prompt_block=prompt_block,
     )
 

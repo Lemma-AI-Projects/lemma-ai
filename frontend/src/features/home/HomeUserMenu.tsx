@@ -178,6 +178,14 @@ export function HomeUserMenu() {
 
         <ActionMenuSeparator />
 
+        {/* Home 不是一个设置项：它回答「Lemma 眼里的我是谁」，而且是唯一一层
+            跨学习空间跟着用户走的信息（Global User Layer V0）。所以它排在最前，
+            在「个性化 / 个人资料 / 设置」之上。 */}
+        <ActionMenuItem
+          label="Home"
+          icon={UserRound}
+          onSelect={() => navigate('/me')}
+        />
         <ActionMenuItem
           label="Credits"
           icon={Coins}

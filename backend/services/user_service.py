@@ -59,3 +59,28 @@ async def get_or_create_profile(
 
     await db.refresh(profile)
     return profile
+
+
+async def update_profile(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    nickname: str | None = None,
+    nickname_set: bool = False,
+) -> Profile:
+    """Write the fields a user owns about their own identity.
+
+    `nickname_set` (rather than `nickname is not None`) is what lets the API
+    distinguish "leave it alone" from "clear it" — clearing a nickname is a real
+    request, and `None` alone cannot express both.
+
+    The row is provisioned on demand, so a PATCH that arrives before the user's
+    first GET still lands on a profile.
+    """
+    profile = await get_or_create_profile(db, user_id=user_id, email=None)
+    if nickname_set:
+        cleaned = (nickname or "").strip()
+        profile.nickname = cleaned or None
+        await db.commit()
+        await db.refresh(profile)
+    return profile

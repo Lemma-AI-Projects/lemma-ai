@@ -15,6 +15,7 @@ import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBluepr
 import { FreeCourseDetailView } from '@/features/free-course/FreeCourseDetailView'
 import { FreeCourseLessonView } from '@/features/free-course/FreeCourseLessonView'
 import { TeachingSessionView } from '@/features/free-course/session/TeachingSessionView'
+import { UserHomePage } from '@/features/user-home/UserHomePage'
 import { CreditsPage } from '@/pages/CreditsPage'
 import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
 import { HomePage } from '@/pages/HomePage'
@@ -146,6 +147,12 @@ const routes: RouteObject[] = [
           {
             path: 'plugins',
             element: <PluginsPage />,
+          },
+          {
+            // Home（Global User Layer V0）：跨学习空间跟着用户走的那一页。
+            // 注意路由不叫 /home —— 那是 app 首页（New chat）。
+            path: 'me',
+            element: <UserHomePage />,
           },
           {
             // 可选 id：/chat 为新会话态，采纳预生成 id 后 replace 为

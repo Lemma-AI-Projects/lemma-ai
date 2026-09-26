@@ -28,6 +28,7 @@ from ai.streaming import encode_chunk
 from ai.tools import (
     LOAD_POINT_VIDEO,
     LOAD_SKILL,
+    PROPOSE_HOME_PREFERENCE,
     READ_CURRENT_GRAPH,
     RECORD_EVIDENCE,
     READ_PAGE,
@@ -72,6 +73,7 @@ async def shutdown_ai_runtime() -> None:
 __all__ = [
     "LOAD_POINT_VIDEO",
     "LOAD_SKILL",
+    "PROPOSE_HOME_PREFERENCE",
     "READ_CURRENT_GRAPH",
     "RECORD_EVIDENCE",
     "READ_PAGE",

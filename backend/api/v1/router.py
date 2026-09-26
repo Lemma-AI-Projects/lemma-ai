@@ -20,6 +20,7 @@ from api.v1 import (
     qbank_admin,
     question_sets,
     scheduled_tasks,
+    user_home,
     users,
     webhooks,
 )
@@ -27,6 +28,9 @@ from api.v1 import (
 api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(users.router)
+# User Home（Global User Layer V0）：跨空间跟着用户走的那一层。
+# 只读/写「人」；空间级偏好挂在 /projects/{id}/preferences，两条路由分开。
+api_router.include_router(user_home.router)
 api_router.include_router(chat.router)
 api_router.include_router(conversations.router)
 api_router.include_router(projects.router)

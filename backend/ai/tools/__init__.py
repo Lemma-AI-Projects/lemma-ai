@@ -7,6 +7,7 @@ loop lives in the AIClient facade; framework translation in ai/conversion.py.
 from ai.tools.declarations import (
     LOAD_POINT_VIDEO,
     LOAD_SKILL,
+    PROPOSE_HOME_PREFERENCE,
     READ_CURRENT_GRAPH,
     RECORD_EVIDENCE,
     READ_PAGE,
@@ -28,6 +29,7 @@ from ai.tools.types import (
 __all__ = [
     "LOAD_POINT_VIDEO",
     "LOAD_SKILL",
+    "PROPOSE_HOME_PREFERENCE",
     "READ_CURRENT_GRAPH",
     "RECORD_EVIDENCE",
     "READ_PAGE",

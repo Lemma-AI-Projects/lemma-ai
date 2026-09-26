@@ -9,6 +9,7 @@ import {
   LibraryBig,
   Puzzle,
   SquarePen,
+  UserRound,
 } from 'lucide-react'
 import { Link, Outlet } from 'react-router-dom'
 import { cn } from '@/lib/utils'
@@ -67,6 +68,9 @@ export function AppLayout() {
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
+        {/* Home：跨学习空间跟着用户走的那一层（Global User Layer V0）。路由不叫
+            /home —— 那是 app 首页；这一页在 /me。 */}
+        <SidebarItem icon={UserRound} label="Home" to="/me" />
         <div
           className={cn(
             'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',

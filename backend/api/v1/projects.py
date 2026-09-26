@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -12,7 +12,13 @@ from schemas.project import (
     ProjectOut,
     ProjectUpdateIn,
 )
-from services import agent_context_service, conversation_service, project_service
+from schemas.user_home import SpacePreferenceIn, SpacePreferenceOut
+from services import (
+    agent_context_service,
+    conversation_service,
+    project_service,
+    space_preference_service,
+)
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -154,3 +160,76 @@ async def delete_project(
     project = await _owned_or_404(db, current_user, project_id)
     # Conversations inside fall back to the main list (FK SET NULL).
     await project_service.delete_project(db, project)
+
+
+# --- space preferences: the middle layer of conversation > space > Home -------
+
+
+@router.get("/{project_id}/preferences", response_model=list[SpacePreferenceOut])
+async def list_space_preferences(
+    project_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[SpacePreferenceOut]:
+    """This space's standing preferences, oldest first.
+
+    Lives under the space on purpose: the Home endpoints must not be able to
+    write one of these, and a space preference must not be able to reach Home.
+    Two owners, two routes.
+    """
+    await _owned_or_404(db, current_user, project_id)
+    rows = await space_preference_service.list_for_space(
+        db, user_id=current_user.id, project_id=project_id
+    )
+    return [SpacePreferenceOut.model_validate(row) for row in rows]
+
+
+@router.post(
+    "/{project_id}/preferences",
+    response_model=SpacePreferenceOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_space_preference(
+    project_id: uuid.UUID,
+    payload: SpacePreferenceIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SpacePreferenceOut:
+    """Set how this space teaches — without touching the learner's Home.
+
+    Idempotent on identical text: re-sending the same preference returns the
+    existing row rather than stacking duplicates, so a client can be careless
+    about retries.
+    """
+    await _owned_or_404(db, current_user, project_id)
+    try:
+        row = await space_preference_service.set_preference(
+            db,
+            user_id=current_user.id,
+            project_id=project_id,
+            text=payload.text,
+            conversation_id=payload.source_conversation_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if row is None:
+        raise _NOT_FOUND
+    return SpacePreferenceOut.model_validate(row)
+
+
+@router.delete(
+    "/{project_id}/preferences/{preference_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_space_preference(
+    project_id: uuid.UUID,
+    preference_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    await _owned_or_404(db, current_user, project_id)
+    if not await space_preference_service.delete_preference(
+        db, user_id=current_user.id, preference_id=preference_id
+    ):
+        raise HTTPException(status_code=404, detail="not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
