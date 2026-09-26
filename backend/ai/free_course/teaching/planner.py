@@ -21,10 +21,12 @@ from ai.free_course.sources import SourceMaterial
 from ai.free_course.teaching.types import (
     MAX_ACTIONS_PER_STEP,
     MAX_BLOCKS_PER_STEP,
+    MAX_MARKS_PER_BLOCK,
     MAX_NARRATION_CHARS,
     MAX_STEPS_PER_PLAN,
     BoardAction,
     BoardBlock,
+    BoardMark,
     SessionSignal,
     SessionStepRef,
     TeachingQuestion,
@@ -346,24 +348,21 @@ def _bound_blocks(raw_blocks: list[BoardBlock], cue_count: int) -> list[BoardBlo
         kind = raw.kind
         text = (raw.text or "").strip()
         cue = _cue(raw.cue, cue_count)
+        built: BoardBlock | None = None
         if kind in ("heading", "text"):
             if not text:
                 continue
-            blocks.append(
-                BoardBlock(kind=kind, cue=cue, text=text, color=raw.color)
-            )
+            built = BoardBlock(kind=kind, cue=cue, text=text, color=raw.color)
         elif kind == "formula":
             if not text:
                 continue
-            blocks.append(
-                BoardBlock(kind="formula", cue=cue, text=text, color=raw.color)
-            )
+            built = BoardBlock(kind="formula", cue=cue, text=text, color=raw.color)
         elif kind == "bullets":
             items = [item.strip() for item in raw.items if item.strip()]
             if not items:
                 continue
-            blocks.append(
-                BoardBlock(kind="bullets", cue=cue, items=items[:5], color=raw.color)
+            built = BoardBlock(
+                kind="bullets", cue=cue, items=items[:5], color=raw.color
             )
         elif kind == "definition":
             term = (raw.term or "").strip()
@@ -371,14 +370,12 @@ def _bound_blocks(raw_blocks: list[BoardBlock], cue_count: int) -> list[BoardBlo
             # A definition is the pair; half of it is not a definition.
             if not term or not meaning:
                 continue
-            blocks.append(
-                BoardBlock(
-                    kind="definition",
-                    cue=cue,
-                    term=term,
-                    meaning=meaning,
-                    color=raw.color,
-                )
+            built = BoardBlock(
+                kind="definition",
+                cue=cue,
+                term=term,
+                meaning=meaning,
+                color=raw.color,
             )
         elif kind == "table":
             columns = [column.strip() for column in raw.columns if column.strip()]
@@ -394,14 +391,12 @@ def _bound_blocks(raw_blocks: list[BoardBlock], cue_count: int) -> list[BoardBlo
             # Pad short rows rather than dropping them: a missing cell is a typo,
             # an absent row is missing content.
             rows = [row + [""] * (len(columns) - len(row)) for row in rows]
-            blocks.append(
-                BoardBlock(
-                    kind="table",
-                    cue=cue,
-                    columns=columns,
-                    rows=rows[:8],
-                    color=raw.color,
-                )
+            built = BoardBlock(
+                kind="table",
+                cue=cue,
+                columns=columns,
+                rows=rows[:8],
+                color=raw.color,
             )
         elif kind == "figure":
             # Figure geometry is the same action language as before, only in
@@ -409,16 +404,78 @@ def _bound_blocks(raw_blocks: list[BoardBlock], cue_count: int) -> list[BoardBlo
             actions = _bound_actions(raw.actions, cue_count)
             if not actions:
                 continue
-            blocks.append(
-                BoardBlock(
-                    kind="figure",
-                    cue=cue,
-                    caption=(raw.caption or "").strip() or None,
-                    actions=actions,
-                    color=raw.color,
-                )
+            built = BoardBlock(
+                kind="figure",
+                cue=cue,
+                caption=(raw.caption or "").strip() or None,
+                actions=actions,
+                color=raw.color,
             )
+        if built is None:
+            continue
+        # Marks are bound last, against the text that actually survived: a mark
+        # may only point at words this block really shows.
+        marks = _bound_marks(raw.marks, built, cue_count)
+        blocks.append(built.model_copy(update={"marks": marks}) if marks else built)
     return blocks
+
+
+def _mark_pool(block: BoardBlock) -> str:
+    """Every string a mark in this block may point at.
+
+    The unit is the block, not the step: "which of these two bullets did you
+    mean" is not a question a renderer can answer.
+    """
+    parts = [
+        block.text or "",
+        block.term or "",
+        block.meaning or "",
+        block.caption or "",
+        *block.items,
+    ]
+    for row in block.rows:
+        parts.extend(row)
+    return "\n".join(parts)
+
+
+def _bound_marks(
+    raw_marks: list[BoardMark], block: BoardBlock, cue_count: int
+) -> list[BoardMark]:
+    """Keep only the marks that can actually be drawn.
+
+    A mark whose text is not in the block is **dropped, not repaired**: the whole
+    value of emphasis is that it points at the right words, and a fallback to
+    "somewhere in this block" would be a confidently wrong circle. Dropping is
+    cheap, too — the beat still teaches, it just teaches without the underline.
+    """
+    if not raw_marks:
+        return []
+    pool = _mark_pool(block)
+    action_ids = {action.id for action in block.actions if action.id}
+    marks: list[BoardMark] = []
+    for raw in raw_marks[:MAX_MARKS_PER_BLOCK]:
+        cue = _cue(raw.cue, cue_count)
+        match = (raw.match or "").strip()
+        if not match:
+            # A figure may anchor to an element id instead of to text.
+            if raw.target and raw.target in action_ids:
+                marks.append(
+                    BoardMark(
+                        style=raw.style, occurrence=0, cue=cue, target=raw.target
+                    )
+                )
+            continue
+        if match not in pool:
+            continue
+        marks.append(
+            BoardMark(
+                style=raw.style,
+                match=match,
+                occurrence=max(0, raw.occurrence),
+                cue=cue,
+            )
+        )
+    return marks
 
 
 def _actions_of(step: TeachingStep) -> list[BoardAction]:

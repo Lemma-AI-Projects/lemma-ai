@@ -10,12 +10,44 @@ export interface FreeLessonBlueprint {
   sequence: string[]
 }
 
+/**
+ * Where the learner is inside one lesson. **Derived on the server**, never
+ * stored — see `FreeLessonProgressOut` in `backend/schemas/free_course.py`.
+ *
+ * `finished` means "the board was taught to the end of the current plan", not
+ * "mastered": a re-teach appends steps, so it can legitimately go back to
+ * `in_progress`. Copy that renders this must not upgrade it into a claim about
+ * knowledge.
+ */
+export type FreeLessonLearningState =
+  | 'pending_content'
+  | 'not_started'
+  | 'in_progress'
+  | 'finished'
+
+export interface FreeLessonPractice {
+  answered: number
+  total: number
+}
+
+export interface FreeLessonLearningProgress {
+  state: FreeLessonLearningState
+  /** Index of the next step to play. */
+  cursor: number
+  /** How many steps the lesson's plan currently has. */
+  steps: number
+  updatedAt: string | null
+  /** Exercises answered / available. Separate from `cursor` on purpose. */
+  practice: FreeLessonPractice
+}
+
 export interface FreeLesson {
   id: string
   title: string
   objective: string | null
   blueprint: FreeLessonBlueprint | null
   hasContent: boolean
+  progress: FreeLessonLearningProgress | null
 }
 
 export interface FreeUnit {

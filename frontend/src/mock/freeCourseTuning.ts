@@ -84,9 +84,9 @@ export const tuningCourseMock: FreeCourseDetail = {
       title: '向量与空间',
       objective: '建立"向量是空间里的箭头"这一直觉',
       lessons: [
-        { id: 'c1', title: '向量到底是什么', objective: null, blueprint: null, hasContent: false },
-        { id: 'c2', title: '线性组合与张成', objective: null, blueprint: null, hasContent: false },
-        { id: 'c3', title: '线性无关的几何含义', objective: null, blueprint: null, hasContent: false },
+        { id: 'c1', title: '向量到底是什么', objective: null, blueprint: null, hasContent: true, progress: { state: 'finished', cursor: 12, steps: 12, updatedAt: null, practice: { answered: 3, total: 3 } } },
+        { id: 'c2', title: '线性组合与张成', objective: null, blueprint: null, hasContent: true, progress: { state: 'in_progress', cursor: 4, steps: 11, updatedAt: null, practice: { answered: 1, total: 2 } } },
+        { id: 'c3', title: '线性无关的几何含义', objective: null, blueprint: null, hasContent: true, progress: { state: 'not_started', cursor: 0, steps: 9, updatedAt: null, practice: { answered: 0, total: 2 } } },
       ],
     },
     {
@@ -94,9 +94,9 @@ export const tuningCourseMock: FreeCourseDetail = {
       title: '矩阵作为变换',
       objective: '把矩阵乘法读成"对空间做了一次操作"',
       lessons: [
-        { id: 'c4', title: '矩阵乘法在做什么', objective: null, blueprint: null, hasContent: false },
-        { id: 'c5', title: '秩与可解性', objective: null, blueprint: null, hasContent: false },
-        { id: 'c6', title: '行列式：体积的缩放因子', objective: null, blueprint: null, hasContent: false },
+        { id: 'c4', title: '矩阵乘法在做什么', objective: null, blueprint: null, hasContent: false , progress: { state: 'pending_content', cursor: 0, steps: 0, updatedAt: null, practice: { answered: 0, total: 0 } } },
+        { id: 'c5', title: '秩与可解性', objective: null, blueprint: null, hasContent: false , progress: { state: 'pending_content', cursor: 0, steps: 0, updatedAt: null, practice: { answered: 0, total: 0 } } },
+        { id: 'c6', title: '行列式：体积的缩放因子', objective: null, blueprint: null, hasContent: false , progress: { state: 'pending_content', cursor: 0, steps: 0, updatedAt: null, practice: { answered: 0, total: 0 } } },
       ],
     },
     {
@@ -104,9 +104,9 @@ export const tuningCourseMock: FreeCourseDetail = {
       title: '特征值与对角化',
       objective: '理解为什么有些方向在变换下不变',
       lessons: [
-        { id: 'c7', title: '特征值与特征向量的来历', objective: null, blueprint: null, hasContent: false },
-        { id: 'c8', title: '正交投影与对称矩阵', objective: null, blueprint: null, hasContent: false },
-        { id: 'c9', title: '对角化能拿来做什么', objective: null, blueprint: null, hasContent: false },
+        { id: 'c7', title: '特征值与特征向量的来历', objective: null, blueprint: null, hasContent: false , progress: { state: 'pending_content', cursor: 0, steps: 0, updatedAt: null, practice: { answered: 0, total: 0 } } },
+        { id: 'c8', title: '正交投影与对称矩阵', objective: null, blueprint: null, hasContent: false , progress: { state: 'pending_content', cursor: 0, steps: 0, updatedAt: null, practice: { answered: 0, total: 0 } } },
+        { id: 'c9', title: '对角化能拿来做什么', objective: null, blueprint: null, hasContent: false , progress: { state: 'pending_content', cursor: 0, steps: 0, updatedAt: null, practice: { answered: 0, total: 0 } } },
       ],
     },
   ],

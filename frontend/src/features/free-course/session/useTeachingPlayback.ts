@@ -76,13 +76,34 @@ export interface TeachingPlayback {
   voiceAvailable: boolean
   setMuted: (muted: boolean) => void
   /** Play these steps in order, halting at the first question or at the end. */
-  start: (steps: TeachingStep[], options?: { clearBoard?: boolean }) => void
+  start: (
+    steps: TeachingStep[],
+    options?: { clearBoard?: boolean; silent?: boolean }
+  ) => void
   /** Abandon whatever is playing. Safe to call when nothing is. */
   stop: () => void
   /** Wipe the board — used before a re-explanation, which is a *new* drawing. */
   clearBoard: () => void
   /** Append already-played lines (resuming a session renders its transcript). */
   seedSaid: (lines: SaidLine[]) => void
+  /**
+   * Rebuild the board for steps that were played before this page load.
+   *
+   * The board is a projection of the action stream, so a refresh does not need
+   * a snapshot of it — it needs the same projection run again. This is what
+   * makes "come back later" honest: without it the transcript reappears but the
+   * board stays blank, and the lesson looks like it never happened.
+   */
+  seedBoard: (steps: TeachingStep[]) => void
+  /**
+   * Mark a step as the one currently in play, without playing it.
+   *
+   * Used on resume: when the page was closed while a question was waiting, that
+   * step is still the active one, and everything downstream (the question card,
+   * the answer handlers) hangs off `activeStepId`. Leaving it null silently
+   * skips the question.
+   */
+  focusStep: (stepId: string | null) => void
 }
 
 function sleep(ms: number): Promise<void> {
@@ -172,14 +193,68 @@ export function useTeachingPlayback(options?: {
     setSaid(lines)
   }, [])
 
+  const focusStep = useCallback((stepId: string | null) => {
+    setActiveStepId(stepId)
+  }, [])
+
+  /**
+   * Replay the already-played steps into the board, silently.
+   *
+   * Same fold as the live loop, minus the clock: the wipe that a re-teach does
+   * is replayed too, because it happened — rebuilding only the strokes would
+   * resurrect content the lesson deliberately cleared.
+   */
+  const seedBoard = useCallback((steps: TeachingStep[]) => {
+    let legacy: BoardElement[] = []
+    let blocks: BoardBlockState = EMPTY_BLOCK_STATE
+    let seq = 0
+    for (const step of steps) {
+      if (step.branch === 'reteach') {
+        legacy = []
+        blocks = EMPTY_BLOCK_STATE
+        seq = 0
+      }
+      const sentences = splitSentences(step.narration)
+      for (let index = 0; index < sentences.length; index += 1) {
+        const cue = Math.max(0, Math.min(sentences.length - 1, index))
+        blocks = applyBlockCue(blocks, step.blocks, cue)
+        const batch = step.actions.filter(
+          (action) => Math.max(0, Math.min(sentences.length - 1, action.cue)) === cue
+        )
+        for (const action of batch) {
+          seq += 1
+          legacy = applyAction(legacy, action, seq)
+        }
+      }
+    }
+    setBoard(legacy)
+    setBlockState(blocks)
+    seqRef.current = seq
+  }, [])
+
   const start = useCallback(
-    (steps: TeachingStep[], startOptions?: { clearBoard?: boolean }) => {
+    (
+      steps: TeachingStep[],
+      startOptions?: {
+        clearBoard?: boolean
+        /**
+         * Play it without sound. Used by the board replay, which re-draws the
+         * lesson's ink for someone who wants to watch it again — narrating it a
+         * second time would be a different feature (and a different button).
+         * The learner's mute preference is left alone.
+         */
+        silent?: boolean
+      }
+    ) => {
       cancelRef.current?.()
       if (startOptions?.clearBoard) {
         setBoard([])
         seqRef.current = 0
       }
       if (steps.length === 0) return
+
+      const wasMuted = mutedRef.current
+      if (startOptions?.silent) mutedRef.current = true
 
       let cancelled = false
       let resolvePending: (() => void) | null = null
@@ -194,7 +269,8 @@ export function useTeachingPlayback(options?: {
       cancelRef.current = cancel
 
       void (async () => {
-        for (const step of steps) {
+        try {
+          for (const step of steps) {
           if (cancelled) return
           setActiveStepId(step.id)
           setPhase('playing')
@@ -274,8 +350,13 @@ export function useTeachingPlayback(options?: {
             return
           }
         }
-        setPhase('idle')
-        cancelRef.current = null
+          setPhase('idle')
+          cancelRef.current = null
+        } finally {
+          // Restored on every exit — end of plan, a question, or a cancel — so a
+          // silent replay cannot leave the lesson permanently mute.
+          mutedRef.current = wasMuted
+        }
       })()
     },
     [voice]
@@ -295,6 +376,8 @@ export function useTeachingPlayback(options?: {
     stop,
     clearBoard,
     seedSaid,
+    seedBoard,
+    focusStep,
     clickTarget,
     clickHint,
     resolveClick,

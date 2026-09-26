@@ -160,7 +160,18 @@ export default {
       "awardTitle": "你获得了一个成就",
       "awardGotIt": "收下了",
       "clickHint": "点一下白板上高亮的那个元素。",
-      "start": "开始学习"
+      "start": "开始学习",
+      "finishedTitle": "这一节已经讲完了",
+      "finishedHint": "板书讲到了最后一拍。想再听一遍就从头开始，或者回课程目录看看接着学什么。",
+      "restart": "再讲一遍",
+      "backToOutline": "回到课程目录",
+      "outlineTitle": "本节提纲",
+      "outlineCollapse": "收起提纲",
+      "outlineAhead": "第 {{index}} 拍 · 待讲",
+      "references": "本节用到",
+      "noReferences": "这一节由 AI 根据你的要求生成，没有引用外部资料。",
+      "replayBoard": "重放板书",
+      "export": "导出"
     },
     "badge": "自由课程",
     "loading": "正在加载课程…",
@@ -175,6 +186,22 @@ export default {
     "viewBlueprint": "查看蓝图",
     "lessons": "课",
     "units": "单元",
+    "page": {
+      "progress": "已讲完 {{done}} / {{total}} 节",
+      "outline": "课程目录",
+      "startHere": "从这里开始",
+      "resume": "继续学习",
+      "startOver": "从头再看一遍",
+      "targetAt": "第 {{unit}} 单元 · 第 {{lesson}} 节",
+      "practice": "练习 {{answered}}/{{total}}",
+      "empty": "这门课还没有课节。",
+      "state": {
+        "pendingContent": "待生成",
+        "notStarted": "未开始",
+        "inProgress": "继续 · 第 {{cursor}}/{{steps}} 句",
+        "finished": "已讲完"
+      }
+    },
     "back": "返回",
     "blueprintCanvasLabel": "课程蓝图画布",
     "resetView": "重置视图",

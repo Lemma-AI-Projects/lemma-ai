@@ -29,6 +29,7 @@ import type {
   BoardAction,
   BoardBlock,
   BoardColor,
+  BoardMark,
   BoardPoint,
   BoardShape,
   BoardSize,
@@ -375,6 +376,12 @@ export interface BoardBlockView {
   /** figure only: the element this figure is waiting for a click on (local key). */
   clickKey: string | null
   clickHint: string | null
+  /**
+   * The emphasis revealed so far. Marks carry their own `cue`, so a block can be
+   * on the board for two sentences before the word worth circling gets circled —
+   * which is how a teacher actually uses a pen.
+   */
+  marks: BoardMark[]
 }
 
 export interface BoardBlockState {
@@ -407,7 +414,17 @@ function foldFigure(
   cue: number,
   { catchUp = false }: { catchUp?: boolean } = {}
 ): BoardBlockView {
-  if (view.block.kind !== 'figure') return view
+  const marks = (view.block.marks ?? []).filter((mark) =>
+    catchUp ? Math.max(0, mark.cue) <= cue : Math.max(0, mark.cue) === cue
+  )
+  if (view.block.kind !== 'figure') {
+    if (marks.length === 0) return view
+    const known = new Set(view.marks.map((mark) => `${mark.style}:${mark.match}:${mark.occurrence}`))
+    const fresh = marks.filter(
+      (mark) => !known.has(`${mark.style}:${mark.match}:${mark.occurrence}`)
+    )
+    return fresh.length === 0 ? view : { ...view, marks: [...view.marks, ...fresh] }
+  }
   const batch = view.block.actions.filter((action) => {
     const actionCue = Math.max(0, action.cue)
     return catchUp ? actionCue <= cue : actionCue === cue
@@ -417,6 +434,16 @@ function foldFigure(
   let seq = view.seq
   let clickKey = view.clickKey
   let clickHint = view.clickHint
+  let revealedMarks = view.marks
+  if (marks.length > 0) {
+    const known = new Set(revealedMarks.map((mark) => `${mark.style}:${mark.match}:${mark.occurrence}`))
+    revealedMarks = [
+      ...revealedMarks,
+      ...marks.filter(
+        (mark) => !known.has(`${mark.style}:${mark.match}:${mark.occurrence}`)
+      ),
+    ]
+  }
   for (const action of batch) {
     if (action.kind === 'awaitClick') {
       clickKey = action.target ?? clickKey
@@ -426,7 +453,7 @@ function foldFigure(
     seq += 1
     elements = applyAction(elements, mapAction(action), seq)
   }
-  return { ...view, elements, seq, clickKey, clickHint }
+  return { ...view, elements, seq, clickKey, clickHint, marks: revealedMarks }
 }
 
 /**
@@ -464,6 +491,7 @@ export function applyBlockCue(
           seq: 0,
           clickKey: null,
           clickHint: null,
+          marks: [],
         },
         cue,
         { catchUp: true }

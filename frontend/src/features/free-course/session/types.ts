@@ -74,6 +74,27 @@ export type BoardBlockKind =
   | 'formula'
   | 'figure'
 
+export type BoardMarkStyle = 'highlight' | 'circle' | 'underline'
+
+/**
+ * Emphasis on text this block already shows.
+ *
+ * `match` is copied verbatim out of the block, and the renderer finds it in the
+ * rendered DOM — which is why the board's text never gets rewritten by emphasis
+ * and why `match` containing `_`, `$` or `*` is not re-parsed as markdown. The
+ * mark is metadata about the text, not part of it.
+ */
+export interface BoardMark {
+  style: BoardMarkStyle
+  /** Verbatim text from the same block. */
+  match: string
+  /** Which occurrence of `match` in that block (0 = first). */
+  occurrence: number
+  cue: number
+  /** figure only: anchor to a drawn element instead of to text. */
+  target?: string | null
+}
+
 export interface BoardBlock {
   kind: BoardBlockKind
   /** Index of the narration sentence this block appears on — the sync contract. */
@@ -87,6 +108,8 @@ export interface BoardBlock {
   caption?: string | null
   /** figure only: draw primitives in 0..1 block-local coordinates. */
   actions: BoardAction[]
+  /** Emphasis on this block's own text. */
+  marks: BoardMark[]
   color?: BoardColor | null
 }
 

@@ -10,7 +10,7 @@ back here to land each step.
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, exists, func, select
+from sqlalchemy import delete, distinct, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -34,12 +34,15 @@ from models.free_course import (
     CourseLessonObservation,
     CourseUnit,
 )
+from models.free_course_session import FreeCourseSession
 from schemas.free_course import (
     AnswerFeedbackOut,
     CourseTreeEditIn,
     FreeCourseDetailOut,
     FreeLessonContentOut,
     FreeLessonOut,
+    FreeLessonPracticeOut,
+    FreeLessonProgressOut,
     FreeLessonRefOut,
     FreeUnitOut,
     LearningObjectOut,
@@ -435,6 +438,11 @@ async def get_detail(
     if course is None:
         return None
     content = await _content_counts(db, course_id=course.id)
+    progress = await _lesson_progress(
+        db,
+        chapter_ids=[chapter.id for unit in course.units for chapter in unit.chapters],
+        content=content,
+    )
     intent = (course.intake_json or {}).get("intent")
     map_meta = (course.intake_json or {}).get("map", {})
     units: list[FreeUnitOut] = []
@@ -450,6 +458,7 @@ async def get_detail(
                     else None
                 ),
                 has_content=content.get(chapter.id, 0) > 0,
+                progress=progress.get(chapter.id),
             )
             for chapter in unit.chapters
         ]
@@ -656,6 +665,111 @@ async def _content_counts(
         )
     ).all()
     return {chapter_id: count for chapter_id, count in rows}
+
+
+# The two object kinds a learner can answer. `explanation` / `example` are read
+# material, so counting them as "practice items" would overstate the work.
+_PRACTICE_KINDS = ("practice", "assessment")
+
+
+async def _lesson_progress(
+    db: AsyncSession, *, chapter_ids: list[uuid.UUID], content: dict[uuid.UUID, int]
+) -> dict[uuid.UUID, FreeLessonProgressOut]:
+    """chapter_id -> where the learner is inside that lesson.
+
+    Derived on read, never stored, and that is the honest design rather than a
+    shortcut: `free_course_sessions` only ever holds `status = 'active'` plus a
+    `cursor`, and a re-teach appends steps to the plan, so "finished" is not a
+    fact that can be written down once — it has to be recomputed against the
+    current step count or it goes stale the first time someone says "我没懂".
+
+    Three batched reads (newest session per chapter, practice items per chapter,
+    answered practice items per chapter) so the whole tree costs four queries
+    regardless of how many lessons it has.
+    """
+    if not chapter_ids:
+        return {}
+
+    sessions: dict[uuid.UUID, FreeCourseSession] = {}
+    rows = (
+        await db.execute(
+            select(FreeCourseSession)
+            .where(FreeCourseSession.chapter_id.in_(chapter_ids))
+            .order_by(FreeCourseSession.created_at.desc())
+        )
+    ).scalars()
+    # Newest first, so the first row seen for a chapter is the one in force.
+    for row in rows:
+        sessions.setdefault(row.chapter_id, row)
+
+    totals = dict(
+        (
+            await db.execute(
+                select(CourseLessonObject.chapter_id, func.count())
+                .where(
+                    CourseLessonObject.chapter_id.in_(chapter_ids),
+                    CourseLessonObject.kind.in_(_PRACTICE_KINDS),
+                )
+                .group_by(CourseLessonObject.chapter_id)
+            )
+        ).all()
+    )
+    answered = dict(
+        (
+            await db.execute(
+                select(
+                    CourseLessonObject.chapter_id,
+                    func.count(distinct(CourseLessonObservation.object_id)),
+                )
+                .join(
+                    CourseLessonObservation,
+                    CourseLessonObservation.object_id == CourseLessonObject.id,
+                )
+                .where(
+                    CourseLessonObject.chapter_id.in_(chapter_ids),
+                    CourseLessonObject.kind.in_(_PRACTICE_KINDS),
+                )
+                .group_by(CourseLessonObject.chapter_id)
+            )
+        ).all()
+    )
+
+    progress: dict[uuid.UUID, FreeLessonProgressOut] = {}
+    for chapter_id in chapter_ids:
+        practice = FreeLessonPracticeOut(
+            answered=int(answered.get(chapter_id, 0)),
+            total=int(totals.get(chapter_id, 0)),
+        )
+        if not content.get(chapter_id, 0):
+            # No generated content. Saying "not started" would be a lie about
+            # why: the lesson is not waiting on the learner, it is waiting on
+            # the generator (it gets written the first time it is opened).
+            progress[chapter_id] = FreeLessonProgressOut(
+                state="pending_content", practice=practice
+            )
+            continue
+        session = sessions.get(chapter_id)
+        if session is None:
+            progress[chapter_id] = FreeLessonProgressOut(
+                state="not_started", practice=practice
+            )
+            continue
+        steps = len((session.plan_json or {}).get("steps") or [])
+        cursor = max(0, session.cursor or 0)
+        if steps == 0 or cursor == 0:
+            state = "not_started"
+        elif cursor >= steps:
+            state = "finished"
+        else:
+            state = "in_progress"
+        progress[chapter_id] = FreeLessonProgressOut(
+            state=state,
+            cursor=cursor,
+            steps=steps,
+            updated_at=session.updated_at,
+            practice=practice,
+        )
+    return progress
 
 
 def _to_read_object(obj: CourseLessonObject) -> LearningObjectOut:

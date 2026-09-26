@@ -13,7 +13,7 @@
  * shape and the thing that makes the voice work at all.
  */
 
-import { ArrowLeft, Award, Play, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Award, Check, Film, Play, Printer, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -25,6 +25,8 @@ import { useAppTranslation } from '@/i18n'
 import { CONFUSED_PROMPT, classifyLearnerMessage } from './confusion'
 import { splitSentences } from './sentences'
 import { SessionRail, type RailFeedback } from './SessionRail'
+import { SessionOutline } from './SessionOutline'
+import { useFreeCourseDetail } from '../freeCourseApi'
 import {
   getTeachingSession,
   postSessionProgress,
@@ -35,6 +37,23 @@ import {
 import { Whiteboard } from './Whiteboard'
 import { useTeachingPlayback } from './useTeachingPlayback'
 import type { TeachingSession, TeachingStep } from './types'
+
+/**
+ * What "Export" means here: the browser's own print-to-PDF, pointed at the board
+ * and the outline.
+ *
+ * Deliberately not a bespoke exporter. The board is already laid out in the DOM
+ * (and the rail's copy of it is not), so the cheapest honest export is to hide
+ * the interactive chrome for print and let the two things worth keeping — the
+ * board and the lesson outline — go to the printer as they are. A second
+ * renderer for the same content would be a second thing to keep in sync.
+ */
+const PRINT_CSS = `
+@media print {
+  [data-print-hide] { display: none !important; }
+  [data-print-sheet] { padding: 0 !important; }
+}
+`
 
 function messageOf(error: unknown, fallback: string): string {
   if (isAxiosError(error)) {
@@ -48,12 +67,32 @@ function messageOf(error: unknown, fallback: string): string {
   return fallback
 }
 
+/**
+ * The question the page was closed on, if any.
+ *
+ * Sound because of how the cursor moves: a step reports progress *before* the
+ * timeline stops on its question, so a question step is always the step at
+ * `cursor - 1` once it has been asked. Answering it appends new steps and moves
+ * the cursor past them. So a question sitting exactly at the boundary is one
+ * that was asked and never answered — and resuming without restoring it would
+ * silently drop it.
+ */
+function pendingQuestionAt(
+  steps: TeachingStep[],
+  cursor: number
+): TeachingStep | null {
+  if (cursor <= 0 || cursor > steps.length) return null
+  const step = steps[cursor - 1]
+  return step?.question ? step : null
+}
+
 export function TeachingSessionView() {
   const { id: courseId, chapterId } = useParams<{
     id: string
     chapterId: string
   }>()
   const navigate = useNavigate()
+  const { t } = useAppTranslation()
 
   const [session, setSession] = useState<TeachingSession | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -71,6 +110,15 @@ export function TeachingSessionView() {
    */
   const [award, setAward] = useState<string | null>(null)
   const deferredStepsRef = useRef<TeachingStep[]>([])
+  /**
+   * The board has been taught to its last step. Not a grade — it means "there
+   * is nothing left to play", which used to be a silent dead end: the timeline
+   * resumed past the end, `start([])` returned immediately, and the learner sat
+   * in front of a blank board with no way forward.
+   */
+  const [finished, setFinished] = useState(false)
+  const [outlineOpen, setOutlineOpen] = useState(false)
+  const detailQuery = useFreeCourseDetail(courseId)
 
   // Absolute index of the first step in the batch currently playing — what the
   // server needs to know "how far did the learner get" without the client
@@ -113,37 +161,56 @@ export function TeachingSessionView() {
     }
   }, [courseId, chapterId])
 
-  const handleStart = useCallback(async () => {
-    if (!courseId || !chapterId) return
-    setStarting(true)
-    setError(null)
-    try {
-      const opened = await startTeachingSession(courseId, chapterId)
-      setSession(opened)
-      setStarted(true)
-      if (opened.hasContent && opened.steps.length > 0) {
-        baseIndexRef.current = opened.cursor
-        const resumeAt = opened.cursor
-        // The transcript of what was already taught is restored, so a refresh
-        // mid-lesson does not look like the lesson never happened.
-        playback.seedSaid(
-          opened.steps
-            .slice(0, resumeAt)
-            .flatMap((step) =>
-              splitSentences(step.narration).map((text) => ({
-                stepId: step.id,
-                text,
-              }))
-            )
-        )
-        playback.start(opened.steps.slice(resumeAt), { clearBoard: resumeAt === 0 })
+  const handleStart = useCallback(
+    async (restart = false) => {
+      if (!courseId || !chapterId) return
+      setStarting(true)
+      setError(null)
+      try {
+        const opened = await startTeachingSession(courseId, chapterId, { restart })
+        setSession(opened)
+        setStarted(true)
+        setFinished(false)
+        if (opened.hasContent && opened.steps.length > 0) {
+          baseIndexRef.current = opened.cursor
+          const resumeAt = opened.cursor
+          // The transcript of what was already taught is restored, so a refresh
+          // mid-lesson does not look like the lesson never happened.
+          playback.seedSaid(
+            opened.steps
+              .slice(0, resumeAt)
+              .flatMap((step) =>
+                splitSentences(step.narration).map((text) => ({
+                  stepId: step.id,
+                  text,
+                }))
+              )
+          )
+          // ...and so is the board. The board is a projection of the action
+          // stream, so this is the same fold the timeline does, run silently.
+          playback.seedBoard(opened.steps.slice(0, resumeAt))
+
+          // Closed while a question was waiting: put that question back rather
+          // than resuming after it.
+          const pending = pendingQuestionAt(opened.steps, resumeAt)
+          if (pending) {
+            playback.focusStep(pending.id)
+            return
+          }
+          if (resumeAt >= opened.steps.length) {
+            setFinished(true)
+            return
+          }
+          playback.start(opened.steps.slice(resumeAt))
+        }
+      } catch (caught) {
+        setError(messageOf(caught, '这一节的教学会话没有开起来。'))
+      } finally {
+        setStarting(false)
       }
-    } catch (caught) {
-      setError(messageOf(caught, '这一节的教学会话没有开起来。'))
-    } finally {
-      setStarting(false)
-    }
-  }, [courseId, chapterId, playback])
+    },
+    [courseId, chapterId, playback]
+  )
 
   // Declared before `respond` because the award is named after the beat that
   // was just answered.
@@ -197,6 +264,53 @@ export function TeachingSessionView() {
     },
     [courseId, chapterId, session, playback, questionStep?.title]
   )
+
+  /**
+   * What this lesson builds on — our only real "source".
+   *
+   * A free course is generated from the learner's own sentence and belongs to no
+   * space (`courses` has no project_id), so there is no material layer to cite
+   * and no retrieval pipeline to cite from. The honest reference is therefore
+   * internal: the prerequisites the blueprint already recorded for this lesson.
+   * When there are none the panel says so rather than leaving an empty list,
+   * which would read as "sources existed".
+   */
+  const references = useMemo(() => {
+    const course = detailQuery.data
+    if (!course || !chapterId) return []
+    for (const unit of course.units) {
+      const lesson = unit.lessons.find((item) => item.id === chapterId)
+      if (lesson?.blueprint?.prerequisites?.length) {
+        return lesson.blueprint.prerequisites
+      }
+    }
+    return []
+  }, [detailQuery.data, chapterId])
+
+  /** Beats whose narration has been spoken — the outline's "already taught". */
+  const playedStepIds = useMemo(
+    () => Array.from(new Set(playback.said.map((line) => line.stepId))),
+    [playback.said]
+  )
+
+  /**
+   * Draw the lesson again, silently.
+   *
+   * Worth a button because the board is a *projection*: the same plan always
+   * draws the same thing, so a replay is not a re-teach — no model call, no new
+   * plan, no change to where the learner is. It is for looking again.
+   */
+  const replayBoard = useCallback(() => {
+    if (!session || playedStepIds.length === 0) return
+    const played = new Set(playedStepIds)
+    const upTo = session.steps.filter((step) => played.has(step.id)).length
+    playback.clearBoard()
+    playback.start(session.steps.slice(0, upTo), { silent: true })
+  }, [session, playedStepIds, playback])
+
+  const exportSheet = useCallback(() => {
+    window.print()
+  }, [])
 
   const awaiting = playback.phase === 'awaiting'
   const question = questionStep?.question ?? null
@@ -257,10 +371,23 @@ export function TeachingSessionView() {
   const title = session?.title || '教学会话'
   const noContent = session !== null && !session.hasContent
   const canResume = Boolean(session && session.hasContent && session.steps.length > 0)
+  // Opened before pressing start: the board is already taught to its end, so
+  // the only useful thing to offer is a second pass. "继续" would be a lie here
+  // (there is nothing after the last step).
+  const atEnd = Boolean(
+    canResume &&
+      session &&
+      session.cursor >= session.steps.length &&
+      !pendingQuestionAt(session.steps, session.cursor)
+  )
 
   return (
     <div className="flex h-full flex-col bg-white dark:bg-zinc-950">
-      <header className="flex items-center gap-3 border-b border-zinc-200/80 px-6 py-3 dark:border-zinc-800">
+      <style>{PRINT_CSS}</style>
+      <header
+        className="flex items-center gap-3 border-b border-zinc-200/80 px-6 py-3 dark:border-zinc-800"
+        data-print-hide
+      >
         <Button
           type="button"
           variant="ghost"
@@ -285,25 +412,75 @@ export function TeachingSessionView() {
               '语音讲解 + 白板板书：它会一边写一边讲，讲到一半停下来问你。'}
           </p>
         </div>
-        {started && <PhaseChip phase={playback.phase} />}
+        {started && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 gap-1.5 rounded-full px-3 text-[12px]"
+              disabled={playedStepIds.length === 0}
+              onClick={replayBoard}
+            >
+              <Film className="size-3.5" />
+              {t('freeCourse.session.replayBoard')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 gap-1.5 rounded-full px-3 text-[12px]"
+              onClick={exportSheet}
+            >
+              <Printer className="size-3.5" />
+              {t('freeCourse.session.export')}
+            </Button>
+            <PhaseChip phase={playback.phase} />
+          </div>
+        )}
       </header>
 
       {!started ? (
         <StartGate
           canResume={canResume}
+          atEnd={atEnd}
           noContent={noContent}
           starting={starting}
           error={error}
-          onStart={handleStart}
+          onStart={() => void handleStart(false)}
+          onRestart={() => void handleStart(true)}
           onOpenLesson={() =>
             courseId && chapterId
               ? navigate(`/free-course/${courseId}/lesson/${chapterId}`)
               : undefined
           }
         />
+      ) : finished ? (
+        <LessonFinished
+          onRestart={() => void handleStart(true)}
+          onOutline={() =>
+            courseId ? navigate(`/free-course/${courseId}`) : navigate(-1)
+          }
+        />
+      ) : finished ? (
+        <LessonFinished
+          onRestart={() => void handleStart(true)}
+          onOutline={() =>
+            courseId ? navigate(`/free-course/${courseId}`) : navigate(-1)
+          }
+        />
       ) : (
-        <div className="flex min-h-0 flex-1">
-          <main className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+        <div className="flex min-h-0 flex-1 gap-3 p-4" data-print-sheet>
+          <SessionOutline
+            className="my-0 self-start"
+            title={title}
+            objective={session?.objective ?? ''}
+            steps={session?.steps ?? []}
+            playedStepIds={playedStepIds}
+            activeStepId={playback.activeStepId}
+            references={references}
+            open={outlineOpen}
+            onToggle={() => setOutlineOpen((current) => !current)}
+          />
+          <main className="flex min-w-0 flex-1 flex-col gap-3">
             <div className="relative flex min-h-0 flex-1 flex-col">
               <Whiteboard
                 elements={playback.board}
@@ -330,6 +507,7 @@ export function TeachingSessionView() {
             </div>
           </main>
 
+          <div className="flex min-h-0 shrink-0" data-print-hide>
           <SessionRail
             said={playback.said}
             question={question}
@@ -349,6 +527,7 @@ export function TeachingSessionView() {
             onAsk={handleAsk}
             onStop={playback.stop}
           />
+          </div>
         </div>
       )}
     </div>
@@ -412,31 +591,97 @@ function PhaseChip({ phase }: { phase: string }) {
   )
 }
 
+/**
+ * The end of a lesson's board.
+ *
+ * This screen exists because its absence was a dead end: once a lesson was
+ * taught to its last step, reopening it resumed past the end and played nothing,
+ * leaving a blank board and a disabled-feeling page. Two honest exits instead —
+ * hear it again, or go back to the outline and pick up what is next.
+ */
+function LessonFinished({
+  onRestart,
+  onOutline,
+}: {
+  onRestart: () => void
+  onOutline: () => void
+}) {
+  const { t } = useAppTranslation()
+  return (
+    <div
+      className="flex min-h-0 flex-1 items-center justify-center px-6"
+      data-session-finished
+    >
+      <div className="w-full max-w-[26rem] text-center">
+        <span className="mx-auto flex size-9 items-center justify-center rounded-full bg-[#edf4ff] text-[#4c6694]">
+          <Check className="size-4.5" />
+        </span>
+        <p className="mt-3 text-[15px] font-medium text-zinc-800 dark:text-zinc-100">
+          {t('freeCourse.session.finishedTitle')}
+        </p>
+        <p className="mt-2 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+          {t('freeCourse.session.finishedHint')}
+        </p>
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <Button
+            type="button"
+            className="h-9 gap-2 rounded-full px-4 text-[13px]"
+            onClick={onRestart}
+          >
+            <RefreshCw className="size-4" />
+            {t('freeCourse.session.restart')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 rounded-full px-4 text-[13px]"
+            onClick={onOutline}
+          >
+            {t('freeCourse.session.backToOutline')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function StartGate({
   canResume,
+  atEnd,
   noContent,
   starting,
   error,
   onStart,
+  onRestart,
   onOpenLesson,
 }: {
   canResume: boolean
+  /** Taught to the end of the plan already — offer a second pass, not "continue". */
+  atEnd: boolean
   noContent: boolean
   starting: boolean
   error: string | null
   onStart: () => void
+  onRestart: () => void
   onOpenLesson: () => void
 }) {
+  const { t } = useAppTranslation()
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center px-6">
       <div className="w-full max-w-[26rem] text-center">
         <p className="text-[15px] font-medium text-zinc-800 dark:text-zinc-100">
-          {noContent ? '这一节课还没有内容' : '进入这一节的教学会话'}
+          {noContent
+            ? '这一节课还没有内容'
+            : atEnd
+              ? t('freeCourse.session.finishedTitle')
+              : '进入这一节的教学会话'}
         </p>
         <p className="mt-2 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
           {noContent
             ? '先让它生成这一节的内容，再回到这里——教学会话讲的就是这一节。'
-            : '它会用语音一边讲、一边在左边的白板上写和画；讲到一半会停下来问你。你随时可以打断它，也可以说「我没懂」。'}
+            : atEnd
+              ? t('freeCourse.session.finishedHint')
+              : '它会用语音一边讲、一边在左边的白板上写和画；讲到一半会停下来问你。你随时可以打断它，也可以说「我没懂」。'}
         </p>
         {error && (
           <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[12.5px] leading-5 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300">
@@ -458,14 +703,20 @@ function StartGate({
               type="button"
               disabled={starting}
               className="h-9 gap-2 rounded-full px-4 text-[13px]"
-              onClick={onStart}
+              onClick={atEnd ? onRestart : onStart}
             >
               {starting ? (
                 <Spinner className="size-4" />
+              ) : atEnd ? (
+                <RefreshCw className="size-4" />
               ) : (
                 <Play className="size-4" />
               )}
-              {canResume ? '继续这次教学' : '开始学习'}
+              {atEnd
+                ? t('freeCourse.session.restart')
+                : canResume
+                  ? '继续这次教学'
+                  : '开始学习'}
             </Button>
           )}
         </div>

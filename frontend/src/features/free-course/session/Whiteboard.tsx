@@ -43,7 +43,8 @@ import {
   type BoardShapeElement,
   type BoardTextElement,
 } from './board'
-import type { BoardColor, BoardSize } from './types'
+import type { BoardColor, BoardMark, BoardSize } from './types'
+import { applyMarks } from './anchors'
 import type { ReactNode } from 'react'
 
 /** The reference product's accent, per planning/hyperknow-visual-style-research.html. */
@@ -377,8 +378,36 @@ const BOARD_CSS = `
   from { clip-path: inset(0 100% 0 0); }
   to   { clip-path: inset(0 0 0 0); }
 }
+/* 强调：文字上的三种笔迹。位置完全由排版给，笔迹跟着字走。 */
+.board-mark { position: relative; }
+.board-mark-highlight {
+  background: linear-gradient(transparent 58%, rgba(250, 204, 21, .45) 58%);
+  border-radius: 2px;
+  animation: board-mark-sweep 520ms ease-out both;
+}
+@keyframes board-mark-sweep {
+  from { background-size: 0% 100%; }
+  to   { background-size: 100% 100%; }
+}
+.board-mark-circle {
+  outline: 1.5px solid rgba(216, 90, 48, .85);
+  outline-offset: 3px;
+  border-radius: 999px;
+  animation: board-mark-circle 520ms ease-out both;
+}
+@keyframes board-mark-circle {
+  from { outline-offset: 10px; opacity: .2; }
+  to   { outline-offset: 3px; opacity: 1; }
+}
+.board-mark-underline {
+  box-shadow: inset 0 -0.35em 0 rgba(76, 102, 148, .22);
+  animation: board-mark-sweep 520ms ease-out both;
+}
+/* 跨节点降级：整块（整个公式 / 整条要点）被标记，而不是半个。 */
+.board-mark-wide { padding: 1px 3px; }
 @media (prefers-reduced-motion: reduce) {
   .board-write, .board-draw, .board-block-in, .board-sweep { animation-duration: 1ms; }
+  .board-mark-highlight, .board-mark-circle, .board-mark-underline { animation-duration: 1ms; }
   .board-ripple { animation: none; opacity: .8; }
 }
 `
@@ -436,6 +465,33 @@ function FigureBox({
  * like a formula, and KaTeX brings its own fonts, so forcing handwriting on the
  * prose would fight the math for the same glyphs.
  */
+/**
+ * A block plus its emphasis.
+ *
+ * The marks are applied *after* render, against the DOM Streamdown/KaTeX
+ * produced — so the words are found where they actually are, and the board's
+ * text is never rewritten to carry a highlight. `applyMarks` is idempotent, so
+ * the effect is safe to re-run.
+ */
+function MarkedBlock({
+  children,
+  marks,
+}: {
+  children: React.ReactNode
+  marks: BoardMark[]
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  // Keyed on the mark set: the array identity changes as cues are revealed, and
+  // a JSON key keeps the effect from re-running on every unrelated re-render.
+  const signature = JSON.stringify(marks)
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    applyMarks(element, marks)
+  }, [signature, marks])
+  return <div ref={ref}>{children}</div>
+}
+
 function BlockCard({
   view,
   clickTarget,
@@ -609,11 +665,13 @@ export const Whiteboard = memo(function Whiteboard({
                 className="board-block-in"
                 data-board-block={view.block.kind}
               >
-                <BlockCard
-                  view={view}
-                  clickTarget={clickTarget}
-                  onElementClick={onElementClick}
-                />
+                <MarkedBlock marks={view.marks ?? []}>
+                  <BlockCard
+                    view={view}
+                    clickTarget={clickTarget}
+                    onElementClick={onElementClick}
+                  />
+                </MarkedBlock>
               </div>
             ))}
           </div>

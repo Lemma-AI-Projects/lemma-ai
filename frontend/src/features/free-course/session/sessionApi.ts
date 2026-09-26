@@ -25,13 +25,20 @@ function base(courseId: string, chapterId: string): string {
  * A 409 is meaningful and not an error to retry: it means the session could not
  * be planned (a model that returned something unusable, or a chapter with no
  * content). The caller shows the message rather than a board.
+ *
+ * `restart` is the one way to hear a lesson again. Without it a lesson whose
+ * board has been taught to its end resumes *past* its last step, which plays
+ * nothing at all — so the finished case has to be able to ask for a fresh one.
  */
 export async function startTeachingSession(
   courseId: string,
-  chapterId: string
+  chapterId: string,
+  options?: { restart?: boolean }
 ): Promise<TeachingSession> {
   const { data } = await signOutOn401(
-    apiClient.post<TeachingSession>(base(courseId, chapterId))
+    apiClient.post<TeachingSession>(base(courseId, chapterId), {
+      restart: Boolean(options?.restart),
+    })
   )
   return data
 }

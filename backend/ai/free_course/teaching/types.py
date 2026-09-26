@@ -41,6 +41,9 @@ MAX_ACTIONS_PER_STEP = 24
 # than this means the model is writing an article on the board, which is the
 # failure mode the block contract exists to prevent.
 MAX_BLOCKS_PER_STEP = 6
+# Emphasis is a pointer, not decoration: past a couple per block the board stops
+# having highlights and starts having a colour scheme.
+MAX_MARKS_PER_BLOCK = 4
 MAX_NARRATION_CHARS = 1600
 MAX_LEARNER_INPUT_CHARS = 2000
 
@@ -109,6 +112,33 @@ BlockKind = Literal[
     "figure",
 ]
 
+AnchorStyle = Literal["highlight", "circle", "underline"]
+
+
+class BoardMark(BaseModel):
+    """Emphasis on something the board already says.
+
+    Anchored to *content*, not to coordinates — the same rule as blocks. The
+    model copies the words it wants to emphasise verbatim into `match`; the
+    renderer finds them in the rendered block and wraps them. That is what makes
+    "circle that word" possible without the model knowing where the word landed,
+    and it is why the board's text is never rewritten by emphasis: the mark is
+    metadata about the text, not part of it.
+
+    `occurrence` disambiguates a phrase that appears twice in one block. A mark
+    whose `match` cannot be found is **dropped**, never guessed at — pointing at
+    the wrong word is worse than not pointing.
+    """
+
+    style: AnchorStyle = "highlight"
+    #: Text to emphasise, copied verbatim from the same block.
+    match: str = ""
+    #: Which occurrence of `match` in that block (0 = first).
+    occurrence: int = 0
+    cue: int = 0
+    #: figure blocks only: anchor to an action id, carrying the old semantics.
+    target: str | None = None
+
 
 class BoardBlock(BaseModel):
     """What the board shows, without saying where on the board it goes.
@@ -134,6 +164,7 @@ class BoardBlock(BaseModel):
       **0..1 inside the block**, plus an optional `caption`. Relative coordinates
       are what let the teacher keep drawing while the *placement* stays with the
       renderer.
+    - any kind — `marks` (emphasis on this block's own text)
     """
 
     kind: BlockKind
@@ -146,6 +177,7 @@ class BoardBlock(BaseModel):
     rows: list[list[str]] = Field(default_factory=list)
     caption: str | None = None
     actions: list[BoardAction] = Field(default_factory=list)
+    marks: list[BoardMark] = Field(default_factory=list)
     color: BoardColor | None = None
 
 

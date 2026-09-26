@@ -8,6 +8,7 @@ server-side so a bad network capture can't leak the grading answer.
 """
 
 import uuid
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,6 +36,21 @@ class FreeCourseCreateOut(BaseModel):
     status: str = "building"
 
 
+class TeachingSessionStartIn(BaseModel):
+    """Body of `POST .../chapters/{id}/session`.
+
+    Optional, and older callers omit it entirely (an empty body keeps working):
+    opening a lesson resumes, which is what makes a refresh safe. `restart` is
+    the one deliberate exception — the learner asked to hear the lesson again —
+    and without it there is no way to get a second pass at a lesson whose board
+    has already been taught to its end.
+    """
+
+    model_config = ConfigDict(**_ALIAS)
+
+    restart: bool = False
+
+
 class FreeCourseStepEventOut(BaseModel):
     """The `step` SSE frame body: one FreeCourseEvent from ai/free_course.pipeline.
 
@@ -60,6 +76,51 @@ class LessonBlueprintOut(BaseModel):
     sequence: list[str] = Field(default_factory=list)
 
 
+class FreeLessonPracticeOut(BaseModel):
+    """How far the learner got through this lesson's practice items.
+
+    Kept apart from `FreeLessonProgressOut.cursor` on purpose: "how much of the
+    board has been taught" and "how many exercises have been answered" are two
+    different facts, and a lesson is routinely half-taught with no practice done.
+    Merging them into one percentage would invent a number neither of them
+    supports.
+    """
+
+    model_config = ConfigDict(**_ALIAS)
+
+    answered: int = 0
+    total: int = 0
+
+
+class FreeLessonProgressOut(BaseModel):
+    """Where the learner is inside one lesson — DERIVED, never stored.
+
+    There is no "finished" column anywhere: `free_course_sessions` only ever
+    holds `status = 'active'` plus a `cursor`, so the state below is recomputed
+    from `cursor` against the current step count every time the tree is read.
+    That is deliberate (and the only honest option): a re-teach appends new steps
+    to the plan, so a lesson that was "done" can legitimately become "in
+    progress" again.
+
+    `state` values:
+      - `pending_content` — nothing generated yet (no lesson objects)
+      - `not_started`     — generated, never taught (or taught to step 0)
+      - `in_progress`     — 0 < cursor < steps
+      - `finished`        — cursor >= steps: the board has been taught to its end
+
+    The last one means "the board got to the end of what was planned", NOT "the
+    learner mastered it" — anything rendering it must say so in its own copy.
+    """
+
+    model_config = ConfigDict(**_ALIAS)
+
+    state: Literal["pending_content", "not_started", "in_progress", "finished"]
+    cursor: int = 0
+    steps: int = 0
+    updated_at: datetime | None = None
+    practice: FreeLessonPracticeOut = Field(default_factory=FreeLessonPracticeOut)
+
+
 class FreeLessonOut(BaseModel):
     model_config = ConfigDict(**_ALIAS)
 
@@ -68,6 +129,10 @@ class FreeLessonOut(BaseModel):
     objective: str | None = None
     blueprint: LessonBlueprintOut | None = None
     has_content: bool = False
+    # Always present, so the client never has to infer a lesson's state from
+    # `has_content` alone — that flag cannot tell "not started" from "half
+    # taught", which is the one distinction the course page exists to show.
+    progress: FreeLessonProgressOut | None = None
 
 
 class FreeUnitOut(BaseModel):
@@ -269,6 +334,25 @@ class BoardActionOut(BaseModel):
     cue: int = 0
 
 
+class BoardMarkOut(BaseModel):
+    """Emphasis on text this block already shows.
+
+    `match` is copied verbatim out of the block; the renderer finds it in the
+    rendered DOM and wraps it. No coordinates, and no rewriting of the board's
+    text — the mark is metadata about the text, not part of it.
+    """
+
+    model_config = ConfigDict(**_ALIAS)
+
+    style: str = "highlight"
+    match: str = ""
+    #: Which occurrence of `match` within the block (0 = first).
+    occurrence: int = 0
+    cue: int = 0
+    #: figure only: an action id, carrying the pre-text anchoring semantics.
+    target: str | None = None
+
+
 class BoardBlockOut(BaseModel):
     """One block of board content, as the player receives it.
 
@@ -291,6 +375,7 @@ class BoardBlockOut(BaseModel):
     rows: list[list[str]] = Field(default_factory=list)
     caption: str | None = None
     actions: list[BoardActionOut] = Field(default_factory=list)
+    marks: list[BoardMarkOut] = Field(default_factory=list)
     color: str | None = None
 
 

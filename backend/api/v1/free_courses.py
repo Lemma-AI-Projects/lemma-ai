@@ -27,6 +27,7 @@ from schemas.free_course import (
     ObservationIn,
     SessionProgressIn,
     TeachingSessionOut,
+    TeachingSessionStartIn,
     TeachingTurnIn,
     TeachingTurnOut,
 )
@@ -261,17 +262,26 @@ async def submit_observation(
 async def start_teaching_session(
     course_id: uuid.UUID,
     chapter_id: uuid.UUID,
+    payload: TeachingSessionStartIn | None = None,
     current_user: CurrentUser = Depends(get_current_user),
     db=Depends(get_db),
 ) -> TeachingSessionOut:
     """Open (or resume) this chapter's teaching session.
 
     Resumes an active session instead of planning a new one: a refresh must not
-    restart the lecture — and must not pay for a second plan.
+    restart the lecture — and must not pay for a second plan. `{"restart": true}`
+    is the one deliberate exception, and the only route to a second pass at a
+    lesson whose board has already been taught to its end (without it, that
+    lesson resumes past its own last step and plays nothing).
     """
+    restart = bool(payload.restart) if payload is not None else False
     try:
         session = await free_course_session_service.start_session(
-            db, user_id=current_user.id, course_id=course_id, chapter_id=chapter_id
+            db,
+            user_id=current_user.id,
+            course_id=course_id,
+            chapter_id=chapter_id,
+            restart=restart,
         )
     except free_course_session_service.SessionUnavailable as exc:
         raise HTTPException(

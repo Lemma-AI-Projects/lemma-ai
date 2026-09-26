@@ -22,7 +22,7 @@ Three decisions worth keeping:
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.errors import FreeCourseError
@@ -52,6 +52,7 @@ from models.free_course import (
 from schemas.free_course import (
     BoardActionOut,
     BoardBlockOut,
+    BoardMarkOut,
     BoardPointOut,
     PracticeOptionOut,
     SessionTranscriptEntryOut,
@@ -151,6 +152,18 @@ def _wire_block(block: BoardBlock) -> BoardBlockOut:
         # Figure geometry travels as-is (0..1 inside the block); the renderer
         # maps it to pixels once it knows how wide the block is.
         actions=[_wire_action(action) for action in block.actions],
+        # Marks are already filtered to the ones that point at real text (see
+        # planner._bound_marks); the renderer still counts its own misses.
+        marks=[
+            BoardMarkOut(
+                style=mark.style,
+                match=mark.match,
+                occurrence=mark.occurrence,
+                cue=mark.cue,
+                target=mark.target,
+            )
+            for mark in block.marks
+        ],
         color=block.color,
     )
 
@@ -253,13 +266,24 @@ async def get_session(
 
 
 async def start_session(
-    db: AsyncSession, *, user_id: uuid.UUID, course_id: uuid.UUID, chapter_id: uuid.UUID
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    course_id: uuid.UUID,
+    chapter_id: uuid.UUID,
+    restart: bool = False,
 ) -> TeachingSessionOut | None:
-    """Open a session, or resume the active one.
+    """Open a session: resume the active one, or (`restart`) start it over.
 
-    Resuming rather than restarting is what makes a refresh safe; pressing the
-    start button again after finishing does start over, because that is what
-    "start learning" means.
+    Resuming rather than restarting is what makes a refresh safe. `restart=True`
+    is the deliberate opposite — the learner asked to hear it again — and it is
+    the only way to get a second pass at a lesson: without it a finished lesson
+    resumes at its own end, plays nothing, and leaves the reader on an empty
+    board with no way forward.
+
+    The old row is **archived, never deleted**: its transcript is the record of
+    what was actually taught, and every read follows the newest row, so
+    archiving is enough to make the new session the one in force.
     """
     if await free_course_service.get_owned_course(
         db, user_id=user_id, course_id=course_id
@@ -269,7 +293,19 @@ async def start_session(
         db, user_id=user_id, course_id=course_id, chapter_id=chapter_id
     )
     if existing is not None and existing.status == "active":
-        return _wire_session(existing, steps=_plan_steps(existing))
+        if not restart:
+            return _wire_session(existing, steps=_plan_steps(existing))
+        # Archive every active row for this chapter, not just the newest: if an
+        # earlier path ever left two behind, "start over" has to mean it.
+        await db.execute(
+            update(FreeCourseSession)
+            .where(
+                FreeCourseSession.chapter_id == chapter_id,
+                FreeCourseSession.status == "active",
+            )
+            .values(status="archived")
+        )
+        await db.commit()
 
     result = await db.execute(_chapter_query(course_id, chapter_id))
     chapter = result.scalar_one_or_none()

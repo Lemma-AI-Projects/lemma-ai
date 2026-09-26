@@ -160,7 +160,18 @@ export default {
       "awardTitle": "YOU GOT AN AWARD",
       "awardGotIt": "Got it",
       "clickHint": "Tap the highlighted element on the board.",
-      "start": "Start learning"
+      "start": "Start learning",
+      "finishedTitle": "This lesson is fully taught",
+      "finishedHint": "The board reached its last beat. Hear it again from the start, or go back to the outline and see what is next.",
+      "restart": "Teach it again",
+      "backToOutline": "Back to the outline",
+      "outlineTitle": "Session outline",
+      "outlineCollapse": "Collapse the outline",
+      "outlineAhead": "Beat {{index}} · later",
+      "references": "Builds on",
+      "noReferences": "This lesson was generated from your request. It cites no external sources.",
+      "replayBoard": "Replay the board",
+      "export": "Export"
     },
     "badge": "Free course",
     "loading": "Loading course...",
@@ -175,6 +186,22 @@ export default {
     "viewBlueprint": "Review blueprint",
     "lessons": "lessons",
     "units": "units",
+    "page": {
+      "progress": "{{done}} / {{total}} lessons taught",
+      "outline": "Course outline",
+      "startHere": "Start here",
+      "resume": "Continue",
+      "startOver": "Watch it again from the start",
+      "targetAt": "Unit {{unit}} · Lesson {{lesson}}",
+      "practice": "Practice {{answered}}/{{total}}",
+      "empty": "This course has no lessons yet.",
+      "state": {
+        "pendingContent": "Not generated",
+        "notStarted": "Not started",
+        "inProgress": "Continue · sentence {{cursor}}/{{steps}}",
+        "finished": "Taught"
+      }
+    },
     "back": "Back",
     "blueprintCanvasLabel": "Course blueprint canvas",
     "resetView": "Reset view",
