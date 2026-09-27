@@ -17,6 +17,8 @@ simplification is documented in `ai.knowledge.state`.
 
 from ai.knowledge.state import (
     B_LEVEL_MIN_EVIDENCE,
+    Admission,
+    AdmissionResult,
     Edge,
     Evidence,
     Fringes,
@@ -25,16 +27,21 @@ from ai.knowledge.state import (
     KnowledgeState,
     Origin,
     StateValue,
+    Structure,
     Tier,
     Verdict,
+    admit,
     compute_fringes,
     derive_state,
     is_evidence_admissible,
+    revise,
     summarize,
 )
 
 __all__ = [
     "B_LEVEL_MIN_EVIDENCE",
+    "Admission",
+    "AdmissionResult",
     "Edge",
     "Evidence",
     "Fringes",
@@ -43,10 +50,13 @@ __all__ = [
     "KnowledgeState",
     "Origin",
     "StateValue",
+    "Structure",
     "Tier",
     "Verdict",
+    "admit",
     "compute_fringes",
     "derive_state",
     "is_evidence_admissible",
+    "revise",
     "summarize",
 ]

@@ -54,6 +54,28 @@ produced it themselves (`independent`) without a hint, and when the verdict
 came from a deterministic checker (tier A). Tier B (rubric-judged) is allowed
 but needs two independent records. Tier C (behaviour only — watched a video,
 uploaded a file) never moves the state.
+
+## The three operations, and the portability contract
+
+This package exposes exactly three pure operations, and no fourth:
+
+    admit(evidence) -> Admission          may it be written? does it count?
+    derive(items, edges, evidence) -> state   the instrument (above)
+    revise(structure, evidence) -> structure  V1 skeleton, identity in V0
+
+`admit` is where the **write** policy lives (today: a rubric verdict with no
+recorded reason is refused), so a service adapter cannot re-decide it.
+`revise` is channel ④ of the architecture — structure revision from
+counterexamples — and V0 fixes only its signature.
+
+**Zero dependencies, on purpose.** Nothing in this package imports the
+database, the services, FastAPI, SQLAlchemy, or any sibling `ai.*` module. It
+is plain Python plus its own submodules, so the whole directory can be copied
+elsewhere and still run its own tests. That claim is not a comment: it is
+asserted by `tests/ai/knowledge/test_portability.py`, and the copy-out
+procedure is `PORTABLE.md`. Adding an import of `models`, `services`,
+`fastapi`, `sqlalchemy`, `core` or `ai.client` here is the one change that
+would make this package un-shippable on its own — the test fails on purpose.
 """
 
 from __future__ import annotations
@@ -118,6 +140,20 @@ class Edge:
 
     prerequisite_id: str
     dependent_id: str
+
+
+@dataclass(frozen=True)
+class Structure:
+    """A knowledge structure: the items, and the order between them.
+
+    Only two things, because that is all the derivation reads. It exists so
+    `revise` has a single argument to rewrite and a single value to return —
+    a pair of loose sequences would make the channel's signature ambiguous the
+    moment V1 fills it in.
+    """
+
+    items: tuple[Item, ...] = ()
+    edges: tuple[Edge, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -215,6 +251,66 @@ def is_evidence_admissible(evidence: Evidence) -> bool:
         # learner produced it themselves, unaided.
         return evidence.independent and not evidence.hint_used
     return True
+
+
+class Admission(StrEnum):
+    """What `admit` decided about one piece of evidence.
+
+    Three values, and the middle one is why this is not a bool: evidence can be
+    perfectly writable and still never move the state (tier C, a hint-assisted
+    success, a `no_verdict`). Collapsing that into "refused" would throw away a
+    fact the product wants to keep; collapsing it into "counts" would let
+    behaviour-only evidence decide a mastery claim.
+    """
+
+    COUNTS = "counts"  # written, and admissible to the derivation
+    INERT = "inert"  # written, but it can never move the state
+    REFUSED = "refused"  # not written at all
+
+
+@dataclass(frozen=True)
+class AdmissionResult:
+    status: Admission
+    # Machine-readable, and set only when REFUSED. The caller turns it into a
+    # 4xx reason or a tool-loop correction, so it must not be prose.
+    reason: str | None = None
+
+    @property
+    def writable(self) -> bool:
+        return self.status is not Admission.REFUSED
+
+    @property
+    def counts(self) -> bool:
+        return self.status is Admission.COUNTS
+
+
+def admit(evidence: Evidence) -> AdmissionResult:
+    """The write policy for one piece of evidence. Pure, and its only home.
+
+    Two questions, in this order, and the order matters:
+
+      1. **May it be written?** A rubric judgement (tier B) with no recorded
+         reason cannot be reviewed later, and an unreviewable judgement is not
+         evidence — so it is refused, not stored. This rule used to live in
+         `services/knowledge_service.py`; it lives here so a second write path
+         cannot forget it, and so the core owns the whole policy.
+      2. **If written, does it count?** That is exactly
+         `is_evidence_admissible` — the derivation's own filter, reused rather
+         than restated, so the two can never drift.
+
+    What is deliberately *not* here: the tier-B *count* threshold. "Two records
+    are enough" is a property of the derivation over all of an item's evidence,
+    not of one row, so it stays in `_direct_assignments`.
+    """
+    if evidence.tier is Tier.B and not (evidence.reasoning or "").strip():
+        return AdmissionResult(
+            status=Admission.REFUSED, reason="reasoning_required_for_tier_b"
+        )
+    return AdmissionResult(
+        status=(
+            Admission.COUNTS if is_evidence_admissible(evidence) else Admission.INERT
+        )
+    )
 
 
 def _direct_assignments(
@@ -467,3 +563,19 @@ def summarize(
         ]
     )
     return "\n".join(lines)
+
+
+def revise(structure: Structure, evidence: Sequence[Evidence]) -> Structure:
+    """Channel ④, fixed as a signature — V0 implements no rule here.
+
+    The architecture reserves a channel from evidence back into the structure:
+    when direct evidence contradicts a prerequisite edge, the edge itself should
+    become questionable (`knowledge_edges.counterexample_count` exists to hold
+    that count, and nothing writes it today). V0 deliberately stops at the
+    signature.
+
+    Returning `structure` unchanged is the honest V0: there is no rule, so there
+    is no change. A caller cannot mistake this for a working channel, and V1 can
+    fill it in without moving anyone's call site.
+    """
+    return structure
