@@ -34,7 +34,7 @@ from schemas.knowledge import (
     KnowledgeEvidenceOut,
     KnowledgeStructureOut,
 )
-from services import coordinator_service, knowledge_service, project_service
+from services import coordinator_service, evidence_entry, knowledge_service, project_service
 
 _NOT_FOUND = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND, detail="project_not_found"
@@ -122,11 +122,22 @@ async def post_evidence(
     """
     await _require_owned_project(db, current_user, payload.project_id)
     try:
-        evidence = await knowledge_service.record_evidence(
+        evidence = await evidence_entry.admit_outcome(
             db,
-            project_id=payload.project_id,
             user_id=current_user.id,
-            payload=payload,
+            scope_ref=evidence_entry.space_scope(payload.project_id),
+            outcome=evidence_entry.Outcome(
+                verdict=payload.verdict,
+                tier=payload.tier,
+                reasoning=payload.reasoning,
+                item_id=payload.item_id,
+                item_label=payload.item_label,
+                independent=payload.independent,
+                hint_used=payload.hint_used,
+            ),
+            provenance=evidence_entry.Provenance(
+                surface=SOURCE_API, extra=payload.response_ref or {}
+            ),
         )
     except knowledge_service.EvidenceRejected as rejected:
         raise HTTPException(

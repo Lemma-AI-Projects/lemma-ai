@@ -33,6 +33,7 @@ from ai.knowledge import (
     StateValue,
     Tier,
     Verdict,
+    admit,
     compute_fringes,
     derive_state,
     summarize,
@@ -549,14 +550,26 @@ async def record_evidence(
 ) -> KnowledgeEvidenceOut:
     """Write one piece of evidence. Append-only; nothing here changes state.
 
-    This is the function the Global Agent's tool calls, and the one the manual
-    acceptance check calls. Same door, so the acceptance test cannot take a
-    shortcut that production does not have.
+    Persistence only. "May this be written?" is not answered here: it is
+    `ai.knowledge.admit`, the core's policy, and this function defers to it so
+    no write path can answer differently. Surfaces reach this through
+    `services/evidence_entry.py`; it stays directly callable for the manual
+    acceptance check and the seed script, which are not surfaces.
     """
-    if payload.tier == "B" and not (payload.reasoning or "").strip():
-        # A rubric judgement with no recorded reason cannot be reviewed later,
-        # and an unreviewable judgement is not evidence.
-        raise EvidenceRejected("reasoning_required_for_tier_b")
+    decision = admit(
+        Evidence(
+            # `admit` judges the row, not its target: the item is resolved just
+            # below, and the policy never reads this field.
+            item_id=str(payload.item_id) if payload.item_id is not None else "",
+            verdict=Verdict(payload.verdict),
+            tier=Tier(payload.tier),
+            independent=payload.independent,
+            hint_used=payload.hint_used,
+            reasoning=payload.reasoning,
+        )
+    )
+    if not decision.writable:
+        raise EvidenceRejected(decision.reason or "refused")
 
     item, candidates = await resolve_item(
         db,

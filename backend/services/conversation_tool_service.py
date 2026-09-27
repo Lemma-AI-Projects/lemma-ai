@@ -62,11 +62,11 @@ from ai.skills import skill_body, skill_names
 from core.database import AsyncSessionLocal
 from models.doc import Page
 from schemas.desmos import Desmos3DGraphPayload, DesmosGraphPayload
-from schemas.knowledge import KnowledgeEvidenceIn
 from services import (
     coordinator_service,
     desmos_graph_service,
     doc_service,
+    evidence_entry,
     knowledge_service,
     space_memory_service,
     user_home_service,
@@ -584,21 +584,20 @@ def build_global_tools(
                 return
 
             try:
-                evidence = await knowledge_service.record_evidence(
+                evidence = await evidence_entry.admit_outcome(
                     db,
-                    project_id=project_id,
                     user_id=user_id,
-                    payload=KnowledgeEvidenceIn(
-                        project_id=project_id,
-                        item_id=item.id,
+                    scope_ref=evidence_entry.space_scope(project_id),
+                    outcome=evidence_entry.Outcome(
                         verdict=verdict,
                         tier="A" if basis == "verified" else "B",
-                        independent=True,
-                        hint_used=False,
                         reasoning=reasoning,
-                        response_ref={"conversationId": str(conversation_id)}
-                        if conversation_id
-                        else None,
+                        # Already resolved above: the tool refuses an unknown
+                        # item rather than letting the service invent one.
+                        item_id=item.id,
+                    ),
+                    provenance=evidence_entry.Provenance(
+                        surface=SOURCE_CHAT, conversation_id=conversation_id
                     ),
                 )
             except knowledge_service.EvidenceRejected as rejected:
