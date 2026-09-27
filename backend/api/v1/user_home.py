@@ -28,13 +28,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
 from schemas.user_home import (
+    BackgroundDraftOut,
+    BackgroundFromUrlIn,
     UserHomeAboutIn,
     UserHomeItemIn,
     UserHomeItemOut,
     UserHomeItemPatch,
     UserHomeOut,
 )
-from services import user_home_service
+from services import background_extract_service, user_home_service
 from services.user_service import get_or_create_profile
 
 router = APIRouter(prefix="/users/me/home", tags=["user-home"])
@@ -62,6 +64,11 @@ async def _home_out(db: AsyncSession, *, user_id: uuid.UUID) -> UserHomeOut:
         nickname=profile.nickname,
         language=home.language if home else None,
         background=home.background if home else None,
+        # No row means "nothing written yet"; the default for that state is the
+        # column default — the analysis is allowed, there is just nothing yet.
+        auto_about=home.auto_about if home else True,
+        auto_interests=home.auto_interests if home else True,
+        auto_preferences=home.auto_preferences if home else True,
         interests=[
             _item_out(item) for item in confirmed if item.kind == "interest"
         ],
@@ -99,8 +106,33 @@ async def update_about(
         patch["language"] = payload.language
     if "background" in sent:
         patch["background"] = payload.background
+    # The Auto switches are one scalar the same page owns, so they travel on the
+    # same request rather than getting an endpoint of their own — that would only
+    # add a way for the switch and the text to disagree.
+    for field in ("auto_about", "auto_interests", "auto_preferences"):
+        if field in sent:
+            patch[field] = getattr(payload, field)
     await user_home_service.update_about(db, user_id=caller.id, **patch)
     return await _home_out(db, user_id=caller.id)
+
+
+@router.post("/background/extract", response_model=BackgroundDraftOut)
+async def extract_background(
+    payload: BackgroundFromUrlIn, caller: Caller
+) -> BackgroundDraftOut:
+    """Read a page the learner linked, and draft the background from it.
+
+    Returns the draft; it does not write it. The page drops the text into the
+    text area and the learner presses save — the same rule as everywhere else in
+    this feature: nothing enters Home except through the person it is about.
+    """
+    try:
+        draft, title = await background_extract_service.draft_background_from_url(
+            payload.url, user_id=caller.id
+        )
+    except background_extract_service.ExtractError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return BackgroundDraftOut(background=draft, source_title=title)
 
 
 @router.post("/items", response_model=UserHomeItemOut, status_code=201)

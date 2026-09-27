@@ -117,6 +117,15 @@ export function HomeUserMenu() {
             </>
           }
         >
+          {/* 这个子菜单本来就是「关于你」的容器（放账号）。资料放在账号列表
+              之上，路径就是 头像 → 你 → 个人资料。 */}
+          <ActionMenuItem
+            label="个人资料"
+            icon={UserRound}
+            onSelect={() => navigate('/me')}
+          />
+          <ActionMenuSeparator />
+
           <ActionMenuItem className="gap-2.5 rounded-md px-2 py-1.5">
             <span
               className="flex size-7 shrink-0 items-center justify-center rounded-full"
@@ -178,11 +187,11 @@ export function HomeUserMenu() {
 
         <ActionMenuSeparator />
 
-        {/* Home 不是一个设置项：它回答「Lemma 眼里的我是谁」，而且是唯一一层
+        {/* 个人资料不是一个设置项：它回答「Lemma 眼里的我是谁」，而且是唯一一层
             跨学习空间跟着用户走的信息（Global User Layer V0）。所以它排在最前，
-            在「个性化 / 个人资料 / 设置」之上。 */}
+            在「个性化 / 设置」之上 —— 而且这里只有这一个通往它的入口。 */}
         <ActionMenuItem
-          label="Home"
+          label="个人资料"
           icon={UserRound}
           onSelect={() => navigate('/me')}
         />
@@ -195,11 +204,6 @@ export function HomeUserMenu() {
           label="个性化"
           icon={Palette}
           onSelect={() => openSettings('personalization')}
-        />
-        <ActionMenuItem
-          label="个人资料"
-          icon={UserRound}
-          onSelect={() => openSettings('account')}
         />
         <ActionMenuItem
           label="设置"

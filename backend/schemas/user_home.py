@@ -52,6 +52,13 @@ class UserHomeOut(_Camel):
     nickname: str | None = None
     language: str | None = None
     background: str | None = None
+    #: Whether Lemma's analysis may fill that section in for this person. Sent
+    #: with every read because the switches are part of the page's state, not a
+    #: setting the frontend should have to remember. `True` is the product
+    #: default — see `models/user_home.py` for why it is not `False`.
+    auto_about: bool = True
+    auto_interests: bool = True
+    auto_preferences: bool = True
     interests: list[UserHomeItemOut] = Field(default_factory=list)
     preferences: list[UserHomeItemOut] = Field(default_factory=list)
     candidates: list[UserHomeItemOut] = Field(default_factory=list)
@@ -63,10 +70,40 @@ class UserHomeAboutIn(_Camel):
     `None` is a real value here ("clear this line"), so the API layer reads
     `model_fields_set` rather than `is not None` — otherwise clearing a field
     would be impossible to express.
+
+    The three `auto*` switches ride the same request because they are the same
+    kind of thing: one scalar the page owns. A second endpoint would only add a
+    way for the two to disagree.
     """
 
     language: str | None = Field(default=None, max_length=32)
-    background: str | None = Field(default=None, max_length=500)
+    #: 2000, not 500: the field is a text area now, and "转行做了三年后端，本科
+    #: 计算机，正在补数学" is one sentence a person actually writes. The column
+    #: has always been `Text`; only this bound was tighter than the storage.
+    background: str | None = Field(default=None, max_length=2000)
+    auto_about: bool | None = None
+    auto_interests: bool | None = None
+    auto_preferences: bool | None = None
+
+
+class BackgroundFromUrlIn(_Camel):
+    """Ask Lemma to read a page and draft the background from it."""
+
+    url: str = Field(min_length=8, max_length=2048)
+
+
+class BackgroundDraftOut(_Camel):
+    """A draft, never a write.
+
+    The page puts this in the text area; the learner still presses save. That is
+    the same rule the agent lives under everywhere else in this feature — nothing
+    enters Home except through the person it is about.
+    """
+
+    background: str
+    #: The page's own title, so the learner can tell which link this came from
+    #: without re-reading the URL.
+    source_title: str | None = None
 
 
 class UserHomeItemIn(_Camel):

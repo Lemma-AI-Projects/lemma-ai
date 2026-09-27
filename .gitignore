@@ -18,6 +18,10 @@
 /LEMMA_VISION.md
 /chatgpt-理解学习方法集.md
 
+# 运行日志目录（含 chrome-profile 浏览器缓存、backend/vite 日志）：全本地，不入库。
+/.logs/
+*.log
+
 # 本地临时文件与备份（*.bak / *.orig）：不属于任何一次改动的一部分。
 *.bak
 *.orig

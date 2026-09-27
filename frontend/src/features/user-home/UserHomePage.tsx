@@ -1,19 +1,31 @@
 /**
- * Home — the page for the layer that follows the learner between spaces.
+ * 个人资料（`/me`）— the page for the layer that follows the learner between
+ * spaces.
  *
- * Three sections, and the split is the product's own scope rule:
+ * It starts from the person: identity first, then what Lemma remembers about
+ * them, and every proposal sits in the block it is going to land in. The page
+ * never names itself — "个人资料" is what the *entries* say, not what the page
+ * says, because a noun here would turn it back into a system module.
  *
- *   - **About me** — who this person is, stable across spaces. The name is shown
- *     here but lives in `profiles`; the language and background are the two
- *     single-valued facts Home owns.
- *   - **Interests** — long-term directions, one line each.
- *   - **How I work** — how they want to be taught, everywhere. A one-off "explain
- *     this in detail" is NOT one of these, and the copy at the bottom says so.
+ * Six bands, top to bottom:
  *
- * The page is deliberately plain about what it is: a place the learner owns and
- * every Learn Space's agent reads. There is no schema vocabulary here — no
- * "profile", no "field", no "data" — because the mental model the user needs is
- * "what Lemma remembers about me", not "what rows exist".
+ *   1. **身份** — avatar, name (edited in place, where it is shown), email, plan.
+ *      Three of these come from `useCurrentUser()`; the name lives in `profiles`
+ *      and is the one identity field with a write endpoint.
+ *   2. **它是什么** — one sentence about the consequence, not the mechanism.
+ *   3. **关于我** — language and background: the two single-valued facts this
+ *      layer owns. "称呼" is NOT here; it belongs where it is displayed.
+ *   4. **长期关注** — long-term directions, one tag each.
+ *   5. **你希望我怎么讲** — how they want to be taught, everywhere, one
+ *      sentence each. A one-off 「这次讲详细一点」 is not one of these.
+ *   6. **页尾** — "想让 Lemma 记住你什么？" plus the boundary line that keeps a
+ *      one-off request from being mistaken for a long-term preference.
+ *
+ * Proposals are not a card at the top: an interest proposal renders inside band
+ * 4, a preference proposal inside band 5, with a small dot next to the section
+ * title saying something is waiting. Nothing here uses internal vocabulary — no
+ * "profile", no "field", no "data" — because the mental model the learner needs
+ * is "what Lemma remembers about me".
  */
 
 import { useState } from 'react'
@@ -22,6 +34,7 @@ import { Check, Pencil, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { SUPPORTED_LANGS } from '@/i18n'
 import { cn } from '@/lib/utils'
 import {
@@ -39,15 +52,142 @@ function languageLabel(value: string | null): string | null {
   return SUPPORTED_LANGS.find((lang) => lang.code === value)?.label ?? value
 }
 
-function SectionTitle({ children }: { children: string }) {
+/**
+ * A Chinese small heading, with an optional dot meaning "something is waiting
+ * here". The dot is a 6px amber mark instead of a card: this page has exactly
+ * one loud thing (the identity band) and a pending proposal is not it.
+ */
+function SectionTitle({
+  children,
+  pending = false,
+}: {
+  children: string
+  pending?: boolean
+}) {
   return (
-    <h2 className="text-[11px] font-medium tracking-[0.08em] text-zinc-400 uppercase">
-      {children}
-    </h2>
+    <div className="flex items-center gap-2">
+      <h2 className="text-[15px] font-medium text-zinc-900">{children}</h2>
+      {pending ? (
+        <span
+          aria-label="有待你确认的一条"
+          title="有待你确认的一条"
+          className="size-1.5 rounded-full bg-amber-400"
+        />
+      ) : null}
+    </div>
   )
 }
 
-/** A row of About Me: label on the left, value on the right, edit in place. */
+/**
+ * The identity avatar — display only. `UserAvatar` is a `<button>` (it is a
+ * menu trigger everywhere else it is used); the identity band must not put a
+ * clickable box around a face that opens nothing.
+ */
+function AvatarBadge({
+  name,
+  color,
+  size = 64,
+}: {
+  name: string
+  color: string
+  size?: number
+}) {
+  const label = Array.from(name.trim())[0]?.toUpperCase() ?? 'U'
+
+  return (
+    <div
+      aria-hidden
+      className="flex shrink-0 items-center justify-center rounded-full"
+      style={{ width: size, height: size, backgroundColor: color }}
+    >
+      <span
+        className="font-bold leading-none text-white/90"
+        style={{ fontSize: Math.round(size / 2.4) }}
+      >
+        {label}
+      </span>
+    </div>
+  )
+}
+
+/** The big name, editable where it is displayed. */
+function NameEditor({
+  value,
+  onSave,
+}: {
+  value: string | null
+  onSave: (next: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value ?? '')
+  const shown = value?.trim()
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <Input
+          autoFocus
+          value={draft}
+          maxLength={60}
+          placeholder="怎么称呼你"
+          className="h-10 w-[220px] rounded-lg text-[18px]"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              onSave(draft.trim())
+              setEditing(false)
+            }
+            if (event.key === 'Escape') setEditing(false)
+          }}
+        />
+        <Button
+          type="button"
+          size="sm"
+          className="h-8 shrink-0 rounded-full px-3.5 text-[13px] font-normal"
+          onClick={() => {
+            onSave(draft.trim())
+            setEditing(false)
+          }}
+        >
+          <Check className="size-3.5" />
+          保存
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-8 shrink-0 rounded-full px-3 text-[13px] font-normal text-zinc-500"
+          onClick={() => setEditing(false)}
+        >
+          取消
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(value ?? '')
+        setEditing(true)
+      }}
+      className="group flex max-w-full items-center gap-2 rounded-lg px-1 py-0.5 text-left hover:bg-zinc-100"
+    >
+      <span
+        className={cn(
+          'truncate text-[26px] font-semibold leading-9 tracking-tight',
+          shown ? 'text-zinc-950' : 'text-zinc-400'
+        )}
+      >
+        {shown || '还没起名字'}
+      </span>
+      <Pencil className="size-4 shrink-0 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100" />
+    </button>
+  )
+}
+
+/** A row of 关于我: label on the left, value on the right, edit in place. */
 function AboutRow({
   label,
   value,
@@ -156,8 +296,8 @@ function AboutRow({
   )
 }
 
-/** One line of Interests or How I work — text, edit in place, remove. */
-function ItemRow({
+/** One line of 你希望我怎么讲 — a sentence, edit in place, remove. */
+function SentenceRow({
   item,
   onEdit,
   onDelete,
@@ -236,13 +376,83 @@ function ItemRow({
   )
 }
 
+/** One tag of 长期关注 — a direction, not a sentence. Edit/remove ride inside. */
+function InterestTag({
+  item,
+  onEdit,
+  onDelete,
+}: {
+  item: UserHomeItem
+  onEdit: (text: string) => void
+  onDelete: () => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(item.text)
+
+  if (editing) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <Input
+          autoFocus
+          value={draft}
+          maxLength={60}
+          className="h-8 w-[160px] rounded-full text-[14px]"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && draft.trim()) {
+              onEdit(draft.trim())
+              setEditing(false)
+            }
+            if (event.key === 'Escape') setEditing(false)
+          }}
+          onBlur={() => {
+            if (draft.trim() && draft.trim() !== item.text) onEdit(draft.trim())
+            setEditing(false)
+          }}
+        />
+      </span>
+    )
+  }
+
+  return (
+    <span className="group inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white py-1 pl-3 pr-1 text-[14px] text-zinc-900">
+      {item.text}
+      {item.origin === 'agent' ? (
+        <span className="text-[11px] text-zinc-400">Lemma 提议</span>
+      ) : null}
+      <button
+        type="button"
+        aria-label="编辑"
+        onClick={() => {
+          setDraft(item.text)
+          setEditing(true)
+        }}
+        className="shrink-0 rounded-full p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-100 hover:text-zinc-700"
+      >
+        <Pencil className="size-3" />
+      </button>
+      <button
+        type="button"
+        aria-label="删除"
+        onClick={onDelete}
+        className="shrink-0 rounded-full p-1 text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-100 hover:text-zinc-700"
+      >
+        <X className="size-3" />
+      </button>
+    </span>
+  )
+}
+
 /** The bottom "add a line" control, shared by both list sections. */
 function AddLine({
   placeholder,
   onSubmit,
+  shape = 'line',
 }: {
   placeholder: string
   onSubmit: (text: string) => void
+  /** `tag` matches the tag list it feeds; `line` matches the sentence list. */
+  shape?: 'line' | 'tag'
 }) {
   const [draft, setDraft] = useState('')
 
@@ -254,12 +464,15 @@ function AddLine({
   }
 
   return (
-    <div className="mt-2 flex items-center gap-2">
+    <div className="mt-3 flex items-center gap-2">
       <Input
         value={draft}
         maxLength={280}
         placeholder={placeholder}
-        className="h-9 rounded-lg text-[14px]"
+        className={cn(
+          'h-9 text-[14px]',
+          shape === 'tag' ? 'max-w-[280px] rounded-full' : 'rounded-lg'
+        )}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') submit()
@@ -280,8 +493,66 @@ function AddLine({
   )
 }
 
+/**
+ * A proposal, drawn in the shape of the block it will land in: a tag for 长期关注,
+ * a sentence row for 你希望我怎么讲. Dashed border instead of the old amber card —
+ * it reads as "not a fact yet" without competing with the identity band.
+ */
+function ProposalRow({
+  item,
+  shape,
+  onConfirm,
+  onIgnore,
+}: {
+  item: UserHomeItem
+  shape: 'tag' | 'line'
+  onConfirm: () => void
+  onIgnore: () => void
+}) {
+  const actions = (
+    <>
+      <Button
+        type="button"
+        size="sm"
+        className="h-6 shrink-0 rounded-full px-2.5 text-[12px] font-normal"
+        onClick={onConfirm}
+      >
+        保存
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="h-6 shrink-0 rounded-full px-2 text-[12px] font-normal text-zinc-500"
+        onClick={onIgnore}
+      >
+        忽略
+      </Button>
+    </>
+  )
+
+  if (shape === 'tag') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-zinc-300 bg-zinc-50 py-1 pl-3 pr-1 text-[14px] text-zinc-600">
+        {item.text}
+        {actions}
+      </span>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 py-1.5">
+      <span className="min-w-0 flex-1 text-[14.5px] leading-6 text-zinc-600">
+        {item.text}
+      </span>
+      {actions}
+    </div>
+  )
+}
+
 export function UserHomePage() {
   const { data, isPending, isError } = useUserHomeQuery()
+  const { data: currentUser } = useCurrentUser()
   const updateAbout = useUpdateAboutMutation()
   const updateNickname = useUpdateNicknameMutation()
   const addItem = useAddHomeItemMutation()
@@ -289,83 +560,72 @@ export function UserHomePage() {
   const deleteItem = useDeleteHomeItemMutation()
   const [note, setNote] = useState<string | null>(null)
 
+  const interests = data?.interests ?? []
+  const preferences = data?.preferences ?? []
+  const candidates = data?.candidates ?? []
+  // A proposal stands next to the facts it would join, not in a card of its own.
+  const interestProposals = candidates.filter((item) => item.kind === 'interest')
+  const preferenceProposals = candidates.filter(
+    (item) => item.kind === 'preference'
+  )
+
+  const displayName = data?.nickname ?? currentUser?.nickname ?? null
+  const email = currentUser?.email ?? null
+  const plan = currentUser?.subscriptionPlan ?? null
+  const avatarColor = currentUser?.avatarColor ?? '#71717a'
+
   const add = (kind: HomeItemKind) => (text: string) => {
     setNote(null)
     addItem.mutate(
       { kind, text },
-      {
-        onError: () => setNote('这一条已经在 Home 里了。'),
-      }
+      { onError: () => setNote('这一条已经在这里了。') }
     )
   }
 
   return (
     <div className="scrollbar-fade h-full min-h-0 overflow-y-auto bg-zinc-50">
-      <div className="mx-auto w-full max-w-[720px] px-10 pt-14 pb-20">
-        <h1 className="text-[26px] font-semibold leading-9 tracking-tight text-zinc-950">
-          Home
-        </h1>
-        <p className="mt-2 max-w-[560px] text-[15px] leading-7 text-zinc-500">
+      <div className="mx-auto w-full max-w-[680px] px-10 pt-14 pb-20">
+        {/* 1 · 身份 */}
+        <section className="flex items-center gap-5">
+          <AvatarBadge name={displayName ?? ''} color={avatarColor} />
+
+          <div className="min-w-0 flex-1">
+            <NameEditor
+              value={displayName}
+              onSave={(next) => updateNickname.mutate(next)}
+            />
+            <div className="mt-1 flex items-center gap-2.5 pl-1">
+              {email ? (
+                <span className="truncate text-[14px] text-zinc-500">
+                  {email}
+                </span>
+              ) : null}
+              {plan ? (
+                <span className="shrink-0 rounded-full border border-zinc-200 px-2 py-0.5 text-[12px] text-zinc-500">
+                  {plan}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </section>
+
+        {/* 2 · 它是什么 */}
+        <p className="mt-6 max-w-[520px] text-[15px] leading-7 text-zinc-500">
           这一页跟着你走。你在一个学习空间里说过的话、定过的偏好，
           换到别的学习空间，Lemma 读到的还是这一份。
         </p>
 
         {isError ? (
-          <p className="mt-8 text-[14px] text-zinc-500">读不到 Home，请刷新重试。</p>
+          <p className="mt-8 text-[14px] text-zinc-500">读不到，请刷新重试。</p>
+        ) : null}
+        {isPending ? (
+          <p className="mt-8 text-[13px] text-zinc-400">正在读取…</p>
         ) : null}
 
-        {data && data.candidates.length > 0 ? (
-          <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-[13px] font-medium text-amber-900">
-              Lemma 想记住这些，需要你先确认
-            </p>
-            <div className="mt-3 flex flex-col gap-2">
-              {data.candidates.map((candidate) => (
-                <div
-                  key={candidate.id}
-                  className="flex items-center gap-3 rounded-lg bg-white/70 px-3 py-2"
-                >
-                  <span className="min-w-0 flex-1 text-[14.5px] text-zinc-800">
-                    {candidate.text}
-                  </span>
-                  <span className="shrink-0 text-[11px] text-zinc-400">
-                    {candidate.kind === 'interest' ? '兴趣' : '偏好'}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 shrink-0 rounded-full px-3.5 text-[13px] font-normal"
-                    onClick={() =>
-                      updateItem.mutate({ id: candidate.id, status: 'confirmed' })
-                    }
-                  >
-                    保存到 Home
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 shrink-0 rounded-full px-3 text-[13px] font-normal text-zinc-500"
-                    onClick={() => deleteItem.mutate(candidate.id)}
-                  >
-                    忽略
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        <section className="mt-10">
-          <SectionTitle>About me</SectionTitle>
+        {/* 3 · 关于我 */}
+        <section className="mt-12">
+          <SectionTitle>关于我</SectionTitle>
           <div className="mt-2">
-            <AboutRow
-              label="称呼"
-              value={data?.nickname ?? null}
-              placeholder="怎么称呼你"
-              onSave={(next) => updateNickname.mutate(next)}
-            />
-            <Separator className="bg-zinc-200" />
             <AboutRow
               label="语言"
               value={data?.language ?? null}
@@ -390,42 +650,79 @@ export function UserHomePage() {
           </div>
         </section>
 
-        <section className="mt-10">
-          <SectionTitle>Interests</SectionTitle>
+        {/* 4 · 长期关注 — 方向，所以是标签 */}
+        <section className="mt-11">
+          <SectionTitle pending={interestProposals.length > 0}>
+            长期关注
+          </SectionTitle>
           <p className="mt-1.5 text-[13px] text-zinc-400">
             你长期关注的方向 —— 不是某一次想问的问题。
           </p>
-          <div className="mt-2">
-            {(data?.interests ?? []).map((item) => (
-              <ItemRow
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {interests.map((item) => (
+              <InterestTag
                 key={item.id}
                 item={item}
                 onEdit={(text) => updateItem.mutate({ id: item.id, text })}
                 onDelete={() => deleteItem.mutate(item.id)}
               />
             ))}
+            {interestProposals.map((item) => (
+              <ProposalRow
+                key={item.id}
+                item={item}
+                shape="tag"
+                onConfirm={() =>
+                  updateItem.mutate({ id: item.id, status: 'confirmed' })
+                }
+                onIgnore={() => deleteItem.mutate(item.id)}
+              />
+            ))}
           </div>
-          <AddLine placeholder="例如：认知科学" onSubmit={add('interest')} />
+          <AddLine
+            shape="tag"
+            placeholder="例如：认知科学"
+            onSubmit={add('interest')}
+          />
         </section>
 
-        <section className="mt-10">
-          <SectionTitle>How I work</SectionTitle>
+        {/* 5 · 你希望我怎么讲 — 说明，所以是句子 */}
+        <section className="mt-11">
+          <SectionTitle pending={preferenceProposals.length > 0}>
+            你希望我怎么讲
+          </SectionTitle>
           <p className="mt-1.5 text-[13px] text-zinc-400">
             你希望 Lemma 怎么给你讲 —— 这里写的，每个学习空间都照做。
           </p>
           <div className="mt-2">
-            {(data?.preferences ?? []).map((item) => (
-              <ItemRow
+            {preferences.map((item) => (
+              <SentenceRow
                 key={item.id}
                 item={item}
                 onEdit={(text) => updateItem.mutate({ id: item.id, text })}
                 onDelete={() => deleteItem.mutate(item.id)}
               />
             ))}
+            {preferenceProposals.map((item) => (
+              <div key={item.id} className="py-1">
+                <ProposalRow
+                  item={item}
+                  shape="line"
+                  onConfirm={() =>
+                    updateItem.mutate({ id: item.id, status: 'confirmed' })
+                  }
+                  onIgnore={() => deleteItem.mutate(item.id)}
+                />
+              </div>
+            ))}
           </div>
-          <AddLine placeholder="例如：回答尽量简洁" onSubmit={add('preference')} />
+          <AddLine
+            placeholder="例如：回答尽量简洁"
+            onSubmit={add('preference')}
+          />
         </section>
 
+        {/* 6 · 页尾 */}
         <Separator className="mt-12 bg-zinc-200" />
 
         <section className="mt-8">
@@ -446,9 +743,6 @@ export function UserHomePage() {
             <p className="mt-2 text-[12.5px] text-zinc-500" data-home-note>
               {note}
             </p>
-          ) : null}
-          {isPending ? (
-            <p className="mt-3 text-[13px] text-zinc-400">正在读取…</p>
           ) : null}
         </section>
       </div>

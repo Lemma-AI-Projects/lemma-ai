@@ -19,9 +19,16 @@ import { SidebarItem } from '@/components/SidebarItem'
 import { SidebarMoreMenu } from '@/components/SidebarMoreMenu'
 import { SidebarSection } from '@/components/SidebarSection'
 import { useConversationsQuery } from '@/features/conversation/conversationApi'
+import { HomeUserMenu } from '@/features/home/HomeUserMenu'
 import { CreateProjectDialog } from '@/features/project/CreateProjectDialog'
 import { useProjectsQuery } from '@/features/project/projectApi'
 
+/**
+ * The sidebar's top bar. Its right slot used to be empty; it now carries the
+ * avatar menu, so the entry to 个人资料 exists on every page instead of only on
+ * the app home — a layer that claims to follow the learner everywhere should be
+ * reachable everywhere.
+ */
 function SidebarHeader({ children }: { children?: ReactNode }) {
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between bg-zinc-100 px-3">
@@ -68,9 +75,9 @@ export function AppLayout() {
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
-        {/* Home：跨学习空间跟着用户走的那一层（Global User Layer V0）。路由不叫
-            /home —— 那是 app 首页；这一页在 /me。 */}
-        <SidebarItem icon={UserRound} label="Home" to="/me" />
+        {/* 个人资料：跨学习空间跟着用户走的那一层（Global User Layer V0）。它
+            不叫 Home —— 那个名字留给 /home（app 首页），这一页在 /me。 */}
+        <SidebarItem icon={UserRound} label="个人资料" to="/me" />
         <div
           className={cn(
             'pointer-events-none h-px w-full shadow-[0_1px_2px_0_rgba(0,0,0,0.04)] transition-opacity duration-150',
@@ -162,7 +169,9 @@ export function AppLayout() {
     <div className="flex h-screen gap-2 overflow-hidden bg-zinc-100 p-2 text-zinc-950 [--sidebar-width:240px]">
       <aside className="flex h-full w-[var(--sidebar-width)] shrink-0 flex-col">
         <nav ref={navRef} className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto">
-          <SidebarHeader />
+          <SidebarHeader>
+            <HomeUserMenu />
+          </SidebarHeader>
           {navigationSidebarContent}
         </nav>
       </aside>

@@ -51,6 +51,11 @@ class AIUseCase(StrEnum):
     # live in front of the learner — different latency budgets.
     FREE_COURSE_SESSION = "free_course_session"
     FREE_COURSE_SESSION_TURN = "free_course_session_turn"
+    # Personal profile (`/me`): read one page the learner pointed at and draft
+    # their background from it. Its own use case so the page's only model call
+    # can be routed and priced on its own, and so its prompt
+    # (`user_profile_extract`) can never be reached by a course step.
+    USER_PROFILE_EXTRACT = "user_profile_extract"
 
 
 class VideoInputKind(StrEnum):

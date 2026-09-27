@@ -36,18 +36,27 @@ Boundaries this file is responsible for keeping (see
     proposed by the agent as a `candidate` and flipped to `confirmed` by an
     explicit user action. `status` and `origin` exist so that rule is
     enforceable in SQL rather than by convention.
+  - **Auto is consent, given once and revocable.** The three `auto_*` switches
+    say whether the learner lets the analysis fill that section in for them.
+    They narrow the rule above rather than excepting it: a row an analysis
+    produced still carries `origin="agent"` — never laundered into something the
+    learner wrote — it stays editable and deletable like any other, and turning
+    Auto off stops new ones. What the switch changes is *when* the consent
+    happens: once, up front, instead of once per line.
 """
 
 import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     ForeignKey,
     Index,
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import TIMESTAMP, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -85,6 +94,21 @@ class UserHome(Base):
     #: Free text on purpose: "high school", "本科·计算机", "转行的后端工程师"
     #: are all true and none of them fit an enum we would have to invent today.
     background: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Whether Lemma's analysis may fill this section in for the learner. Three
+    #: switches, not one: the sections answer different questions (who I am /
+    #: what I care about / how I want to be taught) and wanting help with one
+    #: says nothing about the others. `True` by default — the layer is supposed
+    #: to work before it is configured. Off stops new automatic additions; it
+    #: never removes what is already there.
+    auto_about: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
+    auto_interests: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
+    auto_preferences: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("true")
+    )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

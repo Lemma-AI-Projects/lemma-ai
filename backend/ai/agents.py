@@ -27,6 +27,7 @@ from ai.free_course.types import (
 )
 from ai.errors import UnsupportedCapabilityError
 from ai.types import AIUseCase
+from ai.user_profile import BackgroundDraft
 
 
 @dataclass
@@ -96,6 +97,11 @@ free_course_feedback_agent = _build_structured_agent(AnswerFeedback)
 free_course_session_agent = _build_structured_agent(TeachingSessionPlan)
 free_course_session_turn_agent = _build_structured_agent(TeachingTurn)
 
+# Personal profile (`/me`): read one page, draft the background. Structured like
+# the course steps because the page needs a field it can drop into a text area,
+# not prose it would have to parse.
+user_profile_extract_agent = _build_structured_agent(BackgroundDraft)
+
 _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_INTAKE: course_intake_agent,
     AIUseCase.TOPIC_SEARCH: topic_search_agent,
@@ -108,6 +114,7 @@ _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.FREE_COURSE_FEEDBACK: free_course_feedback_agent,
     AIUseCase.FREE_COURSE_SESSION: free_course_session_agent,
     AIUseCase.FREE_COURSE_SESSION_TURN: free_course_session_turn_agent,
+    AIUseCase.USER_PROFILE_EXTRACT: user_profile_extract_agent,
 }
 
 

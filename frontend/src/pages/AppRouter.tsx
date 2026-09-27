@@ -30,6 +30,7 @@ import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 import { SchedulePreviewPage } from '@/pages/SchedulePreviewPage'
+import { UserProfilePreviewPage } from '@/pages/UserProfilePreviewPage'
 
 const routes: RouteObject[] = [
   {
@@ -60,6 +61,11 @@ const routes: RouteObject[] = [
     // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。
     path: '/preview/schedule',
     element: <SchedulePreviewPage />,
+  },
+  {
+    // 布局评审入口：个人资料页（/me），mock 数据、不登录即可查看。
+    path: '/preview/user-profile',
+    element: <UserProfilePreviewPage />,
   },
   {
     // 免费课的两个静态预览（与 v2 同形：公开、不挂 AppLayout）。

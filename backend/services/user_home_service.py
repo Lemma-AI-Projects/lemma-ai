@@ -114,6 +114,9 @@ async def update_about(
     user_id: uuid.UUID,
     language: Any = _UNSET,
     background: Any = _UNSET,
+    auto_about: Any = _UNSET,
+    auto_interests: Any = _UNSET,
+    auto_preferences: Any = _UNSET,
 ) -> UserHome:
     """Write the About Me fields, creating the row on first write.
 
@@ -121,6 +124,10 @@ async def update_about(
     it alone", while passing `None` (or a blank string) clears the field. The API
     layer decides which is which from the request's own field set, so a client
     can send one field, or send `null` to reset one.
+
+    The three `auto_*` switches are booleans with no "unset" value of their own,
+    so `None` is ignored rather than stored: a switch is either on or off, and
+    "neither" is not a state the page or any future analysis could act on.
     """
     home = await db.get(UserHome, user_id)
     if home is None:
@@ -130,6 +137,13 @@ async def update_about(
         home.language = (language or "").strip() or None
     if background is not _UNSET:
         home.background = (background or "").strip() or None
+    for name, value in (
+        ("auto_about", auto_about),
+        ("auto_interests", auto_interests),
+        ("auto_preferences", auto_preferences),
+    ):
+        if value is not _UNSET and value is not None:
+            setattr(home, name, bool(value))
     await db.commit()
     await db.refresh(home)
     return home
