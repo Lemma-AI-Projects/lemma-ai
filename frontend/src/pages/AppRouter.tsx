@@ -26,6 +26,7 @@ import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
 import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { OnboardingPreviewPage } from '@/pages/OnboardingPreviewPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
@@ -66,6 +67,12 @@ const routes: RouteObject[] = [
     // 布局评审入口：个人资料页（/me），mock 数据、不登录即可查看。
     path: '/preview/user-profile',
     element: <UserProfilePreviewPage />,
+  },
+  {
+    // 布局评审入口：onboarding 8 屏（认识你 → 校准 → 确认），
+    // mock 数据、不登录即可查看。出口接 /preview/user-profile。
+    path: '/preview/onboarding',
+    element: <OnboardingPreviewPage />,
   },
   {
     // 免费课的两个静态预览（与 v2 同形：公开、不挂 AppLayout）。
