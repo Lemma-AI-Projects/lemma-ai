@@ -11,6 +11,13 @@
 /.env.*
 !/.env.example
 
+# 演进规划草稿：个人规划笔记，不入库。
+/evolve plan.md
+
+# 愿景与原始素材（本地，给开发中的 agent 看）：不进仓库。
+/LEMMA_VISION.md
+/chatgpt-理解学习方法集.md
+
 # 本地临时文件与备份（*.bak / *.orig）：不属于任何一次改动的一部分。
 *.bak
 *.orig
