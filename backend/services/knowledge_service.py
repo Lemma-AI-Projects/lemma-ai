@@ -26,16 +26,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai.knowledge import (
     Edge,
+    EdgeConfidence,
     Evidence,
     Fringes,
     Item,
     KnowledgeState,
     StateValue,
+    Structure,
     Tier,
     Verdict,
     admit,
     compute_fringes,
+    count_counterexamples,
     derive_state,
+    revise,
     summarize,
 )
 from models import (
@@ -134,7 +138,17 @@ def to_domain(
         for row in items
     ]
     domain_edges = [
-        Edge(prerequisite_id=str(row.from_item_id), dependent_id=str(row.to_item_id))
+        Edge(
+            prerequisite_id=str(row.from_item_id),
+            dependent_id=str(row.to_item_id),
+            # Both carried from the row since channel ④: the count is what
+            # `revise` raises, and the confidence is what makes a hand-confirmed
+            # edge immune to retirement. Dropping either one here would silently
+            # change the derivation's answer — a `user_confirmed` edge would be
+            # retired by evidence the product promised it was immune to.
+            counterexample_count=row.counterexample_count,
+            confidence=EdgeConfidence(row.confidence),
+        )
         for row in edges
     ]
     domain_evidence = [
@@ -153,16 +167,54 @@ def to_domain(
     return domain_items, domain_edges, domain_evidence
 
 
+async def _persist_counterexamples(
+    db: AsyncSession, rows: list[KnowledgeEdge], counts: dict[tuple[str, str], int]
+) -> None:
+    """Write back only the counts that moved.
+
+    The count is the only thing channel ④ stores — "retired" is recomputed on
+    every read (`revise`), and that is what kept this feature out of the
+    migrations. Writing back only the changed rows matters because this sits on a
+    *read* path: most calls find nothing to record and must stay read-only.
+    """
+    changed = False
+    for row in rows:
+        observed = counts.get((str(row.from_item_id), str(row.to_item_id)))
+        if observed is None or observed == row.counterexample_count:
+            continue
+        row.counterexample_count = observed
+        changed = True
+    if changed:
+        await db.commit()
+
+
 async def compute_state(
     db: AsyncSession, *, project_id: uuid.UUID, user_id: uuid.UUID
 ) -> tuple[KnowledgeState, Fringes, list[KnowledgeItem], list[KnowledgeEdge]]:
-    """The one derivation path. Every consumer goes through here."""
+    """The one derivation path. Every consumer goes through here.
+
+    Since channel ④ the structure is no longer read straight off the tables: the
+    evidence gets to revise it first (`revise` — an edge contradicted twice is
+    retired, unless a person confirmed it). The revision is derived, so the only
+    thing that lands back in storage is the counterexample count; the state and
+    the structure therefore always describe the same world, and no caller can get
+    one without the other.
+    """
     items = await list_items(db, project_id=project_id)
     edges = await list_edges(db, project_id=project_id)
     evidence = await list_evidence(db, project_id=project_id, user_id=user_id)
     domain_items, domain_edges, domain_evidence = to_domain(items, edges, evidence)
-    state = derive_state(domain_items, domain_edges, domain_evidence)
-    fringes = compute_fringes(state, domain_items, domain_edges)
+    structure = Structure(items=tuple(domain_items), edges=tuple(domain_edges))
+    # Persist first: the counts `revise` is about to act on are the ones the row
+    # will hold, so a caller reading the rows right after this sees the same
+    # numbers the state was computed from.
+    await _persist_counterexamples(
+        db, edges, count_counterexamples(structure, domain_evidence)
+    )
+    revised = revise(structure, domain_evidence)
+    revised_edges = list(revised.edges)
+    state = derive_state(domain_items, revised_edges, domain_evidence)
+    fringes = compute_fringes(state, domain_items, revised_edges)
     return state, fringes, items, edges
 
 

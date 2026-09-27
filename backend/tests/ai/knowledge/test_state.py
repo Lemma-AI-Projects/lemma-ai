@@ -17,16 +17,20 @@ import random
 
 from ai.knowledge import (
     B_LEVEL_MIN_EVIDENCE,
+    EDGE_REVISION_MIN_COUNTEREXAMPLES,
     Edge,
+    EdgeConfidence,
     Evidence,
     Item,
     Origin,
     StateValue,
+    Structure,
     Tier,
     Verdict,
     compute_fringes,
     derive_state,
     is_evidence_admissible,
+    revise,
     summarize,
 )
 
@@ -314,3 +318,97 @@ def test_summarize_never_emits_a_percentage_or_a_mastery_score():
 def test_summarize_on_an_empty_space_says_so():
     text = summarize(derive_state([], [], []), compute_fringes(derive_state([], [], []), [], []), [])
     assert "还没有知识结构" in text
+
+
+# --- 10 · channel ④: structure revision ---------------------------------------
+#
+# A counterexample is what `derive_state` already calls a `violation`: the
+# dependent was directly observed as mastered while its prerequisite was
+# directly observed as NOT mastered. Note what is deliberately *not* one:
+# learning the hard end first — the prerequisite merely untested — is not a
+# counterexample, because the positive closure reads it as the prerequisite
+# being held. Only an explicit failure at the prerequisite, together with
+# independent successes at the dependent, contradicts the edge. That is the
+# whole reason the threshold can be as low as two.
+
+AB = Edge(prerequisite_id="a", dependent_id="b")
+BC = Edge(prerequisite_id="b", dependent_id="c")
+
+
+def structure_with(*edges: Edge, items=ITEMS) -> Structure:
+    return Structure(items=tuple(items), edges=tuple(edges))
+
+
+def two_counterexamples() -> list[Evidence]:
+    """Two independent, unaided successes at b — while b's prerequisite failed."""
+    return [correct("b"), correct("b"), wrong("a")]
+
+
+def test_one_counterexample_is_counted_but_does_not_retire():
+    revised = revise(structure_with(AB), [correct("b"), wrong("a")])
+    assert len(revised.edges) == 1
+    assert revised.edges[0].counterexample_count == 1
+    assert revised.edges[0].counterexample_count < EDGE_REVISION_MIN_COUNTEREXAMPLES
+
+
+def test_reaching_the_threshold_retires_the_edge():
+    revised = revise(structure_with(AB), two_counterexamples())
+    assert revised.edges == ()
+
+
+def test_learning_the_hard_end_first_is_not_a_counterexample():
+    # b observed, a untouched: the edge is what made a count as held.
+    revised = revise(structure_with(AB), [correct("b")])
+    assert revised.edges == (AB,)
+
+
+def test_revise_is_idempotent():
+    structure = structure_with(AB)
+    evidence = [correct("b"), wrong("a")]
+    once = revise(structure, evidence)
+    assert revise(once, evidence) == once
+
+
+def test_revise_is_idempotent_once_the_edge_is_retired():
+    structure = structure_with(AB)
+    evidence = two_counterexamples()
+    once = revise(structure, evidence)
+    assert once.edges == ()
+    assert revise(once, evidence) == once
+
+
+def test_revise_does_not_depend_on_evidence_order():
+    structure = structure_with(AB)
+    evidence = [*two_counterexamples(), correct("c")]
+    first = revise(structure, evidence)
+    shuffled = list(evidence)
+    for _ in range(20):
+        random.shuffle(shuffled)
+        assert revise(structure, shuffled) == first
+
+
+def test_revise_only_ever_removes():
+    structure = structure_with(AB, BC)
+    # Includes evidence about an unknown item, which must not grow a topic.
+    evidence = [*two_counterexamples(), correct("ghost"), wrong("c")]
+    revised = revise(structure, evidence)
+    assert revised.items == structure.items
+    assert {i.id for i in revised.items} <= {i.id for i in structure.items}
+    assert {(e.prerequisite_id, e.dependent_id) for e in revised.edges} <= {
+        (e.prerequisite_id, e.dependent_id) for e in structure.edges
+    }
+
+
+def test_a_user_confirmed_edge_counts_counterexamples_but_is_never_retired():
+    confirmed = Edge(
+        prerequisite_id="a",
+        dependent_id="b",
+        confidence=EdgeConfidence.USER_CONFIRMED,
+    )
+    revised = revise(structure_with(confirmed), two_counterexamples())
+    assert len(revised.edges) == 1
+    assert revised.edges[0].counterexample_count == EDGE_REVISION_MIN_COUNTEREXAMPLES
+    assert revised.edges[0].confidence is EdgeConfidence.USER_CONFIRMED
+    # The same evidence on a machine-drafted edge does retire it — the immunity
+    # is the person's, not the evidence's.
+    assert revise(structure_with(AB), two_counterexamples()).edges == ()

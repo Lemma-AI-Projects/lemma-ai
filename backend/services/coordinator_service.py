@@ -58,7 +58,7 @@ from ai.coordinator import (
     Snapshot,
     decide,
 )
-from ai.knowledge import derive_state
+from ai.knowledge import Structure, derive_state, revise
 from ai.knowledge.state import StateValue
 from models.coordinator_decision import CoordinatorDecision
 from services import knowledge_service, notification_service, space_memory_service
@@ -122,7 +122,17 @@ def _previous_value(
     domain_items, domain_edges, domain_evidence = knowledge_service.to_domain(
         items, edges, without
     )
-    previous = derive_state(domain_items, domain_edges, domain_evidence)
+    # The same *revision* the current state went through (`knowledge_service.
+    # compute_state`), over the same structure and a shorter evidence list. What
+    # this function varies is the evidence — that is its whole point — but the
+    # structure must not be a second variable: comparing "before" and "after"
+    # across one revised structure and one raw one would report a lapse that is
+    # really just an edge retiring.
+    revised = revise(
+        Structure(items=tuple(domain_items), edges=tuple(domain_edges)),
+        domain_evidence,
+    )
+    previous = derive_state(domain_items, list(revised.edges), domain_evidence)
     return previous.value(item_id)
 
 

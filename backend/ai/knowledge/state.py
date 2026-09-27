@@ -61,12 +61,13 @@ This package exposes exactly three pure operations, and no fourth:
 
     admit(evidence) -> Admission          may it be written? does it count?
     derive(items, edges, evidence) -> state   the instrument (above)
-    revise(structure, evidence) -> structure  V1 skeleton, identity in V0
+    revise(structure, evidence) -> structure  structure revision (channel ④)
 
 `admit` is where the **write** policy lives (today: a rubric verdict with no
 recorded reason is refused), so a service adapter cannot re-decide it.
-`revise` is channel ④ of the architecture — structure revision from
-counterexamples — and V0 fixes only its signature.
+`revise` is channel ④: evidence may **falsify** a prerequisite edge, never
+invent one, and it may only retire an edge that no human has confirmed by hand.
+Its three rules and the definition of a counterexample live on the function.
 
 **Zero dependencies, on purpose.** Nothing in this package imports the
 database, the services, FastAPI, SQLAlchemy, or any sibling `ai.*` module. It
@@ -81,13 +82,22 @@ would make this package un-shippable on its own — the test fails on purpose.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import StrEnum
 
 # Tier-B evidence needs this many admissible records before it counts.
 # Same shape as the prototype's misconception-confirmation threshold.
 B_LEVEL_MIN_EVIDENCE = 2
+
+#: How many counterexamples retire an agent-drafted prerequisite edge.
+#:
+#: Two, for the same reason `B_LEVEL_MIN_EVIDENCE` is two: one contradiction is
+#: at least as likely to be a mis-scored item — or a learner who attacked the
+#: hard end first — as it is to be a wrong edge. A named constant rather than a
+#: literal because it is a *guess* with no data behind it yet, and a guess that
+#: lives in one place is one edit away from being corrected.
+EDGE_REVISION_MIN_COUNTEREXAMPLES = 2
 
 
 class Tier(StrEnum):
@@ -130,16 +140,45 @@ class Item:
     active: bool = True
 
 
+class EdgeConfidence(StrEnum):
+    """Who asserted a prerequisite edge.
+
+    The values mirror the database's CHECK constraint (`EDGE_CONFIDENCES` in
+    `models/knowledge.py`) rather than the other way round: they are wire values,
+    so a rename here would be a migration there, not a refactor.
+    """
+
+    AGENT_DRAFTED = "agent_drafted"
+    USER_CONFIRMED = "user_confirmed"
+
+
 @dataclass(frozen=True)
 class Edge:
     """`prerequisite_id` must be known before `dependent_id` can be.
 
     Read as: "being able to do `dependent` implies being able to do
     `prerequisite`". The graph must be acyclic.
+
+    The two extra fields are *about* the edge rather than part of the order it
+    expresses, and they exist for `revise`:
+
+      * `counterexample_count` — how much evidence has disagreed with it. A
+        count, never a score: "twice, independently, this looked wrong" is a
+        fact, where "0.7 wrong" would be an invented number.
+      * `confidence` — who put it there. Only `agent_drafted` edges can be
+        retired; a person's own assertion is immune.
     """
 
     prerequisite_id: str
     dependent_id: str
+    #: Monotone by construction — `revise` only ever raises it. Forgetting a
+    #: contradiction is a different feature with a different argument, and `revise`
+    #: does not do it.
+    counterexample_count: int = 0
+    #: Defaults to `agent_drafted`: that is the database default, and the safe
+    #: reading of "nobody recorded who asserted this" is "a machine drafted it",
+    #: which is the revocable one.
+    confidence: EdgeConfidence = EdgeConfidence.AGENT_DRAFTED
 
 
 @dataclass(frozen=True)
@@ -565,17 +604,88 @@ def summarize(
     return "\n".join(lines)
 
 
-def revise(structure: Structure, evidence: Sequence[Evidence]) -> Structure:
-    """Channel ④, fixed as a signature — V0 implements no rule here.
+def count_counterexamples(
+    structure: Structure, evidence: Sequence[Evidence]
+) -> dict[tuple[str, str], int]:
+    """How many pieces of evidence disagree with each edge, keyed by `(p, d)`.
 
-    The architecture reserves a channel from evidence back into the structure:
-    when direct evidence contradicts a prerequisite edge, the edge itself should
-    become questionable (`knowledge_edges.counterexample_count` exists to hold
-    that count, and nothing writes it today). V0 deliberately stops at the
-    signature.
+    Public because two callers need the *number* rather than the decision:
+    `revise` (which retires an edge at the threshold), and whoever has to persist
+    or display the count. An edge that has just been retired is no longer in the
+    structure `revise` returns, so its count cannot be read back off the result —
+    this is where it comes from instead.
 
-    Returning `structure` unchanged is the honest V0: there is no rule, so there
-    is no change. A caller cannot mistake this for a working channel, and V1 can
-    fill it in without moving anyone's call site.
+    A **counterexample** is exactly what `derive_state` already calls a
+    `violation`: the dependent was directly observed as mastered while its
+    prerequisite did not end up in the positive set. That definition is reused
+    here rather than restated, so "contradicted" cannot come to mean two things
+    in two places — this reads the derivation instead of re-deciding it.
+
+    The number attached to an edge is the dependent's own count of *accepted*
+    records (`ItemStatus.evidence_count`). Under a violation the dependent is
+    `mastered`, which means every one of those records is an independent, unaided
+    success at the dependent — i.e. an independent reason to doubt the edge. That
+    is why the count is the evidence count and not "1 per call": a number that
+    only grew when somebody happened to re-run the derivation would measure
+    nothing at all.
     """
-    return structure
+    state = derive_state(structure.items, structure.edges, evidence)
+    struck: dict[tuple[str, str], int] = {}
+    for edge in state.violations:
+        status = state.statuses.get(edge.dependent_id)
+        count = status.evidence_count if status else 0
+        key = (edge.prerequisite_id, edge.dependent_id)
+        struck[key] = max(struck.get(key, 0), count)
+    return struck
+
+
+def revise(structure: Structure, evidence: Sequence[Evidence]) -> Structure:
+    """Channel ④: let evidence falsify the structure.
+
+    Three rules, and they are the whole rule set:
+
+    1. **Only ever removes.** A structure is a *claim*; evidence may falsify a
+       claim, never invent one. Nothing here adds an item or an edge — a
+       learner's answers cannot conjure a topic nobody proposed.
+    2. **Human review is immune.** A `user_confirmed` edge still counts
+       counterexamples — the disagreement is recorded — but it is never retired.
+       A person said so; evidence only gets to offer an objection.
+    3. **Retirement is derived, not stored.** The only thing that leaves this
+       function for storage is `counterexample_count`; "is this edge retired" is
+       recomputed from that count on every call, so the answer stays reversible
+       and auditable, and the database needs no new column.
+
+    Two properties fall out of the arithmetic, and both are tested:
+
+      * **Idempotent** — the count is `max(recorded, observed)`, never
+        `recorded + 1`, so re-running over the same evidence cannot inflate it.
+      * **Order-independent** — the count comes from a set-shaped derivation, so
+        the order the evidence arrived in cannot change the result.
+
+    Monotonicity is deliberate: a count that could fall would silently resurrect
+    an edge the evidence has already rejected twice. Resurrection, if the product
+    wants it, is a V1 decision with its own evidence — not a side effect of some
+    old row being deleted.
+    """
+    struck = count_counterexamples(structure, evidence)
+    if not struck:
+        return structure
+
+    kept: list[Edge] = []
+    for edge in structure.edges:
+        observed = struck.get((edge.prerequisite_id, edge.dependent_id))
+        if observed is None:
+            kept.append(edge)
+            continue
+        counted = replace(
+            edge, counterexample_count=max(edge.counterexample_count, observed)
+        )
+        if (
+            counted.confidence is EdgeConfidence.AGENT_DRAFTED
+            and counted.counterexample_count >= EDGE_REVISION_MIN_COUNTEREXAMPLES
+        ):
+            # Retired: dropped from the structure this call returns. The row and
+            # its count stay in storage — deleting is not this function's job.
+            continue
+        kept.append(counted)
+    return Structure(items=structure.items, edges=tuple(kept))

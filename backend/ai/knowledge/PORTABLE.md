@@ -2,8 +2,9 @@
 
 This directory is the **analysis core**: it decides whether a piece of evidence
 counts (`admit`), derives the learner's state from a structure and its evidence
-(`derive_state` / `compute_fringes`), and reserves the structure-revision
-signature (`revise`). It is meant to be liftable into another project without
+(`derive_state` / `compute_fringes`), and lets that evidence revise the
+structure itself (`revise` — an edge contradicted twice is retired, unless a
+person confirmed it). It is meant to be liftable into another project without
 dragging Lemma along.
 
 That is a claim, so it is enforced rather than asserted:
@@ -70,14 +71,19 @@ python -m pytest test_state.py -q
 ```
 
 Expected: the whole pure-instrument suite passes (admissibility, the two closure
-rules, fringes, the lower-set invariant, the summarize discipline). No network,
-no database, no model.
+rules, fringes, the lower-set invariant, structure revision — count, threshold,
+idempotence, order-independence, human-review immunity — and the summarize
+discipline). No network, no database, no model.
 
 ## 4. What is deliberately *not* part of the core
 
 * The `knowledge_items` / `knowledge_edges` / `knowledge_evidence` tables and
   their SQLAlchemy models (`models/knowledge.py`) — persistence belongs to the
-  host project.
+  host project. That includes the two columns `revise` cares about,
+  `counterexample_count` and `confidence`: the core carries them as plain fields
+  on `Edge` and never learns they are columns. **"Retired" is not one of them** —
+  only the count is stored, and whether an edge is retired is recomputed on every
+  call (`revise`), which is why adding this channel needed no migration.
 * `services/knowledge_service.py` and `services/evidence_entry.py` — the
   adapters that map a host's scope (`space:<id>`) to storage and call `admit` /
   `derive_state`. They know about projects; the core does not.
