@@ -179,6 +179,10 @@ class Settings(BaseSettings):
     supabase_s3_access_key_id: str = ""
     supabase_s3_secret_access_key: str = ""
     supabase_storage_bucket: str = "course-videos"
+    # 学习空间资料文件（PDF / 图片）的落盘目录。空 = `backend/var/materials`
+    # （本地开发默认值，gitignored）。这是 `material_storage` 的**本地**实现：
+    # 将来换成对象存储时，换的是那个模块，不是这一行，也不动 `pages.storage_key`。
+    material_storage_dir: str = ""
     # Sliding expiry: assets untouched this long are swept (lazy re-download on
     # next access). Signed URLs are short-lived and re-minted on every fetch.
     video_asset_ttl_days: int = 30

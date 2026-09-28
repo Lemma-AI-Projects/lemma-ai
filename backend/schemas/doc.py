@@ -52,6 +52,11 @@ class PageOut(BaseModel):
     kind: PageKind
     source: PageSource
     import_ref: str | None
+    #: 上传文件的原始名字与 MIME（笔记 / 画布 / 文本导入的板子都是 None）。
+    #: `storage_key` **刻意不出现在 wire 上** —— 那是服务端的存储细节，客户端只走
+    #: `GET /pages/{id}/file` 取字节。
+    original_name: str | None = None
+    mime: str | None = None
     updated_at: datetime
 
 

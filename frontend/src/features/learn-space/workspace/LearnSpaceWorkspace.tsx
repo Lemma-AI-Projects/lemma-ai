@@ -1,7 +1,22 @@
 import { useCallback, useMemo, useState } from 'react'
+import { ChevronLeft } from 'lucide-react'
 
 import type { CurrentUser } from '@/features/auth/useCurrentUser'
 import { ShelterDrawer } from '@/features/docs/ShelterDrawer'
+import {
+  fetchMaterialObjectUrl,
+  useCreatePageMutation,
+  useDeletePageMutation,
+  useProjectPagesQuery,
+  useRenamePageMutation,
+  useUploadMaterialMutation,
+} from '@/features/docs/docApi'
+import {
+  describeMaterialError,
+  isMaterialName,
+  materialMimeFor,
+} from '@/features/docs/importFile'
+import type { DocPage } from '@/features/docs/types'
 import { LearningBriefPanel } from '@/features/learn-space/brief/LearningBriefPanel'
 import type {
   LearningBrief,
@@ -9,9 +24,12 @@ import type {
 } from '@/features/learn-space/brief/types'
 import { HomeSettingsDialog } from '@/features/home/HomeSettingsDialog'
 import { ConversationPanel } from './ConversationPanel'
+import { childrenOf } from './gridGroups'
 import { WorkspaceCanvas } from './WorkspaceCanvas'
 import { WorkspaceDock } from './WorkspaceDock'
+import { WorkspaceGrid } from './WorkspaceGrid'
 import { WorkspaceTopBar } from './WorkspaceTopBar'
+import type { WorkspaceView } from './WorkspaceMenus'
 import type { WorkspaceNode } from './workspaceTypes'
 
 const ZOOM_MIN = 50
@@ -21,8 +39,8 @@ const ZOOM_RESET = 100
 
 export interface LearnSpaceWorkspaceProps {
   /**
-   * 当前 learn space 的 id（板块数据按它取、抽屉按它挂）。
-   * 可选：`/preview/` 下的纯 mock 预览页没有真实空间，那里抽屉就该是不可用的。
+   * 当前 learn space 的 id（资料按它取、抽屉按它挂、上传按它落）。
+   * 可选：`/preview/` 下的纯 mock 预览页没有真实空间，那里资料层就该是不可用的。
    */
   projectId?: string
   /** 空间名（数据层为 project.name）。 */
@@ -55,13 +73,14 @@ export interface LearnSpaceWorkspaceProps {
 }
 
 /**
- * 学习空间工作台：全屏白色画布 + 顶部悬浮工具条 + 底部 dock，
- * 左侧是 Learning Brief 或文档系统，右侧是对话面板。
+ * 学习空间工作台：底部 dock 只在**画板**模式下出现；网格模式是"空间里有什么"的
+ * 目录，聚焦模式是单件的读写面（还没做，见 learn-space-design.md）。
  *
- * 底部 dock 分三段：左「新对话」· 中「抽屉（装面板 subbutton）」· 右「logo → 文档系统」。
+ * 视角（`dimension`）切的是"怎么看"，不是"看什么"：同一份资料，网格铺成组、
+ * 画板铺成关系图、聚焦只看一件。所以三处渲染共用同一个 `pages` 数据源。
  *
- * 左侧只留一个位置：文档系统（空间里有什么）与 Brief（我学到哪了）互斥 ——
- * 两个都开会把画布挤成中间一条，而它们回答的是同一类问题（「这个空间里有什么」）。
+ * 左下角的文档抽屉与 Brief 互斥（答案都是"这个空间里有什么"）；但它是**画板/聚焦**
+ * 的辅助面 —— 网格模式下不需要它，因为主区已经是那份目录了。
  */
 export function LearnSpaceWorkspace({
   projectId,
@@ -80,6 +99,10 @@ export function LearnSpaceWorkspace({
   isBriefRefreshing,
 }: LearnSpaceWorkspaceProps) {
   const [zoom, setZoom] = useState(ZOOM_RESET)
+  const [view, setView] = useState<WorkspaceView>('grid')
+  // 网格当前进入的文件夹（null = 空间根）。文件夹不是"另一页"，是同一层目录的下一层。
+  const [folderId, setFolderId] = useState<string | null>(null)
+  const [materialNote, setMaterialNote] = useState<string | null>(null)
   // Brief 默认打开，但**用户手动关过之后以用户为准**。
   // 不能把默认值钉死在挂载那一刻：数据是异步来的（undefined → null → 对象），
   // 若用 useState(brief !== undefined) 初始化，接上后端后板块永远不会出现。
@@ -92,6 +115,13 @@ export function LearnSpaceWorkspace({
   const [conversationChoice, setConversationChoice] = useState<
     string | null | undefined
   >(undefined)
+
+  const pagesQuery = useProjectPagesQuery(projectId)
+  const createPage = useCreatePageMutation(projectId ?? '')
+  const renamePage = useRenamePageMutation(projectId ?? '')
+  const deletePage = useDeletePageMutation(projectId ?? '')
+  const uploadMaterial = useUploadMaterialMutation(projectId ?? '')
+
   const latestConversationId = useMemo(() => {
     const node = nodes.find((item) => item.href?.startsWith('/chat/'))
     return node?.id ?? null
@@ -118,7 +148,7 @@ export function LearnSpaceWorkspace({
     []
   )
   const handleZoomReset = useCallback(() => setZoom(ZOOM_RESET), [])
-  // 左侧只有一个位置：文档系统（空间里有什么）与 Brief（我学到哪了）互斥。
+  // 左下角只有一个位置：文档系统（空间里有什么）与 Brief（我学到哪了）互斥。
   const handleToggleDocuments = useCallback(() => {
     setIsDocumentsOpen((current) => !current)
     // Brief 未启用时不动它的选择 —— 否则会把「默认打开」一起关掉。
@@ -134,6 +164,77 @@ export function LearnSpaceWorkspace({
     setIsDocumentsOpen(false)
   }, [isBriefOpen])
   const handleCloseBrief = useCallback(() => setBriefOpenChoice(false), [])
+
+  // --- 资料目录（网格）的三个动作 + 打开 --------------------------------------
+
+  const handleNewNote = useCallback(() => {
+    if (!projectId) return
+    createPage.mutate({
+      title: '未命名笔记',
+      kind: 'note',
+      parentPageId: folderId,
+    })
+  }, [projectId, createPage, folderId])
+
+  const handleNewFolder = useCallback(() => {
+    if (!projectId) return
+    createPage.mutate({
+      title: '新建文件夹',
+      kind: 'folder',
+      parentPageId: folderId,
+    })
+  }, [projectId, createPage, folderId])
+
+  const handleUpload = useCallback(
+    (files: File[]) => {
+      if (!projectId) return
+      setMaterialNote(null)
+      for (const file of files) {
+        if (!isMaterialName(file.name)) {
+          setMaterialNote(`「${file.name}」不是支持的格式：只收 PDF 与图片。`)
+          continue
+        }
+        uploadMaterial.mutate(
+          { file, mime: materialMimeFor(file) },
+          {
+            onError: (error) => setMaterialNote(describeMaterialError(error)),
+            onSuccess: () => setMaterialNote(null),
+          }
+        )
+      }
+    },
+    [projectId, uploadMaterial]
+  )
+
+  const handleOpenMaterial = useCallback(async (page: DocPage) => {
+    // 文件夹不是"打开一份东西"，是走进下一层目录。
+    if (page.kind === 'folder') {
+      setFolderId(page.id)
+      return
+    }
+    // 有文件的（PDF / 图片）走字节：读接口在 token 后面，所以取 blob 再交给浏览器。
+    if (page.originalName) {
+      try {
+        const url = await fetchMaterialObjectUrl(page.id)
+        window.open(url, '_blank', 'noopener')
+        // 新标签页已经拿到这份 blob，给它一分钟再回收。
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      } catch (error) {
+        setMaterialNote(describeMaterialError(error))
+      }
+      return
+    }
+    onOpenPage?.(page.id)
+  }, [onOpenPage])
+
+  const visiblePages = useMemo(
+    () => childrenOf(pagesQuery.data ?? [], folderId),
+    [pagesQuery.data, folderId]
+  )
+  const openFolder = useMemo(
+    () => (folderId ? (pagesQuery.data ?? []).find((page) => page.id === folderId) : null),
+    [pagesQuery.data, folderId]
+  )
 
   return (
     <div className="h-screen w-screen bg-zinc-100 p-2 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
@@ -161,6 +262,11 @@ export function LearnSpaceWorkspace({
           <WorkspaceTopBar
             name={spaceName}
             isNameLoading={isNameLoading}
+            view={view}
+            onChangeView={setView}
+            onNewFolder={handleNewFolder}
+            onNewNote={handleNewNote}
+            onUpload={handleUpload}
             zoom={zoom}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
@@ -176,24 +282,56 @@ export function LearnSpaceWorkspace({
               <div className="absolute inset-0 flex items-center justify-center">
                 <p className="text-sm text-zinc-400">{errorText}</p>
               </div>
+            ) : view === 'grid' ? (
+              <div className="flex h-full min-h-0 flex-col">
+                {(openFolder || materialNote) && (
+                  <div className="flex shrink-0 items-center gap-3 pb-2">
+                    {openFolder && (
+                      <button
+                        type="button"
+                        onClick={() => setFolderId(null)}
+                        className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[13px] text-zinc-600 transition-colors hover:bg-zinc-100"
+                      >
+                        <ChevronLeft className="size-3.5" />
+                        回到空间
+                      </button>
+                    )}
+                    {materialNote ? (
+                      <p className="text-[13px] text-zinc-500" data-material-note>
+                        {materialNote}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+                <div className="min-h-0 flex-1">
+                  <WorkspaceGrid
+                    pages={visiblePages}
+                    isLoading={Boolean(projectId) && pagesQuery.isPending}
+                    isError={pagesQuery.isError}
+                    onOpenPage={handleOpenMaterial}
+                    onRename={(page, title) => renamePage.mutate({ pageId: page.id, title })}
+                    onDelete={(page) => deletePage.mutate(page.id)}
+                  />
+                </div>
+              </div>
             ) : (
-              <WorkspaceCanvas
-                nodes={nodes}
-                zoom={zoom}
-                onOpenNode={onOpenNode}
-              />
+              <WorkspaceCanvas nodes={nodes} zoom={zoom} onOpenNode={onOpenNode} />
             )}
 
-            <WorkspaceDock
-              className="absolute inset-x-0 bottom-0"
-              onCommandRoom={handleCommandRoom}
-              isBriefAvailable={brief !== undefined}
-              isBriefOpen={isBriefOpen}
-              onToggleBrief={handleToggleBrief}
-              isDocumentsAvailable={isDocumentsAvailable}
-              isDocumentsOpen={isDocumentsOpen}
-              onToggleDocuments={handleToggleDocuments}
-            />
+            {/* 底部 dock 是**画板**的工具（新对话 / 抽屉 / 文档系统），
+                网格是目录、聚焦是单件，都不需要它。 */}
+            {view === 'board' && (
+              <WorkspaceDock
+                className="absolute inset-x-0 bottom-0"
+                onCommandRoom={handleCommandRoom}
+                isBriefAvailable={brief !== undefined}
+                isBriefOpen={isBriefOpen}
+                onToggleBrief={handleToggleBrief}
+                isDocumentsAvailable={isDocumentsAvailable}
+                isDocumentsOpen={isDocumentsOpen}
+                onToggleDocuments={handleToggleDocuments}
+              />
+            )}
           </div>
         </div>
 

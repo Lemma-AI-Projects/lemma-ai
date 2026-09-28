@@ -123,6 +123,41 @@ async def create_page(
     return page
 
 
+async def create_material_page(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    project_id: uuid.UUID,
+    title: str,
+    original_name: str,
+    mime: str,
+    storage_key: str,
+) -> Page | None:
+    """Land an uploaded file as an `imported` board.
+
+    Its own function instead of more optional arguments on `create_page`: a board
+    with a file behind it has a different shape (kind + source + the three file
+    columns), and folding them together would let a caller create a "note" that
+    happens to point at a PDF. None when the space is not the caller's — the same
+    rule every other write in this module follows.
+    """
+    if await _owned_project_id(db, user_id=user_id, project_id=project_id) is None:
+        return None
+    page = Page(
+        project_id=project_id,
+        title=title,
+        kind="imported",
+        source="upload",
+        original_name=original_name,
+        mime=mime,
+        storage_key=storage_key,
+    )
+    db.add(page)
+    await db.commit()
+    await db.refresh(page)
+    return page
+
+
 async def update_page(
     db: AsyncSession,
     page: Page,

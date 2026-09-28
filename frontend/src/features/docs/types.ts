@@ -19,6 +19,10 @@ export interface DocPage {
   kind: PageKind
   source: PageSource
   importRef: string | null
+  /** 上传文件的原始名字（含扩展名）。笔记 / 画布 / 文本导入都是 null。 */
+  originalName: string | null
+  /** 上传文件的 MIME。分组按它（或扩展名）算，**不靠标题猜**。 */
+  mime: string | null
   updatedAt: string
 }
 

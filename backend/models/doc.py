@@ -87,6 +87,15 @@ class Page(Base):
         String, nullable=False, server_default="manual"
     )
     import_ref: Mapped[str | None] = mapped_column(String, nullable=True)
+    #: 上传文件的原始名字与 MIME。分组（pdf / word / 表格 / 图片…）靠这两列，
+    #: **不靠 title 猜** —— 标题是给人读的，随时可以改；类型是这个文件的属性。
+    #: 文本导入的板子这两个为 None（它们的内容在 blocks 里，没有独立文件）。
+    original_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    mime: Mapped[str | None] = mapped_column(String, nullable=True)
+    #: 文件在存储里的键。本地盘时代 = `materials/` 下的相对路径；将来换成对象
+    #: 存储时它变成 object key，**调用方不用改**（换的是 storage 实现，不是这一列）。
+    #: 刻意**不下发前端**：前端只走 `GET /pages/{id}/file`，路径是服务端的实现细节。
+    storage_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
     )

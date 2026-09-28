@@ -23,6 +23,7 @@ import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
+import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
 import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -57,6 +58,12 @@ const routes: RouteObject[] = [
     // 布局评审入口：Credits 充值页，mock 数据、不登录即可查看。
     path: '/preview/credits',
     element: <CreditsPreviewPage />,
+  },
+  {
+    // 布局评审入口：学习空间的**网格模式**（分组 + 卡片 + 顶栏两个入口），
+    // mock 资料、不登录即可查看。
+    path: '/preview/learn-space-grid',
+    element: <LearnSpaceGridPreviewPage />,
   },
   {
     // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。

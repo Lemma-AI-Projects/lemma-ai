@@ -186,3 +186,48 @@ export function useSavePageBlocksMutation() {
     },
   })
 }
+
+// ---------------------------------------------------------------------------
+// Materials (PDF / images)
+// ---------------------------------------------------------------------------
+
+/** Upload one PDF/image as a 「资料」 board in this space.
+ *
+ * Same transport as `/pages/import` — raw body plus `X-File-Name` — so a
+ * non-ASCII filename survives and the backend needs no multipart parser. The
+ * bytes are the `File` itself; nothing is base64'd and nothing is re-encoded.
+ */
+export function useUploadMaterialMutation(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (variables: { file: File; mime: string }) => {
+      const { data } = await signOutOn401(
+        apiClient.post<DocPage>('/api/v1/pages/upload', variables.file, {
+          params: { projectId },
+          headers: {
+            'Content-Type': variables.mime,
+            'X-File-Name': encodeURIComponent(variables.file.name),
+          },
+        })
+      )
+      return data
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: pagesQueryKey(projectId) })
+    },
+  })
+}
+
+/** A material's bytes, as an object URL.
+ *
+ * The read route sits behind the caller's token, so this cannot be a bare
+ * `<img src>` or `<a href>`: we fetch the blob and hand the caller a URL the
+ * browser can display. The caller owns revoking it.
+ */
+export async function fetchMaterialObjectUrl(pageId: string): Promise<string> {
+  const { data } = await signOutOn401(
+    apiClient.get(`/api/v1/pages/${pageId}/file`, { responseType: 'blob' })
+  )
+  return URL.createObjectURL(data as Blob)
+}

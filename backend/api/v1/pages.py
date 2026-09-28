@@ -19,6 +19,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
@@ -32,7 +33,7 @@ from schemas.doc import (
     PageUpdateIn,
     PageWithProjectOut,
 )
-from services import doc_service
+from services import doc_service, material_storage
 
 # One text file, one request. 1 MB is ~500k Chinese characters — far past any
 # board a person reads in a chat, and small enough to decode in memory.
@@ -177,6 +178,87 @@ def _split_title(text: str, encoded_filename: str) -> tuple[str, str]:
         break
     stem = Path(unquote(encoded_filename)).stem if encoded_filename else ""
     return stem.strip()[: doc_service.PAGE_TITLE_MAX] or "导入的资料", body
+
+
+@router.post(
+    "/upload", response_model=PageOut, status_code=status.HTTP_201_CREATED
+)
+async def upload_material(
+    request: Request,
+    project_id: uuid.UUID = Query(alias="projectId"),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PageOut:
+    """Upload one PDF or image as a 「资料」 board in an owned space.
+
+    Same transport as `/import` (raw body + `X-File-Name`, no multipart), so
+    non-ASCII names survive and no dependency has to be added. The difference is
+    where the bytes go: `material_storage` keeps them and the row records only a
+    key. Type and size are refused up front (415 / 413) rather than stored and
+    then discovered to be unrenderable.
+    """
+    _doc_api_gate()
+    raw = await request.body()
+    if not raw:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="empty_body"
+        )
+
+    mime = (request.headers.get("content-type") or "").split(";")[0].strip()
+    original_name = unquote(request.headers.get("x-file-name", "")).strip()
+    try:
+        key = material_storage.save(project_id=project_id, mime=mime, data=raw)
+    except material_storage.MaterialError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+
+    stem = Path(original_name).stem.strip() if original_name else ""
+    title = (stem or "未命名资料")[: doc_service.PAGE_TITLE_MAX]
+    page = await doc_service.create_material_page(
+        db,
+        user_id=current_user.id,
+        project_id=project_id,
+        title=title,
+        original_name=original_name or title,
+        mime=mime,
+        storage_key=key,
+    )
+    if page is None:
+        # Not the caller's space: those bytes have no owner any more, so they go.
+        material_storage.delete(key)
+        raise _NOT_FOUND
+    return PageOut.model_validate(page)
+
+
+@router.get("/{page_id}/file")
+async def read_material(
+    page_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    """Serve a material's bytes — the only read path here that is not JSON.
+
+    Ownership is checked exactly like every other page read (`get_owned_page`), so
+    a foreign id is a 404 and never an enumeration oracle. The path is resolved
+    from the row's key **inside the storage root**; a key that escapes it is
+    refused rather than followed — which is why `path_of` exists instead of a
+    string join.
+    """
+    page = await doc_service.get_owned_page(
+        db, user_id=current_user.id, page_id=page_id
+    )
+    if page is None or not page.storage_key:
+        raise _NOT_FOUND
+    try:
+        path = material_storage.path_of(page.storage_key)
+    except material_storage.MaterialError:
+        raise _NOT_FOUND from None
+    if not path.is_file():
+        raise _NOT_FOUND
+    return FileResponse(
+        path,
+        media_type=page.mime or "application/octet-stream",
+        filename=page.original_name or path.name,
+    )
 
 
 @router.post(

@@ -26,6 +26,9 @@
 /.workbuddy/
 /.trae-html-share-packages/
 
+# 学习空间上传的资料文件（PDF/图片，本地盘实现）：是用户的数据，不是仓库的。
+/backend/var/
+
 # 根目录误生成的空文件。
 /$
 
