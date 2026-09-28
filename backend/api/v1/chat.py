@@ -8,6 +8,7 @@ from ai import AIChunk, encode_chunk
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
 from schemas.ai import ChatRequest
+from services.board_context_service import ContextRefused
 from services.chat_service import prepare_turn, run_turn
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -27,7 +28,12 @@ async def create_chat_stream(
 ) -> StreamingResponse:
     # Conversation is resolved (or created) before streaming so the response
     # can announce its id in a header from the first byte.
-    context = await prepare_turn(db, payload, current_user)
+    try:
+        context = await prepare_turn(db, payload, current_user)
+    except ContextRefused as exc:
+        # Mala 的材料读不到：必须在**开流之前**拒绝。等流开了再报错，HTTP 已经是
+        # 200，客户端会以为材料带上了 —— 他会照着不存在的前提问下去。
+        raise HTTPException(status_code=exc.status, detail=exc.reason) from exc
     if context is None:
         # Foreign and nonexistent conversations are indistinguishable on
         # purpose: no probing which ids exist (IDOR red line).

@@ -2,6 +2,7 @@
 
 from models.ai_conversation import AiConversation, AiMessage
 from models.ai_usage_log import AiUsageLog
+from models.board_context import BoardContextBundle
 from models.coordinator_decision import CoordinatorDecision
 from models.course import Course, CourseLesson, CourseModule, CoursePoint
 from models.course_point_progress import CoursePointProgress
@@ -38,6 +39,7 @@ __all__ = [
     "AiMessage",
     "AiUsageLog",
     "Block",
+    "BoardContextBundle",
     "CoordinatorDecision",
     "Course",
     "CourseChapter",

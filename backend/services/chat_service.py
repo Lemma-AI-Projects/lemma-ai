@@ -36,6 +36,7 @@ from core.security import CurrentUser
 from schemas.ai import ChatRequest
 from services import (
     agent_context_service,
+    board_context_service,
     conversation_service,
     conversation_tool_service,
     course_planning_service,
@@ -72,6 +73,10 @@ class TurnContext:
     # Persisted with the turn, which is what makes "the conversation's method is
     # whatever the last turn ran with" true.
     method: str = method_service.runnable_name(None)
+    # Mala：这一轮用户从画板上投送的材料包（`POST /board/contexts` 的 id），按他选择
+    # 的次序。None/[] = 这一轮没投送。取不到时是**硬错误**（见 `_agent_context` 里
+    # 那条单独的 except）—— 他明确带了东西，就不能被 best-effort 悄悄吞掉。
+    context_bundle_ids: list[uuid.UUID] | None = None
 
 
 # The previous turn's write is async (done doesn't wait for it); a fast
@@ -100,7 +105,7 @@ async def prepare_turn(
             )
             if project is None:
                 return None
-        return TurnContext(
+        context = TurnContext(
             conversation_id=uuid.uuid4(),
             user_id=user.id,
             user_content=content,
@@ -114,7 +119,12 @@ async def prepare_turn(
             # A brand-new conversation has no stored method: the request's
             # choice (already validated by the schema) or the default.
             method=method_service.resolve_name(payload.method),
+            context_bundle_ids=payload.context_bundle_ids,
         )
+        # 新会话这条分支到此为止：材料校验 + 返回（否则会掉进下面「找已有会话」
+        # 的逻辑里，而那时 conversationId 本来就是 None）。
+        await _assert_context_bundles(db, context)
+        return context
 
     conversation = None
     for attempt in range(_LOOKUP_GRACE_ATTEMPTS):
@@ -130,13 +140,14 @@ async def prepare_turn(
     rows = await conversation_service.load_recent_history(
         db, conversation_id=conversation.id
     )
-    return TurnContext(
+    context = TurnContext(
         conversation_id=conversation.id,
         user_id=user.id,
         user_content=content,
         user_sent_at=datetime.now(UTC),
         history=[ChatMessage(role=row.role, content=row.content_text) for row in rows],
         project_id=conversation.project_id,
+        context_bundle_ids=payload.context_bundle_ids,
         # The request wins when it carries a choice (the learner switched in the
         # composer and this is the next turn); otherwise the thread keeps the
         # method it was last taught with. `runnable_name` for the stored value —
@@ -146,6 +157,26 @@ async def prepare_turn(
             if payload.method
             else method_service.runnable_name(conversation.method)
         ),
+    )
+    # Mala 的材料必须在**响应开始之前**校验：流一旦开了，再发现的错误就只能以 200
+    # 的形态发出去，而客户端会以为材料带上了 —— 那正是这条链最不能有的一种失败。
+    # （`_load_agent_context` 里还会再取一次，那是真正的注入；这里只负责尽早拒绝。）
+    await _assert_context_bundles(db, context)
+    return context
+
+
+async def _assert_context_bundles(db: AsyncSession, context: TurnContext) -> None:
+    """用户点名的材料必须存在、属于他、且在这个空间里 —— 否则 `ContextRefused`。
+
+    放在 `prepare_turn` 里而不是注入那一步，是为了让拒绝能变成一个真正的 4xx。
+    """
+    if not context.context_bundle_ids:
+        return
+    await board_context_service.load_for_turn(
+        db,
+        user_id=context.user_id,
+        project_id=context.project_id,
+        bundle_ids=list(context.context_bundle_ids),
     )
 
 
@@ -172,7 +203,13 @@ async def _load_agent_context(context: TurnContext):
                 project_id=context.project_id,
                 current_conversation_id=context.conversation_id,
                 history_messages=len(context.history),
+                context_bundle_ids=context.context_bundle_ids,
             )
+    except board_context_service.ContextRefused:
+        # Mala 的材料是**用户明确带上的**：读不到就必须报错（API 层变成 422），
+        # 不能被下面那条 best-effort 吞掉 —— 他会照着不存在的前提问下去。
+        # 其余侧通道仍然是 best-effort：缺了不该让一次对话失败。
+        raise
     except Exception:  # noqa: BLE001 — a missing side channel must not break chat
         logger.warning(
             "agent context unavailable (project=%s)",

@@ -66,6 +66,10 @@ class ChatRequest(BaseModel):
     # becomes a 422 at the edge instead of silently answering in a different
     # teaching style than the caller asked for.
     method: str | None = None
+    # Mala：这一轮用户从画板上投送的材料（`POST /board/contexts` 返回的 id）。
+    # 顺序有意义 —— 那是他在画板上选择的次序，服务层按原序注入。
+    # 取不到 / 不属于本轮的 spaces 就是 422 `context_not_found`，不静默忽略。
+    context_bundle_ids: list[uuid.UUID] | None = None
     messages: list[ChatMessageIn] = Field(min_length=1, max_length=1)
 
     @field_validator("method")

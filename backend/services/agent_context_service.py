@@ -51,6 +51,7 @@ from models.ai_conversation import AiConversation, AiMessage
 from models.doc import Block, Page
 from models.project import Project
 from services import (
+    board_context_service,
     knowledge_service,
     space_memory_service,
     space_preference_service,
@@ -110,6 +111,12 @@ class AgentContext:
     # the layers that are actually set appear; a single layer produces no stack,
     # because nothing can conflict with it.
     preference_layers: list[dict] = field(default_factory=list)
+    #: Mala：这一轮他从画板上投送的材料。空串 = 这一轮没有投送，提示词里就不出现这一段
+    #: （与 learner state 同一条规矩：不占位）。**取不到就是拒绝**，不是空串 —— 见
+    #: `board_context_service.load_for_turn`。
+    board_selection_block: str = ""
+    #: digest 里的计数（包数 / 项数）。文本只在 `promptBlock` 里 —— 面板要的是"带了几个"。
+    board_selection: dict = field(default_factory=dict)
     prompt_block: str = ""
 
     @property
@@ -175,6 +182,10 @@ class AgentContext:
             # prompt does.
             "preferenceLayers": list(self.preference_layers),
             "historyMessages": self.history_messages,
+            # Mala：这一轮带了哪些材料 —— 计数，不是文本（全文只在 inspector 的
+            # promptBlock 里）。`included` 为 false 且两个计数都是 0 ⇒ 这一轮没有投送；
+            # 有投送就会 >0，所以"没投送"与"投送了但读不出"在面板上分得开。
+            "boardSelection": self.board_selection,
             "promptChars": self.prompt_chars,
             "excerptChars": self.excerpt_chars,
             "action": action,
@@ -386,6 +397,9 @@ async def build_agent_context(
     project_id: uuid.UUID,
     current_conversation_id: uuid.UUID | None = None,
     history_messages: int = 0,
+    #: Mala：这一轮用户投送的材料包 id（`POST /board/contexts` 的返回值），按他选择
+    #: 的次序。取不到 / 不属于这个空间 → `ContextRefused`，由 API 层变成 422。
+    context_bundle_ids: list[uuid.UUID] | None = None,
 ) -> AgentContext | None:
     """Everything the Global Agent will see for one turn, or None if the space
     is not the caller's (the API layer turns that into a 404)."""
@@ -488,6 +502,16 @@ async def build_agent_context(
         db, user_id=user_id, project_id=project_id
     )
 
+    # Mala：他在画板上选给他的那几样。这一步会**拒绝**（取不到、猜错空间），
+    # 而不是给一段空话 —— 用户以为带上了、实际没带上，是最糟的一种失败。
+    bundles = await board_context_service.load_for_turn(
+        db,
+        user_id=user_id,
+        project_id=project_id,
+        bundle_ids=list(context_bundle_ids or []),
+    )
+    selection_block = board_context_service.render_selection_block(bundles)
+
     # conversation > space > Home, most specific first. The conversation's own
     # layer is `ai_conversations.method` — the only conversation-scoped
     # preference the product stores. A one-off request ("explain THIS in
@@ -510,7 +534,14 @@ async def build_agent_context(
     # inspector partial. The split lives in the digest instead, for humans.
     prompt_block = "\n\n".join(
         part
-        for part in (home_block, space_block, learner_block, preference_block)
+        for part in (
+            home_block,
+            space_block,
+            learner_block,
+            preference_block,
+            # Mala 的材料放在最后：它是这一轮**最新**的输入，离用户的话最近。
+            selection_block,
+        )
         if part
     )
     return AgentContext(
@@ -531,6 +562,12 @@ async def build_agent_context(
         preference_layers=[
             {"scope": layer.scope, "text": layer.text} for layer in layers
         ],
+        board_selection_block=selection_block,
+        board_selection={
+            "included": bool(selection_block),
+            "bundleCount": len(bundles),
+            "itemCount": sum(len(bundle.items or []) for bundle in bundles),
+        },
         prompt_block=prompt_block,
     )
 

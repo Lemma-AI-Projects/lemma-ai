@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from api.v1 import (
+    board,
     chat,
     companion,
     conversations,
@@ -62,3 +63,6 @@ api_router.include_router(coordinator.router)
 # 题库（Question Bank）：题组读取 + 开发者构建入口。
 api_router.include_router(question_sets.router)
 api_router.include_router(qbank_admin.router)
+# Mala（神笔马良）：把画板上选中的材料存成一个「投送包」，供下一轮对话引用。
+# 它不解析画板（前端 analyzer 是权威），也不调模型 —— 只存住用户选了什么。
+api_router.include_router(board.router)
