@@ -16,7 +16,8 @@ export type LearningBriefVariant = 'thick' | 'inferred' | 'thin'
 
 const thick: LearningBrief = {
   projectId: 'preview',
-  spaceName: '线性代数 · 第 12 讲',
+  // 空间名是学科级的容器（「线性代数」），不是章节名；「第 N 讲」只属于课节。
+  spaceName: '线性代数',
   goal: '把特征值和特征向量讲清楚，能自己推导一遍正交投影',
   isGoalInferred: false,
   doing: [
@@ -57,7 +58,7 @@ const thick: LearningBrief = {
 
 const inferred: LearningBrief = {
   projectId: 'preview',
-  spaceName: '线性代数 · 第 12 讲',
+  spaceName: '线性代数',
   goal: '理解特征值与特征向量，并能独立完成正交投影的计算',
   isGoalInferred: true,
   doing: [

@@ -2,21 +2,11 @@
  * 品牌件。
  *
  * Lemma 没有吉祥物 —— 凡是需要「一张脸」的地方（开场、背书带）一律用标本身。
- * 标直接取 public/favicon.svg，不在源码里再抄一份路径。
+ * 标本身在 @/components/LemmaMark，这里只是把它排进品牌件里。
  */
 
+import { LemmaMark } from '@/components/LemmaMark'
 import { cn } from '@/lib/utils'
-
-export function LemmaMark({ className }: { className?: string }) {
-  return (
-    <img
-      src="/favicon.svg"
-      alt="Lemma"
-      draggable={false}
-      className={cn('size-10 select-none', className)}
-    />
-  )
-}
 
 /**
  * MIT 的字标。沙盒占位：一个内联 SVG 文字标，等官方素材到位再换。

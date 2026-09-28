@@ -18,7 +18,14 @@ export const WORKSPACE_PILL_BUTTON =
   'flex size-9 shrink-0 items-center justify-center rounded-full text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10 disabled:cursor-default disabled:text-zinc-300 disabled:hover:bg-transparent'
 
 /**
- * 胶囊内切换按钮的开启态（底部 dock 的庇护所 / 学习简报）。
+ * 底部 dock 中间「抽屉」里的 subbutton（图标 + 文字，所以宽度自适应，
+ * 不能用 WORKSPACE_PILL_BUTTON 的固定 size-9）。
+ */
+export const WORKSPACE_DRAWER_BUTTON =
+  'flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10'
+
+/**
+ * 胶囊内切换按钮的开启态（底部 dock 抽屉里的 subbutton）。
  *
  * 与分段的 hover 底色区分开：hover 是浅灰，开启是黑底白字 ——
  * 否则鼠标划过时时分不清「选中了」还是「只是划过」。

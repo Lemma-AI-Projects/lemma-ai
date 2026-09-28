@@ -1,6 +1,6 @@
+import { LemmaMark } from '@/components/LemmaMark'
 import { Input } from '@/components/ui/input'
 
-import { LemmaMark } from './Brand'
 import { StepHeading, type StepProps } from './shared'
 
 /**

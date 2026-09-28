@@ -21,6 +21,7 @@ export function ConversationInput({
   isStreaming,
   onSend,
   onStop,
+  placeholder = 'Ask anything about this lesson...',
 }: {
   className?: string
   value: string
@@ -28,6 +29,8 @@ export function ConversationInput({
   isStreaming: boolean
   onSend: (text: string) => void
   onStop: () => void
+  /** 调用方可按场景换文案（工作台里说的是「空间」，不是「课」）。 */
+  placeholder?: string
 }) {
   const hasContent = value.trim().length > 0
 
@@ -56,7 +59,7 @@ export function ConversationInput({
       )}
     >
       <textarea
-        placeholder="Ask anything about this lesson..."
+        placeholder={placeholder}
         rows={1}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}

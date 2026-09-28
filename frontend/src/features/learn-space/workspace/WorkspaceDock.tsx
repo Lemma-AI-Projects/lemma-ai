@@ -1,144 +1,146 @@
-import { AlignLeft, ClipboardList, MessageCircle, Plus, Radar } from 'lucide-react'
+import { useState } from 'react'
+import { ClipboardList, PanelBottom, Plus } from 'lucide-react'
+import { Popover as PopoverPrimitive } from 'radix-ui'
 
+import { LemmaMark } from '@/components/LemmaMark'
 import { cn } from '@/lib/utils'
 import {
+  WORKSPACE_DRAWER_BUTTON,
   WORKSPACE_PILL,
   WORKSPACE_PILL_BUTTON,
   WORKSPACE_PILL_BUTTON_ACTIVE,
 } from './workspaceStyles'
 
 export interface WorkspaceDockProps {
-  /** 「指挥室」：在当前空间里开一段新对话。 */
+  /** 「新对话」：在当前空间里开一段新对话。 */
   onCommandRoom: () => void
-  /**
-   * 「庇护所」（左侧板块抽屉）是否可用。false 时该槽位退回占位 ——
-   * 板块数据来自文档层（本分支尚未接入），没数据就没有开关，
-   * 不做「点了没反应」的按钮。
-   */
-  isShelterAvailable?: boolean
-  isShelterOpen?: boolean
-  onToggleShelter?: () => void
-  /**
-   * Learning Brief 是否可用。false 时该槽位退回占位 —— 板块没数据就没有开关，
-   * 不做「点了没反应」的按钮。
-   */
-  /**
-   * 「Space Context」是否可用（要有真实空间）。false 时槽位不渲染 ——
-   * 没数据就没有开关，不做点了没反应的按钮。
-   */
-  isContextAvailable?: boolean
-  isContextOpen?: boolean
-  onToggleContext?: () => void
+  /** 抽屉里有没有 subbutton 可放。没有时抽屉仍占位（三个按钮是一组，缺一个会散），只是内容为空。 */
   isBriefAvailable: boolean
   isBriefOpen: boolean
   onToggleBrief: () => void
-  isConversationOpen: boolean
-  onToggleConversation: () => void
+  /**
+   * 文档系统是否可用。三个按钮是一组，缺一个会散，所以不可用时**禁用**而不是不渲染 ——
+   * mock 预览页没有真实空间，那里这个按钮就该是灰的，不是点了没反应。
+   */
+  isDocumentsAvailable: boolean
+  /** 右侧 logo（文档系统）是否处于打开态，用于高亮。 */
+  isDocumentsOpen: boolean
+  onToggleDocuments: () => void
   className?: string
 }
 
 /**
- * 画布底部的悬浮 dock。
+ * 画布底部的悬浮 dock —— **一个胶囊里的三个按钮**，挨在一起，不拆散。
  *
- * 参考稿里有四个槽位：指挥室（+）、庇护所（≡）、学习简报、pending。
- * 四个槽位收在**一个**胶囊里，与顶部工具条共用同一套形状（WORKSPACE_PILL +
- * 胶囊内分段按钮）—— 原先它们是四块各自独立的灰块，每块 112px 只放一个图标，
- * 在白色画布上读起来是四条空条，也没跟顶部说同一种话。
+ * - **1 · 新对话（+）**：往这个空间里添一段对话。
+ * - **2 · 抽屉**：不是开关，是个容器入口 —— 点开弹一层浮层，subbutton 列在里面。
+ *   目前只有一个 subbutton：学习简报（Learn Brief）。将来加面板就往抽屉里加
+ *   subbutton，底栏这三个按钮不动。
+ * - **3 · logo**：对应**文档系统**（这个空间里的资料层）。
  */
 export function WorkspaceDock({
   onCommandRoom,
-  isShelterAvailable,
-  isShelterOpen,
-  onToggleShelter,
-  isContextAvailable,
-  isContextOpen,
-  onToggleContext,
   isBriefAvailable,
   isBriefOpen,
   onToggleBrief,
-  isConversationOpen,
-  onToggleConversation,
+  isDocumentsAvailable,
+  isDocumentsOpen,
+  onToggleDocuments,
   className,
 }: WorkspaceDockProps) {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+
+  // 先关抽屉再开面板：抽屉浮在画布上，留着会挡住刚打开的面板。
+  const handleBriefClick = () => {
+    setIsDrawerOpen(false)
+    onToggleBrief()
+  }
+
   return (
-    <div className={cn('flex items-center justify-between gap-3', className)}>
-      <div className={cn(WORKSPACE_PILL, 'gap-0.5 px-1')}>
+    <div
+      className={cn(
+        'pointer-events-none flex items-center justify-center',
+        className
+      )}
+    >
+      <div className={cn(WORKSPACE_PILL, 'pointer-events-auto gap-0.5 px-1')}>
         <button
           type="button"
           onClick={onCommandRoom}
-          aria-label="指挥室"
-          title="指挥室"
+          aria-label="新对话"
+          title="新对话"
           className={WORKSPACE_PILL_BUTTON}
         >
           <Plus className="size-[18px]" />
         </button>
 
-        {/* 槽位只在可用时渲染：没有实现的槽位留一块空白，
-            在胶囊里读起来是「排版漏了一块」，比缺一个按钮更糟。 */}
-        {isShelterAvailable && (
-          <button
-            type="button"
-            onClick={onToggleShelter}
-            aria-pressed={isShelterOpen}
-            aria-label="庇护所"
-            title="庇护所"
-            className={cn(
-              WORKSPACE_PILL_BUTTON,
-              isShelterOpen && WORKSPACE_PILL_BUTTON_ACTIVE
-            )}
-          >
-            <AlignLeft className="size-[18px]" />
-          </button>
-        )}
+        <PopoverPrimitive.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+          <PopoverPrimitive.Trigger asChild>
+            <button
+              type="button"
+              aria-label="抽屉"
+              title="抽屉"
+              className={cn(
+                WORKSPACE_PILL_BUTTON,
+                isDrawerOpen && WORKSPACE_PILL_BUTTON_ACTIVE
+              )}
+            >
+              <PanelBottom className="size-[18px]" />
+            </button>
+          </PopoverPrimitive.Trigger>
 
-        {isContextAvailable && (
-          <button
-            type="button"
-            onClick={onToggleContext}
-            aria-pressed={isContextOpen}
-            aria-label="Space Context"
-            title="Space Context：Agent 到底看到了什么"
-            className={cn(
-              WORKSPACE_PILL_BUTTON,
-              isContextOpen && WORKSPACE_PILL_BUTTON_ACTIVE
-            )}
-          >
-            <Radar className="size-[18px]" />
-          </button>
-        )}
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Content
+              side="top"
+              align="center"
+              sideOffset={10}
+              aria-label="抽屉"
+              className="z-50 w-52 rounded-xl border border-zinc-200/80 bg-white p-1.5 shadow-[0_8px_24px_-8px_rgba(16,24,40,0.25)] focus-visible:outline-none"
+            >
+              {isBriefAvailable ? (
+                <button
+                  type="button"
+                  onClick={handleBriefClick}
+                  aria-pressed={isBriefOpen}
+                  className={cn(
+                    WORKSPACE_DRAWER_BUTTON,
+                    'w-full justify-start',
+                    isBriefOpen && WORKSPACE_PILL_BUTTON_ACTIVE
+                  )}
+                >
+                  <ClipboardList className="size-[18px]" />
+                  <span>学习简报</span>
+                </button>
+              ) : (
+                <p className="px-2.5 py-2 text-xs text-zinc-400">
+                  这个空间暂时没有可放的板块
+                </p>
+              )}
+            </PopoverPrimitive.Content>
+          </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
 
-        {isBriefAvailable && (
-          <button
-            type="button"
-            onClick={onToggleBrief}
-            aria-pressed={isBriefOpen}
-            aria-label="学习简报"
-            title="学习简报"
-            className={cn(
-              WORKSPACE_PILL_BUTTON,
-              isBriefOpen && WORKSPACE_PILL_BUTTON_ACTIVE
-            )}
-          >
-            <ClipboardList className="size-[18px]" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onToggleDocuments}
+          disabled={!isDocumentsAvailable}
+          aria-pressed={isDocumentsAvailable ? isDocumentsOpen : undefined}
+          aria-label="文档系统"
+          title={
+            isDocumentsAvailable
+              ? '文档系统：这个空间里的资料'
+              : '预览页没有真实空间，文档系统不可用'
+          }
+          className={cn(
+            WORKSPACE_PILL_BUTTON,
+            isDocumentsOpen && isDocumentsAvailable && WORKSPACE_PILL_BUTTON_ACTIVE
+          )}
+        >
+          <LemmaMark
+            className={cn('size-5', !isDocumentsAvailable && 'opacity-40')}
+          />
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={onToggleConversation}
-        aria-pressed={isConversationOpen}
-        aria-label="对话面板"
-        title="对话面板"
-        className={cn(
-          'flex size-11 shrink-0 items-center justify-center rounded-full border bg-white transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10',
-          isConversationOpen
-            ? 'border-zinc-900 text-zinc-900'
-            : 'border-zinc-200/80 text-zinc-500 hover:text-zinc-900'
-        )}
-      >
-        <MessageCircle className="size-[18px]" />
-      </button>
     </div>
   )
 }

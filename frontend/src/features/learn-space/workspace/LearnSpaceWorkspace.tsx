@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { AgentContextInspector } from '@/features/agent/AgentContextInspector'
 import type { CurrentUser } from '@/features/auth/useCurrentUser'
 import { ShelterDrawer } from '@/features/docs/ShelterDrawer'
 import { LearningBriefPanel } from '@/features/learn-space/brief/LearningBriefPanel'
@@ -39,12 +38,12 @@ export interface LearnSpaceWorkspaceProps {
   onNewConversation: () => void
   onOpenNode: (node: WorkspaceNode) => void
   /**
-   * 从 shelter 抽屉进一块板。**给了才认为抽屉可用** —— 不给则 dock 上那个
-   * 槽位保持占位，不做点了没反应的按钮。
+   * 从文档系统进一块板。**给了才认为文档系统可用** —— 不给则 dock 右侧 logo
+   * 保持占位，不做点了没反应的按钮。
    */
   onOpenPage?: (pageId: string) => void
   /**
-   * Learning Brief 数据。`undefined` = 板块未启用（dock 槽位退回占位、面板不出现）；
+   * Learning Brief 数据。`undefined` = 板块未启用（dock 抽屉退回不渲染、面板不出现）；
    * `null` = 读取中（面板先出骨架）；对象 = 有数据。默认打开。
    */
   brief?: LearningBrief | null
@@ -57,12 +56,11 @@ export interface LearnSpaceWorkspaceProps {
 
 /**
  * 学习空间工作台：全屏白色画布 + 顶部悬浮工具条 + 底部 dock，
- * 左侧是 Learning Brief，右侧是对话面板。
+ * 左侧是 Learning Brief 或文档系统，右侧是对话面板。
  *
- * 布局对齐参考稿：工具条与画布同属左侧一列，右侧面板与工具条顶端齐平、
- * 占满整列高度。侧栏在这里不出现（该路由不套 AppLayout）。
+ * 底部 dock 分三段：左「新对话」· 中「抽屉（装面板 subbutton）」· 右「logo → 文档系统」。
  *
- * 左侧只留一个位置：shelter（空间里有什么）与 Brief（我学到哪了）互斥 ——
+ * 左侧只留一个位置：文档系统（空间里有什么）与 Brief（我学到哪了）互斥 ——
  * 两个都开会把画布挤成中间一条，而它们回答的是同一类问题（「这个空间里有什么」）。
  */
 export function LearnSpaceWorkspace({
@@ -87,10 +85,8 @@ export function LearnSpaceWorkspace({
   // 若用 useState(brief !== undefined) 初始化，接上后端后板块永远不会出现。
   const [briefOpenChoice, setBriefOpenChoice] = useState<boolean | null>(null)
   const isBriefOpen = briefOpenChoice ?? brief !== undefined
-  const [isConversationOpen, setIsConversationOpen] = useState(true)
+  const [isDocumentsOpen, setIsDocumentsOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [isShelterOpen, setIsShelterOpen] = useState(false)
-  const [isContextOpen, setIsContextOpen] = useState(false)
   // undefined = 还没选，跟着这个空间最近的一段对话走；null = 明确要一段新的。
   // 不额外查一次：画布上的节点就是本空间的对话列表。
   const [conversationChoice, setConversationChoice] = useState<
@@ -102,9 +98,16 @@ export function LearnSpaceWorkspace({
   }, [nodes])
   const activeConversationId =
     conversationChoice === undefined ? latestConversationId : conversationChoice
-  // 抽屉可用与否，取决于调用方给不给「点开一块板」的出口 —— 给了才显示按钮。
-  // 没有 projectId（mock 预览页）就没有可取的板块，按钮同样不出现。
-  const isShelterAvailable = Boolean(onOpenPage && projectId)
+  // 对话名就是画布节点标题 —— 不额外查一次，节点本来就是本空间的对话列表。
+  // 草稿节点标题为空，退回 undefined 让面板用兜底文案。
+  const activeConversationTitle = useMemo(() => {
+    const node = nodes.find((item) => item.id === activeConversationId)
+    return node?.title.trim() || undefined
+  }, [nodes, activeConversationId])
+  // 文档系统可用与否，取决于调用方给不给「点开一块板」的出口。
+  // 没有 projectId（mock 预览页）就没有可取的板块 —— dock 上那个 logo 于是置灰，
+  // 而不是留着点了没反应。
+  const isDocumentsAvailable = Boolean(onOpenPage && projectId)
 
   const handleZoomIn = useCallback(
     () => setZoom((current) => Math.min(ZOOM_MAX, current + ZOOM_STEP)),
@@ -115,54 +118,31 @@ export function LearnSpaceWorkspace({
     []
   )
   const handleZoomReset = useCallback(() => setZoom(ZOOM_RESET), [])
-  const handleToggleConversation = useCallback(
-    () => setIsConversationOpen((current) => !current),
-    []
-  )
-  // 左侧只有一个位置：板块抽屉（空间里有什么）与 Brief（我学到哪了）互斥。
-  // 两个都开会把画布挤成中间一条，而它们回答的是同一类问题。
-  const handleToggleShelter = useCallback(() => {
-    setIsShelterOpen((current) => !current)
-    setIsContextOpen(false)
+  // 左侧只有一个位置：文档系统（空间里有什么）与 Brief（我学到哪了）互斥。
+  const handleToggleDocuments = useCallback(() => {
+    setIsDocumentsOpen((current) => !current)
     // Brief 未启用时不动它的选择 —— 否则会把「默认打开」一起关掉。
     if (brief !== undefined) setBriefOpenChoice(false)
   }, [brief])
-  const handleCloseShelter = useCallback(() => setIsShelterOpen(false), [])
-  // 三者互斥：同一侧只放一个面板，同时开会把画布挤成中间一条。
-  const handleToggleContext = useCallback(() => {
-    setIsContextOpen((current) => !current)
-    setIsShelterOpen(false)
-    if (brief !== undefined) setBriefOpenChoice(false)
-  }, [brief])
-  const handleCloseContext = useCallback(() => setIsContextOpen(false), [])
-  // 「指挥室」不再是跳去 /chat：工作台里就有真对话，那就地开一段新的。
+  const handleCloseDocuments = useCallback(() => setIsDocumentsOpen(false), [])
+  // 「新对话」不再是跳去 /chat：工作台里就有真对话，那就地开一段新的。
   const handleCommandRoom = useCallback(() => {
     setConversationChoice(null)
-    setIsConversationOpen(true)
   }, [])
   const handleToggleBrief = useCallback(() => {
     setBriefOpenChoice(!isBriefOpen)
-    setIsShelterOpen(false)
-    setIsContextOpen(false)
+    setIsDocumentsOpen(false)
   }, [isBriefOpen])
   const handleCloseBrief = useCallback(() => setBriefOpenChoice(false), [])
 
   return (
     <div className="h-screen w-screen bg-zinc-100 p-2 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="flex h-full w-full gap-4 overflow-hidden rounded-2xl bg-white p-4 dark:bg-background">
-        {isShelterOpen && onOpenPage && projectId && (
+        {isDocumentsOpen && onOpenPage && projectId && (
           <ShelterDrawer
             projectId={projectId}
-            onClose={handleCloseShelter}
+            onClose={handleCloseDocuments}
             onOpenPage={onOpenPage}
-          />
-        )}
-
-        {isContextOpen && projectId && (
-          <AgentContextInspector
-            projectId={projectId}
-            conversationId={activeConversationId ?? undefined}
-            onClose={handleCloseContext}
           />
         )}
 
@@ -207,31 +187,25 @@ export function LearnSpaceWorkspace({
             <WorkspaceDock
               className="absolute inset-x-0 bottom-0"
               onCommandRoom={handleCommandRoom}
-              isShelterAvailable={isShelterAvailable}
-              isShelterOpen={isShelterOpen}
-              onToggleShelter={handleToggleShelter}
-              isContextAvailable={Boolean(projectId)}
-              isContextOpen={isContextOpen}
-              onToggleContext={handleToggleContext}
               isBriefAvailable={brief !== undefined}
               isBriefOpen={isBriefOpen}
               onToggleBrief={handleToggleBrief}
-              isConversationOpen={isConversationOpen}
-              onToggleConversation={handleToggleConversation}
+              isDocumentsAvailable={isDocumentsAvailable}
+              isDocumentsOpen={isDocumentsOpen}
+              onToggleDocuments={handleToggleDocuments}
             />
           </div>
         </div>
 
-        {isConversationOpen && (
-          <ConversationPanel
-            className="w-[22rem]"
-            projectId={projectId}
-            spaceName={spaceName}
-            conversationId={activeConversationId}
-            onConversationChange={setConversationChoice}
-            onClose={handleToggleConversation}
-          />
-        )}
+        <ConversationPanel
+          className="w-[22rem]"
+          projectId={projectId}
+          spaceName={spaceName}
+          conversationId={activeConversationId}
+          conversationTitle={activeConversationTitle}
+          onConversationChange={setConversationChoice}
+          onOpenDocuments={isDocumentsAvailable ? handleToggleDocuments : undefined}
+        />
       </div>
 
       <HomeSettingsDialog
