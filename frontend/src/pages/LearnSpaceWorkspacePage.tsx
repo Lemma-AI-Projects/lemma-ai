@@ -106,6 +106,11 @@ export function LearnSpaceWorkspacePage() {
     [id, navigate]
   )
 
+  // dimension → 聚焦：单份资料那一屏是独立路由，所以是"走过去"，不是换布局。
+  const handleOpenFocus = useCallback(() => {
+    navigate(`/learn-spaces/${id}/focus`)
+  }, [id, navigate])
+
   let errorText: string | undefined
   if (projectQuery.isError) {
     errorText = isNotFoundError(projectQuery.error)
@@ -127,6 +132,7 @@ export function LearnSpaceWorkspacePage() {
       onNewConversation={handleNewConversation}
       onOpenNode={handleOpenNode}
       onOpenPage={handleOpenPage}
+      onOpenFocus={handleOpenFocus}
       brief={brief}
       onOpenBriefStep={handleOpenBriefStep}
       onRefreshBrief={refreshBrief}

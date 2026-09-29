@@ -61,6 +61,11 @@ export interface LearnSpaceWorkspaceProps {
    */
   onOpenPage?: (pageId: string) => void
   /**
+   * dimension 里的「聚焦」：单份资料那一屏是**另一条路由**（`learn-spaces/:id/focus`），
+   * 不在这个工作台上原地换布局。不给就按不可选处理（预览页）。
+   */
+  onOpenFocus?: () => void
+  /**
    * Learning Brief 数据。`undefined` = 板块未启用（dock 抽屉退回不渲染、面板不出现）；
    * `null` = 读取中（面板先出骨架）；对象 = 有数据。默认打开。
    */
@@ -93,6 +98,7 @@ export function LearnSpaceWorkspace({
   onNewConversation,
   onOpenNode,
   onOpenPage,
+  onOpenFocus,
   brief,
   onOpenBriefStep,
   onRefreshBrief,
@@ -264,6 +270,7 @@ export function LearnSpaceWorkspace({
             isNameLoading={isNameLoading}
             view={view}
             onChangeView={setView}
+            onOpenFocus={onOpenFocus}
             onNewFolder={handleNewFolder}
             onNewNote={handleNewNote}
             onUpload={handleUpload}

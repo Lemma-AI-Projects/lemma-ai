@@ -1,6 +1,6 @@
 import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
-import { DocEditorView } from '@/features/docs/DocEditorView'
+import { FocusView } from '@/features/learn-space/focus/FocusView'
 import { AppLayout } from '@/layouts/AppLayout'
 import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
 import { ConversationPage } from '@/pages/ConversationPage'
@@ -22,6 +22,7 @@ import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
+import { FocusPreviewPage } from '@/pages/FocusPreviewPage'
 import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
@@ -66,6 +67,12 @@ const routes: RouteObject[] = [
     element: <LearnSpaceGridPreviewPage />,
   },
   {
+    // 布局评审入口：学习空间的**聚焦模式**（新顶栏 + 大纲 + 可编辑正文 + 右栏
+    // Agent），mock 数据、不登录即可查看。
+    path: '/preview/focus',
+    element: <FocusPreviewPage />,
+  },
+  {
     // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。
     path: '/preview/schedule',
     element: <SchedulePreviewPage />,
@@ -104,10 +111,17 @@ const routes: RouteObject[] = [
         element: <LearnSpaceWorkspacePage />,
       },
       {
-        // 一块板（资料层）的查看页：全屏布局。块编辑器是下一步，
-        // 这里先给抽屉一个真落点，避免「能点却 404」。
+        // 聚焦模式（单份资料）：全屏、不套 AppLayout。它就是原来那条"只读预览"
+        // 升级来的 —— 现在能写、有大纲、能在资料之间一直往前走。
+        // 设计见 .workbuddy/research/focus-mode-design.md。
         path: 'learn-spaces/:id/docs/:pageId',
-        element: <DocEditorView />,
+        element: <FocusView />,
+      },
+      {
+        // 聚焦模式没有选中资料时（null stack）：空态是它的一等状态，
+        // 不是"没加载完"。dimension 下拉里的「聚焦」落到这里。
+        path: 'learn-spaces/:id/focus',
+        element: <FocusView />,
       },
       {
         element: <AppLayout />,

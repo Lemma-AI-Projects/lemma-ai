@@ -17,6 +17,12 @@ export interface WorkspaceTopBarProps {
   /** 当前视角。缩放与分页只在聚焦里出现（见 learn-space-design.md §2）。 */
   view: WorkspaceView
   onChangeView: (view: WorkspaceView) => void
+  /**
+   * 切到**聚焦**（单份资料那一屏）。它不在这个工作台上原地换布局 —— 它是一条
+   * 独立路由（`learn-spaces/:id/focus` 是它的空态），所以要给一个真去处，
+   * 而不是把 view 改成 'focus' 然后画一片空白。
+   */
+  onOpenFocus?: () => void
   /** `edit` 的两个新建动作与上传（网格 / 画板里都能用）。 */
   onNewFolder: () => void
   onNewNote: () => void
@@ -38,6 +44,7 @@ export function WorkspaceTopBar({
   isNameLoading,
   view,
   onChangeView,
+  onOpenFocus,
   onNewFolder,
   onNewNote,
   onUpload,
@@ -150,7 +157,11 @@ export function WorkspaceTopBar({
         </>
       )}
 
-      <WorkspaceModeMenu view={view} onChange={onChangeView} />
+      <WorkspaceModeMenu
+        view={view}
+        onChange={onChangeView}
+        onOpenFocus={onOpenFocus}
+      />
 
       {/* 标记：参考稿有此按钮，行为未定义 → 禁用而不是假装可点。 */}
       <button

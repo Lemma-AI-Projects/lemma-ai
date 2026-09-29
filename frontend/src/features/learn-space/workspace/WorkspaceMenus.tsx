@@ -42,16 +42,21 @@ const TRIGGER =
  * `dimension` —— 顶部最右那个位置（别家产品放"排序方式"）放的是**视角**。
  *
  * 它不是排序、不是筛选：切换视角不改变"空间里有什么"，只改变"这一屏怎么摆"。
- * 画板与聚焦**列出来但不可选** —— 一个点不动的菜单项，比一个假装能切的项诚实
- * （沿用仓库纪律：不做点了没反应的东西）。
+ *
+ * **网格与聚焦现在都能选**：网格在这一屏原地换；聚焦是**另一屏**（单份资料，
+ * 独立路由），所以它走 `onOpenFocus` 而不是把这一屏的 state 改掉 —— 后者会画
+ * 出一片空白。画板**列出来但不可选**：一个点不动的菜单项，比一个假装能切的项
+ * 诚实（沿用仓库纪律：不做点了没反应的东西）。
  */
 export function WorkspaceModeMenu({
   view,
   onChange,
+  onOpenFocus,
   className,
 }: {
   view: WorkspaceView
   onChange: (view: WorkspaceView) => void
+  onOpenFocus?: () => void
   className?: string
 }) {
   return (
@@ -69,7 +74,7 @@ export function WorkspaceModeMenu({
       {VIEW_ORDER.map((option) => {
         const Icon = VIEW_ICONS[option]
         const isCurrent = option === view
-        const isReady = option === 'grid'
+        const isReady = option === 'grid' || (option === 'focus' && Boolean(onOpenFocus))
         return (
           <ActionMenuItem
             key={option}
@@ -77,14 +82,19 @@ export function WorkspaceModeMenu({
             disabled={!isReady}
             label={isCurrent ? `${VIEW_LABELS[option]}（当前）` : VIEW_LABELS[option]}
             onSelect={() => {
-              if (isReady) onChange(option)
+              if (!isReady) return
+              if (option === 'focus') {
+                onOpenFocus?.()
+                return
+              }
+              onChange(option)
             }}
           />
         )
       })}
       <ActionMenuSeparator />
       <p className="px-2 py-1.5 text-[12px] leading-4 text-zinc-400">
-        画板与聚焦还在设计里，先只放网格。
+        聚焦是另一屏（单份资料，能在里面写）。画板还在设计里。
       </p>
     </ActionMenu>
   )
