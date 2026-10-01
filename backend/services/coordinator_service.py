@@ -55,13 +55,19 @@ from ai.coordinator import (
     EvidenceFact,
     Finding,
     FocusItem,
+    GoalFact,
     Snapshot,
     decide,
 )
 from ai.knowledge import Structure, derive_state, revise
 from ai.knowledge.state import StateValue
 from models.coordinator_decision import CoordinatorDecision
-from services import knowledge_service, notification_service, space_memory_service
+from services import (
+    knowledge_service,
+    notification_service,
+    space_goal_service,
+    space_memory_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -224,6 +230,22 @@ async def build_snapshot(
         db, user_id=user_id, project_id=project_id, limit=RECENT_MEMORY_CAP
     )
 
+    # The space's direction, if the learner confirmed one. Read through the goal
+    # service rather than off the table so "only `active` counts" stays that
+    # module's rule — a `draft` here would let an unconfirmed guess steer
+    # decisions, which is exactly what the confirm step exists to prevent.
+    active_goal = await space_goal_service.get_active(db, project_id=project_id)
+    goal = (
+        GoalFact(
+            target_text=active_goal.target_text,
+            purpose=active_goal.purpose,
+            deadline_at=active_goal.deadline_at,
+            context=active_goal.context,
+        )
+        if active_goal is not None
+        else None
+    )
+
     return Snapshot(
         event=event,
         current_time=now,
@@ -247,7 +269,7 @@ async def build_snapshot(
             memory.text for memory, _source in (memories or [])[:RECENT_MEMORY_CAP]
         ),
         available_actions=ACTION_VALUES,
-        goal=None,
+        goal=goal,
     )
 
 

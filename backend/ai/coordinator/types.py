@@ -138,6 +138,32 @@ class EvidenceFact:
 
 
 @dataclass(frozen=True)
+class GoalFact:
+    """The space's goal, as a decision may see it — and only the active one.
+
+    A *fact about direction*, not a plan: it says where the learner wants to get
+    to and what counts as success there. It carries no progress, no percentage
+    and no ranking, because none of those exist — the table behind it
+    (`space_goals`) deliberately has no such column.
+
+    `purpose` is the field that changes decisions: "get the exam right" and
+    "understand why it works" are different instructions even when they point at
+    the same topic, and a method that cannot tell them apart is not choosing, it
+    is guessing.
+
+    A `draft` goal never reaches here. That is the whole reason the confirm step
+    exists: an unconfirmed goal is somebody's guess about what the learner wants,
+    and letting a guess steer ranking and termination is the most expensive way
+    to be wrong.
+    """
+
+    target_text: str
+    purpose: str
+    deadline_at: datetime | None = None
+    context: str | None = None
+
+
+@dataclass(frozen=True)
 class Snapshot:
     """Everything the decision may look at — and nothing else."""
 
@@ -156,10 +182,10 @@ class Snapshot:
     # action the system does not have (and so a future model-based policy could
     # be constrained with it).
     available_actions: tuple[str, ...] = ()
-    # V0 has no goal anywhere in the repo (the brief reports `goal: null`), so
-    # this is always None. It is a field, not an omission, so that a goal write
-    # surface can arrive without re-cutting the snapshot.
-    goal: str | None = None
+    # The space's direction, when it has one the learner confirmed. None is a
+    # legitimate state, not a gap: a space may be a place to collect material
+    # before anybody knows what it is for.
+    goal: GoalFact | None = None
 
     @property
     def has_state(self) -> bool:
@@ -207,6 +233,7 @@ __all__ = [
     "EvidenceFact",
     "Finding",
     "FocusItem",
+    "GoalFact",
     "SOURCE_API",
     "SOURCE_CHAT",
     "SUPPORTED_EVENTS",

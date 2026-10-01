@@ -30,6 +30,7 @@ from models.question import Question, QuestionVersion
 from models.question_attempt import QuestionAttempt, QuestionSetAttempt
 from models.question_set import QuestionSet, QuestionSetItem
 from models.scheduled_task import ScheduledTask
+from models.space_goal import SpaceGoal
 from models.space_memory import SpaceMemory
 from models.user_home import SpacePreference, UserHome, UserHomeItem
 from models.xkw_catalog_cache import XkwCatalogCache
@@ -75,6 +76,7 @@ __all__ = [
     "QuestionSetItem",
     "QuestionVersion",
     "ScheduledTask",
+    "SpaceGoal",
     "SpaceMemory",
     "SpacePreference",
     "UserHome",

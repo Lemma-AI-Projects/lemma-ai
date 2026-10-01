@@ -53,6 +53,19 @@ class EvidenceFactOut(_Out):
     created_at: datetime | None
 
 
+class GoalFactOut(_Out):
+    """The space's direction, as the decision read it — never a plan.
+
+    No progress, no percentage, no ranking: none of those exist yet, and a field
+    for them here would be a promise the system cannot keep.
+    """
+
+    target_text: str
+    purpose: str
+    deadline_at: datetime | None = None
+    context: str | None = None
+
+
 class DecisionOut(_Out):
     action: str
     target: str | None
@@ -75,7 +88,9 @@ class SnapshotOut(_Out):
     recent_evidence: tuple[EvidenceFactOut, ...]
     recent_memory: tuple[str, ...]
     available_actions: tuple[str, ...]
-    goal: str | None
+    # The space's direction. `None` means "no confirmed goal", which is a
+    # legitimate state — not a loading state and not an error.
+    goal: GoalFactOut | None = None
 
 
 class ExplanationOut(_Out):

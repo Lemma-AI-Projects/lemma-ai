@@ -61,6 +61,10 @@ from schemas.knowledge import (
     LearningBriefNextStep,
     LearningBriefOut,
 )
+# The brief shows the space's direction, so it reads it through the goal
+# service — the same door everything else uses, and the only place that knows
+# "only a confirmed goal counts".
+from services import space_goal_service
 
 # "What you are working on" is a recency window, not an accumulated list.
 DOING_WINDOW = timedelta(days=7)
@@ -355,8 +359,13 @@ async def build_brief(
     """The Learning Brief. Fully derived; no model call anywhere.
 
     Returns None when the project is not owned (the route turns that into 404).
-    `goal` is always None right now: there is no write surface for it anywhere
-    in the repo, and inventing one here would be a different feature.
+
+    `goal` is filled from the space's confirmed goal, and `isGoalInferred` says
+    whether it was proposed by the system rather than stated by the learner. Both
+    keys have been on the wire since the brief was written, always null — this is
+    the write surface they were waiting for. Reading the goal does not make this
+    computed view less derived: it is still facts read, never facts invented, and
+    a goal that has not been confirmed is not read at all.
     """
     project = (
         await db.execute(select(Project).where(Project.id == project_id))
@@ -403,11 +412,17 @@ async def build_brief(
         if len(doing) >= BRIEF_LIST_CAP:
             break
 
+    goal_row = await space_goal_service.get_active(db, project_id=project_id)
+
     return LearningBriefOut(
         project_id=project_id,
         space_name=project.name,
-        goal=None,
-        is_goal_inferred=False,
+        # A goal with no deadline and no number is still shown verbatim — the
+        # panel's job is to say where the learner is going, not to score it.
+        goal=goal_row.target_text if goal_row is not None else None,
+        is_goal_inferred=(
+            goal_row is not None and goal_row.origin == "agent_proposed"
+        ),
         doing=doing or None,
         already_have=already_have or None,
         developing=developing or None,
