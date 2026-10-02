@@ -6,7 +6,44 @@ the answer back into a question. It exists so that "the difference comes from th
 Method" can be demonstrated against the same input and the same state.
 """
 
-from ai.methods.types import Behaviour, MethodDirective, MethodInput, select_focus
+from ai.methods.types import (
+    DEFAULT_PURPOSE_KEY,
+    Behaviour,
+    MethodDirective,
+    MethodInput,
+    completion_lines,
+    goal_relation,
+    purpose_key,
+    select_focus,
+)
+
+#: 面向学习者的三格 —— **(在做什么, 要你做什么, 什么算完成)**，按目标分四套。
+#:
+#: 与 Socratic 同一张表的四行，但每一行都不同：讲清楚之后"什么算完成"是
+#: **他自己能再做一遍**，而不是"他自己走完了"—— 因为这一轮他确实是被讲懂的，
+#: 判据必须承认这一点，否则它就是在夸一个没发生的动作。
+_LEARNER_FACING: dict[str, tuple[str, str, str]] = {
+    DEFAULT_PURPOSE_KEY: (
+        "我把这一步讲清楚",
+        "读一遍，再复述一遍",
+        "你能复述一遍，就算过",
+    ),
+    "exam_performance": (
+        "我按考试的样子讲",
+        "读完照着再做一道",
+        "你自己做对一道，就算过",
+    ),
+    "understanding": (
+        "我把道理讲清楚",
+        "读完换个例子讲",
+        "换个例子也讲得清，就算过",
+    ),
+    "build_something": (
+        "我只讲能用上的",
+        "用在你手上的东西里",
+        "用进去了，就算过",
+    ),
+}
 
 
 class DirectExplanationMethod:
@@ -16,11 +53,18 @@ class DirectExplanationMethod:
 
     def execute(self, context: MethodInput) -> MethodDirective:
         focus = select_focus(context)
+        system_move, learner_move, completion = _LEARNER_FACING[
+            purpose_key(context.goal)
+        ]
         return MethodDirective(
             name=self.name,
             display_name=self.display_name,
             focus=focus,
-            discipline=_discipline(context, focus),
+            discipline=_discipline(context, focus, completion),
+            system_move=system_move,
+            learner_move=learner_move,
+            completion=completion,
+            goal_relation=goal_relation(context.goal),
             behaviour=Behaviour(
                 expects_question=False,
                 max_questions=0,
@@ -31,7 +75,7 @@ class DirectExplanationMethod:
         )
 
 
-def _discipline(context: MethodInput, focus: str | None) -> str:
+def _discipline(context: MethodInput, focus: str | None, completion: str) -> str:
     """The rules for this turn.
 
     The "where to start" rule is the one that reads Learner State: on a space
@@ -71,4 +115,5 @@ def _discipline(context: MethodInput, focus: str | None) -> str:
             f"本轮要讲的知识点：**{focus}**。"
             "（如果他问的是别的，就讲他问的那个。）",
         ]
+    lines += completion_lines(context, completion)
     return "\n".join(lines)

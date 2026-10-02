@@ -20,12 +20,13 @@ from __future__ import annotations
 from ai.methods import (
     DEFAULT_METHOD,
     METHODS,
+    PURPOSES,
     get_method,
     item_labels,
     method_names,
     select_focus,
 )
-from ai.methods.types import MethodInput
+from ai.methods.types import GoalView, MethodInput
 from services.method_service import (
     UnknownMethod,
     directive_for_turn,
@@ -61,11 +62,17 @@ FRINGE = ["特征向量"]
 QUESTION = "我不理解 eigenvector。"
 
 
+def goal(purpose: str) -> GoalView:
+    """这个空间的方向，只有 `purpose` 是逐案变的 —— 其余字段固定。"""
+    return GoalView(target_text="考到 117 分", purpose=purpose, context="TOEFL")
+
+
 def context(
     *,
     message: str = QUESTION,
     learner_state: str = LEARNER_STATE,
     outer_fringe: list[str] | None = None,
+    goal: GoalView | None = None,
 ) -> MethodInput:
     return MethodInput(
         user_message=message,
@@ -73,6 +80,7 @@ def context(
         learner_state=learner_state,
         outer_fringe=FRINGE if outer_fringe is None else outer_fringe,
         history_messages=2,
+        goal=goal,
     )
 
 
@@ -172,12 +180,99 @@ def test_both_methods_land_on_the_same_focus():
 
 def test_digest_is_small_and_camel_case():
     digest = method_digest(socratic())
-    assert set(digest) == {"name", "displayName", "focus", "behaviour"}
+    assert set(digest) == {
+        "name",
+        "displayName",
+        "focus",
+        "systemMove",
+        "learnerMove",
+        "completion",
+        "goalRelation",
+        "behaviour",
+    }
     assert digest["name"] == "socratic"
     assert digest["focus"] == "特征向量"
     assert digest["behaviour"]["awaitsLearner"] is True
     # The discipline text is not reprinted per answer.
     assert "discipline" not in digest
+
+
+# --- 同一个知识点，不同目标不是同一件事 -------------------------------------
+#
+# 这一段是"目标真的进了运行时"的判据：同一句问题、同一个学习状态、**只改
+# `purpose`**，产出的对象必须不同。测不出来，目标就只是存了一行。
+
+
+def test_only_the_purpose_changes_the_completion_criterion():
+    """⭐ §0 验收 1（同一句话、同一个状态，只改 purpose）。"""
+    exam = socratic(goal=goal("exam_performance"))
+    understanding = socratic(goal=goal("understanding"))
+
+    # 方法本身没变：同一个焦点、同一套行为（要问一个问题、不许给答案）。
+    # 变的是**目标带来的那几格** —— 判据、要你做什么、和目标的关�系。
+    assert exam.focus == understanding.focus == "特征向量"
+    assert exam.behaviour == understanding.behaviour
+    assert exam.name == understanding.name
+
+    # 完成判据必须不同：为了考试是"做对两道"，为了理解是"说得出为什么"。
+    assert exam.completion != understanding.completion
+    assert "做对两道" in exam.completion
+    assert "为什么" in understanding.completion
+    assert exam.goal_relation != understanding.goal_relation
+    assert exam.learner_move != understanding.learner_move
+
+
+def test_the_two_methods_disagree_about_what_done_means_for_one_purpose():
+    """同一套目标下两个方法的"什么算完成"也不同 —— 它们确实要求不同的东西。"""
+    asked = socratic(goal=goal("exam_performance"))
+    told = direct(goal=goal("exam_performance"))
+    assert asked.completion != told.completion
+    assert asked.learner_move != told.learner_move
+    assert asked.system_move != told.system_move
+
+
+def test_without_a_goal_the_status_says_so_instead_of_guessing():
+    """空间还没有目标：判据仍然有（这一轮要成什么），但**不说和目标的关系**。"""
+    directive = socratic(goal=None)
+    assert directive.system_move
+    assert directive.learner_move
+    assert directive.completion
+    assert directive.goal_relation is None
+    # 同一套话给"没有目标"和 `other` —— 两种情况我们同样不知道他要什么。
+    assert (
+        socratic(goal=goal("other")).completion == directive.completion
+    )
+
+
+def test_every_purpose_row_of_every_method_is_filled():
+    """四行缺一行就会在运行时 KeyError，而那只会在某个用户身上发生。"""
+    for name in method_names():
+        method = get_method(name)
+        assert method is not None
+        for purpose in PURPOSES:
+            directive = method.execute(context(goal=goal(purpose)))
+            assert directive.system_move and directive.learner_move
+            assert directive.completion
+
+
+def test_the_completion_reaches_the_model_as_an_instruction():
+    """只写给用户看，它就不会改变行为 —— 所以纪律文本里也必须有它。"""
+    directive = socratic(goal=goal("exam_performance"))
+    assert "## 这一轮什么算完成" in directive.discipline
+    assert directive.completion in directive.discipline
+    # 判据提到目标，但明确不让它变成话题（否则模型每轮都要念一句目标）。
+    assert "考到 117 分" in directive.discipline
+    assert "不要在回答里提这个目标本身" in directive.discipline
+
+
+def test_a_method_that_reads_a_goal_can_still_run_without_one():
+    """没有目标不是错误路径：两个方法都必须照常产出一条完整指令。"""
+    for name in method_names():
+        method = get_method(name)
+        assert method is not None
+        directive = method.execute(context(goal=None))
+        assert directive.completion
+        assert "这个空间还没有目标" in directive.discipline
 
 
 # --- reading the input ------------------------------------------------------

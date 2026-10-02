@@ -14,11 +14,16 @@ conversation into an interrogation.
 from ai.methods.direct_explanation import DirectExplanationMethod
 from ai.methods.socratic import SocraticMethod
 from ai.methods.types import (
+    DEFAULT_PURPOSE_KEY,
+    PURPOSES,
     Behaviour,
+    GoalView,
     Method,
     MethodDirective,
     MethodInput,
+    goal_relation,
     item_labels,
+    purpose_key,
     select_focus,
 )
 
@@ -49,13 +54,18 @@ def method_names() -> list[str]:
 
 __all__ = [
     "DEFAULT_METHOD",
+    "DEFAULT_PURPOSE_KEY",
     "METHODS",
+    "PURPOSES",
     "Behaviour",
+    "GoalView",
     "Method",
     "MethodDirective",
     "MethodInput",
     "get_method",
+    "goal_relation",
     "item_labels",
     "method_names",
+    "purpose_key",
     "select_focus",
 ]

@@ -29,6 +29,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai import AIChunk, AIUseCase, ChatMessage, ai_client
+from ai.coordinator.types import GoalFact
 from core import aio
 from core.config import settings
 from core.database import AsyncSessionLocal
@@ -43,6 +44,7 @@ from services import (
     free_course_service,
     method_service,
     project_service,
+    space_goal_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,6 +79,9 @@ class TurnContext:
     # 的次序。None/[] = 这一轮没投送。取不到时是**硬错误**（见 `_agent_context` 里
     # 那条单独的 except）—— 他明确带了东西，就不能被 best-effort 悄悄吞掉。
     context_bundle_ids: list[uuid.UUID] | None = None
+    # 这个空间的方向（Goal V0，只读）。**不给模型看** —— 它由 Method 读，Method 把它
+    # 需要的那部分放进 discipline。读不到（没有目标 / 读失败）就是 None，方法照常跑。
+    goal: GoalFact | None = None
 
 
 # The previous turn's write is async (done doesn't wait for it); a fast
@@ -120,6 +125,7 @@ async def prepare_turn(
             # choice (already validated by the schema) or the default.
             method=method_service.resolve_name(payload.method),
             context_bundle_ids=payload.context_bundle_ids,
+            goal=await _active_goal(db, payload.project_id),
         )
         # 新会话这条分支到此为止：材料校验 + 返回（否则会掉进下面「找已有会话」
         # 的逻辑里，而那时 conversationId 本来就是 None）。
@@ -157,12 +163,27 @@ async def prepare_turn(
             if payload.method
             else method_service.runnable_name(conversation.method)
         ),
+        goal=await _active_goal(db, conversation.project_id),
     )
     # Mala 的材料必须在**响应开始之前**校验：流一旦开了，再发现的错误就只能以 200
     # 的形态发出去，而客户端会以为材料带上了 —— 那正是这条链最不能有的一种失败。
     # （`_load_agent_context` 里还会再取一次，那是真正的注入；这里只负责尽早拒绝。）
     await _assert_context_bundles(db, context)
     return context
+
+
+async def _active_goal(db: AsyncSession, project_id: uuid.UUID | None) -> GoalFact | None:
+    """这个空间正在推进的方向，只读 —— best-effort 的那一层包装。
+
+    Best-effort，理由和别的侧通道一样：读不到目标不该让一次对话失败。代价说清楚 ——
+    失败与"这个空间还没有目标"在这一轮里长得一样，方法会按没有目标那套话来教。
+    这是有意的取舍（目标只是判据的一个输入，不是对话的前提），不是漏了。
+    """
+    try:
+        return await space_goal_service.load_fact(db, project_id=project_id)
+    except Exception:  # noqa: BLE001 — a missing side channel must not break chat
+        logger.warning("active goal unavailable (project=%s)", project_id, exc_info=True)
+        return None
 
 
 async def _assert_context_bundles(db: AsyncSession, context: TurnContext) -> None:
@@ -271,6 +292,7 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         user_message=context.user_content,
         agent_context=agent_context,
         history_messages=len(context.history),
+        goal=context.goal,
     )
 
     def digest_now() -> dict | None:

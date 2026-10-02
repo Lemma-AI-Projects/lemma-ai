@@ -7,7 +7,44 @@ exists to make that survive contact with a model that would very much like to
 help by explaining.
 """
 
-from ai.methods.types import Behaviour, MethodDirective, MethodInput, select_focus
+from ai.methods.types import (
+    DEFAULT_PURPOSE_KEY,
+    Behaviour,
+    MethodDirective,
+    MethodInput,
+    completion_lines,
+    goal_relation,
+    purpose_key,
+    select_focus,
+)
+
+#: 面向学习者的三格 —— **(在做什么, 要你做什么, 什么算完成)**，按目标分四套。
+#:
+#: 「在做什么」不随目标变：这个方法就是不给你答案。变的是**要你做什么**和
+#: **什么算完成** —— 而后者是这一层存在的理由：同一个知识点，"你自己做对两道"
+#: 与"你说得出为什么、举得出反例"不是同一个标准，而它们分别对应考试与理解。
+_LEARNER_FACING: dict[str, tuple[str, str, str]] = {
+    DEFAULT_PURPOSE_KEY: (
+        "先请你自己走一遍",
+        "把下一步写给我",
+        "你自己走完，就算过",
+    ),
+    "exam_performance": (
+        "先请你自己走一遍",
+        "先别翻资料，写给我",
+        "你自己做对两道，就算过",
+    ),
+    "understanding": (
+        "先请你讲出理解",
+        "把为什么写给我",
+        "说得出为什么、举得出反例",
+    ),
+    "build_something": (
+        "先请你用它做一步",
+        "用在你手上的东西里",
+        "真的用进去了，就算过",
+    ),
+}
 
 
 class SocraticMethod:
@@ -17,11 +54,18 @@ class SocraticMethod:
 
     def execute(self, context: MethodInput) -> MethodDirective:
         focus = select_focus(context)
+        system_move, learner_move, completion = _LEARNER_FACING[
+            purpose_key(context.goal)
+        ]
         return MethodDirective(
             name=self.name,
             display_name=self.display_name,
             focus=focus,
-            discipline=_discipline(context, focus),
+            discipline=_discipline(context, focus, completion),
+            system_move=system_move,
+            learner_move=learner_move,
+            completion=completion,
+            goal_relation=goal_relation(context.goal),
             behaviour=Behaviour(
                 expects_question=True,
                 max_questions=1,
@@ -32,7 +76,7 @@ class SocraticMethod:
         )
 
 
-def _discipline(context: MethodInput, focus: str | None) -> str:
+def _discipline(context: MethodInput, focus: str | None, completion: str) -> str:
     """The rules for this turn.
 
     Built rather than fixed because one rule changes with the space: "the
@@ -74,4 +118,5 @@ def _discipline(context: MethodInput, focus: str | None) -> str:
             f"本轮要衔接的知识点：**{focus}**。"
             "（如果他问的不是这个，就按他问的那一步来——但仍然是只问一个问题。）",
         ]
+    lines += completion_lines(context, completion)
     return "\n".join(lines)

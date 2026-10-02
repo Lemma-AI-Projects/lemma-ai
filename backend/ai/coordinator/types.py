@@ -88,6 +88,16 @@ class Finding(StrEnum):
     LAPSE = "lapse"  # they had it, this attempt failed
     STRUGGLE = "struggle"  # still learning it, no success yet
     UNSETTLED = "unsettled"  # the write did not decide anything
+    #: 结构里暂时没有可学的新项 —— 这是一个**结论**，不是"没有结论"。
+    #:
+    #: 与 `NONE` 分开，因为两者说的事完全不同：`NONE` 是"我没法判断"（不认识的事件、
+    #: 没有结构），`NO_NEXT_STEP` 是"我判断过了，现在没有下一步可做"。混成一个值，
+    #: 会让"暂时没事可做"读起来像"什么都看不见" —— 而前者是可以被检验的事实
+    #: （外沿为空），后者是一个缺口。
+    #:
+    #: ⚠️ 它**不**等于"他已经学完了"：到期的复习不在这条判断里（Scheduler 不在
+    #: Coordinator 链上），所以它只说结构上没有新东西，不说这个人没有事可做。
+    NO_NEXT_STEP = "no_next_step"
 
 
 @dataclass(frozen=True)

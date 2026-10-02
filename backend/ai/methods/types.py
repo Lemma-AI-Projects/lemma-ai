@@ -18,18 +18,79 @@ Two decisions worth keeping:
   is the entire acceptance criterion.
 """
 
+from dataclasses import dataclass
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
+@dataclass(frozen=True)
+class GoalView:
+    """The space's direction, as a Method may read it — and only as much of it.
+
+    Read-only, and deliberately not a plan: it says where the learner wants to
+    get to and what counts as success there. No progress, no percentage, no
+    ranking — the table behind it has no such column, and inventing one here
+    would be the Method pretending to know something nobody knows.
+
+    This layer's own copy of the shape rather than `ai.coordinator.GoalFact`:
+    the decision layer's vocabulary must not become the method layer's, or the
+    two can only drift together. `services/method_service` does the mapping.
+    """
+
+    target_text: str
+    #: `exam_performance` / `understanding` / `build_something` / `other`.
+    #: The load-bearing field: "get the exam right" and "understand why it
+    #: works" are different instructions even when they point at one topic.
+    purpose: str
+    context: str | None = None
+
+
+#: The purposes a goal can have (`models/space_goal.py`). Kept here as the
+#: *method* layer's copy so the tables below can be checked for completeness.
+PURPOSES = ("exam_performance", "understanding", "build_something", "other")
+
+#: The table key for "we do not know what he wants" — no goal, or `other`.
+#: Both get the same words, because in both cases the honest thing is the same:
+#: do not pretend to know what this is for.
+DEFAULT_PURPOSE_KEY = "default"
+
+#: Why this turn matters to the goal, in one short sentence. Shared by every
+#: method: it is about the topic's relation to the direction, not about the
+#: pedagogy. Empty when there is no goal — the status bar then says nothing
+#: rather than something generic.
+_GOAL_RELATION = {
+    "exam_performance": "这一轮练的是会考的东西 —— 冲着你的目标去。",
+    "understanding": "目标是理解，所以这一轮不追求做对，追求说得清。",
+    "build_something": "这一轮是为你想做出来的那个东西服务的。",
+}
+
+
+def purpose_key(goal: "GoalView | None") -> str:
+    """Which row of the learner-facing tables applies."""
+    if goal is None or goal.purpose not in _GOAL_RELATION:
+        return DEFAULT_PURPOSE_KEY
+    return goal.purpose
+
+
+def goal_relation(goal: "GoalView | None") -> str | None:
+    """「这件事和你的目标什么关系」—— 状态栏第二行就是它。
+
+    `None` when there is no goal: a status bar that said "和你的目标有关" about a
+    space with no goal would be making one up.
+    """
+    if goal is None:
+        return None
+    return _GOAL_RELATION.get(goal.purpose)
+
+
 class MethodInput(BaseModel):
     """Everything a Method is allowed to look at.
 
     Every field is filled from what the Global Agent already assembled for this
-    turn (`services/agent_context_service.py`) — nothing here derives state, and
-    nothing here writes it.
+    turn (`services/agent_context_service.py`) plus the space's goal — nothing
+    here derives state, and nothing here writes it.
     """
 
     # The learner's own words for this turn.
@@ -46,6 +107,11 @@ class MethodInput(BaseModel):
     # Outer-fringe titles: what the system says is ready to be learned next.
     outer_fringe: list[str] = Field(default_factory=list)
     history_messages: int = 0
+    #: Where this space is trying to get to, when the learner has confirmed a
+    #: goal. `None` is a legitimate state — a space may be a place to collect
+    #: material before anybody knows what it is for, and the methods then say so
+    #: instead of guessing.
+    goal: GoalView | None = None
 
     @property
     def has_knowledge_structure(self) -> bool:
@@ -87,7 +153,20 @@ class Behaviour(BaseModel):
 
 
 class MethodDirective(BaseModel):
-    """What a Method decides: where this turn aims, and how it must behave."""
+    """What a Method decides: where this turn aims, and how it must behave.
+
+    **Three faces, three readers** — the same division the architecture draws:
+
+    | 面 | 字段 | 谁读 |
+    |---|---|---|
+    | 面向模型 | `discipline` | 模型（注入 system prompt） |
+    | 面向学习者 | `system_move` / `learner_move` / `completion` | Focus 顶部的状态栏 |
+    | 面向系统 | `behaviour` + `focus` | 测试 / 日志 / 将来的策略 |
+
+    面向学习者那三格是**动词短语**，不是标签：状态栏说的必须是"我们现在在做什么 /
+    要你做什么 / 什么算完成"，**不显示这个 Method 的名字** —— 一个术语会邀请用户去
+    评价这种教法，一个动词只会邀请他去做。
+    """
 
     name: str
     display_name: str
@@ -97,6 +176,17 @@ class MethodDirective(BaseModel):
     # What the learner needs to hear about *this* turn's method, in the model's
     # own instruction language. Injected into the system prompt verbatim.
     discipline: str
+    #: ① 我们现在在做什么。动词，不是术语（"先请你自己走一遍，我不给答案"）。
+    system_move: str
+    #: ② 要你做什么。一句话，让他知道现在该动手了。
+    learner_move: str
+    #: ③ 什么算完成。**这一格是承重的**：没有它，用户不知道什么时候算过，
+    #: 而"什么时候算过"正是"有方向"最直接的证据。它随 `purpose` 变 —— 同一个
+    #: 知识点，为了考试与为了理解不是同一件事。
+    completion: str
+    #: 这件事和你的目标什么关系。没有目标时是 `None`（那就不说，而不是说一句
+    #: "和你的目标有关"——那是在替他想一个目标）。
+    goal_relation: str | None = None
     behaviour: Behaviour
 
     @property
@@ -175,3 +265,30 @@ def select_focus(context: MethodInput) -> str | None:
     if context.outer_fringe:
         return context.outer_fringe[0]
     return None
+
+
+def completion_lines(context: MethodInput, completion: str) -> list[str]:
+    """The tail every discipline ends with: what would make this turn count.
+
+    Shared by both methods on purpose. "什么算完成" is the one piece of the
+    directive that has to reach **both** readers — the learner (the status bar)
+    and the model (otherwise the criterion is a label, not an instruction), and
+    two hand-written versions of the same idea would drift apart.
+
+    The last line is the part that keeps it honest in use: a criterion that is
+    never quoted back is a criterion, not a topic. Left unsaid, a model told
+    "this is for your exam" will start every answer with it.
+    """
+    lines = [
+        "",
+        "## 这一轮什么算完成",
+        completion,
+    ]
+    if context.goal is not None:
+        lines.append(
+            f"（这个空间的目标是「{context.goal.target_text}」—— 上面这条判据就是照着它定的。"
+            "不要在回答里提这个目标本身：它是判据，不是话题。）"
+        )
+    else:
+        lines.append("（这个空间还没有目标，所以这条判据只说这一次。）")
+    return lines

@@ -28,6 +28,7 @@ from ai.coordinator import (
     SOURCE_CHAT,
     Action,
     CoordinatorEvent,
+    Finding,
     FocusItem,
     Snapshot,
     Urgency,
@@ -97,13 +98,49 @@ def test_case_1_one_rubric_record_does_not_settle_anything_so_do_nothing():
     assert reason
 
 
-def test_case_1_mastered_with_nothing_ready_is_nothing_to_do():
+def test_case_1_mastered_with_nothing_ready_is_no_next_step():
+    """结构上没有下一步 —— 这是一个**结论**，不是"没有结论"。
+
+    以前它和"不认识的事件""没有结构"共用一个 `NONE`，于是日志与界面上读不出区别。
+    分开之后，这一支必须能被单独认出来。
+    """
     snap = snapshot(focus=focus(value=StateValue.MASTERED.value), ready=())
 
+    finding, _target, reason = find(snap)
     decision = decide(snap)
+    assert finding is Finding.NO_NEXT_STEP
     assert decision.action is Action.NO_ACTION
     assert decision.urgency is Urgency.LOW
-    assert "没有下一步可学" in decision.reason
+    assert decision.payload["finding"] == "no_next_step"
+    assert "现在没有可学的新东西" in decision.reason
+    # 它**不许**被说成"他已经学完了" —— 到期的复习不在这条判断里。
+    assert "不是「他已经学完了」" in decision.reason
+    assert reason
+
+
+def test_no_next_step_is_a_different_value_from_none():
+    """三个"什么都不做"必须是三个能分开的理由，不是同一个值加三种措辞。"""
+    settled = find(snapshot(focus=focus(value=StateValue.MASTERED.value), ready=()))[0]
+    no_structure = find(snapshot(focus=None, ready=("特征值",)))[0]
+    unknown_event = find(
+        snapshot(focus=focus(value=StateValue.MASTERED.value), event_type="goal.changed")
+    )[0]
+
+    assert settled is Finding.NO_NEXT_STEP
+    assert no_structure is Finding.NONE
+    assert unknown_event is Finding.NONE
+    assert settled is not no_structure
+    # 三者都是"什么都不做"，但理由各不相同 —— 这正是它们要能分开的原因。
+    reasons = {
+        decide(snapshot(focus=focus(value=StateValue.MASTERED.value), ready=())).reason,
+        decide(snapshot(focus=None, ready=("特征值",))).reason,
+        decide(
+            snapshot(
+                focus=focus(value=StateValue.MASTERED.value), event_type="goal.changed"
+            )
+        ).reason,
+    }
+    assert len(reasons) == 3
 
 
 def test_case_1_no_focus_item_is_nothing_to_do():

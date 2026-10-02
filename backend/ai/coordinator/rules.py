@@ -19,7 +19,13 @@ The rule table, in evaluation order:
     该项没做对，且此前做对过                        → LAPSE（有过、现在没做出来）
     该项没做对，此前没做对过                        → STRUGGLE（还在学它）
     该项已具备，且外沿有可学项                      → NEXT_STEP(可学项[0])
-    该项已具备，外沿为空                           → NONE（没有再往前的下一步）
+    该项已具备，外沿为空                           → NO_NEXT_STEP（结构上没有下一步）
+
+    `NO_NEXT_STEP` 与 `NONE` 是两个值，不是两个措辞：`NONE` 说"我没法判断"，
+    `NO_NEXT_STEP` 说"我判断过了，现在没有下一步可做"。把它单列出来，是因为
+    "暂时没有可以开始的东西"是一个**可以被检验的结论**，而它以前和"不认识的事件"
+    共用一个值 —— 于是日志与界面上都读不出区别。它不等于"学完了"：到期的复习不在
+    这条链上（Scheduler 不在这里），所以它只说结构，不说这个人。
 
     然后按「有没有人在场」决定送达方式：
 
@@ -60,8 +66,16 @@ _URGENCY: dict[Finding, Urgency] = {
     Finding.NEXT_STEP: Urgency.NORMAL,
     Finding.STRUGGLE: Urgency.NORMAL,
     Finding.UNSETTLED: Urgency.LOW,
+    Finding.NO_NEXT_STEP: Urgency.LOW,
     Finding.NONE: Urgency.LOW,
 }
+
+# Findings that produce no action wherever the event came from. `NO_NEXT_STEP`
+# belongs here for the same reason `UNSETTLED` does: there is nothing to do, and
+# reacting anyway would be inventing work.
+_NO_ACTION: frozenset[Finding] = frozenset(
+    {Finding.NONE, Finding.UNSETTLED, Finding.NO_NEXT_STEP}
+)
 
 # Finding -> what to do when somebody is there to be taught.
 _ACTION_IN_CONVERSATION: dict[Finding, Action] = {
@@ -129,9 +143,10 @@ def find(snapshot: Snapshot) -> tuple[Finding, str | None, str]:
             f"「{focus.label}」已经具备，而「{target}」的前提都已满足 —— 可以开始学它。",
         )
     return (
-        Finding.NONE,
+        Finding.NO_NEXT_STEP,
         None,
-        f"「{focus.label}」已经具备，但目前没有前提已满足的新项 —— 没有下一步可学。",
+        f"「{focus.label}」已经具备，而结构里暂时没有前提已满足的新项 —— "
+        "现在没有可学的新东西（这不是「他已经学完了」，只是这个结构里没有下一步）。",
     )
 
 
@@ -140,7 +155,7 @@ def decide(snapshot: Snapshot) -> Decision:
     finding, target, reason = find(snapshot)
     urgency = _URGENCY[finding]
 
-    if finding in (Finding.NONE, Finding.UNSETTLED):
+    if finding in _NO_ACTION:
         return Decision(
             action=Action.NO_ACTION,
             target=target,

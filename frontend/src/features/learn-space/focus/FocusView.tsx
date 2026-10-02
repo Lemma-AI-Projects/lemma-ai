@@ -14,6 +14,10 @@ import { ConversationPanel } from '@/features/learn-space/workspace/Conversation
 import { useProjectQuery } from '@/features/project/projectApi'
 import { useActiveGoalQuery } from '@/features/learn-space/goal/goalApi'
 import { goalLine } from '@/features/learn-space/goal/goalText'
+import {
+  useMethodStatusQuery,
+  type MethodStatus,
+} from '@/features/learn-space/method/methodApi'
 import { cn } from '@/lib/utils'
 
 import { BlockEditor } from './BlockEditor'
@@ -36,7 +40,11 @@ export interface FocusPreviewData {
    * `/projects/{id}/goals/active` 算出来；没有目标时是 `null`。
    */
   goalLine?: string | null
-  method?: string
+  /**
+   * method 状态栏的四格（在做什么 / 要你做什么 / 什么算完成 + 和目标的关�系）。
+   * 真实页面上来自 `/api/v1/methods/status`。
+   */
+  methodStatus?: MethodStatus
   title: string
   blocks: DocBlock[]
   pages: { id: string; title: string }[]
@@ -128,6 +136,14 @@ function FocusDocument({
   const { goal } = useActiveGoalQuery(spaceId)
   const direction = preview ? (preview.goalLine ?? null) : goalLine(goal ?? null)
 
+  // method 状态栏：这个空间**现在**在被怎么教（右栏那段会话的做法），加上这个空间
+  // 的方向。传 conversationId 是为了跟着右栏那段会话走；还没开会话时后端会回落到
+  // "这个空间最近教过的那一段"。预览不连后端，直接用 fixture 里那一份。
+  const { status: methodStatus } = useMethodStatusQuery(
+    spaceId,
+    conversationId
+  )
+  const methodBar = preview ? preview.methodStatus : methodStatus
   const materials = useMemo(
     () => (preview?.pages ?? (pagesQuery.data ?? []).map((page) => ({ id: page.id, title: page.title }))),
     [pagesQuery.data, preview?.pages]
@@ -297,7 +313,7 @@ function FocusDocument({
           spaceName={spaceName}
           isNameLoading={!preview && projectQuery.isPending}
           goalLine={direction}
-          method={preview?.method}
+          methodStatus={methodBar}
           roam={
             currentIndex >= 0 && materials.length > 1
               ? {

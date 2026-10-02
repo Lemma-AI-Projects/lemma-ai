@@ -113,7 +113,15 @@ export const FOCUS_PREVIEW: FocusPreviewData = {
   // 空间名旁边那一行方位。真实页面上它由 `/projects/{id}/goals/active` 算出来，
   // 这里写死一条，好让评审页与离屏断言看到同一个东西。
   goalLine: '考到 90 分 · 还有 21 天',
-  method: 'socratic（mock）',
+  // method 状态栏的四格。真实页面上由 `/api/v1/methods/status` 算出来
+  // （socratic × `exam_performance` 那一行），这里写死同样的内容 —— 评审时看到的
+  // 就是真有目标时顶栏的样子。**注意里面没有 method 的名字**：界面上只出现动词。
+  methodStatus: {
+    systemMove: '先请你自己走一遍',
+    learnerMove: '先别翻资料，写给我',
+    completion: '你自己做对两道，就算过',
+    goalRelation: '这一轮练的是会考的东西 —— 冲着你的目标去。',
+  },
   title: '讲义 · 特征值.md',
   blocks: BLOCKS,
   pageIndex: 2,

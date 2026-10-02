@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.project import Project
 from models.space_goal import SpaceGoal
 from schemas.space_goal import SpaceGoalCreateIn, SpaceGoalOut, SpaceGoalUpdateIn
+from ai.coordinator.types import GoalFact
 from services import space_memory_service
 
 #: Reasons whose prefix is a person, not the system.
@@ -122,6 +123,34 @@ async def get_active(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def load_fact(
+    db: AsyncSession, *, project_id: uuid.UUID | None
+) -> GoalFact | None:
+    """The goal as a *reader* sees it (decision layer, method layer).
+
+    The two callers who need it are both read-only and both outside this module's
+    write discipline, so the row -> `GoalFact` mapping lives here rather than
+    being copied into each of them — a second copy is how "which purposes count"
+    would drift.
+
+    Returns None for "no active goal". It does **not** swallow errors: a caller
+    that must not fail (a chat turn) wraps this itself and says so. Making the
+    failure and the absence look alike in here would hide it from the one caller
+    that can afford to care.
+    """
+    if project_id is None:
+        return None
+    row = await get_active(db, project_id=project_id)
+    if row is None:
+        return None
+    return GoalFact(
+        target_text=row.target_text,
+        purpose=row.purpose,
+        deadline_at=row.deadline_at,
+        context=row.context,
+    )
 
 
 async def list_for_space(
@@ -365,6 +394,7 @@ __all__ = [
     "get_active",
     "is_user_close",
     "list_for_space",
+    "load_fact",
     "outcome_kind",
     "pause",
     "resume",
