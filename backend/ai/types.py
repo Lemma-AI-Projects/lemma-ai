@@ -56,6 +56,11 @@ class AIUseCase(StrEnum):
     # can be routed and priced on its own, and so its prompt
     # (`user_profile_extract`) can never be reached by a course step.
     USER_PROFILE_EXTRACT = "user_profile_extract"
+    # Space Goal: read one sentence the learner just said and say whether it
+    # contains a goal for this space. Its own use case because the honest answer
+    # is usually "no goal here" — routing it apart makes "is this model
+    # over-eager?" a question somebody can actually answer.
+    SPACE_GOAL_EXTRACT = "space_goal_extract"
 
 
 class VideoInputKind(StrEnum):

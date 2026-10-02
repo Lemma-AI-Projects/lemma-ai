@@ -32,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.project import Project
 from models.space_goal import SpaceGoal
-from schemas.space_goal import SpaceGoalCreateIn, SpaceGoalUpdateIn
+from schemas.space_goal import SpaceGoalCreateIn, SpaceGoalOut, SpaceGoalUpdateIn
 from services import space_memory_service
 
 #: Reasons whose prefix is a person, not the system.
@@ -67,6 +67,29 @@ def outcome_kind(purpose: str) -> str:
 def is_user_close(reason: str) -> bool:
     """True when the learner closed it, so the decision may not be revisited."""
     return reason.startswith(_USER_PREFIX)
+
+
+def to_out(goal: SpaceGoal) -> SpaceGoalOut:
+    """Row -> wire. `outcomeKind` is computed here rather than read off the row.
+
+    The row has no such column (see `models/space_goal.py`), so this is the only
+    place the two facts are joined — which is the point: one source, one join.
+    """
+    return SpaceGoalOut(
+        id=goal.id,
+        project_id=goal.project_id,
+        target_text=goal.target_text,
+        deadline_at=goal.deadline_at,
+        context=goal.context,
+        purpose=goal.purpose,
+        origin=goal.origin,
+        status=goal.status,
+        confirmed_at=goal.confirmed_at,
+        closed_reason=goal.closed_reason,
+        outcome_kind=outcome_kind(goal.purpose),
+        created_at=goal.created_at,
+        updated_at=goal.updated_at,
+    )
 
 
 async def _owned_project_id(
@@ -345,5 +368,6 @@ __all__ = [
     "outcome_kind",
     "pause",
     "resume",
+    "to_out",
     "update",
 ]

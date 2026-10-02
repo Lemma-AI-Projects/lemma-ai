@@ -86,3 +86,30 @@ class SpaceGoalCloseIn(_Camel):
     """
 
     reason: GoalCloseReason
+
+
+#: 被读的那句话。它是一句话，不是一份文档 —— 超出这个长度的是粘贴。
+GOAL_MESSAGE_MAX = 2000
+
+
+class SpaceGoalExtractIn(_Camel):
+    """请系统读一句话，看里面有没有这个空间的目标。"""
+
+    message: str = Field(min_length=1, max_length=GOAL_MESSAGE_MAX)
+
+
+class SpaceGoalSuggestionOut(_Camel):
+    """读出来的建议 —— **不是一次写入**。
+
+    `heard=False` 是**正常结果**（绝大多数话里没有目标），不是错误；客户端要把它
+    当成一个普通回答，别当成失败弹窗。
+
+    这个形状里**没有"回述句子"**：页面把它读出来之后是要给人**改**的，一段文字改完
+    还得再解析一次，两边的说法迟早对不上。页面用这几个字段自己组一句话。
+    """
+
+    heard: bool
+    target_text: str | None = None
+    deadline_at: datetime | None = None
+    context: str | None = None
+    purpose: GoalPurpose | None = None

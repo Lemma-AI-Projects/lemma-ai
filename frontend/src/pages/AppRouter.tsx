@@ -23,6 +23,7 @@ import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { FocusPreviewPage } from '@/pages/FocusPreviewPage'
+import { GoalPreviewPage } from '@/pages/GoalPreviewPage'
 import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
@@ -71,6 +72,12 @@ const routes: RouteObject[] = [
     // Agent），mock 数据、不登录即可查看。
     path: '/preview/focus',
     element: <FocusPreviewPage />,
+  },
+  {
+    // 布局评审入口：学习目标那一块（空态 / 回述 / 正在推 / 已暂停），
+    // 四屏并排，mock 数据、不登录即可查看。
+    path: '/preview/goal',
+    element: <GoalPreviewPage />,
   },
   {
     // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。

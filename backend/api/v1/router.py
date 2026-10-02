@@ -21,6 +21,7 @@ from api.v1 import (
     qbank_admin,
     question_sets,
     scheduled_tasks,
+    space_goals,
     user_home,
     users,
     webhooks,
@@ -66,3 +67,7 @@ api_router.include_router(qbank_admin.router)
 # Mala（神笔马良）：把画板上选中的材料存成一个「投送包」，供下一轮对话引用。
 # 它不解析画板（前端 analyzer 是权威），也不调模型 —— 只存住用户选了什么。
 api_router.include_router(board.router)
+# 空间目标（Goal V0）：这个空间为什么存在。挂在 /projects/{id}/goals 下 ——
+# 目标属于空间不属于人，所以它与 /projects/{id}/preferences 同一条路，而
+# user_home 那几条路由永远写不到它。
+api_router.include_router(space_goals.router)

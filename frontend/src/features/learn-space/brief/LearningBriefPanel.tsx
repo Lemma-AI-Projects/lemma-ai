@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ArrowRight, Check, Circle, RotateCw, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { GoalBlock } from '../goal/GoalBlock'
 import { useKnowledgeStructureQuery } from './briefApi'
 import {
   layoutStructure,
@@ -102,7 +103,11 @@ export function LearningBriefPanel({
           <BriefSkeleton />
         ) : brief ? (
           <>
-            <GoalBlock brief={brief} />
+            {/* 目标这一块自己取数（`/projects/{id}/goals/active`），因为一句字符串
+                装不下它还需要的截止日期、状态与"为了什么"。简报里那两格
+                （`goal` / `isGoalInferred`）仍然是同一个事实，留给只读简报的
+                消费者；面板不把它渲染第二遍 —— 一个事实两处显示，迟早说不一样。 */}
+            <GoalBlock projectId={brief.projectId} />
 
             {/* Learner State Inspector：把那张图本身摊开 ——
                 ✓ 已具备 / → 接下来可学 / ○ 还没轮到。
@@ -179,36 +184,6 @@ export function LearningBriefPanel({
         ) : null}
       </div>
     </aside>
-  )
-}
-
-function GoalBlock({ brief }: { brief: LearningBrief }) {
-
-  if (!brief.goal) {
-    return (
-      <div className="rounded-xl border border-dashed border-zinc-300 px-3 py-2.5">
-        <p className="text-[11px] font-medium tracking-wide text-zinc-400 uppercase">
-          学习目标
-        </p>
-        <p className="mt-1 text-[13px] leading-5 text-zinc-500">
-          还没有设置学习目标
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="rounded-xl bg-zinc-50 px-3 py-2.5">
-      <p className="text-[11px] font-medium tracking-wide text-zinc-400 uppercase">
-        学习目标
-      </p>
-      <p className="mt-1 text-[13px] leading-5 text-zinc-900">{brief.goal}</p>
-      {brief.isGoalInferred && (
-        <p className="mt-1.5 text-[11px] leading-4 text-zinc-400">
-          根据本空间的课程推断
-        </p>
-      )}
-    </div>
   )
 }
 

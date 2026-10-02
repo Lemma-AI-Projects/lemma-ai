@@ -12,6 +12,8 @@ import {
 import type { DocBlock } from '@/features/docs/types'
 import { ConversationPanel } from '@/features/learn-space/workspace/ConversationPanel'
 import { useProjectQuery } from '@/features/project/projectApi'
+import { useActiveGoalQuery } from '@/features/learn-space/goal/goalApi'
+import { goalLine } from '@/features/learn-space/goal/goalText'
 import { cn } from '@/lib/utils'
 
 import { BlockEditor } from './BlockEditor'
@@ -29,6 +31,11 @@ import {
 /** 预览/评审用：不连后端，直接渲染这一份数据（`/preview/focus`）。 */
 export interface FocusPreviewData {
   spaceName: string
+  /**
+   * 空间名旁边那一行方位（"期末考到 90 分 · 还有 21 天"）。真实页面上由
+   * `/projects/{id}/goals/active` 算出来；没有目标时是 `null`。
+   */
+  goalLine?: string | null
   method?: string
   title: string
   blocks: DocBlock[]
@@ -115,6 +122,11 @@ function FocusDocument({
   }, [isDirty])
 
   const spaceName = preview?.spaceName ?? projectQuery.data?.name ?? ''
+
+  // 顶栏那一行方位：这个空间正在为什么花时间。没有目标时是 null —— 顶栏就什么都
+  // 不加（"还没有目标"属于简报，不属于标题栏）。预览走 fixture 里写死的那一条。
+  const { goal } = useActiveGoalQuery(spaceId)
+  const direction = preview ? (preview.goalLine ?? null) : goalLine(goal ?? null)
 
   const materials = useMemo(
     () => (preview?.pages ?? (pagesQuery.data ?? []).map((page) => ({ id: page.id, title: page.title }))),
@@ -284,6 +296,7 @@ function FocusDocument({
         <FocusTopBar
           spaceName={spaceName}
           isNameLoading={!preview && projectQuery.isPending}
+          goalLine={direction}
           method={preview?.method}
           roam={
             currentIndex >= 0 && materials.length > 1

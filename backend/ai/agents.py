@@ -26,6 +26,7 @@ from ai.free_course.types import (
     LessonBlueprint,
 )
 from ai.errors import UnsupportedCapabilityError
+from ai.goal_extract import GoalDraft
 from ai.types import AIUseCase
 from ai.user_profile import BackgroundDraft
 
@@ -102,6 +103,10 @@ free_course_session_turn_agent = _build_structured_agent(TeachingTurn)
 # not prose it would have to parse.
 user_profile_extract_agent = _build_structured_agent(BackgroundDraft)
 
+# Space Goal: read one sentence, hear a goal or hear nothing. Structured for the
+# same reason as the profile call — the caller needs fields, not prose.
+space_goal_extract_agent = _build_structured_agent(GoalDraft)
+
 _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.COURSE_INTAKE: course_intake_agent,
     AIUseCase.TOPIC_SEARCH: topic_search_agent,
@@ -115,6 +120,7 @@ _STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
     AIUseCase.FREE_COURSE_SESSION: free_course_session_agent,
     AIUseCase.FREE_COURSE_SESSION_TURN: free_course_session_turn_agent,
     AIUseCase.USER_PROFILE_EXTRACT: user_profile_extract_agent,
+    AIUseCase.SPACE_GOAL_EXTRACT: space_goal_extract_agent,
 }
 
 

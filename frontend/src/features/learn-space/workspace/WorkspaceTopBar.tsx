@@ -14,6 +14,14 @@ export interface WorkspaceTopBarProps {
   name: string
   /** 名称还在取：画骨架，不闪空胶囊。 */
   isNameLoading?: boolean
+  /**
+   * 空间名旁边那一行**方位**：`考到 117 分 · 还有 61 天`。
+   *
+   * 它由页面算好传进来（`goalText.goalLine`），顶栏不认识"目标"这个对象 —— 否则
+   * 一个标题栏会开始知道决策层的词汇。没有目标时传 `null`，这里什么都不加：
+   * 一个空的目标位比一句"还没有目标"更不打扰人。
+   */
+  goalLine?: string | null
   /** 当前视角。缩放与分页只在聚焦里出现（见 learn-space-design.md §2）。 */
   view: WorkspaceView
   onChangeView: (view: WorkspaceView) => void
@@ -42,6 +50,7 @@ export interface WorkspaceTopBarProps {
 export function WorkspaceTopBar({
   name,
   isNameLoading,
+  goalLine,
   view,
   onChangeView,
   onOpenFocus,
@@ -90,6 +99,15 @@ export function WorkspaceTopBar({
           <span className="h-2 w-[3px] rounded-full bg-zinc-300" />
         </span>
       </div>
+
+      {goalLine && (
+        <span
+          title={goalLine}
+          className="hidden max-w-64 truncate text-xs text-zinc-400 sm:block"
+        >
+          {goalLine}
+        </span>
+      )}
 
       <div className="min-w-0 flex-1" />
 

@@ -6,6 +6,14 @@ export interface FocusTopBarProps {
   spaceName: string
   isNameLoading?: boolean
   /**
+   * 空间名后面那一行**方位**：`期末考到 90 分 · 还有 21 天`。
+   *
+   * 它是"我为什么在这个空间里花时间"的一句话，由页面算好传进来（顶栏不认识
+   * "目标"这个对象）。没有目标时 `null` —— 这个位置就空着，而不是写一句
+   * "还没有目标"：那是简报要说的事。
+   */
+  goalLine?: string | null
+  /**
    * 这一轮的 method 状态。**今天只是占位** —— method 的流程还没实装，
    * 所以这里显示的是后端 METHODS 里真实存在的那个名字（`socratic`），
    * 后面挂一个 `（mock）` 明说它不是真在跑，而不是编一个好听的状态。
@@ -40,6 +48,7 @@ export interface FocusTopBarProps {
 export function FocusTopBar({
   spaceName,
   isNameLoading = false,
+  goalLine = null,
   method = 'socratic（mock）',
   roam = null,
   onExit,
@@ -70,6 +79,15 @@ export function FocusTopBar({
       <span className="shrink-0 rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-200">
         聚焦
       </span>
+
+      {goalLine && (
+        <span
+          title={goalLine}
+          className="hidden max-w-56 truncate text-xs text-zinc-400 sm:block"
+        >
+          {goalLine}
+        </span>
+      )}
 
       <div className="mx-auto flex items-center">
         <button

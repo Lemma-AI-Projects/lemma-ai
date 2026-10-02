@@ -23,6 +23,8 @@ import type {
   LearningBriefNextStep,
 } from '@/features/learn-space/brief/types'
 import { HomeSettingsDialog } from '@/features/home/HomeSettingsDialog'
+import { useActiveGoalQuery } from '@/features/learn-space/goal/goalApi'
+import { goalLine } from '@/features/learn-space/goal/goalText'
 import { ConversationPanel } from './ConversationPanel'
 import { childrenOf } from './gridGroups'
 import { WorkspaceCanvas } from './WorkspaceCanvas'
@@ -127,6 +129,11 @@ export function LearnSpaceWorkspace({
   const renamePage = useRenamePageMutation(projectId ?? '')
   const deletePage = useDeletePageMutation(projectId ?? '')
   const uploadMaterial = useUploadMaterialMutation(projectId ?? '')
+
+  // 空间名旁边那一行方位。没有目标（或还没读到）时是 null —— 顶栏就什么都不加，
+  // 而不是显示一句"还没有目标"：那属于简报，不属于标题栏。
+  const { goal } = useActiveGoalQuery(projectId)
+  const direction = goalLine(goal ?? null)
 
   const latestConversationId = useMemo(() => {
     const node = nodes.find((item) => item.href?.startsWith('/chat/'))
@@ -268,6 +275,7 @@ export function LearnSpaceWorkspace({
           <WorkspaceTopBar
             name={spaceName}
             isNameLoading={isNameLoading}
+            goalLine={direction}
             view={view}
             onChangeView={setView}
             onOpenFocus={onOpenFocus}

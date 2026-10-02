@@ -36,7 +36,7 @@ from core.database import AsyncSessionLocal, engine
 from models.space_goal import SpaceGoal
 from models.space_memory import SpaceMemory
 from schemas.space_goal import SpaceGoalCreateIn, SpaceGoalUpdateIn
-from services import coordinator_service, space_goal_service
+from services import coordinator_service, knowledge_service, space_goal_service
 
 
 def run(coro):
@@ -169,6 +169,15 @@ async def _snapshot_goal(space):
     return snapshot.goal
 
 
+async def _brief(space):
+    """The two reserved slots the brief contract has been carrying, always null."""
+    user_id, project_id, _stranger = space
+    async with AsyncSessionLocal() as db:
+        return await knowledge_service.build_brief(
+            db, project_id=project_id, user_id=user_id
+        )
+
+
 async def _memories(space) -> list[str]:
     _user_id, project_id, _stranger = space
     async with AsyncSessionLocal() as db:
@@ -207,10 +216,12 @@ async def _goal_rows(space) -> list[SpaceGoal]:
 
 
 def test_a_confirmed_goal_reaches_the_snapshot_and_the_brief(space):
-    """The vertical slice: create -> confirm -> the decision layer can read it."""
+    """The vertical slice: create -> confirm -> both reserved slots stop being null."""
     goal = run(_create(space))
     assert goal.status == "draft"
     assert run(_snapshot_goal(space)) is None, "draft 不该进快照"
+    before = run(_brief(space))
+    assert before is not None and before.goal is None, "简报的 goal 槽在确认前仍是 null"
 
     confirmed = run(_confirm(space, goal.id))
     assert confirmed.status == "active"
@@ -223,6 +234,21 @@ def test_a_confirmed_goal_reaches_the_snapshot_and_the_brief(space):
     assert fact.purpose == "exam_performance"
     assert fact.context == "TOEFL"
     assert fact.deadline_at is not None
+
+    # 简报那两个从写下来就一直为空的槽（`goal` / `isGoalInferred`），现在有值了。
+    after = run(_brief(space))
+    assert after is not None
+    assert after.goal == "两个月后 TOEFL 117"
+    assert after.is_goal_inferred is False
+
+
+def test_a_goal_the_system_proposed_is_marked_as_inferred(space):
+    """`isGoalInferred` 是既有契约里就有的区分，现在第一次真的被用上。"""
+    goal = run(_create(space, origin="agent_proposed"))
+    run(_confirm(space, goal.id))
+    brief = run(_brief(space))
+    assert brief is not None and brief.goal is not None
+    assert brief.is_goal_inferred is True
 
 
 def test_a_goal_with_no_deadline_is_still_a_goal(space):
