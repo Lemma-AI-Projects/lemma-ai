@@ -6,11 +6,15 @@
     `null`。目标会驱动排序与终止，一个没点头的目标就是一次猜测。
   * **拒绝要说得出理由** —— 别人的空间 404、第二次确认 422、关闭不带理由 422、
     改一个已经关掉的目标 422。绝不静默降级。
-  * **改目标不产生新行**，而且留下一条空间记忆；暂停不留记忆（暂停不是方向变了）。
+  * **改目标不产生新行**，暂停不留记忆（暂停不是方向变了）。
   * **抽取是读，不是写** —— 它回答"我听到了什么"，库里一行都不该多出来。
 
+只断言**客户端看得见的东西**（`GET` 回来是什么），不在这里直接查库：库那一层由
+`tests/services/test_space_goal_db.py` 钉住，而且 `asyncio.run()` 不能跑在
+TestClient 块里 —— 事件循环的规矩和其他 API 测试一样。
+
 Auth is the only thing faked (a `CurrentUser` in place of a token); the model call
-is faked in the two extraction cases, and nowhere else.
+is faked in the three extraction cases, and nowhere else.
 """
 
 from __future__ import annotations
@@ -33,7 +37,8 @@ PROJECTS = "/api/v1/projects"
 
 
 def run(coro):
-    """asyncio.run with the pool drained on both sides (see test_notifications_db)."""
+    """asyncio.run with the pool drained on both sides. Fixture-only — never
+    inside a `with act_as(...)` block (see the module docstring)."""
 
     async def wrapper():
         with contextlib.suppress(Exception):
@@ -76,34 +81,6 @@ async def _drop(*user_ids: uuid.UUID) -> None:
             await conn.execute(
                 text("delete from auth.users where id = :id"), {"id": user_id}
             )
-
-
-async def _goal_rows(project_id: uuid.UUID) -> list[tuple[str, str | None]]:
-    async with AsyncSessionLocal() as db:
-        rows = (
-            await db.execute(
-                text(
-                    "select status, target_text from space_goals "
-                    "where project_id = :p order by created_at"
-                ),
-                {"p": project_id},
-            )
-        ).all()
-    return [(row[0], row[1]) for row in rows]
-
-
-async def _memories(project_id: uuid.UUID) -> list[str]:
-    async with AsyncSessionLocal() as db:
-        rows = (
-            await db.execute(
-                text(
-                    "select text from space_memories "
-                    "where project_id = :p order by created_at"
-                ),
-                {"p": project_id},
-            )
-        ).all()
-    return [row[0] for row in rows]
 
 
 @pytest.fixture
@@ -155,11 +132,11 @@ def _goals(space_id: uuid.UUID) -> str:
     return f"{PROJECTS}/{space_id}/goals"
 
 
-def _create_goal(client: TestClient, space_id: uuid.UUID, **overrides) -> dict:
+def _create_goal(client: TestClient, space_id: uuid.UUID, **overrides):
     return client.post(_goals(space_id), json={**GOAL, **overrides})
 
 
-def _confirm(client: TestClient, space_id: uuid.UUID, goal_id: str) -> dict:
+def _confirm(client: TestClient, space_id: uuid.UUID, goal_id: str):
     return client.post(f"{_goals(space_id)}/{goal_id}/confirm")
 
 
@@ -213,6 +190,7 @@ def test_an_understanding_goal_is_marked_system_observable(world, act_as):
             purpose="understanding",
         ).json()
         assert body["outcomeKind"] == "system_observable"
+        assert body["deadlineAt"] is None
 
 
 # --- 拒绝要说得出理由 --------------------------------------------------------
@@ -226,19 +204,18 @@ def test_another_persons_space_is_a_404(world, act_as):
         assert _create_goal(client, space_a).status_code == 404
 
 
-def test_another_persons_goal_id_is_a_404(world, act_as):
+def test_somebody_elses_goal_id_is_a_404(world, act_as):
+    """另一个空间的目标 id，在自己空间的路由下必须是 404，不能是 500 或 422。"""
     user_a, user_b, space_a = world
+    not_a_space = uuid.uuid4()
     with act_as(user_a) as client:
         goal_id = _create_goal(client, space_a).json()["id"]
-        user_b_space = uuid.uuid4()  # b 没有空间，这里只测 goal_id 的归属
-    with act_as(user_a) as client:
-        # 同一个空间里编一个不存在的 id ⇒ 404，而不是 500 或者 422。
-        assert client.post(
-            f"{_goals(space_a)}/{uuid.uuid4()}/confirm"
-        ).status_code == 404
-        assert goal_id  # 真的建过
+        # 同一个空间里编一个不存在的 id
+        assert client.post(f"{_goals(space_a)}/{uuid.uuid4()}/confirm").status_code == 404
+        # 真实存在的 id，但挂在别人的空间下面
+        assert client.post(f"{_goals(not_a_space)}/{goal_id}/confirm").status_code == 404
     with act_as(user_b) as client:
-        assert client.post(f"{_goals(user_b_space)}/{goal_id}/confirm").status_code == 404
+        assert client.post(f"{_goals(not_a_space)}/{goal_id}/confirm").status_code == 404
 
 
 def test_a_second_active_goal_is_refused(world, act_as):
@@ -261,8 +238,7 @@ def test_closing_without_a_reason_is_refused_by_the_contract(world, act_as):
     user_a, _user_b, space_a = world
     with act_as(user_a) as client:
         goal_id = _create_goal(client, space_a).json()["id"]
-        missing = client.post(f"{_goals(space_a)}/{goal_id}/close", json={})
-        assert missing.status_code == 422, missing.text
+        assert client.post(f"{_goals(space_a)}/{goal_id}/close", json={}).status_code == 422
 
 
 def test_a_closed_goal_can_be_neither_edited_nor_closed_again(world, act_as):
@@ -289,10 +265,10 @@ def test_a_closed_goal_can_be_neither_edited_nor_closed_again(world, act_as):
         assert edited.json()["detail"] == "goal_closed"
 
 
-# --- 改：一条记忆，不产生新行；暂停不留痕迹 ----------------------------------
+# --- 改：同一行；暂停不留痕迹 ------------------------------------------------
 
 
-def test_editing_changes_the_row_and_leaves_one_memory(world, act_as):
+def test_editing_changes_the_same_goal_and_opens_no_new_one(world, act_as):
     user_a, _user_b, space_a = world
     with act_as(user_a) as client:
         goal_id = _create_goal(client, space_a).json()["id"]
@@ -303,14 +279,15 @@ def test_editing_changes_the_row_and_leaves_one_memory(world, act_as):
         )
         assert edited.status_code == 200, edited.text
         assert edited.json()["targetText"] == "改成 110 分"
-        # 改的是同一行，不是新开一个目标。
-        assert run(_goal_rows(space_a)) == [("active", "改成 110 分")]
-        memories = run(_memories(space_a))
-        assert len(memories) == 1
-        assert "改成 110 分" in memories[0]
+        assert edited.json()["status"] == "active"
+        # 同一个目标，不是新开一个。
+        listed = client.get(_goals(space_a)).json()
+        assert len(listed) == 1
+        assert listed[0]["id"] == goal_id
+        assert listed[0]["targetText"] == "改成 110 分"
 
 
-def test_pausing_leaves_no_trace_and_resuming_brings_it_back(world, act_as):
+def test_pausing_takes_the_direction_away_and_resuming_brings_it_back(world, act_as):
     user_a, _user_b, space_a = world
     with act_as(user_a) as client:
         goal_id = _create_goal(client, space_a).json()["id"]
@@ -321,8 +298,6 @@ def test_pausing_leaves_no_trace_and_resuming_brings_it_back(world, act_as):
         assert paused.json()["status"] == "paused"
         # 暂停之后就没有方向了 —— 决定层读到 null。
         assert client.get(f"{_goals(space_a)}/active").json() is None
-        # 暂停不是方向变了，所以不留记忆。
-        assert run(_memories(space_a)) == []
 
         resumed = client.post(f"{_goals(space_a)}/{goal_id}/resume")
         assert resumed.status_code == 200, resumed.text
@@ -336,9 +311,7 @@ def test_after_closing_you_can_start_the_next_one(world, act_as):
     with act_as(user_a) as client:
         first = _create_goal(client, space_a).json()["id"]
         _confirm(client, space_a, first)
-        client.post(
-            f"{_goals(space_a)}/{first}/close", json={"reason": "user_achieved"}
-        )
+        client.post(f"{_goals(space_a)}/{first}/close", json={"reason": "user_achieved"})
 
         second = _create_goal(client, space_a, targetText="把口语提到 28 分").json()["id"]
         assert _confirm(client, space_a, second).status_code == 200
@@ -358,9 +331,7 @@ def _fake_generate(draft):
     return _call
 
 
-def test_extraction_returns_a_suggestion_and_writes_nothing(
-    world, act_as, monkeypatch
-):
+def test_extraction_returns_a_suggestion_and_writes_nothing(world, act_as, monkeypatch):
     """场景 1：他说了那句话 ⇒ 听到一个目标 ⇒ 但库里一行都不多。"""
     from ai.goal_extract import GoalDraft
 
@@ -390,8 +361,9 @@ def test_extraction_returns_a_suggestion_and_writes_nothing(
         assert body["targetText"] == "TOEFL 考到 117 分"
         assert body["purpose"] == "exam_performance"
         assert body["deadlineAt"].startswith(deadline.date().isoformat())
-        # **读不写**：库里一行都没有。
-        assert run(_goal_rows(space_a)) == []
+        # **读不写**：一个目标都没多出来。
+        assert client.get(_goals(space_a)).json() == []
+        assert client.get(f"{_goals(space_a)}/active").json() is None
 
 
 def test_extraction_hears_nothing_and_says_so(world, act_as, monkeypatch):
@@ -409,7 +381,12 @@ def test_extraction_hears_nothing_and_says_so(world, act_as, monkeypatch):
             f"{_goals(space_a)}/extract", json={"message": "这个公式为什么成立？"}
         )
         assert answer.status_code == 200, answer.text
-        assert answer.json() == {"heard": False}
+        body = answer.json()
+        assert body["heard"] is False
+        # 什么都没听到的时候，一个字都不该编出来。
+        assert body["targetText"] is None
+        assert body["purpose"] is None
+        assert body["deadlineAt"] is None
 
 
 def test_a_failed_reading_is_not_an_empty_reading(world, act_as, monkeypatch):

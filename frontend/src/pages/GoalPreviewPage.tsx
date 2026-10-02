@@ -103,8 +103,8 @@ export function GoalPreviewPage() {
     <div className="min-h-screen bg-zinc-50 px-8 py-6">
       <h1 className="text-lg font-medium text-zinc-900">学习目标 · 四屏</h1>
       <p className="mt-1 max-w-2xl text-[13px] leading-6 text-zinc-500">
-        这是简报里「学习目标」那一块。**注意这里没有进度条、没有达成概率** —— 对
-        「考到 117 分」这种只有学习者能看到结果的目标，系统没有证据说完成了多少，
+        这是简报里「学习目标」那一块。**注意：这里不会出现任何百分比或完成比例** ——
+        对「考到 117 分」这种只有学习者能看到结果的目标，系统没有证据说完成了多少，
         编一个数字比不说更糟。
       </p>
 

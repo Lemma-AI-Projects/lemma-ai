@@ -109,3 +109,26 @@ export function restateGoal(draft: {
   if (parts.length === 0) return ''
   return `${parts.join('，')}。`
 }
+
+/**
+ * 编辑器里的那份草稿 → 回述句。
+ *
+ * 存在的唯一理由是**字段名不一样**：`<input type="date">` 给的是 `YYYY-MM-DD`，
+ * 而 `restateGoal` 要的是能直接显示的日期时间。两边名字像、类型不同，直接传过去
+ * 不会报错，只会**静默丢掉日期** —— 这个函数就是为了让那一处映射能被单测钉住
+ * （离屏断言抓到过一次：回述句里"…之前"整段不见了）。
+ */
+export function restateLocalDraft(draft: {
+  targetText: string
+  /** `YYYY-MM-DD`，空串 = 没有截止日期。 */
+  deadline: string
+  context: string
+  purpose?: GoalPurpose | null
+}): string {
+  return restateGoal({
+    targetText: draft.targetText,
+    deadlineAt: draft.deadline || null,
+    context: draft.context,
+    purpose: draft.purpose,
+  })
+}

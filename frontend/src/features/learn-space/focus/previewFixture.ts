@@ -112,7 +112,7 @@ export const FOCUS_PREVIEW: FocusPreviewData = {
   spaceName: '线性代数 · 期末冲刺',
   // 空间名旁边那一行方位。真实页面上它由 `/projects/{id}/goals/active` 算出来，
   // 这里写死一条，好让评审页与离屏断言看到同一个东西。
-  goalLine: '期末考到 90 分 · 还有 21 天',
+  goalLine: '考到 90 分 · 还有 21 天',
   method: 'socratic（mock）',
   title: '讲义 · 特征值.md',
   blocks: BLOCKS,

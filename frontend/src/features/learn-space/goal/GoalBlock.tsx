@@ -17,7 +17,7 @@ import {
   USER_CLOSE_OPTIONS,
   describeDeadline,
   formatDeadline,
-  restateGoal,
+  restateLocalDraft,
 } from './goalText'
 import type {
   GoalCloseReason,
@@ -301,7 +301,9 @@ export function GoalRestatement({
 
   return (
     <div className="rounded-xl bg-zinc-50 px-3 py-2.5">
-      <p className="text-[13px] leading-5 text-zinc-900">{restateGoal(draft)}</p>
+      <p className="text-[13px] leading-5 text-zinc-900">
+        {restateLocalDraft(draft)}
+      </p>
       <p className="mt-1 text-[11px] leading-4 text-zinc-400">{note}</p>
 
       <div className="mt-2.5 space-y-2">

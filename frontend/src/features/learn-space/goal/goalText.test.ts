@@ -8,6 +8,7 @@ import {
   formatDeadline,
   goalLine,
   restateGoal,
+  restateLocalDraft,
 } from './goalText'
 import type { GoalPurpose, SpaceGoal } from './types'
 
@@ -97,6 +98,32 @@ describe('回述句由字段拼出来', () => {
 
   it('什么都没有 ⇒ 空串（页面据此不渲染这张卡）', () => {
     expect(restateGoal({ targetText: '  ' })).toBe('')
+  })
+})
+
+describe('编辑器草稿 → 回述句（字段名不一样，这一处映射要钉住）', () => {
+  it('date-only 的截止日期也要出现在句子里', () => {
+    // 离屏断言抓到过一次：`deadline` 与 `deadlineAt` 名字像、类型不同，直接传过去
+    // 不报错，只会静默丢掉日期 —— 回述句里"…之前"整段不见了。
+    expect(
+      restateLocalDraft({
+        targetText: '考到 TOEFL 117 分',
+        deadline: '2026-12-02',
+        context: 'TOEFL',
+        purpose: 'exam_performance',
+      })
+    ).toContain('2026年12月2日之前')
+  })
+
+  it('草稿里日期是空串 ⇒ 句子里就不说时间', () => {
+    expect(
+      restateLocalDraft({
+        targetText: '真正学懂线性代数',
+        deadline: '',
+        context: '',
+        purpose: 'understanding',
+      })
+    ).toBe('目标是「真正学懂线性代数」，为了真正理解。')
   })
 })
 
