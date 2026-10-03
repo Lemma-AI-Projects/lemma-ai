@@ -51,25 +51,50 @@ class GoalView:
 #: *method* layer's copy so the tables below can be checked for completeness.
 PURPOSES = ("exam_performance", "understanding", "build_something", "other")
 
-#: The table key for "we do not know what he wants" — no goal, or `other`.
-#: Both get the same words, because in both cases the honest thing is the same:
-#: do not pretend to know what this is for.
+#: The table key for "we do not know what he wants" — no goal, `other`, or a
+#: purpose nobody has heard of. All three get the same words, because in all
+#: three the honest thing is the same: do not pretend to know what this is for.
 DEFAULT_PURPOSE_KEY = "default"
+
+#: The purposes that get their **own** pedagogy row. Note this is deliberately
+#: not `PURPOSES`: `other` is a real purpose (it is what the extractor produces
+#: when it hears a direction but cannot classify it) and it deliberately shares
+#: the default row. Keying the table lookup off `PURPOSES` would send `other`
+#: to a row that does not exist — which is exactly the KeyError this constant's
+#: docstring is now guarding against.
+OWN_ROW_PURPOSES = ("exam_performance", "understanding", "build_something")
 
 #: Why this turn matters to the goal, in one short sentence. Shared by every
 #: method: it is about the topic's relation to the direction, not about the
-#: pedagogy. Empty when there is no goal — the status bar then says nothing
-#: rather than something generic.
+#: pedagogy. `None` only when there is no goal — the status bar then says
+#: nothing rather than something generic.
+#:
+#: `other` gets its own line on purpose. "No goal" and "a goal we could not
+#: put a purpose on" are two different facts and the bar must not collapse
+#: them: the learner who typed a direction deserves to see that we have it,
+#: even while we admit we do not yet know what it is for.
 _GOAL_RELATION = {
     "exam_performance": "这一轮练的是会考的东西 —— 冲着你的目标去。",
     "understanding": "目标是理解，所以这一轮不追求做对，追求说得清。",
     "build_something": "这一轮是为你想做出来的那个东西服务的。",
+    "other": "这是你给的方向；还没弄清它是为了什么，所以先不做多余的事。",
 }
 
 
 def purpose_key(goal: "GoalView | None") -> str:
-    """Which row of the learner-facing tables applies."""
-    if goal is None or goal.purpose not in _GOAL_RELATION:
+    """Which row of the learner-facing tables applies.
+
+    Keyed off `OWN_ROW_PURPOSES` — the purposes that have a **pedagogy** of their
+    own. `other`, an unknown purpose and no goal at all all land on the default
+    row, because in those three cases the same thing is true: we do not know
+    what he wants this for, so we do not pretend.
+
+    The two functions here ask different questions and must not be coupled:
+    this one picks the pedagogy, `goal_relation` picks the sentence about the
+    goal. An earlier version keyed this off `PURPOSES` and fell over with
+    `KeyError: 'other'` — the two answer different questions.
+    """
+    if goal is None or goal.purpose not in OWN_ROW_PURPOSES:
         return DEFAULT_PURPOSE_KEY
     return goal.purpose
 
@@ -77,12 +102,18 @@ def purpose_key(goal: "GoalView | None") -> str:
 def goal_relation(goal: "GoalView | None") -> str | None:
     """「这件事和你的目标什么关系」—— 状态栏第二行就是它。
 
-    `None` when there is no goal: a status bar that said "和你的目标有关" about a
-    space with no goal would be making one up.
+    `None` **only** when there is no goal at all: a status bar that said
+    "和你的目标有关" about a space with no goal would be making one up.
+
+    A goal whose `purpose` we could not classify still gets its own line (see
+    `_GOAL_RELATION["other"]`), because having a direction and not knowing what
+    it is for are two different facts. A `purpose` that is not in
+    `PURPOSES` at all is a bug rather than a state, so it falls through to the
+    generic line instead of to silence.
     """
     if goal is None:
         return None
-    return _GOAL_RELATION.get(goal.purpose)
+    return _GOAL_RELATION.get(goal.purpose, _GOAL_RELATION["other"])
 
 
 class MethodInput(BaseModel):

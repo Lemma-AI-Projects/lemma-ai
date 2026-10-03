@@ -63,3 +63,30 @@ export function FocusEmptyRenderHarness() {
     </Providers>
   )
 }
+
+/**
+ * 同一个 Focus，但这个空间**还没有目标**。
+ *
+ * 需要它是因为「没有目标时状态栏说什么」是 C 组最容易被悄悄做错的一处：
+ * 后端会给 `goalRelation: null`，一个偷懒的前端可以顺手渲染一句
+ * 「这和你的目标有关」把它盖过去 —— 于是一个根本没有目标的空间，
+ * 顶栏看起来和真有目标时一模一样。断言那一行**不存在**，比断言它说了什么更准。
+ */
+export function FocusNoGoalRenderHarness() {
+  return (
+    <Providers>
+      <FocusView
+        preview={{
+          ...FOCUS_PREVIEW,
+          goalLine: null,
+          methodStatus: {
+            systemMove: '先请你自己走一遍',
+            learnerMove: '把下一步写给我',
+            completion: '你自己走完，就算过',
+            goalRelation: null,
+          },
+        }}
+      />
+    </Providers>
+  )
+}

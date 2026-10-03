@@ -17,6 +17,8 @@ either of those would be testing the pipeline instead.
 
 from __future__ import annotations
 
+import importlib
+
 from ai.methods import (
     DEFAULT_METHOD,
     METHODS,
@@ -26,7 +28,13 @@ from ai.methods import (
     method_names,
     select_focus,
 )
-from ai.methods.types import GoalView, MethodInput
+from ai.methods.types import (
+    DEFAULT_PURPOSE_KEY,
+    OWN_ROW_PURPOSES,
+    GoalView,
+    MethodInput,
+    purpose_key,
+)
 from services.method_service import (
     UnknownMethod,
     directive_for_turn,
@@ -238,14 +246,61 @@ def test_without_a_goal_the_status_says_so_instead_of_guessing():
     assert directive.learner_move
     assert directive.completion
     assert directive.goal_relation is None
-    # 同一套话给"没有目标"和 `other` —— 两种情况我们同样不知道他要什么。
+    # 同一套**判据**给"没有目标"和 `other` —— 两种情况下我们同样不知道他要什么，
+    # 所以教法不该变。目标关系那句话则必须变（见下一个测试）。
     assert (
         socratic(goal=goal("other")).completion == directive.completion
     )
 
 
+def test_a_goal_without_a_known_purpose_still_gets_a_line():
+    """有方向、但不知道为了什么 —— 这和"没有方向"不是一件事。
+
+    端到端脚本 `.workbuddy/localdb/verify_method_goal_runtime.py` 抓到过这个：
+    `other` 原先落到 `goal_relation is None`，于是状态栏在**有目标**时第二行
+    空着，和没目标的空间长得一模一样。用户打了方向却看不到任何回应。
+
+    两句话必须不同：没有目标时说什么都没有（那才是编造）；有目标但说不出
+    目的时要承认"收到了方向、还不知道为了什么"。
+    """
+    unknown = socratic(goal=goal("other"))
+    none_at_all = socratic(goal=None)
+
+    assert unknown.goal_relation is not None, "有目标却什么都不说"
+    assert none_at_all.goal_relation is None, "没目标却在谈目标"
+    assert unknown.goal_relation != none_at_all.goal_relation
+    # 目的是 unknown 的一种，不是全部 —— 三个已知目的各有各的话。
+    known = {
+        socratic(goal=goal(p)).goal_relation
+        for p in ("exam_performance", "understanding", "build_something")
+    }
+    assert len(known) == 3
+    assert unknown.goal_relation not in known, "unknown 复用了某个已知目的的话"
+
+
+def test_an_unexpected_purpose_falls_back_to_the_other_line():
+    """表里没有的 purpose 是 bug，不是状态。
+
+    库有 CHECK 约束挡着，但 Method 层是纯函数、不读库 —— 挡不住一个手写出来的
+    `MethodInput`。这时候退到"其他"那一行，比静默变成 None 好：空行看起来像
+    "系统没话说"，而实际上我们确实有话可说。
+    """
+    directive = socratic(goal=goal("通过考试并且理解原理同时做出东西"))
+    assert directive.goal_relation == socratic(goal=goal("other")).goal_relation
+    assert directive.completion  # 也不能因此崩掉
+
+
 def test_every_purpose_row_of_every_method_is_filled():
-    """四行缺一行就会在运行时 KeyError，而那只会在某个用户身上发生。"""
+    """四行缺一行就会在运行时 KeyError，而那只会在某个用户身上发生。
+
+    这条断言的价值来自一次真事故：把 `purpose_key` 从 `OWN_ROW_PURPOSES` 改成
+    `PURPOSES` 之后，`other` 被送进一张没有它那行的表，四个测试一起炸在
+    `KeyError: 'other'`。`other` 是抽取器真的会产出的值（听到了方向但分不清
+    为了什么），所以这不是假想输入。
+    """
+    assert set(OWN_ROW_PURPOSES) < set(PURPOSES), (
+        "有自己教学法行的 purpose 必须是合法 purpose 的真子集"
+    )
     for name in method_names():
         method = get_method(name)
         assert method is not None
@@ -253,6 +308,40 @@ def test_every_purpose_row_of_every_method_is_filled():
             directive = method.execute(context(goal=goal(purpose)))
             assert directive.system_move and directive.learner_move
             assert directive.completion
+
+
+def test_purpose_key_never_names_a_row_that_does_not_exist():
+    """`purpose_key` 的返回值必须落在每个 Method 真的有的行上。
+
+    直接对着表查一遍，而不是只查 `PURPOSES` 的几个值 —— 键的来源（`PURPOSES`）
+    和行存在的判据（`OWN_ROW_PURPOSES`）是两个东西，只有把每个 Method 的表
+    都摸一遍才能发现它们对不上。
+    """
+    for name in method_names():
+        method = get_method(name)
+        assert method is not None
+        rows = _method_rows(name)
+        for purpose in (*PURPOSES, "一个没人听过的目的", ""):
+            key = purpose_key(GoalView(target_text="t", purpose=purpose))
+            assert key in rows, (
+                f"{name}: purpose={purpose!r} → {key!r}，但它只有 {sorted(rows)}"
+            )
+    assert purpose_key(None) == DEFAULT_PURPOSE_KEY
+    assert purpose_key(GoalView(target_text="t", purpose="other")) == (
+        DEFAULT_PURPOSE_KEY
+    ), "other 与「不知道」同义，就该共用默认行"
+
+
+def _method_rows(name: str) -> set[str]:
+    """从 Method 自己那里问出「我有哪些行」。
+
+    故意不复用 `ai/methods/types.py` 里任何常量：那个模块正是被测对象，
+    拿它的常量去构造期望值，等于用被测代码证明被测代码。
+    """
+    module_name = {"socratic": "ai.methods.socratic", "direct_explanation": "ai.methods.direct_explanation"}[name]
+    module = importlib.import_module(module_name)
+    table = getattr(module, "_LEARNER_FACING")
+    return set(table)
 
 
 def test_the_completion_reaches_the_model_as_an_instruction():
