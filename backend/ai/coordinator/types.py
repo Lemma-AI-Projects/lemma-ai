@@ -139,12 +139,26 @@ class FocusItem:
 
 @dataclass(frozen=True)
 class EvidenceFact:
-    """One recent record, as the snapshot shows it. A fact, not a score."""
+    """One recent record, as the snapshot shows it. A fact, not a score.
+
+    `hint_used` is the field that makes the record honest. It is carried here
+    (rather than left in the table) because a decision that cannot see *whether
+    the learner did it alone* cannot choose to help less next time — it can only
+    react to how many times he got it right, which is exactly the signal that
+    stays high the most while help is doing the work. The column, the wire
+    contract and the domain object all already existed
+    (`knowledge_evidence.hint_used` · `schemas/knowledge.py` ·
+    `evidence_entry.Outcome`); the Agent's tool was the only surface that could
+    not fill it, which is why it now takes `hintUsed`.
+    """
 
     item_label: str
     verdict: str
     tier: str
     created_at: datetime | None
+    #: Whether help was given this time. `False` means the learner did it
+    #: unassisted — the only kind the core counts toward mastery.
+    hint_used: bool = False
 
 
 @dataclass(frozen=True)

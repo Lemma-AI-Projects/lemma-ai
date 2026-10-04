@@ -532,6 +532,22 @@ def build_global_tools(
         verdict = str(call.args.get("verdict", "")).strip().lower()
         basis = str(call.args.get("basis", "judged")).strip().lower() or "judged"
         reasoning = str(call.args.get("reasoning", "")).strip()
+        # ⚠️ A **missing** `hintUsed` is read as `True`, not `False`.
+        #
+        # The tool schema marks it required, so a well-behaved model always sends
+        # it — but a model that omits it has not said "he did it alone", it has
+        # said nothing, and the two must not read the same. Defaulting to False
+        # would turn every omission into an unassisted success, which is the one
+        # reading the core counts (`ai/knowledge/state.py:291`), so the failure
+        # would be invisible: the learner's state would inflate and nothing
+        # anywhere would say why.
+        #
+        # Defaulting to True makes the omission *harmless* — the evidence is
+        # written and does not move the state (`INERT`), and the next unassisted
+        # success is the one that counts. Under-reporting help costs one
+        # non-counting row; over-reporting it costs the learner's real progress.
+        hint_used = call.args.get("hintUsed")
+        hint_used = True if hint_used is None else bool(hint_used)
         if not item_label or verdict not in ("correct", "incorrect"):
             yield ToolResult(
                 response={
@@ -595,6 +611,14 @@ def build_global_tools(
                         # Already resolved above: the tool refuses an unknown
                         # item rather than letting the service invent one.
                         item_id=item.id,
+                        # ⚠️ The one field that makes a success honest. The core
+                        # only counts a correct answer that was both
+                        # `independent` and not `hint_used`
+                        # (`ai/knowledge/state.py:291`), so this is what
+                        # separates "he got there" from "we walked him there" —
+                        # and it is the only data a future method has for
+                        # deciding to help less.
+                        hint_used=hint_used,
                     ),
                     provenance=evidence_entry.Provenance(
                         surface=SOURCE_CHAT, conversation_id=conversation_id

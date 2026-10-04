@@ -262,6 +262,10 @@ async def build_snapshot(
                 verdict=row.verdict,
                 tier=row.tier,
                 created_at=row.created_at,
+                # Read straight off the row: without it the snapshot sees only
+                # "correct, correct, correct" and cannot tell a learner who is
+                # getting there from one who is being walked there.
+                hint_used=row.hint_used,
             )
             for row in reversed(evidence[-RECENT_EVIDENCE_CAP:])
         ),
