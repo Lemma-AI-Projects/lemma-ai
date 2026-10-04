@@ -18,7 +18,10 @@ either of those would be testing the pipeline instead.
 from __future__ import annotations
 
 import importlib
+import pkgutil
+from pathlib import Path
 
+from ai.errors import AIConfigError
 from ai.methods import (
     DEFAULT_METHOD,
     METHODS,
@@ -27,14 +30,22 @@ from ai.methods import (
     item_labels,
     method_names,
     select_focus,
+    validate_methods,
 )
 from ai.methods.types import (
     DEFAULT_PURPOSE_KEY,
+    NOT_APPLICABLE,
     OWN_ROW_PURPOSES,
+    AppliesWhen,
+    CompletionRule,
+    EvidenceTarget,
     GoalView,
     MethodInput,
+    Restraint,
     purpose_key,
 )
+from ai.methods.runtime import UnknownMethod as RuntimeUnknownMethod
+from ai.methods.runtime import catalogue, resolve, run_once
 from services.method_service import (
     UnknownMethod,
     directive_for_turn,
@@ -337,9 +348,12 @@ def _method_rows(name: str) -> set[str]:
 
     故意不复用 `ai/methods/types.py` 里任何常量：那个模块正是被测对象，
     拿它的常量去构造期望值，等于用被测代码证明被测代码。
+
+    路径是 `ai.methods.<name>.method` 而不是 `ai.methods.<name>`：R1 起每个
+    做法是一个**目录**（照 `ai/skills/registry.py` 的形状），表在 `method.py`
+    里，包的 `__init__` 只 export 那个类。
     """
-    module_name = {"socratic": "ai.methods.socratic", "direct_explanation": "ai.methods.direct_explanation"}[name]
-    module = importlib.import_module(module_name)
+    module = importlib.import_module(f"ai.methods.{name}.method")
     table = getattr(module, "_LEARNER_FACING")
     return set(table)
 

@@ -1,11 +1,11 @@
-"""The Method layer's vocabulary: one small interface, two implementations.
+"""The Method layer's vocabulary: one small interface, two plugins.
 
 A **Method** answers one question: *given this learner, this state and this
-message, what should the next teaching move be?* It is deliberately not a
-runtime, a workflow engine or a plugin ABI — there are exactly two fields of
-metadata, one input type, one output type and one function.
+message, how should this turn intervene?* It is deliberately not a runtime, a
+workflow engine or a plugin ABI — a handful of declared fields, one input type,
+one output type and one function.
 
-Two decisions worth keeping:
+Three decisions worth keeping:
 
 - **`execute()` does not call a model.** The chat turn's model call stays where
   it was (`AIUseCase.TEXT_CHAT`, with the Global Agent's tools bound). A Method
@@ -16,10 +16,24 @@ Two decisions worth keeping:
   structures, a difference in behaviour can no longer be attributed to the
   method — and "the difference comes from the Method, not from different input"
   is the entire acceptance criterion.
+- **Four of the five elements are data, not prose.** A Method's claim on the
+  learner has to be checkable or it is only a manner of speaking:
+
+  | 要素 | 类型 | 若只是文本会怎样 |
+  |---|---|---|
+  | 1 适用条件 | `AppliesWhen` | 变成对所有情况的默认话术 |
+  | 2 要他做的动作 | `learner_move`（字符串） | 混在纪律文本里，系统读不到 |
+  | 3 我不做的事 | `Restraint` → `Behaviour` | "少帮忙"只是一句承诺 |
+  | 4 观察什么 | `EvidenceTarget` | **完全没有** —— 做法退回成提示词 |
+  | 5 什么算完成 | `CompletionRule` + `completion` | 不可证伪 |
+
+  Before R1, elements 1/3/4 existed only inside a Chinese paragraph and element 5
+  existed only as one sentence of it, so the machine-readable `Behaviour` was a
+  hand-written second copy that nothing cross-checked.
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -157,16 +171,124 @@ class MethodInput(BaseModel):
         return bool(item_labels(self.learner_state))
 
 
+class Restraint(BaseModel):
+    """要素 3 · 「我这次不做的事」—— 退缩的量。
+
+    The load-bearing half of a Method, and the half that is easiest to leave
+    implicit: a system trained to be helpful will always do more unless something
+    stops it. Naming the restraint as data is what makes "withhold the answer"
+    a decision rather than an accident.
+
+    Every field here maps onto exactly one `Behaviour` flag — that mapping is the
+    whole reason `Behaviour` exists at all, and it is checked by
+    `test_restraint_and_behaviour_are_one_thing`. Before this type, the flags and
+    the Chinese discipline text were two hand-written copies of the same promise,
+    so changing one without the other failed nothing.
+    """
+
+    # Does this turn end with a question put to the learner?
+    asks_question: bool
+    # How many questions one turn may contain (0 = none).
+    max_questions: int
+    # Must the turn withhold the answer itself? This is the restraint that
+    # actually matters: it is the difference between teaching and enabling.
+    withholds_answer: bool
+    # Must the turn contain a worked example?
+    requires_example: bool
+    # Does the turn stop and wait for the learner before anything else happens?
+    stops_for_learner: bool
+
+
+class AppliesWhen(BaseModel):
+    """要素 1 · 适用条件 —— 什么状态下才用得上它。
+
+    Without this a Method degenerates into the default voice for every situation,
+    which is the failure mode "he asked a question and got the Socratic treatment
+    when he plainly wanted the answer".
+    """
+
+    # Does this method need the learner to DO something? A method whose whole
+    # point is a learner action is wrong for a turn where nobody is going to act,
+    # and the Coordinator needs to be able to tell that from the outside.
+    needs_learner_action: bool
+    #: What to do on a space with no knowledge structure: `fallback` = run with
+    #: the honest weaker rule (both current methods do this), `hold` = refuse,
+    #: because the method's premise is a structure this space does not have.
+    without_structure: Literal["fallback", "hold"] = "fallback"
+
+
+class EvidenceTarget(BaseModel):
+    """要素 4 · 观察什么 —— 希望从用户行为里看到的那一条记录。
+
+    **这一类必须能用 `record_evidence` 的参数表达**，否则它就是一句没人读的
+    话、做法会退回成提示词。The correspondence is exact and is the acceptance
+    criterion (`test_every_evidence_target_maps_onto_the_recording_tool`):
+
+    | 这里          | 工具参数 (`ai/tools/declarations.py`) |
+    |---------------|--------------------------------------|
+    | `item_hint`   | `item`                               |
+    | `tier`        | `basis`（`A` = verified，`B` = judged）|
+    | `require_independent` | `hintUsed = false`          |
+
+    Deliberately **no `verdict`**: what the learner did is the observation's
+    answer, not part of what we are looking for. A target that named a verdict
+    would be asking for a conclusion, and a Method may not pre-judge its own
+    outcome — that judgement belongs to `ai.knowledge.admit`, and it is the one
+    that knows `independent` and `hint_used`.
+
+    `require_independent` defaults to `True` because that is the core's own rule
+    (`ai/knowledge/state.py:291`): a correct answer produced with help is
+    `INERT`. A Method that watched for helped successes would be counting
+    something the state deliberately does not count.
+    """
+
+    item_hint: str | None = None
+    tier: Literal["A", "B"] = "B"
+    require_independent: bool = True
+
+
+class CompletionRule(BaseModel):
+    """要素 5 · 什么算这次干预结束了 —— 一个可核对的判据。
+
+    **Derived, never felt.** This is the type that makes a Method falsifiable: the
+    completion line the learner reads and the condition the system checks come
+    from the same object, so "we told him two independent correct answers and
+    then changed the subject" cannot pass unnoticed.
+
+    Two properties keep it derivable from evidence alone (no clock, no
+    "how long has this been running"):
+
+    * it depends only on the evidence rows, so it is recomputable at any time
+      from the table — no episode row needs to exist for it to be checkable;
+    * it names a count, not a feeling, so "did it happen" has one answer.
+
+    `NOT_APPLICABLE` is a first-class value, not a failure: most turns owe no
+    completion at all, and a rule that had to be satisfied every turn would make
+    every turn look unfinished.
+    """
+
+    kind: Literal["consecutive_correct", "judged_observation", "not_applicable"]
+    #: How many qualifying observations. Only meaningful for the counting kinds;
+    #: ignored by `NOT_APPLICABLE`.
+    n: int = 1
+
+
+#: The one value a method uses when this turn owes no completion. Named because
+#: "no completion" is a decision, and a decision that has to be spelled out is a
+#: decision nobody will quietly drop later.
+NOT_APPLICABLE = CompletionRule(kind="not_applicable")
+
+
 class Behaviour(BaseModel):
-    """The machine-readable half of a directive.
+    """The machine-readable half of a directive — a **view** of `Restraint`.
 
-    The natural-language discipline is what the model reads; this is what a
-    test, a log or a future Coordinator can read. Keeping the shape explicit is
-    also what stops the two methods from drifting into "same behaviour, warmer
-    wording".
+    ⚠️ It is derived, not declared. It exists because this object rides in the
+    per-answer digest and is read by tests; `Restraint` is what a Method
+    declares. Before R1 the two were hand-written separately and nothing checked
+    that they agreed — see `test_restraint_and_behaviour_are_one_thing`.
 
-    camelCase on the way out (`by_alias=True`) because this object ends up in
-    the per-answer digest, which is wire-shaped like the rest of it.
+    camelCase on the way out (`by_alias=True`) because the digest is
+    wire-shaped like the rest of it.
     """
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -182,9 +304,29 @@ class Behaviour(BaseModel):
     # Does the turn stop and wait for the learner before anything else happens?
     awaits_learner: bool
 
+    @classmethod
+    def of(cls, restraint: Restraint) -> "Behaviour":
+        return cls(
+            expects_question=restraint.asks_question,
+            max_questions=restraint.max_questions,
+            forbids_full_answer=restraint.withholds_answer,
+            requires_example=restraint.requires_example,
+            awaits_learner=restraint.stops_for_learner,
+        )
+
 
 class MethodDirective(BaseModel):
-    """What a Method decides: where this turn aims, and how it must behave.
+    """What one run of a Method decides: where this turn aims, and how to intervene.
+
+    **The four elements, all data** — the reason this type grew in R1:
+
+    | 要素 | 字段 | 面向 |
+    |---|---|---|
+    | 1 适用条件 | `applies_when` | 系统（选不选它） |
+    | 2 要他做的动作 | `learner_move` | 学习者 + 模型 |
+    | 3 我不做的事 | `restraint` → `behaviour` | 系统（`behaviour` 是它的视图） |
+    | 4 观察什么 | `evidence_target` | 系统（核对） |
+    | 5 什么算完成 | `completion`（人话）+ `completion_rule`（可核对） | 两者 |
 
     **Three faces, three readers** — the same division the architecture draws:
 
@@ -192,11 +334,15 @@ class MethodDirective(BaseModel):
     |---|---|---|
     | 面向模型 | `discipline` | 模型（注入 system prompt） |
     | 面向学习者 | `system_move` / `learner_move` / `completion` | Focus 顶部的状态栏 |
-    | 面向系统 | `behaviour` + `focus` | 测试 / 日志 / 将来的策略 |
+    | 面向系统 | `behaviour` + `focus` + `evidence_target` + `completion_rule` | 测试 / 日志 / 将来的策略 |
 
     面向学习者那三格是**动词短语**，不是标签：状态栏说的必须是"我们现在在做什么 /
     要你做什么 / 什么算完成"，**不显示这个 Method 的名字** —— 一个术语会邀请用户去
     评价这种教法，一个动词只会邀请他去做。
+
+    `completion` 与 `completion_rule` 是**同一个承诺的两种形态**，刻意放在一处：
+    判据（`rule`）与人话（`completion`）若分开存，早晚会漂 —— 界面上写着"做对两道
+    就算过"而系统按一条去核对，那比没有判据更糟。
     """
 
     name: str
@@ -215,10 +361,26 @@ class MethodDirective(BaseModel):
     #: 而"什么时候算过"正是"有方向"最直接的证据。它随 `purpose` 变 —— 同一个
     #: 知识点，为了考试与为了理解不是同一件事。
     completion: str
+    #: 要素 1。What state this run applies to. Carried on the directive (not
+    #: only on the class) because whether a method applies can depend on the
+    #: purpose — "先自己走一遍" is right for an exam and wrong for a build task.
+    applies_when: AppliesWhen
+    #: 要素 3。What this turn refuses to do. `behaviour` is derived from it.
+    restraint: Restraint
+    #: 要素 4。What one recorded observation would look like if this worked.
+    evidence_target: EvidenceTarget
+    #: 要素 5, machine half. Paired with `completion` above — see the class
+    #: docstring. Defaults to "no completion owed" so a method that genuinely
+    #: owes nothing does not have to say so twice.
+    completion_rule: CompletionRule = NOT_APPLICABLE
     #: 这件事和你的目标什么关系。没有目标时是 `None`（那就不说，而不是说一句
     #: "和你的目标有关"——那是在替他想一个目标）。
     goal_relation: str | None = None
-    behaviour: Behaviour
+
+    @property
+    def behaviour(self) -> Behaviour:
+        """The wire-shaped view of `restraint` — derived, never declared."""
+        return Behaviour.of(self.restraint)
 
     @property
     def prompt_block(self) -> str:
@@ -227,11 +389,22 @@ class MethodDirective(BaseModel):
 
 class Method(Protocol):
     """The whole interface. Everything else in this package is an implementation
-    detail of one of the two methods."""
+    detail of the methods.
+
+    Note what is **not** here: nothing that starts, stops or switches a method.
+    A Method is a plugin that answers "given this turn, how should I intervene"
+    — who calls it, when it runs and what happens next belong to the
+    Coordinator and the runtime, and a plugin that could reach them would be a
+    small autonomous agent wearing a teaching costume.
+    """
 
     name: str
     display_name: str
     description: str
+    #: 要素 1，the part of it that does not vary with the turn.
+    applies_when: AppliesWhen
+    #: 要素 3，the restraint this method always holds.
+    restraint: Restraint
 
     def execute(self, context: MethodInput) -> MethodDirective: ...
 
@@ -298,7 +471,9 @@ def select_focus(context: MethodInput) -> str | None:
     return None
 
 
-def completion_lines(context: MethodInput, completion: str) -> list[str]:
+def completion_lines(
+    context: MethodInput, completion: str, rule: CompletionRule
+) -> list[str]:
     """The tail every discipline ends with: what would make this turn count.
 
     Shared by both methods on purpose. "什么算完成" is the one piece of the
@@ -306,10 +481,22 @@ def completion_lines(context: MethodInput, completion: str) -> list[str]:
     and the model (otherwise the criterion is a label, not an instruction), and
     two hand-written versions of the same idea would drift apart.
 
+    **The `rule` argument is what makes this honest.** The sentence the model
+    reads is generated from the same `CompletionRule` the system will check, so
+    "连续两道独立做对" cannot be shown to the learner while something else is
+    being counted. A method owing no completion says so in the text too, rather
+    than printing a criterion it is not going to look for.
+
     The last line is the part that keeps it honest in use: a criterion that is
     never quoted back is a criterion, not a topic. Left unsaid, a model told
     "this is for your exam" will start every answer with it.
     """
+    if rule.kind == "not_applicable":
+        return [
+            "",
+            "## 这一轮不设完成判据",
+            "这一轮不需要达成什么，只要这一轮该做的事做完了就行。",
+        ]
     lines = [
         "",
         "## 这一轮什么算完成",

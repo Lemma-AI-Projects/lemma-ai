@@ -107,6 +107,10 @@ async def _create() -> tuple[uuid.UUID, uuid.UUID, uuid.UUID, uuid.UUID]:
                 "insert into ai_conversations (id, user_id, project_id, method) "
                 "values (:id, :u, :p, :m)"
             ),
+            # The row still exists and still says `socratic` — that is the point.
+            # Nothing reads it any more (see
+            # `user_home_service.conversation_note`), and the test below asserts
+            # it stays out of the prompt.
             {"id": conversation_id, "u": user_id, "p": space_a, "m": "socratic"},
         )
     return user_id, space_a, space_b, conversation_id
@@ -227,10 +231,23 @@ def test_a_space_preference_does_not_leak_to_another_space_or_home(spaces):
     assert [row.text for row in run(_rows())] == [SPACE_A_PREFERENCE]
 
 
-# --- Test 3: a conversation overrides both, and changes neither -------------
+# --- Test 3: the layer order, and a method name is not a preference ---------
 
 
-def test_conversation_layer_outranks_space_and_home_without_editing_home(spaces):
+def test_a_method_name_is_never_a_teaching_preference(spaces):
+    """⚠️ The conversation layer is empty by design, and this is why.
+
+    It used to be `ai_conversations.method`, which put the bare word `socratic`
+    into the prompt labelled *"asked for in THIS turn"*. Two things were wrong
+    with that at once: the learner never asked for a method (nobody picks one
+    anywhere in this product), and a method *name* is the one thing the status
+    bar refuses to show the learner — printing it into their own words reinstates
+    exactly the frame the Method layer exists to avoid.
+
+    So the assertion is negative and it is the load-bearing one: the space layer
+    still outranks Home, the stack still states its order, and **the method name
+    appears nowhere in the prompt**.
+    """
     user_id, space_a, _space_b, conversation_id = spaces
     run(_seed_home(user_id))
 
@@ -257,21 +274,23 @@ def test_conversation_layer_outranks_space_and_home_without_editing_home(spaces)
             )
 
     layers = run(_layers())
-    assert [layer.scope for layer in layers] == ["conversation", "space", "home"]
-    assert layers[0].text == "socratic"
+    # No conversation layer: the only thing that used to produce one was a
+    # method name, and a method name is not something the learner said.
+    assert [layer.scope for layer in layers] == ["space", "home"]
+    assert layers[0].text == SPACE_A_PREFERENCE
 
     context = run(_context(user_id, space_a, conversation_id))
     # The stack is stated in the prompt, in that order, so the model does not have
     # to guess which line wins when they disagree.
     assert "most specific first" in context.prompt_block
-    assert context.prompt_block.index("THIS turn") < context.prompt_block.index(
-        "THIS space"
+    assert context.prompt_block.index("THIS space") < context.prompt_block.index(
+        "global"
     )
-    assert [layer["scope"] for layer in context.preference_layers] == [
-        "conversation",
-        "space",
-        "home",
-    ]
+    assert [layer["scope"] for layer in context.preference_layers] == ["space", "home"]
+    # The regression this test exists for: the conversation row still says
+    # `socratic`, and none of it may reach the prompt.
+    assert "socratic" not in context.prompt_block.lower()
+    assert "asked for in THIS turn" not in context.prompt_block
 
     # Read-only, all of it: the turn left Home exactly as it found it.
     assert run(_home(user_id)).preferences == [PREFERENCE]

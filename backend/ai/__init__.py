@@ -21,6 +21,7 @@ from ai.errors import (
 )
 from ai.media.inputs import from_provider_file, from_url
 from ai.media.provider_files import delete_video, upload_video
+from ai.methods import validate_methods
 from ai.model_factory import init_http_client, shutdown_http_client
 from ai.native.gemini_video import close_shared_client
 from ai.skills import validate_skills
@@ -57,10 +58,16 @@ from ai.types import (
 
 
 def init_ai_runtime() -> None:
-    """Validate the routing table and skills, open the shared HTTP client
-    (lifespan startup)."""
+    """Validate the routing table, the skills and the method plugins, open the
+    shared HTTP client (lifespan startup).
+
+    `validate_methods()` is here for the same reason `validate_skills()` is: a
+    plugin missing a declared element is a method that cannot be checked, and it
+    must fail the boot rather than the first learner who triggers it.
+    """
     validate_routes()
     validate_skills()
+    validate_methods()
     init_http_client()
 
 

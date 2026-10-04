@@ -327,21 +327,39 @@ async def read_user_home(db: AsyncSession, *, user_id: uuid.UUID) -> UserHomeCon
 async def conversation_note(
     db: AsyncSession, *, conversation_id: uuid.UUID | None
 ) -> str | None:
-    """The conversation's own teaching instruction, if it has one.
+    """The conversation's own teaching instruction, if it has one — **always None.**
 
-    `ai_conversations.method` is the only conversation-scoped preference the
-    product stores today, and it belongs to the conversation: another
-    conversation in the same space may choose differently, and it never edits
-    Home.
+    ⚠️ This function used to return `ai_conversations.method`, and that was two
+    wrong things at once, both invisible because the value is a bare word:
+
+    1. **It was false.** `render_preference_stack` labels the conversation layer
+       *"asked for in THIS turn"* (`ai/prompts/user_home.py:31`). The learner
+       never asked for `socratic` — nobody picks a method anywhere in this
+       product. The prompt was asserting a preference that does not exist.
+    2. **It leaked the term.** The Method layer's own rule is that the learner
+       never sees a method *name*: `MethodStatusOut` deliberately has no `name`
+       field, because a name invites him to evaluate the teaching style
+       ("I don't like the Socratic one") — the exact frame the status bar exists
+       to avoid. Printing `socratic` into the prompt reinstated it at the one
+       place the model reads as if it were the learner's own words.
+
+    So the conversation layer of the teaching-preference stack is **empty by
+    design**. A genuine one-off request ("this time explain it in detail") needs
+    no row: it is the last thing in the chat history, and the stack block already
+    spells out the ordering.
+
+    ⚠️ Kept as a function rather than deleted: `agent_context_service` calls it,
+    and the stack it builds is how "a conversation can override Home but never
+    edit it" stays structural instead of aspirational. Removing the layer would
+    remove the place a future real conversation-scoped preference would go.
+
+    Returns `None` and touches no database — the signature survives so the
+    caller does not have to change, but the query is gone on purpose: reading a
+    column whose only consumer was removed is how dead reads become dead
+    features.
     """
-    if conversation_id is None:
-        return None
-    method = (
-        await db.execute(
-            select(AiConversation.method).where(AiConversation.id == conversation_id)
-        )
-    ).scalar_one_or_none()
-    return method or None
+    del db, conversation_id
+    return None
 
 
 async def prune_orphans(db: AsyncSession, *, user_id: uuid.UUID) -> int:
