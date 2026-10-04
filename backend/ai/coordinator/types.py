@@ -210,11 +210,161 @@ class Snapshot:
     # legitimate state, not a gap: a space may be a place to collect material
     # before anybody knows what it is for.
     goal: GoalFact | None = None
+    # The installed methods, as facts. **Injected, never imported** — the same
+    # discipline as `available_actions`, and for the same reason: `rules.py` is
+    # a pure function over this snapshot, so a candidate list that arrived by
+    # import would make "adding a method" a change to the decision layer. Empty
+    # is a legitimate state meaning "nothing is installed", and the rules below
+    # read it as "do not intervene" rather than failing.
+    available_methods: tuple[MethodFact, ...] = ()
 
     @property
     def has_state(self) -> bool:
         """Is there a knowledge structure to reason about at all?"""
         return bool(self.mastered or self.ready or self.developing or self.focus)
+
+    def method(self, method_id: str) -> MethodFact | None:
+        """One candidate by id, or None when it is not installed.
+
+        Looked up rather than assumed: a decision that names a method which is
+        not in the snapshot would be a decision that cannot be executed, and the
+        failure would surface as a 500 in the middle of a learner's turn.
+        """
+        for fact in self.available_methods:
+            if fact.id == method_id:
+                return fact
+        return None
+
+
+@dataclass(frozen=True)
+class MethodFact:
+    """One installed method, as the decision layer is allowed to see it.
+
+    **Facts about the method, not the method.** This is a dataclass rather than
+    an import of `ai.methods.Method` for the same reason `Snapshot` carries
+    `available_actions` as strings: the decision layer must be able to *receive*
+    a candidate list without knowing what any candidate is. If `rules.py` could
+    import a method, adding a method would change the Coordinator — and the whole
+    point of the plugin shape is that it does not.
+
+    The four fields are the ones a choice actually needs, and the last two are
+    the ones that cannot be read off a name: two methods can both be called
+    "讲解" and differ entirely in whether they withhold the answer. `String`
+    fields over an enum because this type crosses a boundary that must not know
+    what a method is.
+    """
+
+    id: str
+    display_name: str
+    #: Does it need the learner to DO something? A method whose point is a
+    #: learner action is wrong for a turn where nobody will act.
+    needs_learner_action: bool
+    #: Does it withhold the answer? The load-bearing difference between the two
+    #: installed methods, and the one a decision cannot infer from anything else.
+    withholds_answer: bool
+
+    def __post_init__(self) -> None:
+        if not self.id.strip():
+            raise ValueError("a method fact without an id cannot be chosen")
+
+
+class MethodSelection(StrEnum):
+    """What to do about the method for this turn. Five values.
+
+    **Why five and not one.** The obvious design is "pick a method every turn",
+    and it is wrong in a way that only shows up in use: a method is a promise
+    about a *stretch* of work (`ask him to try → he tries → drop the help → try
+    again`), and re-deciding every turn would erase the help that was just
+    withdrawn, and make the choice jitter on whatever the last piece of evidence
+    happened to say. So `HOLD` exists and is free: the name is already stored.
+
+    | 值 | 什么时候 | 凭什么 |
+    |---|---|---|
+    | `START` | 还没有做法在跑，且这一轮该有人做功 | 候选里那个**要求学习者动手**的 |
+    | `HOLD` | 同一件事继续做 | 什么都不变 |
+    | `SWITCH` | 缺的不是这个点 / 做法本身不成立 | **必须带理由**（见下） |
+    | `END` | 判据达成，或继续已无收益 | 完成判据，或一次明确的放弃 |
+    | `NO_INTERVENTION` | 大多数轮次 | 没什么值得插进来的 |
+
+    `NO_INTERVENTION` is a **first-class candidate, not a fallback branch**. If
+    "select" always yields a method, ordinary conversation gets shoved into
+    whichever teaching style happens to be installed — and the learner asked a
+    question, not for a lesson. A system that always intervenes and one that
+    never does are the same error.
+    """
+
+    START = "start"
+    HOLD = "hold"
+    SWITCH = "switch"
+    END = "end"
+    NO_INTERVENTION = "no_intervention"
+
+
+@dataclass(frozen=True)
+class MethodDecision:
+    """One method decision: which of the five, and — where it applies — which.
+
+    `reason` is mandatory whenever a method is being started or switched, and
+    `validate()` refuses it otherwise. A silent switch is indistinguishable from
+    a random one, and "why am I being taught this differently now" is the
+    question a learner is entitled to ask; an answer that cannot be reconstructed
+    from the log is not an answer.
+    """
+
+    selection: MethodSelection
+    #: None for `NO_INTERVENTION`, and for `HOLD` when nothing is running.
+    method_id: str | None = None
+    reason: str | None = None
+
+    def validate(self, snapshot: Snapshot) -> "MethodDecision":
+        """Refuse a decision that could not be carried out.
+
+        Three refusals, each catching a different way this can go wrong in
+        production rather than in a test:
+
+        * naming a method that is not installed — the turn would 500 later;
+        * a start or switch with no reason — an unexplainable change;
+        * a hold with nothing to hold — "continue what?" has no answer.
+        """
+        if self.selection is MethodSelection.NO_INTERVENTION:
+            if self.method_id is not None:
+                raise ValueError(
+                    "no_intervention cannot carry a method — it means none is running"
+                )
+            return self
+        if self.method_id is None:
+            raise ValueError(f"{self.selection.value} requires a method id")
+        if snapshot.method(self.method_id) is None:
+            raise ValueError(
+                f"{self.selection.value} names method {self.method_id!r}, which is "
+                "not in the snapshot's candidates"
+            )
+        if self.selection in (MethodSelection.START, MethodSelection.SWITCH):
+            if not (self.reason or "").strip():
+                raise ValueError(
+                    f"{self.selection.value} needs a reason — a silent change is "
+                    "indistinguishable from a random one"
+                )
+        if self.selection is MethodSelection.HOLD and not (self.reason or "").strip():
+            # A hold is the zero-cost case, so its reason is optional — but the
+            # method must be one that is actually running, which the lookup above
+            # already checked.
+            return self
+        return self
+
+    def to_payload(self) -> dict[str, Any]:
+        """The shape that rides in `Decision.payload` and the decision log."""
+        return {
+            "selection": self.selection.value,
+            "method": self.method_id,
+            "reason": self.reason,
+        }
+
+
+#: The one decision meaning "leave the learner alone". Named so that both the
+#: rules and the tests can say it instead of a bare `None`, which reads as
+#: "nothing was decided" rather than "we decided not to".
+NO_INTERVENTION = MethodSelection.NO_INTERVENTION
 
 
 @dataclass(frozen=True)
@@ -223,6 +373,13 @@ class Decision:
 
     `payload` is machine-readable extras for the executor (`{"itemId": ...}`).
     It is never user-facing copy.
+
+    It also carries the method choice in `payload["method"]` — a small dict of
+    the shape `{"selection": ..., "method": ..., "reason": ...}`. **It rides
+    here rather than in a column of its own** so that "what did we decide and
+    what did we pick" is one row: a decision whose method is unrecorded cannot
+    answer "why was I taught this way", and that question is the only reason the
+    log exists.
     """
 
     action: Action
@@ -258,6 +415,10 @@ __all__ = [
     "Finding",
     "FocusItem",
     "GoalFact",
+    "MethodDecision",
+    "MethodFact",
+    "MethodSelection",
+    "NO_INTERVENTION",
     "SOURCE_API",
     "SOURCE_CHAT",
     "SUPPORTED_EVENTS",

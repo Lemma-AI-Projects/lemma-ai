@@ -16,7 +16,7 @@ See `services/coordinator_service.py` for the part that touches the database,
 picks the executor, and records the decision.
 """
 
-from .rules import decide, find
+from .rules import decide, find, select_method
 from .types import (
     EVENT_LEARNER_STATE_UPDATED,
     EVENT_SOURCES,
@@ -30,6 +30,9 @@ from .types import (
     Finding,
     FocusItem,
     GoalFact,
+    MethodDecision,
+    MethodFact,
+    MethodSelection,
     Snapshot,
     Urgency,
     decision_wire,
@@ -50,6 +53,10 @@ __all__ = [
     "Finding",
     "FocusItem",
     "GoalFact",
+    "MethodDecision",
+    "MethodFact",
+    "MethodSelection",
+    "NO_INTERVENTION",
     "SOURCE_API",
     "SOURCE_CHAT",
     "SUPPORTED_EVENTS",
@@ -58,4 +65,5 @@ __all__ = [
     "decide",
     "decision_wire",
     "find",
+    "select_method",
 ]

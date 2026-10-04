@@ -55,6 +55,8 @@ from .types import (
     Action,
     Decision,
     Finding,
+    MethodDecision,
+    MethodSelection,
     Snapshot,
     Urgency,
 )
@@ -151,9 +153,17 @@ def find(snapshot: Snapshot) -> tuple[Finding, str | None, str]:
 
 
 def decide(snapshot: Snapshot) -> Decision:
-    """The one decision this event produces. Never a loop, never a plan."""
+    """The one decision this event produces. Never a loop, never a plan.
+
+    Two questions, two tables, one row: *should we do anything* (below) and
+    *who does the work* (`select_method`, further down). They are answered
+    separately because they can disagree — a `CONTINUE` with
+    `NO_INTERVENTION` means "keep going at this, and do not change how you are
+    being taught" — and one action field cannot honestly carry both.
+    """
     finding, target, reason = find(snapshot)
     urgency = _URGENCY[finding]
+    method = select_method(snapshot, finding)
 
     if finding in _NO_ACTION:
         return Decision(
@@ -161,7 +171,7 @@ def decide(snapshot: Snapshot) -> Decision:
             target=target,
             reason=reason,
             urgency=urgency,
-            payload=_payload(snapshot, target, finding),
+            payload=_payload(snapshot, target, finding, method),
         )
 
     if snapshot.event.from_conversation:
@@ -170,7 +180,7 @@ def decide(snapshot: Snapshot) -> Decision:
             target=target,
             reason=reason,
             urgency=urgency,
-            payload=_payload(snapshot, target, finding),
+            payload=_payload(snapshot, target, finding, method),
         )
 
     action = _ACTION_IN_BACKGROUND.get(finding, Action.NO_ACTION)
@@ -181,24 +191,38 @@ def decide(snapshot: Snapshot) -> Decision:
             target=target,
             reason=f"{reason}{_BACKGROUND_NOTE}",
             urgency=Urgency.LOW,
-            payload=_payload(snapshot, target, finding),
+            payload=_payload(snapshot, target, finding, method),
         )
     return Decision(
         action=action,
         target=target,
         reason=f"{reason}{_BACKGROUND_NOTE}",
         urgency=urgency,
-        payload=_payload(snapshot, target, finding),
+        payload=_payload(snapshot, target, finding, method),
     )
 
 
-def _payload(snapshot: Snapshot, target: str | None, finding: Finding) -> dict:
+def _payload(
+    snapshot: Snapshot,
+    target: str | None,
+    finding: Finding,
+    method: MethodDecision,
+) -> dict:
     """Machine-readable extras for the executor. No user-facing copy here.
 
     `finding` is included because the executor's wording differs between a lapse
     and a next step, and it must not have to re-derive that from the raw state.
+
+    `method` is included because "why was I taught this way" is the only reason
+    a decision log exists, and a log that records the finding but not the method
+    cannot answer it. It rides in the same row rather than in a column of its
+    own so the two can never disagree.
     """
-    payload: dict = {"eventType": snapshot.event.type, "finding": finding.value}
+    payload: dict = {
+        "eventType": snapshot.event.type,
+        "finding": finding.value,
+        "method": method.to_payload(),
+    }
     if snapshot.focus is not None:
         payload["focusItemId"] = snapshot.focus.id
         payload["focusItemLabel"] = snapshot.focus.label
@@ -208,4 +232,85 @@ def _payload(snapshot: Snapshot, target: str | None, finding: Finding) -> dict:
     return payload
 
 
-__all__ = ["decide", "find"]
+# --- method selection --------------------------------------------------------
+#
+# A second, smaller table. It answers "who does the work this turn", which is a
+# different question from "should we do anything at all" above — and keeping
+# them apart is the point: the first table may well say CONTINUE while this one
+# says NO_INTERVENTION (keep working on it, but do not restructure how you are
+# being taught right now), and collapsing them would force one of those two
+# meanings to be lost.
+#
+# ⚠️ **This table names no method.** It reads `MethodFact` fields the snapshot
+# was handed. That is not a stylistic choice: a table keyed on method *names*
+# would mean adding a method edits this file, which is the thing the plugin
+# shape exists to prevent (`ai/coordinator/__init__.py`: *"no methods"*).
+# Selection therefore goes through declared properties, and a method with
+# different properties is selected by a different branch of this table without
+# anyone editing it.
+
+#: Which findings plausibly warrant *starting* a method. Kept small on purpose:
+#: a method is a promise about a stretch of work, and starting one on every
+#: finding would mean a new promise每 time a piece of evidence lands — which is
+#: the jitter `MethodSelection.HOLD` exists to prevent.
+_SELECTABLE_FINDINGS: frozenset[Finding] = frozenset(
+    {Finding.LAPSE, Finding.STRUGGLE, Finding.NEXT_STEP}
+)
+
+
+def select_method(snapshot: Snapshot, finding: Finding) -> MethodDecision:
+    """Who does the work this turn. One of five answers, none of them a plan.
+
+    **The order of the branches is the argument.**
+
+    1. Nothing installed → no intervention. Not an error: a build with no
+       method must still answer, and "no method" means the default turn.
+    2. Nobody is learning anything → no intervention. A method is for a live
+       learner; choosing one for an empty room would be planning.
+    3. The finding says nothing is worth doing → no intervention. **Most turns
+       land here**, and that is the design working rather than failing.
+    4. The learner is stuck (`LAPSE` / `STRUGGLE`) → the method that makes him
+       do something, because "讲得更清楚" is what already failed. This is the
+       one place the choice is forced by a property rather than a name: among
+       candidates, `needs_learner_action` is what separates "he tries" from
+       "we explain again".
+    5. Otherwise a new item became learnable → same choice, since a method that
+       needs no action has nothing to do while the learner is being introduced
+       to something.
+
+    `START` vs `HOLD` is R4's business (it needs to know whether something is
+    already running); this layer answers "what would suit", and says so.
+    """
+    candidates = snapshot.available_methods
+    if not candidates:
+        return MethodDecision(
+            selection=MethodSelection.NO_INTERVENTION,
+            reason="没有可用的做法 —— 这一轮按普通对话回答。",
+        )
+    if not snapshot.event.from_conversation:
+        return MethodDecision(
+            selection=MethodSelection.NO_INTERVENTION,
+            reason="没有活跃对话，做法只对正在被教的人有意义。",
+        )
+    if finding not in _SELECTABLE_FINDINGS:
+        return MethodDecision(
+            selection=MethodSelection.NO_INTERVENTION,
+            reason="这一轮没有值得插进来的教学动作。",
+        )
+
+    acting = [fact for fact in candidates if fact.needs_learner_action]
+    chosen = (acting or candidates)[0]
+    if finding is Finding.STRUGGLE:
+        why = "他卡在这里了 —— 这一轮要让他自己动，不是再讲一遍。"
+    elif finding is Finding.LAPSE:
+        why = "他曾经做对过、这次没做出来 —— 先让他自己做一次。"
+    else:
+        why = "有一项刚变得可学 —— 从他动手开始，而不是从他听开始。"
+    return MethodDecision(
+        selection=MethodSelection.START,
+        method_id=chosen.id,
+        reason=why,
+    ).validate(snapshot)
+
+
+__all__ = ["decide", "find", "select_method"]

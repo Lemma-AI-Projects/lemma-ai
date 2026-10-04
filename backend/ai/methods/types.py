@@ -456,6 +456,24 @@ def select_focus(context: MethodInput) -> str | None:
     labels the space stores, so an English alias for a Chinese label
     ("eigenvector" for 特征向量) does not match and the fallback is used. For a
     fringe that already *is* the concept being asked about, the two agree.
+
+    ⚠️ **The fallback is a known duplication and it is dated, not forgiven.**
+    `rules.py` picks `ready[0]` as the target of a `NEXT_STEP`, and this reads
+    `outer_fringe[0]` — the same rule said twice, in two layers that are not
+    supposed to know about each other. It happens to agree today because both
+    read the same derivation, but the architecture should not depend on that
+    continuing.
+
+    It is **not** removed in R3, and the reason matters: R3 computes a method
+    choice without wiring it to the conversation, so deleting the fallback here
+    would leave a turn whose focus is `None` whenever the learner names nothing
+    — dropping the whole "本轮要衔接的知识点" line out of the discipline, with
+    nothing replacing it. Removing it is correct only once the Coordinator's
+    target actually *reaches* the method, which is R4's job (the method then
+    reads the decision's target instead of deriving its own).
+
+    `test_the_focus_fallback_is_a_dated_duplication` names that debt so R4
+    cannot inherit it silently.
     """
     candidates = [
         *context.outer_fringe,

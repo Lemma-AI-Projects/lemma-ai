@@ -56,6 +56,7 @@ from ai.coordinator import (
     Finding,
     FocusItem,
     GoalFact,
+    MethodFact,
     Snapshot,
     decide,
 )
@@ -106,6 +107,38 @@ class DecisionRecord:
 
 
 # --- snapshot ----------------------------------------------------------------
+
+
+def _installed_methods() -> tuple[MethodFact, ...]:
+    """The installed methods, as facts the decision layer is allowed to see.
+
+    **This is the only place the two layers meet.** `ai/coordinator/` must not
+    import the method registry — its own docstring says *"no methods"*, and the
+    reason is structural rather than aesthetic: a rule set that could name a
+    method would need editing when a method is added, and then "add a plugin"
+    would quietly become "edit the decision layer". So the registry is read here
+    and handed over as `MethodFact`, whose four fields are the ones a choice can
+    actually use.
+
+    Carries `needs_learner_action` and `withholds_answer` because those are the
+    two properties a rule can decide on. A candidate list of names would force
+    the choice to be made by name, which is the coupling we are avoiding.
+
+    Empty is a legitimate result: a build with no method installed still answers
+    turns, and `select_method` reads that as "do not intervene" rather than
+    failing.
+    """
+    from ai.methods.runtime import catalogue
+
+    return tuple(
+        MethodFact(
+            id=str(row["name"]),
+            display_name=str(row["displayName"]),
+            needs_learner_action=bool(row["needsLearnerAction"]),
+            withholds_answer=bool(row["withholdsAnswer"]),
+        )
+        for row in catalogue()
+    )
 
 
 def _previous_value(
@@ -184,6 +217,10 @@ async def build_snapshot(
 ) -> Snapshot:
     """The distilled view the decision is allowed to see."""
     now = datetime.now(UTC)
+    # Read once, used for both the no-space and the normal return. The decision
+    # layer may not know what a method is — it is handed these as facts, and
+    # `ai/coordinator/` never imports the registry (see the package docstring).
+    methods = _installed_methods()
     if project_id is None:
         # No space: there is no learner state to reason about. The decision will
         # be NO_ACTION, and it is still recorded.
@@ -194,6 +231,7 @@ async def build_snapshot(
             space_name=None,
             focus=None,
             available_actions=ACTION_VALUES,
+            available_methods=methods,
         )
 
     state, fringes, items, edges = await knowledge_service.compute_state(
@@ -273,6 +311,7 @@ async def build_snapshot(
             memory.text for memory, _source in (memories or [])[:RECENT_MEMORY_CAP]
         ),
         available_actions=ACTION_VALUES,
+        available_methods=methods,
         goal=goal,
     )
 

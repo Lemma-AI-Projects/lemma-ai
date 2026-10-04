@@ -331,5 +331,19 @@ def test_no_decision_ever_carries_user_facing_copy():
         "focusItemLabel",
         "focusValue",
         "targetLabel",
+        "method",
     }
     assert "title" not in decision.payload and "body" not in decision.payload
+    # The method choice rides along in the same row, machine-shaped too.
+    method = decision.payload["method"]
+    assert set(method) == {"selection", "method", "reason"}
+    assert isinstance(method["selection"], str)
+    # ⚠️ And its reason must also be addressed to a system. "他卡在这里了——
+    # 这一轮要让他自己动" explains why a method was picked; it is not something to
+    # show a learner, who is told what to *do* by the method itself and never
+    # asked to evaluate the choice. A second, softer version of the same leak
+    # would be to put the learner's justification here.
+    for banned in ("请", "您", "你可以", "试着"):
+        assert banned not in method["reason"], (
+            f"做法选择的理由面向了学习者：{banned!r} in {method['reason']!r}"
+        )
