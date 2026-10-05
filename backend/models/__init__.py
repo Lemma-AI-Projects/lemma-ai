@@ -17,6 +17,7 @@ from models.free_course import (
 )
 from models.free_course_session import FreeCourseSession
 from models.knowledge import KnowledgeEdge, KnowledgeEvidence, KnowledgeItem
+from models.method_episode import MethodEpisode
 from models.notification import Notification
 from models.payment import CreditLedger, Payment, PaymentWebhookEvent
 from models.point_gemini_file import PointGeminiFile
