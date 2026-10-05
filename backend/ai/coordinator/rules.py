@@ -269,17 +269,26 @@ def select_method(snapshot: Snapshot, finding: Finding) -> MethodDecision:
        learner; choosing one for an empty room would be planning.
     3. The finding says nothing is worth doing → no intervention. **Most turns
        land here**, and that is the design working rather than failing.
-    4. The learner is stuck (`LAPSE` / `STRUGGLE`) → the method that makes him
+    4. **Something is already running and this turn is about the same thing →
+       hold it.** A Method is a promise about a stretch, so re-deciding every
+       turn would erase the help that was just withdrawn and make the choice
+       jitter on whatever the last piece of evidence said. Holding costs
+       nothing: the name is already on the episode.
+    5. Something is running but the learner has moved on → **end** it, because a
+       promise about item A cannot be kept by working on item B.
+    6. The learner is stuck (`LAPSE` / `STRUGGLE`) → the method that makes him
        do something, because "讲得更清楚" is what already failed. This is the
        one place the choice is forced by a property rather than a name: among
        candidates, `needs_learner_action` is what separates "he tries" from
        "we explain again".
-    5. Otherwise a new item became learnable → same choice, since a method that
+    7. Otherwise a new item became learnable → same choice, since a method that
        needs no action has nothing to do while the learner is being introduced
        to something.
 
-    `START` vs `HOLD` is R4's business (it needs to know whether something is
-    already running); this layer answers "what would suit", and says so.
+    ⚠️ `HOLD` deliberately has no reason requirement, and the others do — see
+    `MethodDecision.validate`. A hold is the zero-cost case: continuing what is
+    already happening needs no justification, while *starting* or *changing*
+    something does.
     """
     candidates = snapshot.available_methods
     if not candidates:
@@ -298,6 +307,23 @@ def select_method(snapshot: Snapshot, finding: Finding) -> MethodDecision:
             reason="这一轮没有值得插进来的教学动作。",
         )
 
+    # 4 / 5 — is there a promise in progress, and does it cover this turn?
+    running = snapshot.active_method
+    if running is not None:
+        if _same_subject(snapshot):
+            return MethodDecision(
+                selection=MethodSelection.HOLD,
+                method_id=running,
+            ).validate(snapshot)
+        return MethodDecision(
+            selection=MethodSelection.END,
+            method_id=running,
+            reason=(
+                f"正在进行的是「{snapshot.active_focus}」，"
+                f"而这一轮的证据是另一件事 —— 先把那一段收掉。"
+            ),
+        ).validate(snapshot)
+
     acting = [fact for fact in candidates if fact.needs_learner_action]
     chosen = (acting or candidates)[0]
     if finding is Finding.STRUGGLE:
@@ -311,6 +337,26 @@ def select_method(snapshot: Snapshot, finding: Finding) -> MethodDecision:
         method_id=chosen.id,
         reason=why,
     ).validate(snapshot)
+
+
+def _same_subject(snapshot: Snapshot) -> bool:
+    """Is the running episode about the thing this turn's evidence is about?
+
+    **Both sides unknown counts as the same subject.** With no knowledge
+    structure there are no labels to compare, and treating "cannot tell" as "not
+    the same" would end every episode the moment a space with no items ran one —
+    so a stretch would last exactly one turn, which is the per-turn behaviour
+    this layer exists to stop.
+
+    The asymmetry is deliberate: `HOLD` is the cheap, reversible answer, and
+    `END` throws the promise away. When the evidence is thin, keeping the
+    promise costs a turn; ending it costs the learner's continuity.
+    """
+    running_focus = (snapshot.active_focus or "").strip()
+    this_focus = (snapshot.focus.label if snapshot.focus else "").strip()
+    if not running_focus or not this_focus:
+        return True
+    return running_focus == this_focus
 
 
 __all__ = ["decide", "find", "select_method"]

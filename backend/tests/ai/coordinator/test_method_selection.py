@@ -63,6 +63,8 @@ def snapshot(
     focus_value: str = StateValue.NOT_MASTERED.value,
     was_mastered: bool = False,
     ready: tuple[str, ...] = (),
+    active_method: str | None = None,
+    active_focus: str | None = None,
 ) -> Snapshot:
     from ai.coordinator import SOURCE_API, SOURCE_CHAT, CoordinatorEvent
 
@@ -92,7 +94,115 @@ def snapshot(
         ready=ready,
         developing=("换元后的上下限",) if focus_value else (),
         available_methods=methods,
+        active_method=active_method,
+        active_focus=active_focus,
     )
+
+
+# --- 真库装配（只有那一条需要） ----------------------------------------------
+
+
+def _run(coro):
+    import asyncio
+    import contextlib
+
+    async def wrapper():
+        with contextlib.suppress(Exception):
+            from core.database import engine
+
+            await engine.dispose()
+        try:
+            return await coro
+        finally:
+            with contextlib.suppress(Exception):
+                from core.database import engine
+
+                await engine.dispose()
+
+    return asyncio.run(wrapper())
+
+
+@pytest.fixture()
+def space():
+    """A throwaway user + space, per test.
+
+    Only the assembly test below needs a database; the rest are pure. Probing
+    here (rather than at module import) keeps the other tests running on a
+    checkout with no Postgres, and the fixture is function-scoped so a leftover
+    episode cannot make a later test hold a promise it did not start.
+    """
+    import contextlib
+    import uuid
+
+    from sqlalchemy import text
+
+    from core.database import engine
+
+    async def _probe():
+        with contextlib.suppress(Exception):
+            await engine.dispose()
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("select 1"))
+        finally:
+            with contextlib.suppress(Exception):
+                await engine.dispose()
+
+    try:
+        _run(_probe())
+    except Exception as exc:  # noqa: BLE001 — any failure means "no database here"
+        pytest.skip(f"no database reachable: {type(exc).__name__}: {exc}")
+
+    user_id, project_id = uuid.uuid4(), uuid.uuid4()
+    email = f"method-selection-test-{user_id}@example.test"
+
+    async def _create():
+        from sqlalchemy import text as sql_text
+
+        with contextlib.suppress(Exception):
+            await engine.dispose()
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(
+                    sql_text("insert into auth.users (id, email) values (:i, :e)"),
+                    {"i": user_id, "e": email},
+                )
+                await conn.execute(
+                    sql_text(
+                        "insert into profiles (id, email, avatar_color) "
+                        "values (:i, :e, :c)"
+                    ),
+                    {"i": user_id, "e": email, "c": "#000000"},
+                )
+                await conn.execute(
+                    sql_text(
+                        "insert into projects (id, user_id, name) values (:i, :u, :n)"
+                    ),
+                    {"i": project_id, "u": user_id, "n": "method-selection-test"},
+                )
+        finally:
+            with contextlib.suppress(Exception):
+                await engine.dispose()
+
+    async def _drop():
+        from sqlalchemy import text as sql_text
+
+        with contextlib.suppress(Exception):
+            await engine.dispose()
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(
+                    sql_text("delete from auth.users where id = :i"), {"i": user_id}
+                )
+        finally:
+            with contextlib.suppress(Exception):
+                await engine.dispose()
+
+    _run(_create())
+    try:
+        yield user_id, project_id
+    finally:
+        _run(_drop())
 
 
 # --- 名单是注入的 ------------------------------------------------------------
@@ -358,3 +468,151 @@ def test_a_finding_that_says_nothing_can_still_ask_for_no_method():
     decision = decide(snap)
     assert decision.payload["finding"] == "unsettled"
     assert decision.payload["method"]["selection"] == MethodSelection.NO_INTERVENTION
+
+
+# --- 已经在跑的一段 ----------------------------------------------------------
+#
+# R4d：`HOLD` 与 `END` 的产生。理由与「HOLD 零成本」都在
+# `ai/coordinator/rules.py:select_method` 的 docstring 里；这里钉住它们。
+
+
+def test_a_promise_in_progress_is_held_not_re_decided():
+    """⚠️ **这一条是 R4d 存在的全部理由。**
+
+    同一个 finding、同一个候选清单，只是因为「已经有一段在进行」，
+    结果从 `start` 变成 `hold` —— 而这正是计划 §0.5 优化 1 说的：
+    每轮重选会抹掉刚做的撤除帮助，并让选择因为最后一条证据而抖。
+    """
+    fresh = select_method(snapshot(), Finding.STRUGGLE)
+    running = select_method(
+        snapshot(active_method="socratic", active_focus="换元后的上下限"),
+        Finding.STRUGGLE,
+    )
+    assert fresh.selection is MethodSelection.START
+    assert running.selection is MethodSelection.HOLD
+    assert running.method_id == "socratic"
+    # 保持不需要理由：继续做正在做的事不需要被论证。
+    assert running.reason is None
+
+
+def test_a_turn_about_something_else_ends_the_promise():
+    """⚠️ 关于 A 的承诺不能靠做 B 来兑现。"""
+    decision = select_method(
+        # 正在进行的是「特征值」，而这一轮的证据是「换元后的上下限」。
+        snapshot(active_method="socratic", active_focus="特征值"),
+        Finding.STRUGGLE,
+    )
+    assert decision.selection is MethodSelection.END
+    assert decision.method_id == "socratic"
+    assert "特征值" in (decision.reason or "")
+
+
+def test_keeping_a_promise_is_the_cheap_answer_so_thin_evidence_keeps_it():
+    """⚠️ 两边都不知道时算「同一件事」—— 这个不对称是故意的。
+
+    With no labels to compare, treating "cannot tell" as "not the same" would
+    end every episode in a space with no knowledge structure, so a stretch would
+    last exactly one turn — the per-turn behaviour this layer exists to stop.
+    The asymmetry: `HOLD` is reversible, `END` throws the promise away.
+    """
+    no_labels = snapshot(
+        focus_value="", active_method="socratic", active_focus=None
+    )
+    assert select_method(no_labels, Finding.STRUGGLE).selection is (
+        MethodSelection.HOLD
+    )
+    # And the reverse: a stretch with a focus, on a space whose turn has none.
+    no_focus = snapshot(
+        focus_value="", active_method="socratic", active_focus="换元后的上下限"
+    )
+    assert select_method(no_focus, Finding.STRUGGLE).selection is MethodSelection.HOLD
+
+
+def test_holding_or_ending_something_that_is_not_running_is_refused():
+    """继续 / 结束一个从未做出的承诺不是决定。"""
+    snap = snapshot()
+    for selection in (MethodSelection.HOLD, MethodSelection.END):
+        with pytest.raises(ValueError, match="not the running episode"):
+            MethodDecision(
+                selection=selection, method_id="socratic", reason="测试"
+            ).validate(snap)
+
+
+def test_ending_needs_a_reason_while_holding_does_not():
+    """静默的结束与随机的结束，事后看起来一模一样。"""
+    running = snapshot(active_method="socratic", active_focus="换元后的上下限")
+    # A hold with no reason is fine.
+    MethodDecision(selection=MethodSelection.HOLD, method_id="socratic").validate(
+        running
+    )
+    with pytest.raises(ValueError, match="reason"):
+        MethodDecision(selection=MethodSelection.END, method_id="socratic").validate(
+            running
+        )
+
+
+def test_not_intervening_outranks_a_running_promise():
+    """一段在进行，但这一轮没有值得插进来的东西 —— 就不插进去。
+
+    "A promise is in progress" is not a reason to keep intervening; the same
+    rule that leaves most turns alone applies here, and a system that always
+    does something is the mirror image of one that never does.
+    """
+    running = snapshot(
+        active_method="socratic", active_focus="换元后的上下限", focus_value=""
+    )
+    decision = select_method(running, Finding.NONE)
+    assert decision.selection is MethodSelection.NO_INTERVENTION
+
+
+def test_the_snapshot_reads_the_running_episode_from_the_database(space):
+    """装配路径：真的开一段，快照里就有它。
+
+    The rule is only pure because this read happens in
+    `coordinator_service.build_snapshot`. A test that skipped the assembly would
+    pass while every `HOLD` stayed unreachable in production.
+    """
+    from ai.coordinator import SOURCE_CHAT, CoordinatorEvent
+    from core.database import AsyncSessionLocal
+    from services import coordinator_service, method_episode_service
+
+    user_id, project_id = space
+
+    async def _open():
+        async with AsyncSessionLocal() as db:
+            return await method_episode_service.open_episode(
+                db,
+                user_id=user_id,
+                project_id=project_id,
+                method="socratic",
+                commitment="你自己做对两道，就算过",
+                completion_rule={"kind": "consecutive_correct", "n": 2},
+                evidence_target={"item_hint": None, "tier": "B"},
+                focus_label="换元后的上下限",
+            )
+
+    async def _build():
+        async with AsyncSessionLocal() as db:
+            return await coordinator_service.build_snapshot(
+                db,
+                user_id=user_id,
+                event=CoordinatorEvent(
+                    type="learner_state.updated", source=SOURCE_CHAT
+                ),
+                project_id=project_id,
+            )
+
+    async def _close(episode_id):
+        async with AsyncSessionLocal() as db:
+            await method_episode_service.close_episode(
+                db, user_id=user_id, episode_id=episode_id, status="paused"
+            )
+
+    episode = _run(_open())
+    assert episode.focus_label == "换元后的上下限"
+    snap = _run(_build())
+    assert snap.active_method == "socratic"
+    assert snap.active_focus == "换元后的上下限"
+    # And the rule reads it as a promise in progress, not a fresh start.
+    assert select_method(snap, Finding.STRUGGLE).selection is MethodSelection.HOLD
+    _run(_close(episode.id))

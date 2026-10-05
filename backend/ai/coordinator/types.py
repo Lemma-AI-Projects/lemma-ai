@@ -217,6 +217,23 @@ class Snapshot:
     # is a legitimate state meaning "nothing is installed", and the rules below
     # read it as "do not intervene" rather than failing.
     available_methods: tuple[MethodFact, ...] = ()
+    #: What is **already running** in this space, as a fact: the method id of the
+    #: live episode, or None.
+    #:
+    #: Injected for the same reason as `available_methods`, and it is the field
+    #: that makes `HOLD` possible. A Method is a promise about a *stretch* of
+    #: work, so re-deciding every turn would erase the help that was just
+    #: withdrawn and make the choice jitter on whatever the last piece of evidence
+    #: happened to say. Reading "is something already running" off a column here,
+    #: rather than querying the episode table inside a rule, keeps `rules.py` a
+    #: pure function — and `HOLD` is free, which is the point.
+    #:
+    #: None is a legitimate and common state: nothing has been started.
+    active_method: str | None = None
+    #: The focus item of the live episode, when there is one. Lets a rule notice
+    #: that the stretch under way is about a *different* item than this turn's
+    #: evidence, which is the case where re-deciding is right rather than wrong.
+    active_focus: str | None = None
 
     @property
     def has_state(self) -> bool:
@@ -323,8 +340,9 @@ class MethodDecision:
         production rather than in a test:
 
         * naming a method that is not installed — the turn would 500 later;
-        * a start or switch with no reason — an unexplainable change;
-        * a hold with nothing to hold — "continue what?" has no answer.
+        * a start, switch or end with no reason — an unexplainable change;
+        * holding or ending something that is not running — "continue what?" has
+          no answer, and ending a promise that was never made is a lie.
         """
         if self.selection is MethodSelection.NO_INTERVENTION:
             if self.method_id is not None:
@@ -339,17 +357,25 @@ class MethodDecision:
                 f"{self.selection.value} names method {self.method_id!r}, which is "
                 "not in the snapshot's candidates"
             )
-        if self.selection in (MethodSelection.START, MethodSelection.SWITCH):
-            if not (self.reason or "").strip():
+        if self.selection in (MethodSelection.HOLD, MethodSelection.END):
+            if self.method_id != snapshot.active_method:
                 raise ValueError(
-                    f"{self.selection.value} needs a reason — a silent change is "
-                    "indistinguishable from a random one"
+                    f"{self.selection.value} names {self.method_id!r}, which is not "
+                    f"the running episode ({snapshot.active_method!r}) — continuing "
+                    "or ending a promise that was never made is not a decision"
                 )
-        if self.selection is MethodSelection.HOLD and not (self.reason or "").strip():
-            # A hold is the zero-cost case, so its reason is optional — but the
-            # method must be one that is actually running, which the lookup above
-            # already checked.
-            return self
+        if self.selection in (
+            MethodSelection.START,
+            MethodSelection.SWITCH,
+            MethodSelection.END,
+        ) and not (self.reason or "").strip():
+            raise ValueError(
+                f"{self.selection.value} needs a reason — a silent change is "
+                "indistinguishable from a random one"
+            )
+        # A hold is the zero-cost case, so its reason is optional: continuing what
+        # is already happening needs no justification. The lookups above already
+        # checked that there *is* something running.
         return self
 
     def to_payload(self) -> dict[str, Any]:

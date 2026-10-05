@@ -63,8 +63,10 @@ from ai.coordinator import (
 from ai.knowledge import Structure, derive_state, revise
 from ai.knowledge.state import StateValue
 from models.coordinator_decision import CoordinatorDecision
+from models.method_episode import MethodEpisode
 from services import (
     knowledge_service,
+    method_episode_service,
     notification_service,
     space_goal_service,
     space_memory_service,
@@ -149,6 +151,29 @@ def _installed_methods() -> tuple[MethodFact, ...]:
         )
         for row in catalogue()
     )
+
+
+async def _active_episode(
+    db: AsyncSession, *, project_id: uuid.UUID | None
+) -> MethodEpisode | None:
+    """The space's live episode, or None. Never raises for a missing one.
+
+    A read of the decision layer's inputs must not be able to fail the decision:
+    `handle_event_safely` would drop the event, and a learner whose answer was
+    just recorded would lose the decision about it because a lookup raised. So a
+    failure here is logged and read as "nothing is running", which is the
+    conservative reading — it can cause a needless re-decision, never a lost one.
+    """
+    if project_id is None:
+        return None
+    try:
+        return await method_episode_service.get_active(db, project_id=project_id)
+    except Exception:  # noqa: BLE001 — see the docstring
+        logger.warning(
+            "coordinator: active episode unavailable (project=%s)", project_id,
+            exc_info=True,
+        )
+        return None
 
 
 def _previous_value(
@@ -294,6 +319,12 @@ async def build_snapshot(
         else None
     )
 
+    # What this space is already in the middle of teaching. Read here so the
+    # rules never touch the episode table — `rules.py` is a pure function over
+    # the snapshot, and a lookup inside it would make "hold vs start" depend on
+    # the database instead of on what the decision layer was shown.
+    episode = await _active_episode(db, project_id=project_id)
+
     return Snapshot(
         event=event,
         current_time=now,
@@ -322,6 +353,12 @@ async def build_snapshot(
         ),
         available_actions=ACTION_VALUES,
         available_methods=methods,
+        # ⚠️ Read *after* the label map: `active_focus` is a label, and the rules
+        # compare it with `focus.label`. Resolving an id here instead would mean
+        # two different string forms for the same item, and the comparison would
+        # fail for the wrong reason.
+        active_method=episode.method if episode is not None else None,
+        active_focus=episode.focus_label if episode is not None else None,
         goal=goal,
     )
 
