@@ -3,6 +3,7 @@ import { RequireAuth } from '@/features/auth/RequireAuth'
 import { FocusView } from '@/features/learn-space/focus/FocusView'
 import { AppLayout } from '@/layouts/AppLayout'
 import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
+import { ConnectPreviewPage } from '@/pages/ConnectPreviewPage'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
@@ -94,6 +95,12 @@ const routes: RouteObject[] = [
     // mock 数据、不登录即可查看。出口接 /preview/user-profile。
     path: '/preview/onboarding',
     element: <OnboardingPreviewPage />,
+  },
+  {
+    // 布局评审入口：Connect 页（社交 && 连接 的实验），mock 数据、不登录即可查看。
+    // 左上角是页面切换器（默认 Public Hall），内容区是当前子页面。
+    path: '/preview/connect',
+    element: <ConnectPreviewPage />,
   },
   {
     // 免费课的两个静态预览（与 v2 同形：公开、不挂 AppLayout）。
