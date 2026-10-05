@@ -11,6 +11,13 @@ It is NOT a queue and NOT state: nothing reads this table to decide anything. Th
 next decision is computed from Learner State, never from the last decision — a
 decision layer that read its own log would start compounding its own mistakes.
 
+Two columns carry the machine-shaped half, and keeping them apart is the point:
+`event_payload` is what **arrived**, `decision_payload` is what **came out**. A
+decision that also chose a teaching method records that choice as data
+(`{"method": {"selection", "method", "reason"}}`) rather than as prose folded into
+`reason` — the reason is a sentence for a person, and a JSON object inside a
+Chinese sentence is something the next reader will parse with a regex.
+
 Deliberately absent: `consumed_at`, `status`, `superseded_by`. V0 produces a
 decision and records it; whether some executor later "used" it is V1's business
 (and would need a lifecycle, which is exactly the complexity the brief forbids
@@ -65,6 +72,25 @@ class CoordinatorDecision(Base):
     )
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     event_payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default="{}"
+    )
+    #: What the decision itself produced, machine-shaped: `finding`,
+    #: `targetLabel`, and since R3 the `method` choice
+    #: (`{"selection", "method", "reason"}`).
+    #:
+    #: ⚠️ **This column exists because `reason` cannot carry it.** The reason is a
+    #: sentence for a person; the method choice is a decision tree's output and
+    #: folding `{"selection": "start", "method": "socratic"}` into Chinese prose
+    #: means the next person to read it writes a regex. Until this column landed,
+    #: the method choice existed only on the in-memory `Decision` and the log
+    #: could not answer "why was I taught this way" — the one question this
+    #: table exists to answer.
+    #:
+    #: Separate from `event_payload` on purpose: that is what arrived, this is
+    #: what came out. Merging them would make "the event said so" and "we
+    #: decided so" indistinguishable after the fact, which is the same class of
+    #: confusion as attributing a message to the person it was sent to.
+    decision_payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, server_default="{}"
     )
     action: Mapped[str] = mapped_column(String, nullable=False)

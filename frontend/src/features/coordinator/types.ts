@@ -19,12 +19,39 @@ export type CoordinatorUrgency = 'low' | 'normal' | 'high'
 /** Who announced the event. It is what turns a next step into a reminder. */
 export type CoordinatorEventSource = 'chat' | 'api'
 
+/**
+ * What the decision **produced**, machine-shaped. Mirrors the backend's
+ * `Decision.payload`: the finding, the target label, and since R3 the method
+ * choice.
+ *
+ * Kept separate from `eventPayload` (what *arrived*) because "the event said so"
+ * and "we decided so" are different claims, and a log that merged them could not
+ * tell them apart afterwards.
+ */
+export interface MethodChoicePayload {
+  selection: 'start' | 'hold' | 'switch' | 'end' | 'no_intervention'
+  /** The method's id, or null when nothing was selected / nothing is running. */
+  method: string | null
+  /** A system sentence explaining the choice. Never learner-facing copy. */
+  reason: string | null
+}
+
+export interface CoordinatorDecisionPayload {
+  finding?: string
+  targetLabel?: string
+  method?: MethodChoicePayload
+  [key: string]: unknown
+}
+
 /** One row of the decision log (`GET /coordinator/decisions`). */
 export interface CoordinatorDecisionRecord {
   id: string
   projectId: string | null
   eventType: string
+  /** What arrived. */
   eventPayload: Record<string, unknown>
+  /** What came out. Empty for rows recorded before R4a — not backfilled. */
+  decisionPayload: CoordinatorDecisionPayload
   action: CoordinatorAction
   target: string | null
   reason: string

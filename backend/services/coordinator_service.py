@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -92,7 +92,13 @@ class UnsupportedEvent(ValueError):
 
 @dataclass(frozen=True)
 class DecisionRecord:
-    """A recorded decision, as the API and the dev panel read it."""
+    """A recorded decision, as the API and the dev panel read it.
+
+    `decision_payload` is what the decision *produced* (`finding` · `targetLabel`
+    · the `method` choice), kept separate from `event_payload`, which is what
+    *arrived*. The pair together answer the two questions "what did we decide"
+    and "what prompted it" — and only the first of those used to be recorded.
+    """
 
     id: uuid.UUID
     project_id: uuid.UUID | None
@@ -104,6 +110,10 @@ class DecisionRecord:
     urgency: str
     effect: str
     created_at: datetime
+    #: Not user-facing copy — machine shape, read by the panel's inspector and by
+    #: anything asking "why was I taught this way". Defaults to empty so a caller
+    #: building a record by hand (tests) does not have to invent one.
+    decision_payload: dict[str, Any] = field(default_factory=dict)
 
 
 # --- snapshot ----------------------------------------------------------------
@@ -435,6 +445,12 @@ async def handle_event(
         project_id=project_id,
         event_type=event.type,
         event_payload=dict(event.payload),
+        # What the decision produced, in its own words. Without this the method
+        # choice existed only on the in-memory `Decision`, and the log could not
+        # answer "why was I taught this way" — the one question this table is
+        # for. `dict(...)` so the row never shares mutable state with the
+        # decision object that produced it.
+        decision_payload=dict(decision.payload),
         action=decision.action.value,
         target=decision.target,
         reason=decision.reason,
@@ -544,6 +560,7 @@ def _to_record(row: CoordinatorDecision) -> DecisionRecord:
         urgency=row.urgency,
         effect=row.effect,
         created_at=row.created_at,
+        decision_payload=dict(row.decision_payload or {}),
     )
 
 

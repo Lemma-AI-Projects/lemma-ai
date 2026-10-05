@@ -111,3 +111,8 @@ class CoordinatorDecisionOut(_Out):
     urgency: str
     effect: str
     created_at: datetime
+    #: What the decision **produced** (`finding` · `targetLabel` · the `method`
+    #: choice), as data. Separate from `event_payload` on the wire for the same
+    #: reason it is separate in the table: one is what arrived, the other is what
+    #: came out, and "the event said so" is not "we decided so".
+    decision_payload: dict[str, Any] = {}

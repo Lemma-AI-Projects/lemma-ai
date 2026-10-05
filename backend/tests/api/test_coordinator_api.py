@@ -183,6 +183,7 @@ def test_an_answer_ends_with_a_reminder_and_a_recorded_decision(authed_client):
         "projectId",
         "eventType",
         "eventPayload",
+        "decisionPayload",
         "action",
         "target",
         "reason",
@@ -197,6 +198,22 @@ def test_an_answer_ends_with_a_reminder_and_a_recorded_decision(authed_client):
     assert row["eventPayload"]["verdict"] == "correct"
     assert row["effect"].startswith("notification_sent:")
     assert row["reason"].strip()
+    # ⚠️ `decisionPayload` is what the decision **produced**, and it is a
+    # different thing from `eventPayload` (what arrived). Until R4a the method
+    # choice existed only on the in-memory `Decision`, so this log could not
+    # answer "why was I taught this way" — the one question it exists for.
+    # The finding is whatever the rule derived; this evidence closed a gap, so a
+    # new item became learnable.
+    assert row["decisionPayload"]["finding"] == "next_step"
+    # A background event (no room to teach in) chooses not to intervene, and it
+    # says why — "not selected" and "not recorded" must be different rows.
+    method = row["decisionPayload"]["method"]
+    assert method["selection"] == "no_intervention"
+    assert method["method"] is None
+    assert method["reason"].strip()
+    # The two payloads stay separate: the event said one thing, the decision
+    # another, and merging them would make them indistinguishable afterwards.
+    assert "method" not in row["eventPayload"]
 
 
 def test_a_single_rubric_judgement_decides_nothing_and_says_why(authed_client):
