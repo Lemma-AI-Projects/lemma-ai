@@ -48,6 +48,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ai.coordinator import (
     ACTION_VALUES,
     EVENT_LEARNER_STATE_UPDATED,
+    EVENT_PHASE_TURN_START,
     SUPPORTED_EVENTS,
     Action,
     CoordinatorEvent,
@@ -59,6 +60,7 @@ from ai.coordinator import (
     MethodFact,
     Snapshot,
     decide,
+    event_phase,
 )
 from ai.knowledge import Structure, derive_state, revise
 from ai.knowledge.state import StateValue
@@ -221,6 +223,24 @@ def _as_uuid(value: Any) -> uuid.UUID | None:
         return None
 
 
+def _item_id_for_label(items: list, label: str | None) -> str | None:
+    """The id of the item carrying this exact label, or None.
+
+    Exact match only, and that is the point rather than a limitation: at
+    `turn_start` the focus has to be the item a promise is *actually* about, and
+    a fuzzy or substring match could attach a stretch to a neighbouring item and
+    then "hold" the wrong promise. No label means no answer, and the caller
+    treats that as "no focus" rather than guessing.
+    """
+    wanted = (label or "").strip()
+    if not wanted:
+        return None
+    for row in items:
+        if row.label == wanted:
+            return str(row.id)
+    return None
+
+
 def _event_evidence_id(event: CoordinatorEvent, evidence: list, *, focus_id: str):
     """Which record counts as "the event" when working out the previous value.
 
@@ -277,8 +297,22 @@ async def build_snapshot(
     )
     labels = {str(row.id): row.label for row in items}
 
+    # Which moment this event is about, and what is already in progress. Both are
+    # read **before** the focus is assembled, because at `turn_start` the focus
+    # comes from the running episode rather than from the event.
+    phase = event_phase(event)
+    episode = await _active_episode(db, project_id=project_id)
+
     focus: FocusItem | None = None
     focus_id = str(event.payload.get("itemId") or "")
+    # ⚠️ `turn_start` has no evidence to point at, and the honest focus is the
+    # item a promise is already about — not the first row of anything. A
+    # turn-start event with no running episode names nothing, and the rules read
+    # that as "no focus" (→ `NONE` → no intervention), which is the right answer
+    # for the very first turn: nothing has been started, so there is nothing to
+    # hold and no evidence to have started one.
+    if not focus_id and phase == EVENT_PHASE_TURN_START and episode is not None:
+        focus_id = _item_id_for_label(items, episode.focus_label) or ""
     if focus_id and focus_id in {str(row.id) for row in items}:
         status = state.statuses.get(focus_id)
         focus = FocusItem(
@@ -318,12 +352,6 @@ async def build_snapshot(
         if active_goal is not None
         else None
     )
-
-    # What this space is already in the middle of teaching. Read here so the
-    # rules never touch the episode table — `rules.py` is a pure function over
-    # the snapshot, and a lookup inside it would make "hold vs start" depend on
-    # the database instead of on what the decision layer was shown.
-    episode = await _active_episode(db, project_id=project_id)
 
     return Snapshot(
         event=event,

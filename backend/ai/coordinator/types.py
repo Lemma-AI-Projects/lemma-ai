@@ -40,6 +40,40 @@ from typing import Any
 EVENT_LEARNER_STATE_UPDATED = "learner_state.updated"
 SUPPORTED_EVENTS = (EVENT_LEARNER_STATE_UPDATED,)
 
+# **When in a turn the event happened.** A field on the event's payload, not a
+# new event name, and the reason is in the comment above: every new event name
+# "needs a rule, not just a name", and the rule for "the learner has said
+# something" is the same rule — what did that change? The answer is only the
+# *input*, not the conclusion.
+#
+# `EVIDENCE` is the original: a record landed, so the state may have moved.
+# `TURN_START` is "the learner has just spoken, before the model answers" — the
+# moment a method has to be chosen for the status bar to say anything at all.
+# Without it the only decision point is after evidence arrives, so the first
+# interaction of every session would have no method and the last word on what
+# to teach would belong to a record rather than to the question.
+EVENT_PHASE_EVIDENCE = "evidence"
+EVENT_PHASE_TURN_START = "turn_start"
+#: Absent means `EVIDENCE` — the shape every pre-R4e caller sends.
+DEFAULT_EVENT_PHASE = EVENT_PHASE_EVIDENCE
+EVENT_PHASES = (EVENT_PHASE_EVIDENCE, EVENT_PHASE_TURN_START)
+
+
+def event_phase(event: "CoordinatorEvent") -> str:
+    """Which moment this event is about, refusing anything it does not know.
+
+    A refusal rather than a default: an unknown phase means a caller expects
+    behaviour nobody wrote, and answering it as "evidence" would produce a
+    decision for a moment the system does not model — the same reasoning as
+    `UnsupportedEvent` for an unknown type.
+    """
+    phase = str(event.payload.get("phase") or DEFAULT_EVENT_PHASE)
+    if phase not in EVENT_PHASES:
+        raise ValueError(
+            f"unknown event phase {phase!r}; known: {', '.join(EVENT_PHASES)}"
+        )
+    return phase
+
 # Who announced the event. This is the caller's own statement about where the
 # evidence came from, and it is the one field that changes *delivery*:
 # "chat" means a conversation is live (there is somebody to teach right now),
@@ -436,6 +470,9 @@ __all__ = [
     "CoordinatorEvent",
     "Decision",
     "EVENT_LEARNER_STATE_UPDATED",
+    "EVENT_PHASES",
+    "EVENT_PHASE_EVIDENCE",
+    "EVENT_PHASE_TURN_START",
     "EVENT_SOURCES",
     "EvidenceFact",
     "Finding",

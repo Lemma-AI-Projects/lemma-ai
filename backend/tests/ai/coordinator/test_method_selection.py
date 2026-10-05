@@ -55,6 +55,10 @@ EXPLAIN = MethodFact(
 )
 BOTH = (SOCRATIC, EXPLAIN)
 
+#: The single item the turn-start assembly tests seed. A real label, because the
+#: lookup under test is an exact one.
+TOP = "换元后的上下限"
+
 
 def snapshot(
     *,
@@ -616,3 +620,207 @@ def test_the_snapshot_reads_the_running_episode_from_the_database(space):
     # And the rule reads it as a promise in progress, not a fresh start.
     assert select_method(snap, Finding.STRUGGLE).selection is MethodSelection.HOLD
     _run(_close(episode.id))
+
+
+# --- turn_start：同一个事件，不是一个新事件名 -------------------------------
+#
+# R4e。`ai/coordinator/types.py` 上方那段注释说清了为什么是 payload 的一个字段
+# 而不是新的事件名：每个新事件名 "needs a rule, not just a name"，而「他刚说了
+# 一句话」对应的问题不是新问题，只是新**输入**。
+
+
+def test_an_absent_phase_reads_as_evidence():
+    """缺省 = `evidence`，所以每一个 R4e 之前���调用方都不需要改。"""
+    from ai.coordinator import (
+        DEFAULT_EVENT_PHASE,
+        EVENT_PHASE_EVIDENCE,
+        EVENT_LEARNER_STATE_UPDATED,
+        SOURCE_CHAT,
+        CoordinatorEvent,
+        event_phase,
+    )
+
+    assert DEFAULT_EVENT_PHASE == EVENT_PHASE_EVIDENCE
+    plain = CoordinatorEvent(
+        type=EVENT_LEARNER_STATE_UPDATED, source=SOURCE_CHAT
+    )
+    assert event_phase(plain) == EVENT_PHASE_EVIDENCE
+
+
+def test_an_unknown_phase_is_refused_rather_than_treated_as_evidence():
+    """⚠️ 未知 phase ⇒ 拒绝，不是当 evidence。
+
+    把它当 evidence 会为一个系统没有建模的时刻产出决定 —— 与
+    `UnsupportedEvent` 对未知**类型**是同一条推理。
+    """
+    from ai.coordinator import (
+        EVENT_LEARNER_STATE_UPDATED,
+        SOURCE_CHAT,
+        CoordinatorEvent,
+        event_phase,
+    )
+
+    with pytest.raises(ValueError, match="unknown event phase"):
+        event_phase(
+            CoordinatorEvent(
+                type=EVENT_LEARNER_STATE_UPDATED,
+                source=SOURCE_CHAT,
+                payload={"phase": "user_lunch_break"},
+            )
+        )
+
+
+def test_the_supported_event_list_did_not_grow():
+    """⚠️ `SUPPORTED_EVENTS` 仍然只有一个名字 —— 这一步不加事件名。"""
+    from ai.coordinator import (
+        EVENT_LEARNER_STATE_UPDATED,
+        EVENT_PHASE_TURN_START,
+        SUPPORTED_EVENTS,
+    )
+
+    assert SUPPORTED_EVENTS == (EVENT_LEARNER_STATE_UPDATED,)
+    assert EVENT_PHASE_TURN_START == "turn_start"
+
+
+def test_turn_start_takes_its_focus_from_the_running_episode(space):
+    """装配路径：`turn_start` 的 focus 来自那一段，而不是来自证据。
+
+    A turn-start event has no evidence to point at. Attaching the first row of
+    anything instead would make the rules decide about an item nobody asked
+    about; taking the running episode's item is what lets `HOLD` actually
+    happen.
+    """
+    from ai.coordinator import (
+        EVENT_LEARNER_STATE_UPDATED,
+        EVENT_PHASE_TURN_START,
+        SOURCE_CHAT,
+        CoordinatorEvent,
+    )
+    from core.database import AsyncSessionLocal
+    from schemas.knowledge import KnowledgeImportIn
+    from services import (
+        coordinator_service,
+        knowledge_service,
+        method_episode_service,
+    )
+
+    user_id, project_id = space
+
+    # One item, so "the running episode's item" is unambiguous.
+    async def _seed():
+        async with AsyncSessionLocal() as db:
+            await knowledge_service.import_structure(
+                db,
+                project_id=project_id,
+                payload=KnowledgeImportIn(
+                    items=[KnowledgeImportIn.DraftItem(ref="a", label=TOP)],
+                    edges=[],
+                ),
+            )
+
+    async def _open():
+        async with AsyncSessionLocal() as db:
+            return await method_episode_service.open_episode(
+                db,
+                user_id=user_id,
+                project_id=project_id,
+                method="socratic",
+                commitment="你自己做对两道，就算过",
+                completion_rule={"kind": "consecutive_correct", "n": 2},
+                evidence_target={"item_hint": TOP, "tier": "B"},
+                focus_label=TOP,
+            )
+
+    async def _build(phase):
+        async with AsyncSessionLocal() as db:
+            return await coordinator_service.build_snapshot(
+                db,
+                user_id=user_id,
+                event=CoordinatorEvent(
+                    type=EVENT_LEARNER_STATE_UPDATED,
+                    source=SOURCE_CHAT,
+                    payload={"phase": phase},
+                ),
+                project_id=project_id,
+            )
+
+    async def _close(episode_id):
+        async with AsyncSessionLocal() as db:
+            await method_episode_service.close_episode(
+                db, user_id=user_id, episode_id=episode_id, status="paused"
+            )
+
+    _run(_seed())
+    episode = _run(_open())
+
+    at_turn_start = _run(_build(EVENT_PHASE_TURN_START))
+    assert at_turn_start.focus is not None
+    assert at_turn_start.focus.label == TOP
+
+    # An evidence event with no `itemId` has no focus at all — and that is the
+    # honest answer, because no record landed.
+    at_evidence = _run(_build("evidence"))
+    assert at_evidence.focus is None
+
+    _run(_close(episode.id))
+
+
+def test_turn_start_with_nothing_running_has_no_focus(space):
+    """第一轮：没有在跑的一段 ⇒ 没有 focus ⇒ 不干预。
+
+    Nothing has been started, so there is nothing to hold and no evidence to
+    have started one. A first turn that silently picked a method would be
+    picking it with no reason at all.
+    """
+    from ai.coordinator import (
+        EVENT_LEARNER_STATE_UPDATED,
+        EVENT_PHASE_TURN_START,
+        SOURCE_CHAT,
+        CoordinatorEvent,
+    )
+    from core.database import AsyncSessionLocal
+    from services import coordinator_service
+
+    user_id, project_id = space
+
+    async def _build():
+        async with AsyncSessionLocal() as db:
+            return await coordinator_service.build_snapshot(
+                db,
+                user_id=user_id,
+                event=CoordinatorEvent(
+                    type=EVENT_LEARNER_STATE_UPDATED,
+                    source=SOURCE_CHAT,
+                    payload={"phase": EVENT_PHASE_TURN_START},
+                ),
+                project_id=project_id,
+            )
+
+    snap = _run(_build())
+    assert snap.active_method is None
+    assert snap.focus is None
+    finding, _target, _reason = find(snap)
+    assert finding is Finding.NONE
+    assert select_method(snap, finding).selection is MethodSelection.NO_INTERVENTION
+
+
+def test_the_label_lookup_is_exact_or_nothing(space):
+    """⚠️ 模糊或子串匹配会把一段挂到相邻的知识点上，然后「保持」错的承诺。
+
+    Refusing to answer is the safe direction: no focus reads as "nothing
+    running", which cannot hold the wrong promise.
+    """
+    from services.coordinator_service import _item_id_for_label
+
+    class _Item:
+        def __init__(self, item_id: str, label: str) -> None:
+            self.id = item_id
+            self.label = label
+
+    items = [_Item("i1", "换元后的上下限"), _Item("i2", "换下限")]
+    assert _item_id_for_label(items, "换元后的上下限") == "i1"
+    # "换下限" is a real item, not a fragment of the other one.
+    assert _item_id_for_label(items, "换下限") == "i2"
+    assert _item_id_for_label(items, "上下限") is None
+    assert _item_id_for_label(items, None) is None
+    assert _item_id_for_label(items, "  ") is None
