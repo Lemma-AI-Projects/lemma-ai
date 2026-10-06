@@ -352,3 +352,118 @@ def test_practice_progress_is_independent_of_where_the_board_is(course):
     assert lesson.state == "in_progress"
     assert lesson.practice.answered == 0
     assert lesson.practice.total == 2
+
+
+# --- 课程中心那一侧（B-01） --------------------------------------------------
+#
+# `progress_service.get_courses_point_counts` join 的是 `course_points` —— 视频课
+# 的表。free 课程没有 point，所以那个查询对它**根本没有行**，调用方按
+# 「缺 entry 视为 0/0」处理 ⇒ 自由课程在课程中心永远 0/0、永远落在「进行中」tab。
+# 这一节钉的是修好之后的样子。
+
+
+def test_a_free_course_reports_chapter_progress_to_the_course_center(course):
+    """free 课程的两门课：一门学完（cursor 到底）、一门没碰过 ⇒ (1, 2)。"""
+    user_id, course_id, chapters = course
+    run(_write_session(chapters["full"], cursor=2, steps=2))
+
+    counts = run(_counts(user_id, course_id))
+    assert counts[course_id] == (1, 2), (
+        "自由课程的中心进度必须按课节算，而且要与课程页同源"
+    )
+
+
+def test_the_center_and_the_course_page_agree_on_what_finished_means(course):
+    """⚠️ 同一门课，课程页与课程中心必须给出同一个「学完」。
+
+    两处口径若分叉，课程页会显示「1/2 学完」而课程中心显示「0/2」——
+    那比没有进度更糟：用户会以为进度坏了。
+    """
+    user_id, course_id, chapters = course
+    run(_write_session(chapters["full"], cursor=2, steps=2))
+
+    def _finished_pair():
+        counts = run(_counts(user_id, course_id))
+        page = run(_progress(user_id, course_id))
+        return counts[course_id][0], sum(
+            1 for lesson in page.values() if lesson.state == "finished"
+        )
+
+    assert _finished_pair() == (1, 1)
+    # 没碰过的那门课，两侧都算「没学完」—— 口径不同的话这里就会分叉。
+    assert run(_counts(user_id, course_id))[course_id] == (1, 2)
+
+    # 那门课还没有内容（夹具里它是 empty），所以它永远不可能学完 ——
+    # **这不是**实现的问题，而是「没有内容」在课程页也显示 pending_content。
+    page = run(_progress(user_id, course_id))
+    # _progress 返回 {title: progress} ⇒ key 才是标题
+    assert page["Empty lesson"].state == "pending_content"
+
+
+def test_a_re_teach_moves_a_finished_lesson_back_to_in_progress(course):
+    """⚠️ 「学完」不是一次性能写下的事实。
+
+    这个模块的 docstring 已经为「课节级进度」写过这条；这里是它对**课程中心**
+    的同样要求 —— 而课程中心那侧是新增的，最容易在这里被写成"查完就算"。
+    """
+    user_id, course_id, chapters = course
+    run(_write_session(chapters["full"], cursor=2, steps=2))
+    assert run(_counts(user_id, course_id))[course_id] == (1, 2)
+    # 用户说「我没懂」⇒ plan 追加两步，cursor 停在 2 ⇒ 又变回在学。
+    # ⚠️ 必须**再写一条更新的 session**（ 取 created_at desc 的
+    # 第一条），而不是给旧的那条改 plan —— 后者测的是改了历史，
+    # 那不是重讲发生的事。
+    run(_write_session(chapters["full"], cursor=2, steps=4))
+    assert run(_counts(user_id, course_id))[course_id] == (0, 2)
+
+
+def test_the_list_endpoint_carries_mode_and_free_counts(course):
+    """线上契约：`mode` 在，且 free 课程的两数不是 0/0。"""
+    user_id, course_id, chapters = course
+    run(_write_session(chapters["full"], cursor=2, steps=2))
+
+    rows = run(_listed(user_id))
+    row = next(r for r in rows if r.id == course_id)
+    # 没有 mode 的话前端 `isFree` 恒 false ⇒ 点进去拉一棵空树
+    assert row.mode == "free"
+    assert (row.completed_point_count, row.total_point_count) == (1, 2)
+
+
+def test_a_video_course_keeps_its_point_counts(course):
+    """视频课那一侧不受影响 —— 修 free 不能改 video 的口径。"""
+    user_id, course_id, _chapters = course
+    video_id = run(_add_video_course(user_id))
+    rows = run(_listed(user_id))
+    row = next(r for r in rows if r.id == video_id)
+    assert row.mode == "video"
+    # 这门课没有 point ⇒ 0/0 是**对的**（它确实一节都没上），而 free 侧的 0/0 是断口
+    assert (row.completed_point_count, row.total_point_count) == (0, 0)
+
+
+async def _counts(user_id: uuid.UUID, course_id: uuid.UUID) -> dict:
+    async with AsyncSessionLocal() as db:
+        return await free_course_service.course_progress_counts(
+            db, course_ids=[course_id]
+        )
+
+
+async def _listed(user_id: uuid.UUID):
+    from services import course_service
+
+    async with AsyncSessionLocal() as db:
+        return await course_service.list_courses(db, user_id=user_id)
+
+
+async def _add_video_course(user_id: uuid.UUID) -> uuid.UUID:
+    course_id = uuid.uuid4()
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "insert into courses "
+                "(id, user_id, topic, title, status, search_status, mode) "
+                "values (:id, :user_id, 't', 'video fixture', 'ready', "
+                " 'searched', 'video')"
+            ),
+            {"id": course_id, "user_id": user_id},
+        )
+    return course_id

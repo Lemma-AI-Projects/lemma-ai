@@ -20,7 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from models.course import Course, CourseLesson, CourseModule, CoursePoint
 from schemas.course import CourseDetailOut, CourseListItemOut, QuestionnaireOut
-from services import progress_service
+from services import free_course_service, progress_service
 
 # Only fully-built courses appear in the list (拍板: status < ready stay hidden,
 # failed drafts too). Everything below this is a draft swept by cleanup.
@@ -271,8 +271,17 @@ async def list_courses(
 ) -> list[CourseListItemOut]:
     """Only ready courses, newest first (drafts/failed stay hidden).
 
-    Carries each course's learned/total point counts so the course center can
-    draw its ring and filter by 进行中/已完成 without a per-card detail fetch.
+    Carries each course's learned/total counts so the course center can draw its
+    ring and filter by 进行中/已完成 without a per-card detail fetch.
+
+    ⚠️ **The two course shapes are counted differently, on purpose.** A video
+    course counts points; a free course counts chapters, because it has no
+    points at all — asking the point query about one returns no row, and
+    "missing entry means 0/0" then makes every free course look untouched and
+    permanently 进行中. The two counts are reached through the module that owns
+    each shape (`progress_service` / `free_course_service`) rather than by
+    branching here, so the criterion for "学完" stays in one place per shape
+    instead of being restated in this loop.
     """
     result = await db.execute(
         select(Course)
@@ -286,6 +295,18 @@ async def list_courses(
         db, user_id=user_id, course_ids=[course.id for course in courses]
     )
 
+    # One batched read per shape, before the loop: a free course's chapters are
+    # counted in a single query no matter how many free courses are on the page
+    # (`course_progress_counts` fans out over ids). Asking per course would make
+    # the list cost grow with the page, which is the thing this loop exists to
+    # avoid.
+    free_ids = [course.id for course in courses if course.mode == "free"]
+    free_counts = (
+        await free_course_service.course_progress_counts(db, course_ids=free_ids)
+        if free_ids
+        else {}
+    )
+
     items: list[CourseListItemOut] = []
     for course in courses:
         item = CourseListItemOut.model_validate(course)
@@ -293,6 +314,14 @@ async def list_courses(
         if entry is not None:
             item.completed_point_count = entry.completed
             item.total_point_count = entry.total
+        completed, total = free_counts.get(course.id, (0, 0))
+        if total:
+            # A free course's chapters ARE its units of progress, so they are
+            # reported through the same two numbers — the card and the filter
+            # both read point counts, and renaming the wire field per shape
+            # would push that branch into the client.
+            item.completed_point_count = completed
+            item.total_point_count = total
         items.append(item)
     return items
 

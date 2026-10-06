@@ -155,11 +155,24 @@ class CourseListItemOut(BaseModel):
     description: str | None = None
     cover_url: str | None = None
     status: str
+    #: 'video' or 'free'. **Load-bearing, not decoration**: the two trees have
+    #: different shapes (`modules → lessons → points` vs
+    #: `units → chapters → lesson objects`), so a card that cannot tell them
+    #: apart opens a free course down the video path — which fetches an empty
+    #: tree. The frontend has been declaring this field all along; the wire
+    #: contract simply never carried it, so `isFree` was permanently false and
+    #: every free course was treated as a video one.
+    mode: str = "video"
     created_at: datetime
     updated_at: datetime
     # Learning progress as counts, not a percentage: the course card shows a
     # ring while the 进行中/已完成 filter needs "finished everything", and both
     # fall out of the same pair without the wire rounding anything away.
+    #
+    #: ⚠️ For a free course these count **chapters**, not points — it has no
+    #: points at all, so the point query returns no row for it and the caller
+    #: reads that as 0/0. See `free_course_service.course_progress_counts` for
+    #: why, and for the one criterion both paths share.
     completed_point_count: int = 0
     total_point_count: int = 0
 

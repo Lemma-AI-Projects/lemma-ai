@@ -127,6 +127,19 @@ export function useSubmitFreeObservation(
       void queryClient.invalidateQueries({
         queryKey: freeLessonQueryKey(courseId, chapterId),
       })
+      // ⚠️ **And the course detail**, because that is where the practice counts
+      // are shown (`practice.answered / practice.total` on
+      // `FreeCourseDetailView`). Invalidating only the lesson left the course
+      // page showing the count from before the answer — the learner answered a
+      // question and the number they go back to see did not move, which reads
+      // as "my answer didn't count" rather than as a stale cache.
+      //
+      // Deliberately two targeted keys rather than `refetchType: 'all'`: this
+      // trades one extra request for not re-fetching every unrelated course
+      // query the page happens to have mounted.
+      void queryClient.invalidateQueries({
+        queryKey: freeCourseDetailQueryKey(courseId),
+      })
     },
   })
 }

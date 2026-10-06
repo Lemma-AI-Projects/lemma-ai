@@ -816,6 +816,83 @@ class TreeEditConflict(Exception):
         )
 
 
+async def course_progress_counts(
+    db: AsyncSession, *, course_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, tuple[int, int]]:
+    """每个 free 课程的 (学完的课节数, 课节总数)，供课程中心画环。
+
+    **为什么需要它**：`progress_service.get_courses_point_counts` join 的是
+    `course_points` —— 那是视频课的表。free 课程没有 point，所以它在那个查询里
+    **根本没有行**，调用方按「缺 entry 视为 0/0」处理 ⇒ 自由课程在课程中心
+    永远显示 0/0、永远落在「进行中」tab。这是一个断口，不是一个显示偏好。
+
+    **口径与 `_lesson_progress` 完全一致**（`steps > 0 且 cursor >= steps` 算学完）：
+    两处必须同源，否则课程页说「3/4 学完」而课程中心说「0/4」——
+    那比没有进度更糟。这里**复用它的判据而不是重新发明一个**。
+
+    三次批量读（课节 · 最新 session · 有内容的课节），所以整个列表页
+    的成本与课程数量无关。
+    """
+    if not course_ids:
+        return {}
+    chapters: dict[uuid.UUID, list[uuid.UUID]] = {}
+    # Column order matters and is easy to get wrong: the select is
+    # (course_id, chapter_id, unit_id), so the unpacking must match. Getting it
+    # wrong groups chapters by **unit** id and returns a dict full of courses
+    # nobody asked about — which looks like a working function returning
+    # plausible numbers.
+    for course_id, chapter_id, _unit_id in (
+        await db.execute(
+            select(
+                CourseUnit.course_id,
+                CourseChapter.id,
+                CourseChapter.unit_id,
+            )
+            .join(CourseChapter, CourseChapter.unit_id == CourseUnit.id)
+            .where(CourseUnit.course_id.in_(course_ids))
+            .order_by(CourseUnit.order_index, CourseChapter.order_index)
+        )
+    ).all():
+        chapters.setdefault(course_id, []).append(chapter_id)
+    if not chapters:
+        return {}
+
+    flat = [chapter_id for ids in chapters.values() for chapter_id in ids]
+    # "有内容"只需要 >0，不需要精确计数 —— 所以用 `exists` 而不是 `count`，
+    # 也因此不必改 `_content_counts` 的签名（它按 course 查，被 detail 路径用着）。
+    with_content: set[uuid.UUID] = set(
+        (
+            await db.execute(
+                select(CourseChapter.id)
+                .where(
+                    CourseChapter.id.in_(flat),
+                    exists().where(
+                        CourseLessonObject.chapter_id == CourseChapter.id
+                    ),
+                )
+                .order_by(CourseChapter.order_index)
+            )
+        ).scalars()
+    )
+    progress = await _lesson_progress(
+        db,
+        chapter_ids=flat,
+        content={chapter_id: 1 for chapter_id in with_content},
+    )
+    return {
+        course_id: (
+            sum(
+                1
+                for chapter_id in chapter_ids
+                if progress.get(chapter_id)
+                and progress[chapter_id].state == "finished"
+            ),
+            len(chapter_ids),
+        )
+        for course_id, chapter_ids in chapters.items()
+    }
+
+
 async def _lessons_with_learner_data(
     db: AsyncSession, chapter_ids: list[uuid.UUID]
 ) -> list[str]:

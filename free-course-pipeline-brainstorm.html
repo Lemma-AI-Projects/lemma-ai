@@ -1,0 +1,1775 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free Course Pipeline — 框架内发散式研究</title>
+<style>
+:root{
+  --ink:#0d0f12; --ink2:#161a20; --ink3:#1e232b;
+  --line:#2a313c; --line2:#39424f;
+  --fg:#e8ecf1; --fg2:#a8b3c1; --fg3:#6f7c8c;
+  --paper:#fbfaf7; --paper2:#f2efe9; --paperline:#ddd8ce;
+  --ink-on-paper:#1a1c1f; --fg2-on-paper:#4d5560;
+  --accent:#c9a227; --accent2:#4a9d8f; --warn:#c96a4a; --cool:#5a7fa8;
+  --fact:#2f7d5f; --infer:#8a6d2f; --assume:#6a5a8f;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.75}
+code,.mono{font-family:var(--mono);font-size:.88em}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+/* ---------- cover ---------- */
+.cover{min-height:96vh;display:flex;flex-direction:column;justify-content:center;padding:80px 0 60px;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:linear-gradient(90deg,transparent,var(--line2),transparent)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--fg3);margin-bottom:28px}
+h1{font-size:clamp(38px,6.4vw,80px);line-height:1.04;margin:0 0 28px;font-weight:600;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:20px;color:var(--fg2);max-width:760px;line-height:1.7}
+.meta{margin-top:48px;display:flex;gap:40px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--fg3)}
+.meta b{display:block;color:var(--fg2);font-weight:500;margin-top:4px}
+
+/* ---------- sections ---------- */
+section{padding:88px 0;border-top:1px solid var(--line)}
+.sec-head{margin-bottom:52px}
+.sec-no{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--accent);display:block;margin-bottom:14px}
+h2{font-size:clamp(28px,3.6vw,44px);line-height:1.14;margin:0 0 18px;font-weight:600;letter-spacing:-.015em}
+h3{font-size:21px;margin:52px 0 16px;font-weight:600;letter-spacing:-.01em}
+h4{font-size:16px;margin:32px 0 10px;font-weight:600;color:var(--fg)}
+p{margin:0 0 16px}
+.sub{color:var(--fg2);font-size:17px;max-width:820px}
+
+/* ---------- evidence tags ---------- */
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;padding:2px 7px;border-radius:3px;margin-right:6px;vertical-align:2px;font-weight:600}
+.t-fact{background:rgba(47,125,95,.18);color:#5fbd97;border:1px solid rgba(47,125,95,.4)}
+.t-infer{background:rgba(138,109,47,.18);color:#c9a94a;border:1px solid rgba(138,109,47,.4)}
+.t-assume{background:rgba(106,90,143,.18);color:#a893d1;border:1px solid rgba(106,90,143,.4)}
+
+.cite{font-family:var(--mono);font-size:12.5px;color:var(--fg3);display:block;margin:6px 0 0;padding-left:14px;border-left:2px solid var(--line2)}
+.cite:hover{color:var(--fg2);border-color:var(--accent)}
+
+/* ---------- cards ---------- */
+.cards{display:grid;gap:18px;margin:28px 0}
+.c2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.c3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.c4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.card{background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:24px}
+.card.hi{border-color:var(--accent);background:linear-gradient(180deg,rgba(201,162,39,.07),transparent 60%)}
+.card h4{margin:0 0 10px;font-size:16px}
+.card p{margin:0;font-size:15px;color:var(--fg2);line-height:1.68}
+.card .num{font-family:var(--mono);font-size:11px;color:var(--fg3);letter-spacing:.16em;margin-bottom:12px;display:block}
+
+/* ---------- the thesis ---------- */
+.thesis{background:var(--paper);color:var(--ink-on-paper);border-radius:14px;padding:48px;margin:40px 0}
+.thesis h3{color:var(--ink-on-paper);margin-top:0;font-size:28px}
+.thesis p{color:var(--fg2-on-paper)}
+.thesis .cite{color:#7a736a;border-color:var(--paperline)}
+.thesis strong{color:var(--ink-on-paper)}
+
+/* ---------- pipeline diagram ---------- */
+.pipe{margin:32px 0;background:var(--ink2);border:1px solid var(--line);border-radius:12px;padding:28px;overflow-x:auto}
+.pipe-row{display:flex;align-items:stretch;gap:0;min-width:min-content;margin-bottom:8px}
+.pipe-row+.pipe-row{margin-top:6px}
+.node{flex:1;min-width:112px;background:var(--ink3);border:1px solid var(--line2);border-radius:8px;padding:12px 10px;text-align:center;font-size:13px;line-height:1.4;position:relative}
+.node b{display:block;font-size:13.5px;margin-bottom:3px;font-weight:600}
+.node span{color:var(--fg3);font-size:11.5px;font-family:var(--mono)}
+.node.dead{background:repeating-linear-gradient(45deg,#1a1e24,#1a1e24 6px,#15181d 6px,#15181d 12px);color:var(--fg3);border-style:dashed}
+.node.gap{background:rgba(201,106,74,.09);border-color:rgba(201,106,74,.45);color:#d99070}
+.node.ok{background:rgba(74,157,143,.09);border-color:rgba(74,157,143,.45)}
+.node.hl{background:rgba(201,162,39,.1);border-color:var(--accent)}
+.node+.node{margin-left:20px}
+.node+.node::before{content:"→";position:absolute;left:-17px;top:50%;transform:translateY(-50%);color:var(--fg3);font-size:13px}
+.node.loop::after{content:"↺";position:absolute;right:-1px;top:-9px;font-size:10px;color:var(--accent)}
+.pipe-cap{font-family:var(--mono);font-size:11.5px;color:var(--fg3);margin-top:14px;letter-spacing:.06em}
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--fg3);margin-top:18px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;margin:28px 0;font-size:14.5px}
+th,td{text-align:left;padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg3);font-weight:600;border-bottom-color:var(--line2)}
+tbody tr:hover{background:rgba(255,255,255,.017)}
+td.mono,th.mono{font-family:var(--mono);font-size:13px}
+.yes{color:#5fbd97;font-weight:600}
+.no{color:#d07a5c;font-weight:600}
+.mid{color:var(--accent);font-weight:600}
+
+/* ---------- matrix (pipelines) ---------- */
+.matrix{overflow-x:auto;margin:32px 0}
+.matrix table{min-width:900px;font-size:13.5px}
+.matrix th:first-child{position:sticky;left:0;background:var(--ink);z-index:1;min-width:170px}
+.matrix td:first-child{font-weight:600;background:var(--ink2);position:sticky;left:0;z-index:1;border-right:1px solid var(--line)}
+.stars{letter-spacing:1px;color:var(--accent);white-space:nowrap}
+.stars .off{color:var(--line2)}
+
+/* ---------- primitives ---------- */
+.prim{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));margin:32px 0}
+.p-card{background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:20px;position:relative}
+.p-card.pick{border-color:var(--accent2);background:linear-gradient(180deg,rgba(74,157,143,.08),transparent 60%)}
+.p-card .badge{position:absolute;top:-9px;left:18px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;padding:2px 8px;border-radius:3px;background:var(--ink);border:1px solid var(--line2);color:var(--fg3)}
+.p-card.pick .badge{background:var(--accent2);border-color:var(--accent2);color:#0d0f12;font-weight:700}
+.p-card h4{margin:6px 0 8px}
+.p-card p{font-size:14px;color:var(--fg2);margin:0 0 10px}
+.p-card .ex{font-family:var(--mono);font-size:11.5px;color:var(--fg3);border-top:1px solid var(--line);padding-top:9px}
+
+/* ---------- perspectives ---------- */
+details.persp{border:1px solid var(--line);border-radius:10px;margin:14px 0;background:var(--ink2);overflow:hidden}
+details.persp[open]{border-color:var(--line2)}
+details.persp>summary{cursor:pointer;padding:18px 22px;list-style:none;display:flex;align-items:center;gap:14px;font-size:16.5px;font-weight:600}
+details.persp>summary::-webkit-details-marker{display:none}
+details.persp>summary::before{content:"▸";color:var(--accent);transition:transform .15s;display:inline-block;font-size:13px}
+details.persp[open]>summary::before{transform:rotate(90deg)}
+details.persp .pno{font-family:var(--mono);font-size:11px;color:var(--fg3);letter-spacing:.14em}
+details.persp .verdict{margin-left:auto;font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:3px;border:1px solid var(--line2);color:var(--fg3);white-space:nowrap}
+details.persp .verdict.keep{color:#5fbd97;border-color:rgba(47,125,95,.5)}
+details.persp .verdict.defer{color:var(--accent);border-color:rgba(138,109,47,.5)}
+details.persp .verdict.noise{color:#d07a5c;border-color:rgba(201,106,74,.5)}
+details.persp .body{padding:0 22px 22px}
+details.persp .body p{color:var(--fg2);font-size:15px}
+
+/* ---------- callouts ---------- */
+.note{border-left:3px solid var(--accent);background:rgba(201,162,39,.05);padding:16px 20px;margin:24px 0;border-radius:0 8px 8px 0}
+.note.red{border-color:var(--warn);background:rgba(201,106,74,.06)}
+.note.green{border-color:var(--accent2);background:rgba(74,157,143,.05)}
+.note .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--fg3);display:block;margin-bottom:6px}
+.note p{margin:0;font-size:15px;color:var(--fg2)}
+.note strong{color:var(--fg)}
+
+/* ---------- experiment ---------- */
+.exp{background:var(--ink2);border:1px solid var(--line);border-radius:12px;padding:30px;margin:24px 0;border-left:3px solid var(--accent)}
+.exp .eid{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--accent);margin-bottom:12px}
+.exp h3{margin:0 0 16px}
+.flowrow{display:grid;gap:0;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:20px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.flowrow>div{padding:14px 16px;border-right:1px solid var(--line);background:var(--ink3);font-size:13.5px;line-height:1.55}
+.flowrow>div:last-child{border-right:none}
+.flowrow .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--fg3);display:block;margin-bottom:5px}
+.falsify{border:1px dashed rgba(201,106,74,.5);background:rgba(201,106,74,.05);padding:16px 20px;border-radius:8px;margin-top:18px}
+.falsify .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:#d99070;display:block;margin-bottom:5px}
+
+/* ---------- shallow to deep ---------- */
+.depth{display:grid;gap:14px;margin:28px 0}
+.d-row{display:grid;grid-template-columns:110px 1fr;gap:20px;align-items:start;background:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:18px 20px}
+.d-time{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.06em;padding-top:2px}
+.d-body h4{margin:0 0 6px;font-size:15.5px}
+.d-body p{margin:0;font-size:14.5px;color:var(--fg2)}
+
+/* ---------- toc ---------- */
+.toc{position:sticky;top:0;background:rgba(13,15,18,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);z-index:20;padding:11px 0}
+.toc-in{max-width:1180px;margin:0 auto;padding:0 28px;display:flex;gap:20px;overflow-x:auto;scrollbar-width:none}
+.toc-in::-webkit-scrollbar{display:none}
+.toc a{font-family:var(--mono);font-size:12px;color:var(--fg3);white-space:nowrap;letter-spacing:.05em}
+.toc a:hover{color:var(--accent)}
+
+footer{padding:60px 0;border-top:1px solid var(--line);color:var(--fg3);font-size:14px}
+footer p{max-width:700px}
+
+@media(max-width:640px){
+  .wrap{padding:0 18px}
+  section{padding:60px 0}
+  .thesis{padding:26px}
+  .d-row{grid-template-columns:1fr;gap:8px}
+  h1{font-size:34px}
+}
+</style>
+</head>
+<body>
+
+<div class="toc"><div class="toc-in">
+  <a href="#reality">1 当前事实</a>
+  <a href="#what">2 它到底是什么</a>
+  <a href="#pipe">3 当前 pipeline</a>
+  <a href="#bottleneck">4 结构性瓶颈</a>
+  <a href="#space">5 设计空间</a>
+  <a href="#cross">6 跨领域</a>
+  <a href="#prim">7 Primitive</a>
+  <a href="#pipes">8 备选 pipeline</a>
+  <a href="#shallow">9 浅 → 深</a>
+  <a href="#ls">10 与 Learn Space</a>
+  <a href="#conv">11 收敛</a>
+  <a href="#exp">12 实验</a>
+</div></div>
+
+<div class="wrap">
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <div class="eyebrow">内部研究 · 发散式头脑风暴 · 2026-10-05</div>
+  <h1>Free Course<br>作为一次<em>学习</em>，<br>而不只是一门课</h1>
+  <p class="lede">
+    这不是一份产品需求文档。它是一次对现有代码的审计，加上一次受约束的发散，
+    目标是回答一个问题：<strong style="color:var(--fg)">当 AI 不只是回答问题、
+    而是真的参与一个人的学习过程时，人和 AI 之间最基本的那个东西是什么。</strong>
+  </p>
+  <p class="lede" style="margin-top:20px;font-size:17px;color:var(--fg3)">
+    Free Course 是这个问题的实验场。它可以失败，可以长得和 Learn Space 完全不同，
+    甚至可以被证明是错方向 —— 但每一次实验都应该让 Lemma 更接近那个答案。
+  </p>
+  <div class="meta">
+    <div>代码基线<b>connecting-page @ d7a9299c</b></div>
+    <div>审计范围<b>后端 3,088 行 · 前端全链路</b></div>
+    <div>事实带行号<b>本文所有 ⚡ 事实 均可回溯</b></div>
+    <div>状态<b>研究，未改一行代码</b></div>
+  </div>
+</div>
+
+<!-- ================= 1 CURRENT REALITY ================= -->
+<section id="reality">
+<div class="sec-head">
+  <span class="sec-no">01 — Current Reality</span>
+  <h2>先说清楚现在真的有什么</h2>
+  <p class="sub">
+    这一节全是事实，不含判断。每一条都能点回代码行。
+    判断从第 4 节开始。
+  </p>
+</div>
+
+<h3>真实存在的（比我预期的多）</h3>
+
+<div class="cards c3">
+  <div class="card">
+    <span class="num">生成</span>
+    <h4>两阶段 6 次模型调用</h4>
+    <p>Phase 1：intent → map → path，产出真实落库。
+       Phase 2：assess_gap → blueprint → content。</p>
+    <span class="cite">services/free_course_events.py:283-344 · :347-476</span>
+  </div>
+  <div class="card">
+    <span class="num">教具</span>
+    <h4>白板课（整条链最扎实的部分）</h4>
+    <p>一次模型调用返回整段教学时间线，每步带 narration + 板书动作，
+       前端按句播放。形状硬校验：必须同时含 open 提问、choice 提问、
+       move、awaitClick，缺一抛 409。</p>
+    <span class="cite">ai/free_course/teaching/planner.py:117-122 · :252-289</span>
+  </div>
+  <div class="card">
+    <span class="num">连续性</span>
+    <h4>会话恢复是真的</h4>
+    <p>cursor 语义精确（"下一个要播的 step 序号"，因为每轮会追加）。
+       刷新后 <code>POST /session</code> 遇 active 行原样返回，不重新 plan、
+       不重新付费。旧会话 archived 不删。</p>
+    <span class="cite">services/free_course_session_service.py:17-20 · :295-308</span>
+  </div>
+  <div class="card">
+    <span class="num">判分</span>
+    <h4>两条独立判分路径</h4>
+    <p>客观题本地比对 option id；开放题交模型按 expected 判，
+       且要求"判定要保守"。模型只解释，不改判定。</p>
+    <span class="cite">free_course_service.py:585-587 · session_service.py:496-500</span>
+  </div>
+  <div class="card">
+    <span class="num">接口</span>
+    <h4>learner_state 的完整空壳</h4>
+    <p><code>LearnerStateProvider</code> Protocol + <code>LearnerState</code>
+       五个字段 + prompt 渲染函数，全部存在，注释写明"真正的 learner 层在 main
+       分支，未合入"。</p>
+    <span class="cite">ai/free_course/learner_state.py:8-12 · :26-64</span>
+  </div>
+  <div class="card">
+    <span class="num">调参</span>
+    <h4>四道问卷 + tuning</h4>
+    <p>volume / depth / focus / pace。volume 有结构性影响
+       （blueprint 序列长度 4/6/8），其余只进 prompt 措辞。</p>
+    <span class="cite">free_course_events.py:66-104 · blueprint.py:20-30</span>
+  </div>
+</div>
+
+<h3>UI 假象与死代码（这些会误导读代码的人）</h3>
+
+<div class="cards c2">
+  <div class="card">
+    <span class="num">假象</span>
+    <h4>「本地判分」是假的</h4>
+    <p>注释写 "graded locally against the option ids"，
+       代码只把 <code>optionId</code> 发给后端，从未本地比对。</p>
+    <span class="cite">FreeCourseLessonView.tsx:373-375 vs :386</span>
+  </div>
+  <div class="card">
+    <span class="num">死代码</span>
+    <h4><code>createFreeCourse</code> 无调用方</h4>
+    <p>前端定义了创建 API 但从不调用 —— 课程创建完全隐在 backend agent 回合里。
+       "用户输入什么决定生成什么"这层因果在前端不可见也不可测。</p>
+    <span class="cite">freeCourseApi.ts:26-37（仅定义处命中）</span>
+  </div>
+  <div class="card">
+    <span class="num">不可达</span>
+    <h4>「本节还没有内容」是死分支</h4>
+    <p><code>isGenerating</code> 初值就是 <code>enabled</code>，
+       而 enabled = <code>!hasContent</code>，所以永远先走进度分支。</p>
+    <span class="cite">useFreeLessonGeneration.ts:36</span>
+  </div>
+  <div class="card">
+    <span class="num">重复</span>
+    <h4><code>finished</code> 分支写了两遍</h4>
+    <p><code>finished ? A : finished ? A : B</code> —— 第二个不可达。</p>
+    <span class="cite">TeachingSessionView.tsx:456-469</span>
+  </div>
+  <div class="card">
+    <span class="num">装饰</span>
+    <h4>4 个首页推荐 chip 没有 onClick</h4>
+    <p>点了没反应。这是"随便试一个"这条入口**唯一可能存在的地方**，而它不存在。</p>
+    <span class="cite">pages/HomePage.tsx:73-79 · mock/homeSuggestions.ts:3-8</span>
+  </div>
+  <div class="card">
+    <span class="num">装饰</span>
+    <h4>三个 InputMenu 是空壳</h4>
+    <p>「未使用插件 / 联网搜索未启用 / 未连接记忆」内容全是
+       <code>aria-hidden</code> 空 div。</p>
+    <span class="cite">features/home/ChatInput.tsx:137 · :156 · :175</span>
+  </div>
+</div>
+
+<div class="note red">
+  <span class="lbl">⚠️ 一处真实断裂（我亲自核实过）</span>
+  <p>
+    <strong><code>CourseListItemOut</code> 没有 <code>mode</code> 字段</strong>，
+    而前端 <code>types/course.ts:70</code> 声明了 <code>mode: 'video' | 'free'</code>
+    并用 <code>course.mode === 'free'</code> 决定跳过视频详情拉取。
+    后端不会吐出这个字段 ⇒ <code>isFree</code> 恒为 false ⇒
+    <strong>free 课程在课程中心被当成视频课</strong>，会去拉一棵空树。
+    同理，<code>totalPointCount</code> 对 free 恒为 0，
+    所以"已学完" tab 永远看不到它，进度环永远 0/0。
+  </p>
+  <span class="cite">backend/schemas/course.py:148-165 · frontend/src/types/course.ts:70 · courseCenterFilters.ts:9-14</span>
+</div>
+
+<h3>没有连接起来的（最重要的一节）</h3>
+
+<div class="thesis">
+  <h3>学习者做过的事，与接下来做什么之间，没有一根线。</h3>
+  <p>
+    整个 Free Course 链路上，用户的每一个动作都落在某个地方 ——
+    答对、答错、说"我没懂"、停止、放弃 —— 但<strong>没有一个地方读它们来决定下一步</strong>。
+  </p>
+  <p>证据链，每一环我都亲自核过：</p>
+  <table style="margin:22px 0 8px">
+    <thead><tr><th>环节</th><th>发生了什么</th><th>证据</th></tr></thead>
+    <tbody>
+      <tr><td>课内练习判分</td><td>写进 <code>course_lesson_observations</code></td>
+          <td class="mono">free_course_service.py:604</td></tr>
+      <tr><td>教学会话判分</td><td><strong>只写进 <code>transcript_json</code></strong>，<br>不进 observation 表</td>
+          <td class="mono">session_service.py:444<br>（<code>CourseLessonObservation</code> 全文只在 import 行 :49）</td></tr>
+      <tr><td>两者是否触发 Learner State / Coordinator</td>
+          <td><strong>零调用</strong> —— 全仓 grep 无命中</td>
+          <td class="mono">ai/free_course/** · services/free_course_*.py</td></tr>
+      <tr><td>observation 被谁读</td><td>只有两次 <code>COUNT(*)</code></td>
+          <td class="mono">free_course_events.py:546 · free_course_service.py:717</td></tr>
+      <tr><td>那个 COUNT 进了哪</td><td>渲染成 prompt 里一行字：<br><code>- 本课程已完成作答：N 次</code></td>
+          <td class="mono">ai/free_course/learner_state.py:90</td></tr>
+      <tr><td>下一节课由什么决定</td><td><strong>按 map 顺序取下一个下标</strong>，不看学习者</td>
+          <td class="mono">free_course_service.py:511-538</td></tr>
+      <tr><td>课节的掌握状态</td><td>硬编码 <code>status="unknown"</code>，注释：<br>"声称学习者已掌握会是谎言"</td>
+          <td class="mono">free_course_service.py:411-430</td></tr>
+    </tbody>
+  </table>
+  <p>
+    <strong>所以学习是一个"读取"过程 —— 只是被读的那份数据，从来没有被写。</strong>
+    这不是"功能少"，这是一个结构性的空洞，而且它已经在代码里留下了完整的形状：
+    接口在、数据类在、渲染函数在，只有内容是空的。
+  </p>
+</div>
+
+<h3>有潜力但没被利用的</h3>
+
+<div class="cards c4">
+  <div class="card">
+    <span class="num">已存在</span>
+    <h4>transcript</h4>
+    <p>注释自认是"学习者真实经历的忠实记录，包括他后来要求重讲的部分"。
+       <strong>从不被读来做任何推理。</strong></p>
+    <span class="cite">session_service.py:429-434</span>
+  </div>
+  <div class="card">
+    <span class="num">已存在</span>
+    <h4>cursor</h4>
+    <p>精确到"下一个要播的 step"。它是"讲到哪里"，
+       不是"学到哪里"—— 这个区别正好是缺的那一半。</p>
+    <span class="cite">session_service.py:17-20</span>
+  </div>
+  <div class="card">
+    <span class="num">已存在</span>
+    <h4>「我没懂，换个讲法」</h4>
+    <p>全套里唯一的自适应信号。设计意图明确，
+       但它只是 prompt 层的一次性重讲，不改难度、不改路线。</p>
+    <span class="cite">session/confusion.ts:3-18 · planner.py:171-176</span>
+  </div>
+  <div class="card">
+    <span class="num">已存在</span>
+    <h4>question 里的 hint</h4>
+    <p>后端生成、有 wire 字段，<strong>前端无消费者</strong>。
+       而 hint 正是"帮助该撤到哪一步"的核心。</p>
+    <span class="cite">schemas/free_course.py:388</span>
+  </div>
+</div>
+
+<h3>来自旧思路、与现在方向冲突的</h3>
+
+<div class="note">
+  <span class="lbl">⟡ 一条</span>
+  <p>
+    课程作为<strong>大纲</strong>（unit → chapter → lesson object）这件事本身，
+    来自视频课的年代。视频课需要章节，因为视频有顺序且不能交互。
+    Free Course 的 docstring 自己写明了它与视频课是两棵树
+    （<code>mode='free'</code> vs <code>mode='video'</code>），
+    却<strong>继承了视频课"内容按顺序消费"的假设</strong>。
+    而现在链路上真正变化最快的部分 —— 一次讲解（session）——
+    <strong>完全在这棵树之外</strong>，它自己是一份预生成脚本。
+  </p>
+  <span class="cite">models/free_course.py:1-24（两棵树的声明）· planner.py:117（脚本式会话）</span>
+</div>
+</section>
+
+<!-- ================= 2 WHAT IT IS ================= -->
+<section id="what">
+<div class="sec-head">
+  <span class="sec-no">02 — What Free Course Actually Is</span>
+  <h2>Free Course 现在到底是什么</h2>
+  <p class="sub">从代码与真实流程推导，不预设。它比"课程"少，比"聊天"多。</p>
+</div>
+
+<div class="cards c2">
+  <div class="card">
+    <span class="num">不是</span>
+    <h4>不是"课程 + 聊天"</h4>
+    <p>聊天与课程是<strong>两个并列的界面</strong>，不是同一个东西的两种表现。
+       点"切到教学会话"是从一棵树上跳到另一棵树上，
+       课程进度与会话进度<strong>互不读写</strong>。</p>
+  </div>
+  <div class="card">
+    <span class="num">不是</span>
+    <h4>不是"AI 生成课程 + 对话式导师"</h4>
+    <p>它更接近<strong>"一次性生成一份大纲 + 一次预录的讲解"</strong>。
+       会话不是对话：模型一次返回整段时间线，之后按句播放。
+       形状必须符合硬校验，缺一抛 409。</p>
+  </div>
+  <div class="card hi">
+    <span class="num">更接近</span>
+    <h4>一份被编译过的学习路径</h4>
+    <p><strong>编译期产物。</strong>像一份 build 好的东西：
+       输入一句话，经过若干次模型调用，产出一个固定形状的树 + 若干固定形状的脚本。
+       学习者在这个产物上<strong>按顺序消费</strong>，
+       他的行为不参与这个产物的形状，只被记在旁边。</p>
+    <span class="cite">由 :283-344 / :347-476 / planner.py:117 三处共同支持</span>
+  </div>
+  <div class="card hi">
+    <span class="num">最接近的隐含结构</span>
+    <h4>它在结构上已经暗示了 adaptation，<br>但把它关在了门外</h4>
+    <p><code>learner_state</code> 进了 prompt；<code>observed_attempts</code>
+       进了 prompt；<code>confused</code> 能改变讲解。
+       <strong>所有零件都在，没有一个能改变下一步该走哪。</strong></p>
+  </div>
+</div>
+
+<div class="note green">
+  <span class="lbl">✓ 一句话结论</span>
+  <p>
+    <strong>Free Course 是一个学习内容的编译器，它缺一个运行时。</strong>
+    编译产物（大纲、讲解脚本）是真实的、可用的；缺的是"根据学习者此刻的状态
+    重新决定下一条指令"的那一层 —— 而那一层在代码里只有一个 5 字段的数据类和一个
+    <code>COUNT(*)</code>。
+  </p>
+</div>
+</section>
+
+<!-- ================= 3 CURRENT PIPELINE ================= -->
+<section id="pipe">
+<div class="sec-head">
+  <span class="sec-no">03 — Current Pipeline</span>
+  <h2>当前 pipeline，逐段标现状</h2>
+  <p class="sub">
+    <span class="tag t-fact">事实</span>绿色 = 有真实实现 ·
+    <span class="tag t-fact">事实</span>红色 = 有代码但断了 ·
+    <span class="tag t-fact">事实</span>虚线 = 死代码
+  </p>
+</div>
+
+<div class="pipe">
+  <div class="pipe-row">
+    <div class="node"><b>Intent</b><span>用户描述</span></div>
+    <div class="node ok"><b>Map</b><span>3 次模型 · 落表</span></div>
+    <div class="node ok"><b>Path</b><span>纯函数 · 不落表</span></div>
+    <div class="node gap"><b>问卷</b><span>4 题 · 必答</span></div>
+    <div class="node ok"><b>Blueprint</b><span>落表</span></div>
+    <div class="node ok"><b>Content</b><span>落表</span></div>
+  </div>
+  <div class="pipe-cap">编译期（用户看到任何教学内容之前）— 6 次模型调用 + 4 道必答题</div>
+
+  <div class="pipe-row" style="margin-top:26px">
+    <div class="node ok"><b>读 explanation</b><span>纯阅读 · 无交互</span></div>
+    <div class="node ok"><b>做 practice</b><span>有选项/自由文本</span></div>
+    <div class="node gap"><b>Observation</b><span>存下来了</span></div>
+    <div class="node gap"><b>Learner State</b><span>只有 COUNT(*)</span></div>
+  </div>
+  <div class="pipe-cap">消费期 · 课内练习</div>
+
+  <div class="pipe-row" style="margin-top:26px">
+    <div class="node ok"><b>白板讲解</b><span>预生成脚本 · 按句播</span></div>
+    <div class="node ok"><b>confused 重讲</b><span>唯一自适应</span></div>
+    <div class="node gap"><b>transcript</b><span>忠实记录</span></div>
+    <div class="node dead"><b>读 transcript</b><span>不存在</span></div>
+  </div>
+  <div class="pipe-cap">消费期 · 教学会话（与会话进度互不读写）</div>
+
+  <div class="pipe-row" style="margin-top:26px">
+    <div class="node dead"><b>下一课</b><span>按下标 +1</span></div>
+    <div class="node dead"><b>难度调整</b><span>不存在</span></div>
+    <div class="node dead"><b>完成判定</b><span>cursor 到底</span></div>
+    <div class="node dead"><b>之后</b><span>无通知/无推荐</span></div>
+  </div>
+  <div class="pipe-cap">收尾 — 整条链的最后一格是空的</div>
+
+  <div class="legend">
+    <span><i style="background:rgba(74,157,143,.3);border:1px solid #4a9d8f"></i>有真实实现</span>
+    <span><i style="background:rgba(201,106,74,.3);border:1px solid #c96a4a"></i>存了但没人读</span>
+    <span><i style="background:#15181d;border:1px dashed #6f7c8c"></i>不存在 / 死代码</span>
+  </div>
+</div>
+
+<div class="note red">
+  <span class="lbl">⚠️ 值得单独指出的一格</span>
+  <p>
+    「下一课」是 <code>ordered[index + 1]</code>。
+    这意味着<strong>课程推进是一个数组下标，而学习不是</strong>。
+    一个学习者卡在第三章的第 2 节，与他卡在第 3 章，系统看到的是同一件事：
+    "还没到第 4 节"。这与"选一节课看完了就完事"在数据结构上无法区分。
+  </p>
+  <span class="cite">free_course_service.py:511-538</span>
+</div>
+</section>
+<!-- ================= 4 BOTTLENECK ================= -->
+<section id="bottleneck">
+<div class="sec-head">
+  <span class="sec-no">04 — Structural Problems</span>
+  <h2>五个结构性瓶颈</h2>
+  <p class="sub">
+    不是「UI 不好 / 功能不够 / AI 不够聪明」。每一条都落到具体代码位置，
+    并且每一条都配一条反例检查。
+  </p>
+</div>
+
+<h3>A · Course 是不是太「静态」？</h3>
+
+<div class="cards c2">
+  <div class="card">
+    <h4>是。而且比「静态」更具体：它是<strong>编译期产物</strong></h4>
+    <p>用户描述 → 6 次模型调用 → 一棵固定的树 + 若干固定形状的脚本。
+       学习者在这份产物上按顺序消费。<strong>产物在他开始之前就已经定完了。</strong></p>
+    <span class="cite">free_course_events.py:283-344 · :347-476</span>
+  </div>
+  <div class="card hi">
+    <h4>反例检查：它已经有运行时了，只是运行时不看产物</h4>
+    <p><code>awaitClick</code>、<code>confused</code> 重讲、
+       会话 <code>extend</code> 追加步骤 —— 这些都是运行时的形状。
+       <strong>问题不是「没有运行时」，是「运行时不回头修改编译产物」。</strong>
+       所以补一个运行时本身没有意义，除非它能改下一步。</p>
+    <span class="cite">planner.py:171-176 · session_service.py:429-434</span>
+  </div>
+</div>
+
+<h3>B · AI 到底知道什么？</h3>
+
+<div class="matrix">
+<table>
+<thead><tr><th>AI 被告知的</th><th>来源</th><th>实际影响</th></tr></thead>
+<tbody>
+<tr><td>学习者自报水平</td><td class="mono">intent.level</td>
+    <td class="yes">进 prompt 一行</td></tr>
+<tr><td>已掌握 / 薄弱 / notes</td><td class="mono">LearnerState 三字段</td>
+    <td class="no"><strong>全仓无调用方传过</strong> ⇒ 恒为 None</td></tr>
+<tr><td>本课程已完成作答 N 次</td><td class="mono">COUNT(*)</td>
+    <td class="mid">进 prompt 一行，<strong>但不改变任何分支</strong></td></tr>
+<tr><td>已讲过什么（最近 6 步）</td><td class="mono">_TAUGHT_WINDOW=6</td>
+    <td class="yes">防复读，用得对</td></tr>
+<tr><td>用户为什么来</td><td class="mono">intent</td>
+    <td class="mid">map 与 path 完全不受问卷影响</td></tr>
+<tr><td>他刚刚做了什么</td><td class="mono">transcript</td>
+    <td class="no"><strong>判分在 prompt 里，但读它的只有渲染</strong></td></tr>
+<tr><td>他哪里卡住了</td><td>—</td><td class="no">只有他自己点「我没懂」</td></tr>
+<tr><td>他是否真的理解</td><td>—</td>
+    <td class="no">不存在这个概念（掌握度硬编码 unknown）</td></tr>
+<tr><td>他应该继续还是停</td><td>—</td>
+    <td class="no">由 map 顺序决定</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note red">
+  <span class="lbl">⟡ 这里的核心发现</span>
+  <p>
+    <strong>AI 知道「他说了什么」，不知道「他会什么」。</strong>
+    这两者的差距不是数据量的问题 —— 是
+    <code>knowledge_service</code> 那套「独立且未受帮助才算」的规则
+    （<code>state.py:291</code>）在 Free Course 里<strong>完全不存在</strong>。
+    换句话说：<strong>Free Course 里的「对」和「会」是同一件事</strong>，
+    而系统早在别处就决定了它们不该是同一件事。
+  </p>
+  <span class="cite">断头：free_course_service.py:604 · session_service.py:444 均不触发 evidence_entry / coordinator_service</span>
+</div>
+
+<h3>C · 用户真正做了什么？</h3>
+
+<p>把「读了 AI 输出」从「学习」里剥掉之后，剩下的东西比预想的少，但比预想的真。</p>
+
+<div class="matrix">
+<table>
+<thead><tr><th>动作</th><th>有 UI</th><th>被记录</th><th>被读来决定下一步</th><th>是「学习动作」吗</th></tr></thead>
+<tbody>
+<tr><td>选选项 / 写文本</td><td class="yes">✓</td><td class="yes">observation + transcript</td><td class="no">✗</td><td class="mid">半个（无尝试形状）</td></tr>
+<tr><td>答错后重试</td><td class="no">✗ 永久 disabled</td><td class="—</td><td class="—</td><td class="no">缺</td></tr>
+<tr><td>跳过 / 标记 / 收藏</td><td class="no">✗ 刻意不做</td><td class="—</td><td class="—</td><td class="no">缺</td></tr>
+<tr><td>点白板元素</td><td class="yes">✓</td><td class="no">只在 cursor 里</td><td class="no">✗</td><td class="mid">半个</td></tr>
+<tr><td>说「我没懂」</td><td class="yes">✓</td><td class="yes">signal</td><td class="yes">触发重讲</td><td class="yes">✓ 唯一</td></tr>
+<tr><td>打断（stop）</td><td class="yes">✓</td><td class="yes">signal=interrupt</td><td class="no">✗</td><td class="mid">信号有了，没用</td></tr>
+<tr><td>自由提问</td><td class="yes">✓</td><td class="yes">transcript</td><td class="no">✗</td><td class="yes">✓ 但没被读</td></tr>
+<tr><td>点成就卡「收下了」</td><td class="yes">✓ 且真拦住后续</td><td class="no">✗</td><td class="no">✗</td><td class="mid">UI 拦住了，状态没记</td></tr>
+<tr><td>预测 / 回忆 / 重建</td><td class="no">只有回忆</td><td class="yes">observation</td><td class="no">✗</td><td class="no">缺预测/重建</td></tr>
+<tr><td>解释给别人听</td><td class="no">✗</td><td class="—</td><td class="—</td><td class="no">缺</td></tr>
+<tr><td>对比 / 比较</td><td class="no">✗</td><td class="—</td><td class="—</td><td class="no">缺</td></tr>
+<tr><td>造一个东西</td><td class="no">✗</td><td class="—</td><td class="—</td><td class="no">缺</td></tr>
+<tr><td>迁移到新情境</td><td class="no">✗</td><td class="—</td><td class="—</td><td class="no">缺</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="lbl">⟡ 读法</span>
+  <p>
+    这张表最后一列是关键。Free Course 现在的学习动作<strong>几乎全是回忆型的</strong> ——
+    选一个他刚被告知过的答案。缺失的是<strong>预测、解释、对比、创造、迁移</strong>，
+    而这几类恰好是<strong>唯一能暴露「他其实没懂」的动作</strong>。
+    一个人可以全选对回忆题而完全不理解 —— 这正是「会」与「对」必须分开的理由。
+  </p>
+</div>
+
+<h3>D · AI 是否真的在「教学」？</h3>
+
+<div class="matrix">
+<table>
+<thead><tr><th>行为</th><th>Free Course 今天做到了吗</th><th>证据</th></tr></thead>
+<tbody>
+<tr><td>explaining</td><td class="yes">✓ 主力</td><td class="mono">explanation / example 对象</td></tr>
+<tr><td>generating</td><td class="yes">✓ 强</td><td class="mono">整条生成管线</td></tr>
+<tr><td>answering</td><td class="yes">✓</td><td class="mono">会话自由提问</td></tr>
+<tr><td>questioning</td><td class="mid">✓ 但形状硬编码</td>
+    <td class="mono">必须含 open + choice，否则 409（planner.py:252-289）</td></tr>
+<tr><td>evaluating</td><td class="mid">✓ 只判这一次</td>
+    <td class="mono">本地比对 option id / 模型按 expected</td></tr>
+<tr><td>scaffolding</td><td class="no">✗ hint 生成了但前端不用</td>
+    <td class="mono">schemas/free_course.py:388 有线无消费者</td></tr>
+<tr><td>diagnosing</td><td class="no">✗</td><td class="mono">全仓无诊断逻辑</td></tr>
+<tr><td>adapting</td><td class="mid">△ 只有一个信号一个动作</td>
+    <td class="mono">confused → 重讲（planner.py:171-176）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note red">
+  <span class="lbl">⚠️ questioning 那个「✓ 但形状硬编码」值得停一下</span>
+  <p>
+    硬校验要求每次讲解<strong>必须</strong>包含一道 open 题和一道 choice 题。
+    这个约束的出发点是对的（每段都有互动），但它变成了<strong>配额</strong>，
+    而不是<strong>判断</strong>：系统不问「他此刻最需要哪一个问题」，
+    它问「这段里还缺哪一类题」。<br><br>
+    <strong>而这恰恰是 diagnosing 与 questioning 的分界线。</strong>
+    配额式的提问不需要知道学习者是谁；判断式的提问必须。
+  </p>
+  <span class="cite">planner.py:252-289（形状硬校验）· :116-135（重试 complaint）</span>
+</div>
+
+<h3>E · Course 的边界是什么？</h3>
+
+<p>把职责拆开，逐项看今天归谁：</p>
+
+<div class="matrix">
+<table>
+<thead><tr><th>这项职责</th><th>今天归谁</th><th>该归谁</th></tr></thead>
+<tbody>
+<tr><td>提供内容</td><td class="yes">AI</td><td class="mid">不变</td></tr>
+<tr><td>组织内容</td><td class="yes">AI（unit / chapter）</td><td class="mid">不变</td></tr>
+<tr><td>设计学习路径</td><td class="yes">AI（path 阶段）</td><td class="mid">不变</td></tr>
+<tr><td><strong>观察用户</strong></td><td class="no">✗ 只有 COUNT</td><td class="yes">← 缺口 1</td></tr>
+<tr><td><strong>调整难度</strong></td><td class="no">✗</td><td class="yes">← 缺口 2</td></tr>
+<tr><td>提问</td><td class="mid">AI（配额式）</td><td class="yes">AI（判断式）</td></tr>
+<tr><td>评价</td><td class="mid">AI（判这一次）</td><td class="yes">AI + 跨次记录</td></tr>
+<tr><td>生成练习</td><td class="yes">AI</td><td class="mid">不变</td></tr>
+<tr><td><strong>决定何时继续</strong></td><td class="no">✗ 数组下标</td><td class="yes">← 缺口 3</td></tr>
+<tr><td><strong>决定何时换教法</strong></td><td class="no">✗</td><td class="yes">← 缺口 4</td></tr>
+<tr><td><strong>决定何时结束</strong></td><td class="mid">cursor 到底</td><td class="yes">← 缺口 5</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="lbl">⟡ 五个缺口列在一起</span>
+  <p>
+    前三项（内容、组织、路径）是 <strong>AI 做得多好</strong>的问题 ——
+    它们随模型能力增长。<br>
+    后五项（观察、调难度、何时继续、何时换法、何时结束）是
+    <strong>系统有没有这个结构</strong>的问题 —— 它们不会随模型能力自动出现。<br><br>
+    <strong>Free Course 今天把全部工程投入放在前 3 项，而后 5 项是空的。</strong>
+    这不是优先级排错了，是因为前 3 项看起来像产品，后 5 项看起来像抽象。
+  </p>
+</div>
+</section>
+
+<!-- ================= 5 DESIGN SPACE ================= -->
+<section id="space">
+<div class="sec-head">
+  <span class="sec-no">05 — Design Space</span>
+  <h2>十一个视角的发散</h2>
+  <p class="sub">
+    每个视角都推到底，不是提三个点子就收。右侧是它对今天这个产品的判决。
+  </p>
+</div>
+
+<details class="persp">
+<summary><span class="pno">01</span>Course as Content <span class="verdict defer">存疑</span></summary>
+<div class="body">
+<p><strong>主张</strong>：如果它本质是内容组织系统，那它应该像 Wikipedia 或 Khan
+那样强：一条路径、清晰层级、可以跳读、内容质量高、随时回来接着看。</p>
+<p><strong>推到底</strong>：内容层的完备度其实不低 —— 6 次模型调用产出带
+objective / blueprint / 四类对象的树，还带难度标签。缺的是<strong>可跳读</strong>
+（只能顺序）与<strong>内容复用</strong>（不能「从某一节开始」）。</p>
+<p><strong>但是</strong>：这条路的天花板是「更好的内容」，而内容质量这件事
+<strong>完全被模型能力绑定</strong> —— 我们做不出比模型更好的内容，
+它不会产生 Lemma 独有的东西。</p>
+<p><strong>判决</strong>：内容是入场券不是护城河。值得做，但不值得作为主方向。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">02</span>Course as Interaction <span class="verdict keep">值得</span></summary>
+<div class="body">
+<p><strong>主张</strong>：课程不是内容，而是<strong>一组持续发生的交互</strong>。
+若如此，unit/chapter 这棵树应该消失，课程 = 一条交互的轨迹。</p>
+<p><strong>推到底</strong>：这其实<strong>最接近白板课现在的形态</strong> ——
+它是唯一真的「在发生」的部分（按步、按句、随回答延伸），
+而课内练习部分是静态内容带一个提交框。
+<strong>系统里已经有一个 Course as Interaction 了，只是它没有名字、没有入口、也不被记录。</strong></p>
+<p><strong>关键代价</strong>：轨迹没有树，就没有「你走到哪了」的天然表示。
+今天的 cursor 解决的是「播到哪」，不是「走到哪」——
+而这正是缺口 3。</p>
+<p><strong>判决</strong>：<strong>这是最可能成为 Lemma 独有 interaction pattern 的方向。</strong>
+理由：它是唯一一个「模型必须在过程中决策，而不是一次生成」的形态，
+而今天的模型调用预算已经允许（每轮 1 次追加）。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">03</span>Course as Experiment <span class="verdict keep">值得</span></summary>
+<div class="body">
+<p><strong>主张</strong>：每节课是一个 learning experiment —— 有假设、有干预、有观测。
+AI 设计的不是「内容」，是<strong>「这次要验证他会不会 X」</strong>。</p>
+<p><strong>推到底</strong>：这与「观察用户」「调整难度」两个缺口是同一件事的三种说法。
+而今天有一个<strong>现成的实验记录</strong>：transcript
+（代码自认「学习者真实经历的忠实记录，包括他后来要求重讲的部分」）。
+它现在<strong>只被写、不被读</strong>。把 transcript 当作「这次实验的观测记录」来读，
+是改动最小而认知收益最大的一步。</p>
+<p><strong>我自己的反对意见</strong>：如果「实验」没有明确的假设与判定，
+它就只是「教学」的漂亮说法。所以这个视角必须落到一个具体 primitive 上 ——
+而它落在 Attempt 上（见 §7）。</p>
+<p><strong>判决</strong>：值得，<strong>但它是 Attempt 的论证方式，不是独立方向</strong>。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">04</span>Course as Game <span class="verdict noise">今天别做</span></summary>
+<div class="body">
+<p><strong>主张</strong>：课程不是章节，是 challenge → attempt → feedback → next challenge。</p>
+<p><strong>推到底</strong>：结构上这是对的，也是 §8 的 Pipeline B。
+但「游戏」的实现里有 80% 是<strong>反馈延迟、连胜、失败可视化</strong> ——
+那些是<strong>动机工程</strong>，需要几十次真实用户调试，而
+<strong>它不产生任何关于「AI 怎么教」的知识</strong>。</p>
+<p><strong>关键判断</strong>：我们现在的核心问题不是「用户不想回来」，
+是「系统不知道他会不会」。给一个不知道状态的系统加连胜动画，是给诊断做化妆。</p>
+<p><strong>判决</strong>：结构在 Pipeline B 里吸收，<strong>游戏化今天别做</strong>。
+把有限的注意力放在「读 transcript」上更值。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">05</span>Course as Dialogue <span class="verdict defer">存疑</span></summary>
+<div class="body">
+<p><strong>主张</strong>：课程本质是长期苏格拉底式对话。Course Structure 还需要存在吗？
+答案：<strong>不需要</strong>。</p>
+<p><strong>推到底</strong>：那产品就变成「一个知道很多的人」，
+和 <code>/chat</code> 的区别只是<strong>它有板书和语音</strong>。这有价值 ——
+但它让 Free Course 失去了「来学一个东西」的入口感，
+而这恰恰是浅用户的心理门槛：<strong>「我要学 X」比「我要聊聊」更容易点进去</strong>。</p>
+<p><strong>更硬的反对</strong>：纯对话没有「完成」的自然表示。
+Learn Space 那边有 <code>method_episodes</code>，因为「一段」有起点有判据；
+纯对话里没有。所以这条路最后会退化成「有声音的 chat」，
+而 Lemma 已经有一个更好的 chat。</p>
+<p><strong>判决</strong>：<strong>取其局部（苏格拉底式提问），弃其整体（取消课程结构）</strong>。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">06</span>Course as Simulation <span class="verdict defer">存疑</span></summary>
+<div class="body">
+<p><strong>主张</strong>：学习不是读知识，而是在环境中 act → observe → reason → adapt。</p>
+<p><strong>推到底</strong>：这是最强的理论主张，也是最难的一个。
+今天最接近的资产是<strong>白板</strong> —— 它是可操作的画布，
+<code>awaitClick</code> 已经在等学习者点它。这已是模拟的雏形，
+但只走了「act」的一半：<strong>点对/点错的后果没有被建模</strong>，
+白板不会因为他的操作而改变。</p>
+<p><strong>关键冲突（值得记住）</strong>：模拟需要「环境状态」，
+而今天的白板是<strong>一次生成、只增不改</strong>
+（<code>steps</code> 只 extend 不 splice，因为 transcript 必须是「忠实记录」）。
+<strong>这两条要求在数据结构上直接冲突</strong> —— 而这个冲突本身就是一个发现：
+它说明「忠实记录」和「可交互环境」是两种不同的历史。</p>
+<p><strong>判决</strong>：<strong>与 02 是同一方向，难度更高。</strong>
+先做 Interaction，模拟是它的自然延伸。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">07</span>Course as Assessment <span class="verdict keep">值得</span></summary>
+<div class="body">
+<p><strong>主张</strong>：AI 首先不是教，而是不断寻找「这个人到底会不会」。
+课程是评估的载体，不是内容的载体。</p>
+<p><strong>推到底</strong>：这是<strong>缺口 1（观察）最锐利的表述</strong>，
+而且它有一个现实优势：<strong>它不需要新的表</strong>。
+<code>course_lesson_observations</code> 已经有 verdict，
+只是从来没有人把多次 verdict 连起来读。</p>
+<p><strong>最硬的约束</strong>：现有动作几乎全是回忆型（§C），
+而回忆题<strong>无法区分「会」「猜」「刚看过」</strong>。
+所以这个视角逼出一个具体要求：<strong>题目必须能区分「记住了」与「懂了」</strong> ——
+而那正需要 §C 里缺的那几类动作。</p>
+<p><strong>判决</strong>：值得，<strong>且与 03 是同一件事的两种说法</strong>。
+真正缺的不是「评估」，是「评估的题目能区分『对』与『会』」。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">08</span>Course as Cognitive Intervention <span class="verdict keep">值得</span></summary>
+<div class="body">
+<p><strong>主张</strong>：Course 不是传递知识，而是在不同时间对用户施加不同的
+cognitive interventions。</p>
+<p><strong>推到底</strong>：这是 <strong>Learn Space 的 Method 已经建成的东西</strong> ——
+四要素（适用条件 / 要他做的 / 我不做的 / 观察什么）+ 一条完成判据。
+Free Course 缺的<strong>不是这个概念，是这个结构的一个具体实现</strong>。</p>
+<p><strong>但有一个重要区别</strong>：Learn Space 的 Method 作用于<strong>知识结构</strong>。
+Free Course 面对的是<strong>一个还没建立的知识点</strong>，
+学习者对它<strong>连名字都没有</strong>。所以同一个四要素在这里会退化成两格 ——
+「适用条件」是「他刚学会了什么」，「完成判据」是「他能不能不靠提示做出来」。</p>
+<p><strong>判决</strong>：值得，<strong>但不要把 Learn Space 的 Method 直接搬过来</strong> ——
+那会让 Free Course 依赖 Learn Space，而它必须能独立。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">09</span>Course as Creation <span class="verdict keep">值得</span></summary>
+<div class="body">
+<p><strong>主张</strong>：学习最终不是「完成课程」，而是<strong>创造某个东西</strong>。
+学习 → 创作 → 遇到问题 → 学习 → 修改 → 再创作。</p>
+<p><strong>推到底</strong>：这是<strong>唯一一个天然产出「转移」证据的形态</strong>，
+而转移（§C 缺的那一列）是唯一能说明「他真的会了」的动作。
+它还有一个别的方向没有的性质：<strong>创作会暴露他自己的知识缺口，
+而那个缺口是他自己发现的，不是系统猜的</strong> ——
+所以它是 07（Assessment）最诚实的形式。</p>
+<p><strong>最硬的约束</strong>：<strong>浅用户没有东西想做</strong>。
+一个只想花 3 分钟试试的人，不会想「我要做一个东西」。
+所以这条<strong>不能作为主入口</strong>，只能作为有耐心用户的深处。</p>
+<p><strong>判决</strong>：值得，<strong>但它的入口门槛决定了它救不了浅用户</strong>。
+它是「30 分钟以上」那一档的答案。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">10</span>Course as Exploration <span class="verdict keep">值得</span></summary>
+<div class="body">
+<p><strong>主张</strong>：用户<strong>根本不知道自己想学什么</strong>。
+Free Course 应该从「我要学 X」变成「让我探索 X」。</p>
+<p><strong>推到底</strong>：这与 Free Course 的<strong>产品定位最吻合</strong> ——
+它是第一次接触 Lemma 的地方，而「随便试一个课程」正是真实用户行为。
+今天的入口要求用户<strong>先描述想学什么</strong>，
+而首页那 4 个「随便试试」chip 是<strong>没有 onClick 的装饰</strong>。</p>
+<p><strong>实现上的关键</strong>：探索不需要新的数据结构 ——
+它需要的是<strong>「不要求先有目标」也能开始</strong>，
+而这正好是 §8 Pipeline D 要解决的事。
+<strong>这是一个被装饰品承诺过、但从未实现的能力。</strong></p>
+<p><strong>判决</strong>：<strong>最可能立刻见效的一个方向</strong>，
+因为它不需要新表、不需要迁移，只需要一个入口。</p>
+</div>
+</details>
+
+<details class="persp">
+<summary><span class="pno">11</span>Course as Agentic Environment <span class="verdict noise">今天别做</span></summary>
+<div class="body">
+<p><strong>主张</strong>：AI 不只是 Tutor，而是 Designer + Tutor + Examiner + Critic + Coach。
+先研究角色，而不是设计 Multi-Agent。</p>
+<table style="margin:16px 0">
+<thead><tr><th>角色</th><th>今天对应什么</th><th>缺什么</th></tr></thead>
+<tbody>
+<tr><td>Designer</td><td class="yes">✓ map / blueprint 阶段</td><td class="no">不知道学习者，设计不出「为他」的东西</td></tr>
+<tr><td>Tutor</td><td class="yes">✓ 白板讲解</td><td class="mid">只有一种教法，重讲是唯一变化</td></tr>
+<tr><td>Examiner</td><td class="mid">△ 只判这一次</td><td class="no">不出题，只判已给出的题</td></tr>
+<tr><td>Critic</td><td class="no">✗ 不存在</td><td class="no">没有任何东西反驳学习者</td></tr>
+<tr><td>Coach</td><td class="no">✗ 不存在</td><td class="no">没有任何东西主动改变策略</td></tr>
+</tbody>
+</table>
+<p><strong>关键判断</strong>：<strong>Examiner 与 Critic 值得作为角色存在，
+而 Designer / Tutor / Coach 今天就够 —— 不需要拆成多个 Agent。</strong>
+拆成多 Agent 会把「谁决定下一步」变成 Agent 间通信问题，
+而它现在是一个数据结构问题（缺口 3）。
+<strong>用架构掩盖数据结构缺口，是最贵的一种修法。</strong></p>
+<p><strong>判决</strong>：<strong>今天别做 Multi-Agent。</strong>
+把 Examiner 补成「出题 + 判 + 记」的完整角色，用现在的单 Agent 形态就够 ——
+而且那正是 §7 的 Attempt。</p>
+</div>
+</details>
+</section>
+
+<!-- ================= 6 CROSS-DOMAIN ================= -->
+<section id="cross">
+<div class="sec-head">
+  <span class="sec-no">06 — Cross-domain Inspirations</span>
+  <h2>跨领域：不是竞品清单，是 interaction loop</h2>
+  <p class="sub">
+    每个系统只问两个问题：<strong>它的 loop 是什么</strong> ·
+    <strong>它靠什么让人继续</strong>。然后问：那个 loop 的哪一段我们缺。
+  </p>
+</div>
+
+<div class="matrix">
+<table>
+<thead><tr><th>系统</th><th>它的 interaction loop</th><th>它靠什么持续</th><th>我们缺的那一段</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>Duolingo</strong></td>
+  <td class="mono">题 → 答 → 即时反馈 → 下一题</td>
+  <td>连胜与进度条（<strong>动机</strong>）</td>
+  <td class="no">我们缺的不是连胜，是<strong>「答完之后系统该干什么」</strong></td>
+</tr>
+<tr>
+  <td><strong>ALEKS</strong></td>
+  <td class="mono">诊断 → 定弱点 → 出针对性题 → 掌握</td>
+  <td><strong>「它知道我在哪」</strong></td>
+  <td class="yes">最接近我们要的 loop。<strong>而它的核心资产是那张知识点掌握表 —— 正是缺口 1</strong></td>
+</tr>
+<tr>
+  <td><strong>Brilliant</strong></td>
+  <td class="mono">概念 → 交互式演示 → 你动手 → 概念成立</td>
+  <td>「我刚才亲手看到它动了」</td>
+  <td class="mid">我们有白板，但<strong>点对错没有后果</strong>（§06 的冲突）</td>
+</tr>
+<tr>
+  <td><strong>Wikipedia</strong></td>
+  <td class="mono">搜索 → 跳转 → 跳转 → 停在某处</td>
+  <td><strong>可跳读</strong>（不需要按顺序）</td>
+  <td class="no">我们只能顺序 —— 而这让「只学 3 分钟」变成不可能</td>
+</tr>
+<tr>
+  <td><strong>GitHub</strong></td>
+  <td class="mono">读 → 改 → 跑 → 失败 → 读 diff</td>
+  <td><strong>反馈是即时的、具体的、不可争辩的</strong></td>
+  <td class="yes">我们的反馈是「一句话评价」；<strong>反馈的粒度决定了学习能不能发生</strong></td>
+</tr>
+<tr>
+  <td><strong>Interactive fiction</strong></td>
+  <td class="mono">选择 → 世界改变 → 新状态 → 新选择</td>
+  <td><strong>选择的后果被记住了</strong></td>
+  <td class="no">我们的 transcript 记了选择，<strong>但不读它</strong></td>
+</tr>
+<tr>
+  <td><strong>Socratic dialogue</strong></td>
+  <td class="mono">提问 → 回答 → <strong>指出回答里的漏洞</strong> → 追问</td>
+  <td>对话本身的张力</td>
+  <td class="no">我们缺 <strong>Critic</strong> —— 没有任何东西反驳他</td>
+</tr>
+<tr>
+  <td><strong>Scientific experiment</strong></td>
+  <td class="mono">假设 → 实验 → 观测 → <strong>假设错了</strong> → 改假设</td>
+  <td><strong>失败的实验也是有信息量的</strong></td>
+  <td class="yes">这是 §03 的原型。<strong>我们连「这次假设是什么」都没记</strong></td>
+</tr>
+<tr>
+  <td><strong>Apprenticeship</strong></td>
+  <td class="mono">看师傅做 → 模仿做 → 做砸了 → 师傅纠正 → 再做</td>
+  <td><strong>「做砸」是学习的关键一步，且被允许</strong></td>
+  <td class="no">我们的练习<strong>答错后永久 disabled，没有重试</strong></td>
+</tr>
+<tr>
+  <td><strong>Coaching</strong></td>
+  <td class="mono">目标 → 现状 → 差距 → 下一步 → <strong>再评估</strong></td>
+  <td>承诺 + 反馈回路</td>
+  <td class="yes">Learn Space 的 <code>method_episodes</code> 已建，Free Course 没有</td>
+</tr>
+<tr>
+  <td><strong>Language learning</strong></td>
+  <td class="mono">输入 → <strong>强制输出</strong> → 即时纠错 → 重复</td>
+  <td>「用出来才算」</td>
+  <td class="mid">我们有强制输出，<strong>但重复的是回忆不是使用</strong></td>
+</tr>
+<tr>
+  <td><strong>Reddit / 评论</strong></td>
+  <td class="mono">发帖 → <strong>陌生人回帖</strong> → 楼主再回</td>
+  <td>被真实的人看见</td>
+  <td class="no">与学习无关，<strong>但它提醒我们一件事：反馈若来自模型，就不是反馈</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="thesis">
+  <h3>三个反复出现的模式</h3>
+  <p>
+    跨了 12 个系统，有三件事<strong>每次都在同一个位置出现</strong>：
+  </p>
+  <ol style="color:var(--fg2-on-paper);padding-left:22px">
+    <li style="margin-bottom:12px">
+      <strong>系统必须先知道「他会不会」，才谈得上教什么。</strong>
+      ALEKS 的掌握表、scientific experiment 的假设、coaching 的现状评估、
+      apprenticeship 的「做砸了」—— 全部要求一个关于学习者的<strong>事实</strong>，
+      而不是一个 COUNT。
+    </li>
+    <li style="margin-bottom:12px">
+      <strong>「做砸」必须被允许且有信息量。</strong>
+      Apprenticeship 明确说「做砸是学习的关键一步」，
+      交互小说的 loop 建立在「选择有后果」上。
+      我们的练习<strong>答错即永久 disabled</strong> —— 那不是防作弊，
+      那是把「做砸」这个步骤从产品里删掉了。
+    </li>
+    <li>
+      <strong>反馈的粒度决定学习能不能发生。</strong>
+      GitHub 的反馈是「这个 diff 跑挂了，栈在这里」——
+      具体、即时、不可争辩。我们的反馈是「一句话评价」，
+      而它<strong>产自一个不知道他会不会的模型</strong>。
+    </li>
+  </ol>
+  <p style="margin-top:20px">
+    <strong>三条都指向同一处：缺的不是内容，也不是交互丰富度，
+    是「系统对他有一个事实」。</strong>
+  </p>
+</div>
+</section>
+
+<!-- ================= 7 PRIMITIVES ================= -->
+<section id="prim">
+<div class="sec-head">
+  <span class="sec-no">07 — Primitive Candidates</span>
+  <h2>如果只能加 1–3 个 primitive</h2>
+  <p class="sub">
+    先列候选，逐个写清它<strong>今天是否已经存在</strong>、<strong>它承载什么</strong>、
+    <strong>不做什么</strong>。然后收敛。
+  </p>
+</div>
+
+<h3>候选（8 个，含已存在但未被承认的）</h3>
+
+<div class="prim">
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Attempt</h4>
+    <p>一次「他动手做了某件事」的记录。<strong>不是「对不对」</strong>，
+       而是「他试了什么、试的过程、判定是什么、有没有被帮助」。</p>
+    <p class="ex">今天最接近：observation（只有对错）+ transcript（只有信号）</p>
+  </div>
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Stall</h4>
+    <p>同一处连续顶不破 N 次。<strong>它不是一个新的记录类型</strong>，
+       是 Attempt 序列上的一个性质。</p>
+    <p class="ex">今天不存在。「我没懂」是用户手工点的信号，不是检出的</p>
+  </div>
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Commitment</h4>
+    <p>这一段要做到什么才算完。<strong>判据与承诺同一行</strong>，
+       改了一边另一边会挂。</p>
+    <p class="ex">今天不存在。Learn Space 已有：<code>method_episodes</code></p>
+  </div>
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Intervention</h4>
+    <p>一次教学动作及其<strong>声明</strong>：做什么 / 不做什么 / 观察什么 / 什么算过。</p>
+    <p class="ex">今天不存在。Learn Space 已有：<code>MethodDirective</code> 四要素</p>
+  </div>
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Evidence</h4>
+    <p>关于「他会了吗」的一条可核对记录。<strong>Free Course 今天完全没有这个概念。</strong></p>
+    <p class="ex">断头：判分不进 <code>evidence_entry</code>（断头 1）</p>
+  </div>
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Transcript</h4>
+    <p>一段交互的忠实记录。<strong>今天已存在，从不被读。</strong></p>
+    <p class="ex">已存在：<code>session.transcript_json</code>（自认是忠实记录）</p>
+  </div>
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Question</h4>
+    <p>学习者<strong>真正问出来</strong>的东西 —— 与「我不会这道题」这种信号不同。</p>
+    <p class="ex">今天混在 transcript 里，与 confused / interrupt 同构</p>
+  </div>
+  <div class="p-card">
+    <span class="badge">候选</span>
+    <h4>Challenge</h4>
+    <p>下一个要试的东西。<strong>今天由数组下标决定。</strong></p>
+    <p class="ex">等价于 <code>next = ordered[index+1]</code></p>
+  </div>
+</div>
+
+<h3>收敛到 2 个 + 1 个动作</h3>
+
+<div class="thesis">
+  <h3>Attempt（承重）· Transcript 的读法（即时）· Stall（派生）</h3>
+
+  <p><strong>为什么 Attempt 而不是 Evidence。</strong>
+  Evidence 是 Learn Space 的核心概念，Free Course 不该复制它 ——
+  那会让它依赖 Learn Space，而它必须能独立。
+  两者形态其实不同：<strong>Evidence 问「他会不会」，
+  Attempt 问「他做了什么」。</strong>
+  在 Free Course 里，<strong>只有 Attempt 是有现成数据源的</strong>
+  （observation + transcript 已经在那儿），
+  而 Evidence 需要一个我们今天没有的知识结构。</p>
+
+  <p><strong>为什么 transcript 的「读法」算一个 primitive。</strong>
+  因为它<strong>不需要任何新数据</strong>。今天 transcript 是死的，
+  不是因为缺字段，是因为没有人把它当观测记录来读。
+  <strong>这是改动最小、认知收益最大的一步</strong> ——
+  它也是唯一一个当天就能做、且不需要定任何 schema 的实验。</p>
+
+  <p><strong>为什么 Stall 是派生的。</strong>
+  它不是新记录，而是「Attempt 序列上的一个性质」：
+  同一处连续未达成 N 次。
+  <strong>把它单列成一个 primitive 是错的</strong> ——
+  那会让它看起来需要一个表，而它只需要一个查询。</p>
+</div>
+
+<div class="cards c3">
+  <div class="card hi">
+    <span class="num">PRIMITIVE 01</span>
+    <h4>Attempt</h4>
+    <p><strong>承载</strong>：他试了什么 · 判定 · 有没有被帮助 · 对应的概念。<br>
+       <strong>不承载</strong>：「他会不会」—— 那是多 attempt 聚合出来的。</p>
+  </div>
+  <div class="card hi">
+    <span class="num">PRIMITIVE 02</span>
+    <h4>Transcript 的读法</h4>
+    <p><strong>承载</strong>：把一段忠实记录变成「他在这段里表现如何」的输入。<br>
+       <strong>不承载</strong>：新表、新字段、新写入面。<strong>只加一个 reader。</strong></p>
+  </div>
+  <div class="card">
+    <span class="num">派生量</span>
+    <h4>Stall</h4>
+    <p><strong>不是 primitive</strong>，是 <code>Attempt</code> 序列上的一个性质。
+       N 可调，且<strong>先记不判</strong> —— 计数即可，不必立刻触发行为。</p>
+  </div>
+</div>
+
+<div class="note red">
+  <span class="lbl">⚠️ 一个我没有推荐、但必须点名的 primitive</span>
+  <p>
+    <strong>Mastery（掌握度）。</strong>
+    几乎所有人会先想到它，而它是<strong>陷阱</strong>：
+    它需要一套知识结构、一套遗忘模型、一套判定标准，
+    而 Free Course 今天<strong>连「他会不会一道题」都还没有诚实记录</strong>
+    （hint 字段无用、无重试、全是回忆题）。
+    <br><br>
+    <strong>在 Attempt 之前做 Mastery，等于在一个没有刻度的尺子上画刻度。</strong>
+  </p>
+</div>
+</section>
+
+<!-- ================= 8 ALTERNATIVE PIPELINES ================= -->
+<section id="pipes">
+<div class="sec-head">
+  <span class="sec-no">08 — Alternative Pipelines</span>
+  <h2>六个 pipeline，不是同一件事的换皮</h2>
+  <p class="sub">
+    A 是今天的形状。B–F 各自改变了<strong>第一步是什么</strong>或
+    <strong>什么决定下一步</strong>，所以它们不可互相替代。
+  </p>
+</div>
+
+<div class="pipe">
+  <div class="pipe-row">
+    <div class="node"><b>Intent</b><span>描述</span></div>
+    <div class="node"><b>Map</b><span>6 次调用</span></div>
+    <div class="node"><b>问卷</b><span>必答</span></div>
+    <div class="node"><b>Content</b><span>树 + 脚本</span></div>
+    <div class="node dead"><b>下一个</b><span>按下标</span></div>
+  </div>
+  <div class="pipe-cap">A · 现状（Content-first）— 内容是主语，学习者是消费者</div>
+
+  <div class="pipe-row" style="margin-top:24px">
+    <div class="node hl"><b>Intent</b><span>一句话</span></div>
+    <div class="node ok"><b>第一次尝试</b><span>≤ 3 分钟</span></div>
+    <div class="node ok"><b>诊断</b><span>读 Attempt</span></div>
+    <div class="node ok"><b>针对性干预</b><span>按诊断选</span></div>
+    <div class="node ok loop"><b>下一次尝试</b><span>由证据定</span></div>
+  </div>
+  <div class="pipe-cap">B · Attempt-first — 学习是主语，课程是它的一个副产品</div>
+
+  <div class="pipe-row" style="margin-top:24px">
+    <div class="node hl"><b>Intent</b><span>一句话</span></div>
+    <div class="node ok"><b>AI 反问 3 问</b><span>不生成任何内容</span></div>
+    <div class="node ok"><b>诊断</b><span>知道起点</span></div>
+    <div class="node ok"><b>第一次尝试</b><span>按起点定难度</span></div>
+    <div class="node ok loop"><b>下一段</b></div>
+  </div>
+  <div class="pipe-cap">C · Interview-first — 先问再教，3 次模型调用换掉 6 次</div>
+
+  <div class="pipe-row" style="margin-top:24px">
+    <div class="node hl"><b>点一下</b><span>无描述</span></div>
+    <div class="node ok"><b>立刻一个挑战</b><span>30 秒内</span></div>
+    <div class="node ok"><b>做 / 不做</b><span>选择也是数据</span></div>
+    <div class="node gap"><b>要不要更多</b><span>可扩展为 B</span></div>
+    <div class="node dead"><b>课程</b><span>此刻不存在</span></div>
+  </div>
+  <div class="pipe-cap">D · Play-first — 最短路的入口，回答「随便试试」那个承诺</div>
+
+  <div class="pipe-row" style="margin-top:24px">
+    <div class="node"><b>意图</b></div>
+    <div class="node ok"><b>一起做出某样东西</b><span>有产物</span></div>
+    <div class="node ok"><b>卡住</b><span>缺口是自发现的</span></div>
+    <div class="node ok"><b>针对性教</b></div>
+    <div class="node ok loop"><b>改，再做</b></div>
+  </div>
+  <div class="pipe-cap">E · Creation-first — 唯一天然产出「转移」证据的形态</div>
+
+  <div class="pipe-row" style="margin-top:24px">
+    <div class="node hl"><b>一句话</b></div>
+    <div class="node ok loop"><b>苏格拉底追问</b><span>没有课节</span></div>
+    <div class="node gap"><b>他自己重建</b><span>最诚实的 Attempt</span></div>
+    <div class="node dead"><b>完成</b><span>无自然表示</span></div>
+  </div>
+  <div class="pipe-cap">F · Dialogue-first — 取局部（追问），弃整体（无课程结构）</div>
+</div>
+
+<h3>七维比较</h3>
+
+<div class="matrix">
+<table>
+<thead><tr><th>Pipeline</th><th>学习价值</th><th>用户体验</th><th>AI 能力要求</th><th>工程复杂度</th><th>可解释性</th><th>与现有架构兼容</th><th>适合浅用户</th><th>导向 Learn Space</th></tr></thead>
+<tbody>
+<tr>
+  <td>A 现状</td>
+  <td class="mid">回忆为主</td><td>中（门槛高）</td>
+  <td class="mid">6 次生成</td><td class="yes">已完成</td>
+  <td class="yes">好（有树）</td><td class="yes">—</td><td class="no">差</td><td class="mid">弱</td>
+</tr>
+<tr>
+  <td>B Attempt</td>
+  <td class="yes">高</td><td>高（看得见进步）</td>
+  <td class="mid">每次尝试 1 次</td><td class="mid">中（不需新表）</td>
+  <td class="yes">好</td><td class="yes">高（复用 observation）</td><td class="mid">中</td><td class="yes">强</td>
+</tr>
+<tr>
+  <td>C Interview</td>
+  <td class="mid">中</td><td class="mid">多一步但有收获</td>
+  <td class="mid">3 次反问</td><td class="yes">低（复用 intent）</td><td class="yes">很好</td><td class="yes">高</td><td class="yes">好</td><td class="mid">中</td>
+</tr>
+<tr>
+  <td>D Play</td>
+  <td class="mid">单次有限</td><td class="yes">最好（3 分钟）</td>
+  <td class="yes">低（1 次）</td><td class="yes">低（一个入口）</td><td class="mid">中（没结构）</td><td class="yes">很高</td><td class="yes">最好</td><td class="mid">看引导</td>
+</tr>
+<tr>
+  <td>E Creation</td>
+  <td class="yes">最高</td><td class="mid">慢热</td>
+  <td class="yes">高</td><td class="no">高</td><td class="yes">很好</td><td class="no">低</td><td class="no">差</td><td class="yes">强</td>
+</tr>
+<tr>
+  <td>F Dialogue</td>
+  <td class="mid">取决对话</td><td>中</td>
+  <td class="mid">每轮 1 次</td><td class="mid">中</td><td class="mid">中</td><td class="mid">中</td><td class="mid">中</td><td class="no">弱</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="thesis">
+  <h3>比较之后的三条结论</h3>
+  <ol style="color:var(--fg2-on-paper);padding-left:22px">
+    <li style="margin-bottom:14px">
+      <strong>没有一个 pipeline 是全部问题的答案。</strong>
+      D 救浅用户但不解决「会不会」；B 解决「会不会」但入口不友好；
+      E 学习价值最高但门槛最高。<br>
+      <strong>而 D → B 是一条自然的阶梯</strong>：D 的第一次挑战产生第一个 Attempt，
+      有了它就能进 B。这不是拼接，这是同一件事的两个阶段。
+    </li>
+    <li style="margin-bottom:14px">
+      <strong>A 不该被替换，该被绕过。</strong>
+      树的顺序推进、6 次模型调用的生成、可跳读性差 —— 这些对「学完一个东西」仍然合理。
+      <strong>问题只是它今天是唯一入口。</strong>加一条 D 的短路，而不是重写 A。
+    </li>
+    <li>
+      <strong>C 的性价比最高但最容易被低估。</strong>它用 3 次反问替换 6 次生成，
+      成本几乎为零（复用 <code>intent</code>），却同时改善浅用户入口与诊断起点。
+      <strong>而它现在是 0 行代码。</strong>
+    </li>
+  </ol>
+</div>
+</section>
+
+<!-- ================= 9 SHALLOW TO DEEP ================= -->
+<section id="shallow">
+<div class="sec-head">
+  <span class="sec-no">09 — Shallow → Deep</span>
+  <h2>浅用户，以及「浅 → 深」的真实转化点</h2>
+  <p class="sub">
+    第一部分是四档体验的现状（<span class="tag t-fact">事实</span>标出从代码读出的硬门槛），
+    第二部分是我认为<strong>真实存在</strong>的转化点，而不是产品漏斗。
+  </p>
+</div>
+
+<h3>四档体验：今天各要付出什么</h3>
+
+<div class="depth">
+  <div class="d-row">
+    <div class="d-time">3 分钟</div>
+    <div class="d-body">
+      <h4>今天：不可能完成一次学习</h4>
+      <p>入口要求先切到「自由课程」分段控件（默认是 <code>'chat'</code>），
+         然后描述想学什么，然后<strong>等 6 次模型调用 + 答 4 道必答题</strong>，
+         才第一次看到教学内容。<strong>3 分钟大概率还在问卷页。</strong></p>
+      <p style="margin-top:8px;color:var(--fg3);font-size:13.5px">
+        硬门槛 <span class="tag t-fact">事实</span>ChatInput.tsx:37（默认 chat）·
+        free_course_events.py:283-344 / :347-476 / :66-104</p>
+    </div>
+  </div>
+  <div class="d-row">
+    <div class="d-time">10 分钟</div>
+    <div class="d-body">
+      <h4>今天：能看到 1–2 节课，但学不到东西</h4>
+      <p>生成刚好跑完。读 1–2 个 explanation，做 0–1 道 practice。
+         <strong>所有这些都存下来了，而没有一件影响下一节</strong> ——
+         下一节由数组下标决定。</p>
+      <p style="margin-top:8px;color:var(--fg3);font-size:13.5px">
+        硬门槛 <span class="tag t-fact">事实</span>free_course_service.py:511-538</p>
+    </div>
+  </div>
+  <div class="d-row">
+    <div class="d-time">30 分钟</div>
+    <div class="d-body">
+      <h4>今天：白板课体验最好的一段</h4>
+      <p>这是全套里唯一「在发生」的东西：讲解、提问、回答、按他的选择延伸。
+         <strong>而它也是唯一不被记录成 Attempt 的一段</strong>
+         （判分只进 transcript_json）。</p>
+      <p style="margin-top:8px;color:var(--fg3);font-size:13.5px">
+        硬门槛 <span class="tag t-fact">事实</span>session_service.py:444 ·
+        planner.py:252-289（形状硬校验）</p>
+    </div>
+  </div>
+  <div class="d-row">
+    <div class="d-time">多次</div>
+    <div class="d-body">
+      <h4>今天：能续上，但续的是「讲到哪」不是「学到哪」</h4>
+      <p>会话恢复是真实的（cursor 落库、刷新后原样返回）。
+         课节进度也是真实的（derived，<code>finished</code> 课节数）。
+         <strong>但两者都不含「他会什么」</strong> ——
+         所以续上之后，系统对他和对一个陌生人的了解是一样的。</p>
+      <p style="margin-top:8px;color:var(--fg3);font-size:13.5px">
+        硬门槛 <span class="tag t-fact">事实</span>session_service.py:17-20 · :295-308 ·
+        free_course_service.py:411-430（掌握度硬编码 unknown）</p>
+    </div>
+  </div>
+</div>
+
+<div class="note red">
+  <span class="lbl">⚠️ 值得单独指出的三处硬门槛</span>
+  <p>
+    ① <strong>默认分段是「随便聊聊」</strong>，自由课程要主动点。
+    ② <strong>4 道问卷是必答的</strong>，且它只影响 blueprint 与 content，
+    <strong>不影响 map 与 path</strong> —— 也就是说，答完问卷得到的课程结构
+    与不答时<strong>完全一样</strong>（<span class="tag t-fact">事实</span>
+    <code>free_course_events.py:293-344</code>，问卷在 phase 1 结束之后才发）。
+    ③ <strong>答错不能重试</strong>（<span class="tag t-fact">事实</span>
+    <code>SessionRail.tsx:105</code> 永久 disabled）——
+    而 apprenticeship 把「做砸」列为学习的关键一步。
+  </p>
+</div>
+
+<h3>「浅 → 深」的真实转化点</h3>
+
+<p>
+  不把它当漏斗。真实的转化点应该<strong>是行为，而不是时间</strong> ——
+  因为在 3 分钟体验里，「他回来了」可能只是忘了关页面。
+</p>
+
+<div class="matrix">
+<table>
+<thead><tr><th>候选转化点</th><th>它今天存在吗</th><th>为什么它/为什么不是</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>他第二次来，同一主题</strong></td>
+  <td class="no">✗ 系统无感知</td>
+  <td>最可靠的信号，但系统<strong>今天不知道他来过</strong>。要它就得先有 Attempt</td>
+</tr>
+<tr>
+  <td><strong>他主动问了「为什么」</strong></td>
+  <td class="mid">△ 记了不读</td>
+  <td><code>transcript</code> 里有自由提问，<strong>但没有人为它读一次</strong></td>
+</tr>
+<tr>
+  <td><strong>他点了「我没懂」</strong></td>
+  <td class="yes">✓ 存在且有效</td>
+  <td><strong>唯一一个已经工作的转化信号</strong>。它证明系统有能力响应 —— 只是只有这一个信号</td>
+</tr>
+<tr>
+  <td><strong>他做对了带提示的题</strong></td>
+  <td class="no">✗ 不记帮助</td>
+  <td>免费课程<strong>没有 <code>hint_used</code></strong>，所以带提示的成功与独立成功不可区分 ——
+      而 Learn Space 那边<strong>已经把这件事解决了</strong></td>
+</tr>
+<tr>
+  <td><strong>他中途离开又回来</strong></td>
+  <td class="mid">△ 会话有，课程不感</td>
+  <td>cursor 恢复是真的，但它恢复的是<strong>播放位置</strong>。</td>
+</tr>
+<tr>
+  <td><strong>他改了目标</strong></td>
+  <td class="mid">△ 问卷在建课前</td>
+  <td>问卷存在且有 4 个维度，<strong>但它只用了 1 次</strong> ——
+      建课之后没有任何机制再听到「我想换个方向」</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+  <span class="lbl">⟡ 我的判断</span>
+  <p>
+    真正的转化点<strong>不是「他回来了」，是「他做了第二件事」</strong> ——
+    任何一件系统能记录、他不会自动重复的事：<strong>再答一题、换一个分支、
+    说一句自己的话、点一次「我没懂」。</strong>
+    <br><br>
+    而这四条今天<strong>只有一条有响应</strong>（点「我没懂」）。
+    其余三条<strong>都被记录了但没人读</strong>。
+    所以「浅 → 深」今天不是一条转化路径的缺失 ——
+    <strong>是四个信号里三个接错了线。</strong>
+  </p>
+</div>
+</section>
+
+<!-- ================= 10 LEARN SPACE ================= -->
+<section id="ls">
+<div class="sec-head">
+  <span class="sec-no">10 — Free Course ↔ Learn Space</span>
+  <h2>哪些能力留在 Free Course，哪些未来可能被抽走，哪些现在绝对不要抽象</h2>
+  <p class="sub">
+    前提不重复：Free Course 作为一个相对独立的 AI Learning Experience，
+    <strong>被允许保持独立，而且目前是有价值的</strong>。
+    下面讲的不是「怎么合并」，是<strong>哪些东西的形态会碰巧一样</strong>。
+  </p>
+</div>
+
+<h3>应该留在 Free Course 内部</h3>
+
+<div class="cards c2">
+  <div class="card">
+    <h4>课程的生成与树</h4>
+    <p>unit / chapter / lesson object 这套结构，
+       以及 6 次模型调用的生成管线。
+       <strong>它的节奏是「一次投入、长期消费」</strong>，
+       而 Learn Space 的知识结构是「长期演化、每次一点」——
+       两种节奏不该共用一个结构。</p>
+  </div>
+  <div class="card">
+    <h4>白板</h4>
+    <p>它是「一次讲解」的工具：画布、动作、按句播放、语音。
+       Learn Space 的 Focus 模式有自己的呈现（文档块 + 三面状态栏），
+       <strong>两者不是同一种东西，不该被统一</strong>。</p>
+  </div>
+  <div class="card">
+    <h4>会话的连续性</h4>
+    <p>cursor 落库、刷新恢复、只增不改的 transcript。
+       <strong>这是整套代码里做得最扎实的一块</strong>，
+       而且它服务的是「一次讲解的连贯性」，
+       Learn Space 有完全不同的连续性需求（跨课、跨天、跨空间）。</p>
+  </div>
+  <div class="card">
+    <h4>生成期的一次性参数</h4>
+    <p>问卷 / tuning 是<strong>一次生成</strong>的参数，不是长期状态。
+       它们的价值恰恰在于「过期」—— 生成完就该被忘掉。
+       <strong>把它抽成长期偏好会毁掉它。</strong></p>
+  </div>
+</div>
+
+<h3>未来可能值得抽象到 Learn Space（候选，不是承诺）</h3>
+
+<div class="cards c3">
+  <div class="card">
+    <h4>Attempt 的记录格式</h4>
+    <p>Free Course 记的是「选了一个 option」，
+       Learn Space 记的是「独立且未受帮助地做对」。
+       <strong>两者是同一个东西的两种精度</strong>，
+       格式统一之后 Free Course 才能说「他已经在别处学过了」。</p>
+  </div>
+  <div class="card">
+    <h4>Commitment 与判据</h4>
+    <p>Learn Space 已经有 <code>method_episodes</code>：
+       一段承诺 + 一条可核对的判据 + 五个出口。
+       Free Course 缺的是同构物。<strong>但顺序必须是 Free Course 先有，
+       再考虑是否收敛</strong> —— 现在反过来做会是错的。</p>
+  </div>
+  <div class="card">
+    <h4>Stall 的判定</h4>
+    <p>「同一处连续顶不破 N 次」在两个场景里是同一个计算。
+       <strong>但 N 的默认值应该各自不同</strong>
+       （Learn Space 有跨课的连续性，Free Course 往往只有一次课）——
+       所以抽象的应该是<strong>机制</strong>，不是数值。</p>
+  </div>
+</div>
+
+<div class="note red">
+  <span class="lbl">⚠️ 三个绝对不要抽象的东西（现在）</span>
+  <p>
+    <strong>① 课程树与知识结构。</strong>unit/chapter 是「教学顺序」，
+    知识结构是「依赖关系」。它们形状相似、用途相反 ——
+    强行统一会让 Learn Space 的结构退化成一条链。
+  </p>
+  <p>
+    <strong>② 白板 / 教具。</strong>它是讲解的工具，不是学习状态的载体。
+    Learn Space 的 Focus 有自己的形式，且那是有意的。
+  </p>
+  <p>
+    <strong>③ 判分与掌握度。</strong>Free Course 的「对」是回忆型判定，
+    Learn Space 的「会」是独立判定。
+    <strong>在 Free Course 有了 hint_used 与非回忆题之前，
+    抽象这一层等于把「猜对了」污染进「掌握了」。</strong>
+  </p>
+</div>
+
+<div class="thesis">
+  <h3>关于「Free Course → Learn Space 是漏斗」这个说法</h3>
+  <p>
+    我核了一遍代码，找不到支持它的机制，也找不到反对它的机制 ——
+    <strong>因为 Free Course 与 Learn Space 之间今天没有任何数据通路。</strong>
+    判分不互通、知识结构不互通、掌握状态不互通。
+  </p>
+  <p>
+    所以这不是一条浅→深的漏斗，而是<strong>两个各自完整的产品</strong>，
+    共享同一个品牌与同一个模型。这本身没问题。
+  </p>
+  <p>
+    <strong>而我认为唯一真实的连接点是：</strong>
+    如果 Free Course 里某个学习者<strong>反复在同一个概念上卡住</strong>，
+    而 Learn Space 恰好有那个概念的知识结构 ——
+    <strong>那时才谈得上「他需要更长的路」</strong>。
+    而这个连接点今天<strong>连不上，因为没有 Attempt 记录</strong>。
+  </p>
+</div>
+</section>
+
+<!-- ================= 11 CONVERGENCE ================= -->
+<section id="conv">
+<div class="sec-head">
+  <span class="sec-no">11 — Convergence</span>
+  <h2>收敛：八个问题</h2>
+</div>
+
+<div class="cards c2">
+  <div class="card hi">
+    <span class="num">Q1</span><h4>当前最核心的问题是什么？</h4>
+    <p><strong>系统对他没有一个事实。</strong>
+       不是内容不够、不是交互不够，而是：他做过什么、会不会、卡在哪 ——
+       全部落在一个 <code>COUNT(*)</code> 上。
+       而整条链路的 5 个决策职责（观察 / 调难度 / 何时继续 / 何时换法 / 何时结束）全部为空。</p>
+  </div>
+  <div class="card hi">
+    <span class="num">Q2</span><h4>最大的结构性缺陷是什么？</h4>
+    <p><strong>学习是一个「读取」过程，只是被读的那份数据从来没有被写。</strong>
+       <code>learner_state</code> 有完整接口、
+       <code>transcript</code> 有忠实记录、
+       <code>observation</code> 有 verdict ——
+       <strong>三个容器都在，零个读它们的地方。</strong></p>
+  </div>
+  <div class="card">
+    <span class="num">Q3</span><h4>哪些东西不应该改？</h4>
+    <p>① <strong>课程树与生成管线</strong>——它对「学完一个东西」仍然合理，
+       该做的是<strong>加一条短路</strong>而不是重写它。<br>
+       ② <strong>白板与它的形状硬校验</strong>——出头的约束是有价值的，
+       该改的是从配额变判断，不是取消。<br>
+       ③ <strong>会话的 cursor 与只增不改</strong>——那是对的，
+       而且它是 §06（模拟）唯一还站得住的那条数据结构原则。</p>
+  </div>
+  <div class="card">
+    <span class="num">Q4</span><h4>哪些东西值得实验？</h4>
+    <p>按「改动小 / 认知收益大」排序：
+       <strong>读 transcript</strong>（0 新表）·
+       <strong>hint_used 接到 Free Course</strong>（1 列，Learn Space 已解决）·
+       <strong>非回忆题</strong>（能让"对"与"会"分开）·
+       <strong>3 分钟入口</strong>（一个装饰品已经承诺过的能力）·
+       <strong>Stall 计数</strong>（先记不判）。</p>
+  </div>
+  <div class="card">
+    <span class="num">Q5</span><h4>哪些 primitive 最值得验证？</h4>
+    <p><strong>Attempt</strong>（承重）·
+       <strong>transcript 的读法</strong>（即时）·
+       <strong>Stall</strong>（派生，不单列）。<br>
+       明确不推荐 <strong>Mastery</strong> —— 在 Attempt 之前做它是
+       <strong>在没刻度的尺子上画刻度</strong>。</p>
+  </div>
+  <div class="card">
+    <span class="num">Q6</span><h4>哪些方向漂亮但没价值？</h4>
+    <p>① <strong>游戏化</strong>——给一个不知道状态的系统加连胜动画。<br>
+       ② <strong>Multi-Agent</strong>——用架构掩盖数据结构缺口。<br>
+       ③ <strong>掌握度 / KST</strong>——前置条件还没满足。<br>
+       ④ <strong>「更好的内容」</strong>——天花板是模型能力，不是我们。</p>
+  </div>
+  <div class="card">
+    <span class="num">Q7</span><h4>哪些可能成为 Lemma 独有的 pattern？</h4>
+    <p><strong>「白板 + 强制输出 + 逐步撤除帮助」</strong>这个组合。
+       它需要三样同时成立：可操作的教具、可判定的动作、<strong>有帮助程度的事实</strong>。
+       前两样今天有，<strong>第三样是 Free Course 唯一完全缺的那一样</strong> ——
+       而 Learn Space 已经把它建好了。<br>
+       <strong>跨两个产品拼出一个 interaction pattern，这可能是最值得投的一件事。</strong></p>
+  </div>
+  <div class="card">
+    <span class="num">Q8</span><h4>Free Course 与 Learn Space 什么关系？</h4>
+    <p>今天：<strong>两个各自完整、零数据通路的产品</strong>，共享品牌与模型。
+       这没问题。<br>
+       唯一真实的连接点是<strong>「他反复在同一个概念上卡住，
+       而别处有那个概念的结构」</strong> ——
+       而它今天连不上，<strong>因为没有 Attempt</strong>。<br>
+       留：课程树 · 白板 · 会话连续性 · 生成期参数。
+       可能抽：Attempt 格式 · Commitment · Stall 机制。
+       <strong>绝不现在抽：课程树 · 白板 · 判分与掌握度</strong>。</p>
+  </div>
+</div>
+
+<div class="note green">
+  <span class="lbl">✓ 一句话收束</span>
+  <p>
+    <strong>Free Course 已经把「把知识变成结构」这件事做得比大多数人好；
+    它欠的不是结构，是「读回自己做过什么」的那一读。</strong>
+    <br><br>
+    而那一读需要的不是新表、不是新架构、不是新 Agent ——
+    它需要 <code>hint_used</code>、非回忆题，以及
+    <strong>把 transcript 从一份存档变成一次观测</strong>。
+  </p>
+</div>
+</section>
+
+<!-- ================= 12 EXPERIMENTS ================= -->
+<section id="exp">
+<div class="sec-head">
+  <span class="sec-no">12 — Experiments</span>
+  <h2>三个实验：它们能告诉我们什么</h2>
+  <p class="sub">
+    不是「实现这个功能」。每个实验都写清它<strong>能回答什么问题</strong>，
+    以及<strong>什么结果会推翻它</strong>。
+  </p>
+</div>
+
+<div class="exp">
+  <div class="eid">EXPERIMENT 01</div>
+  <h3>让 transcript 被读一次</h3>
+  <p>在教学会话的下一轮开始时，把已发生的 transcript 读成一段「他在这段里表现如何」，
+     并<strong>据此决定这次先讲什么</strong>。
+     <strong>不写任何新表、不加任何字段</strong> —— 只加一个 reader。</p>
+  <div class="flowrow">
+    <div><span class="k">HYPOTHESIS</span>会话 transcript 里已经含有足够的信号
+      （点了哪次、答了什么、什么时候说不懂），只是没人读。</div>
+    <div><span class="k">WHAT CHANGES</span>会话第二轮的讲解起点。
+      以及「先讲什么」从固定变成被 transcript 影响。</div>
+    <div><span class="k">WHAT STAYS</span>课表、树、白板、形状硬校验、
+      cursor 与恢复逻辑，全部不动。</div>
+    <div><span class="k">EXPECTED USER BEHAVIOR</span>不明显。
+      <strong>用户可能根本注意不到变化 —— 这是这个实验的特色，不是缺陷。</strong></div>
+    <div><span class="k">WHAT WE LEARN</span>transcript 里的信号够不够。
+      <strong>这是唯一能回答「数据已在那儿，只是没被读」这句话的真伪的实验。</strong></div>
+  </div>
+  <div class="falsify">
+    <span class="k">WHAT WOULD FALSIFY</span>
+    加上 reader 之后，讲解的差异在 transcript 只有 1–2 轮时<strong>不可观察</strong>
+    （数据太少，读不出差别）⇒ 说明 transcript 不是「没被读」，而是「里面东西不够」，
+    那么 primitive 02 就不是最有价值的那一个，下一步要换。
+  </div>
+</div>
+
+<div class="exp">
+  <div class="eid">EXPERIMENT 02</div>
+  <h3>把「我帮过忙」记进 Free Course</h3>
+  <p>Free Course 的练习与白板课增加 <code>hint_used</code>，
+     <strong>并且允许带提示的答对被记为「还不算」</strong>。
+     Learn Space 那边<strong>已经建好了整条链路</strong>
+     （<code>knowledge_evidence.hint_used</code> 列 + 契约 + 领域对象 + 核心规则
+     <code>state.py:291</code>），Free Course 这边是零。</p>
+  <div class="flowrow">
+    <div><span class="k">HYPOTHESIS</span>今天的「答对」里混着大量「被扶着走完」，
+      而 Free Course 完全没有办法区分它们。</div>
+    <div><span class="k">WHAT CHANGES</span>「这一题算不算他学会了」的判定。
+      <strong>这是首次让「对」与「会」在 Free Course 里成为两件事。</strong></div>
+    <div><span class="k">WHAT STAYS</span>树、白板、生成管线、进度算法全部不动。</div>
+    <div><span class="k">EXPECTED USER BEHAVIOR</span>提示会<strong>撤得更快</strong> ——
+      因为系统第一次知道哪些成功是被帮助出来的。</div>
+    <div><span class="k">WHAT WE LEARN</span>带提示的答对<strong>到底占多少</strong>。
+      <strong>这个比例是一个我们今天完全不知道、且无法估算的数字。</strong></div>
+  </div>
+  <div class="falsify">
+    <span class="k">WHAT WOULD FALSIFY</span>
+    实测带提示比例<strong>低于 5%</strong> ⇒ 这条线索在 Free Course 里不成立，
+    那「撤除帮助」的设计要另找依据（而 5% 这个阈值是我拍的，可以调）。
+  </div>
+</div>
+
+<div class="exp">
+  <div class="eid">EXPERIMENT 03</div>
+  <h3>3 分钟 playable：一个不需要描述的入口</h3>
+  <p>首页那 4 个「随便试试」chip 现在<strong>没有 onClick</strong> ——
+  它们承诺过一个从未实现的能力。给它接上一个<strong>不需要先描述、
+  30 秒内给出第一次尝试</strong>的入口。</p>
+  <div class="flowrow">
+    <div><span class="k">HYPOTHESIS</span>「先描述想学什么」是浅用户的最大流失点，
+      而它今天<strong>是强制的</strong>（默认分段是 chat，且表单要求描述）。</div>
+    <div><span class="k">WHAT CHANGES</span>只有入口。
+      <strong>不生成完整课程</strong> —— 一次尝试 + 一次诊断 + 一次针对性干预（Pipeline D 的第一段）。</div>
+    <div><span class="k">WHAT STAYS</span>全部生成管线、树、白板、Learn Space。
+      <strong>这是加法不是改法。</strong></div>
+    <div><span class="k">EXPECTED USER BEHAVIOR</span>首页→第一次尝试的转化上升。
+      <strong>而「有多少人走完第一次尝试后要第二次」比「多少人点了」更重要。</strong></div>
+    <div><span class="k">WHAT WE LEARN</span>浅用户是<strong>被门槛挡住</strong>的，
+      还是<strong>被结果挡住</strong>的（点进来了但不好玩）。
+      <strong>这两种原因要分开测量，而后者的解法完全不同。</strong></div>
+  </div>
+  <div class="falsify">
+    <span class="k">WHAT WOULD FALSIFY</span>
+    接上入口之后，<strong>第二次尝试的转化率没有变化</strong>（只是多了些点一次就走的人）
+    ⇒ 门槛不是瓶颈，<strong>第一次体验的质量才是</strong>，
+    那么这个实验的价值变成了「一个干净的测量基线」，
+    而主攻方向要转向 Experiment 01/02。
+  </div>
+</div>
+
+<div class="note">
+  <span class="lbl">⟡ 为什么是这三个，顺序也是刻意的</span>
+  <p>
+    <strong>01 最便宜</strong>（零新表，最快能出结论）·
+    <strong>02 最尖锐</strong>（它回答一个我们完全不知道的数字）·
+    <strong>03 最重要</strong>（它决定用户会不会进门）。<br><br>
+    01 和 02 是<strong>认知实验</strong> —— 它们回答"我们知不知道自己在做什么"。
+    03 是<strong>产品实验</strong> —— 它回答"别人知不知道"。<br><br>
+    <strong>而 03 最可能第一个做，因为它最便宜、且今天已经有一个承诺过它的死 chip。</strong>
+    但它也是三个里<strong>最可能证伪我们自己的</strong> —— 那正是它值得做的原因。
+  </p>
+</div>
+</section>
+
+<footer>
+  <p><strong style="color:var(--fg2)">研究方法</strong>：
+  代码审计（后端 3,088 行 Free Course 代码 + 前端全链路）·
+  11 个视角的发散 · 12 个跨领域系统的 loop 对照 · 6 个 pipeline 的七维比较 ·
+  三条断头链的亲自核实。</p>
+  <p><strong style="color:var(--fg2)">本报告不做什么</strong>：
+  不改 Free Course · 不设计新架构 · 不提 Multi-Agent · 不接 Learn Space ·
+  不假设任何理论是正确答案。</p>
+  <p style="margin-top:24px;color:var(--fg3)">
+    报告基于 <code>connecting-page @ d7a9299c</code>。所有标 ⚡ 事实 的断言可回溯到
+    <code>文件:行号</code>；标「推断」的段落是我的判断，不是代码事实。
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

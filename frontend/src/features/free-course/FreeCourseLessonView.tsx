@@ -370,10 +370,20 @@ function AnswerableObject({
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
   const [text, setText] = useState('')
 
-  // Items with options are graded locally against the option ids; items without
-  // them are judged by the model, so they submit free text instead. The
-  // confidence field is deliberately not sent: nobody asked the learner to rate
-  // it, and a fabricated value would poison the observation history.
+  // Items with options and items without them are submitted the same way — the
+  // **server** grades both, and the client never compares option ids itself.
+  // (This comment used to say the opposite, which is how a future reader ends
+  // up hunting for grading logic that isn't here.)
+  //
+  // Why grading stays on the server, since "just do it locally" is a reasonable
+  // thing to want for a multiple-choice item: the answer key is deliberately
+  // never sent to the client (`CourseLessonObject`'s docstring), so a local
+  // check would need a second copy of the key — and two copies of a grading
+  // rule is a rule that will disagree with itself. Open items need the model
+  // anyway, so one server path already exists for the harder half.
+  //
+  // The confidence field is deliberately not sent: nobody asked the learner to
+  // rate it, and a fabricated value would poison the observation history.
   const isOpen = object.options.length === 0
   const trimmedText = text.trim()
   const canSubmit = isOpen ? trimmedText.length > 0 : Boolean(selectedOptionId)
