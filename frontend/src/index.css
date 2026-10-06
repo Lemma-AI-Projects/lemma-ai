@@ -391,3 +391,22 @@
 [data-slot="course-video-player"] .vds-tooltip-content {
   backdrop-filter: none;
 }
+
+/**
+ * `font-mono` 的 CJK 兜底。
+ *
+ * `font-mono` 的字体栈（ui-monospace / SF Mono / Menlo / Consolas）里**没有
+ * 中文字形**，而这条页面上有大量「mono 小标签 + 中文」——领域标签、未解决的事项、
+ * 时间跨度的后半段。缺 glyph 时浏览器会为 CJK 单独 fallback，而在实测截图里
+ * 这些标签被**逐字竖排**（一列一个字），在时间轴上方看起来像被压扁了。
+ *
+ * 所以这里给 mono 栈追加一个 CJK 兜底，而不是改 `font-mono` 本身 ——
+ * ASCII 部分仍然是等宽的（时间、日期、数字），只有中文回落到系统 CJK 字体。
+ *
+ * 只**新增**这一个 utility，不改任何现有 token 或已有类的语义。
+ */
+@utility font-mono-cjk {
+  font-family:
+    ui-monospace, 'SF Mono', Menlo, Consolas, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', monospace;
+}

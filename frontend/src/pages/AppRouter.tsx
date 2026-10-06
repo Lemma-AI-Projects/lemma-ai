@@ -28,6 +28,7 @@ import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
 import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
+import { TrajectoryPreviewPage } from '@/pages/TrajectoryPreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { OnboardingPreviewPage } from '@/pages/OnboardingPreviewPage'
 import { PluginsPage } from '@/pages/PluginsPage'
@@ -78,6 +79,17 @@ const routes: RouteObject[] = [
     // 四屏并排，mock 数据、不登录即可查看。
     path: '/preview/goal',
     element: <GoalPreviewPage />,
+  },
+  {
+    // Trajectory：Learn Space 的纵向时间层（空间状态 · 时间线 · 依据追溯）。
+    // 公开、免登录、mock 数据。
+    //
+    // 挂成独立路由而不并进 Learn Space 的导航，是有意的：未来的入口设计是
+    // Hover Shelter → submenu → Trajectory，而那条 submenu 还没有建。
+    // 挂成独立路由意味着它**已经能被任何 navigation entry 打开**，
+    // 将来 Shelter 只需要指向这条路径，不必先改现有导航结构。
+    path: '/preview/trajectory',
+    element: <TrajectoryPreviewPage />,
   },
   {
     // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。
