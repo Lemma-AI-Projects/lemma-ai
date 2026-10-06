@@ -89,6 +89,8 @@ async def plan_session(
     objects: list[LearningObject],
     material: SourceMaterial | None = None,
     user_id: str | None = None,
+    pace: str | None = None,
+    depth: str | None = None,
 ) -> TeachingSessionPlan:
     """Open a teaching session for one chapter.
 
@@ -97,6 +99,17 @@ async def plan_session(
     rendering* of the same content — a teacher at a board instead of a document
     to read. Letting the model re-invent the content here would make the two
     disagree in front of the learner.
+
+    `pace` and `depth` come from the course's tuning answers. They used to reach
+    only the blueprint and content steps, so a learner who picked "紧凑" got a
+    shorter document and then a board lesson that ignored the answer entirely —
+    the choice was silently dropped at the one place it was still visible.
+
+    ⚠️ **`course_volume` is deliberately not among them.** It decides how long the
+    *outline* is (how many chapters the blueprint sequences), and the blueprint
+    is already written by the time a session opens. Passing it here would put
+    "how much is too much" in two places, and the two would eventually disagree
+    about how long this lesson should be.
 
     One retry, and only for a plan that breaks the session's shape. The shape is
     not a style preference: a session with no open question loses the "would you
@@ -109,6 +122,7 @@ async def plan_session(
     prompt = (
         f"本节课：{lesson_title}\n学习目标：{objective}\n"
         + (f"教学环节：{'；'.join(sequence)}\n" if sequence else "")
+        + _tuning_note(pace, depth)
         + f"\n本节已有的学习内容（请把它讲出来，不要另起炉灶）：\n{_digest_objects(objects)}"
     )
     complaint = ""
@@ -228,6 +242,47 @@ async def respond_to(
 
 def _q(step: SessionStepRef) -> str:
     return f"（提问：{step.question}）" if step.question else ""
+
+
+#: How the course's tuning answers read on the board. The values are the
+#: questionnaire's own (`_QUESTION_SET` in `services/free_course_events.py`) —
+#: **copied, not invented**, and `test_the_board_lesson_knows_every_tuning_answer`
+#: is what keeps the copy honest. An unknown value falls through to nothing (see
+#: `_tuning_note`), which is exactly how a rename would silently drop the
+#: learner's choice all over again.
+_PACE_NOTES = {
+    "relaxed": "节奏宽松：每一步都解释清楚，允许停顿与重复。",
+    "moderate": "节奏适中：铺垫与推导都给到，但不复述。",
+    "intensive": "节奏紧凑：少铺垫，直接进入推理与结论。",
+}
+_DEPTH_NOTES = {
+    "intuition": "深度取直觉理解：先让学习者看到整体与图像，再进入形式化。",
+    "derivation": "深度取推导细节：给出完整推导与前提，不省略中间步骤。",
+    "advanced": "深度取进阶深入：在关键处补上更一般的结论与适用范围。",
+}
+
+
+def _tuning_note(pace: str | None, depth: str | None) -> str:
+    """The learner's tuning answers, as one line of prompt — or nothing.
+
+    Returning an empty string when both are unknown is deliberate: the prompt's
+    shape must be identical with and without learner data
+    (`learner_state.py` states the same rule for the same reason), so a course
+    nobody tuned does not get a dangling "节奏：".
+
+    ⚠️ And it is also the failure mode to watch: an unrecognised value produces
+    **no note and no error**, so a renamed option would drop the learner's
+    choice silently. That is why the values above are pinned to the
+    questionnaire's by a test rather than trusted to review.
+    """
+    notes = [
+        note
+        for note in (_PACE_NOTES.get(pace or ""), _DEPTH_NOTES.get(depth or ""))
+        if note
+    ]
+    if not notes:
+        return ""
+    return "学习者自己选的要求（照做，不要改）：" + "".join(notes) + "\n"
 
 
 def _digest_objects(objects: list[LearningObject]) -> str:

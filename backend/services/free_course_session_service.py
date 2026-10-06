@@ -285,17 +285,21 @@ async def start_session(
     what was actually taught, and every read follows the newest row, so
     archiving is enough to make the new session the one in force.
     """
-    if await free_course_service.get_owned_course(
+    # Kept rather than re-read: this is the course row, and its `tuning_json`
+    # holds the learner's own answers to the four tuning questions — which the
+    # board lesson used to ignore entirely, so a learner who asked for a compact
+    # lesson got a compact document and then a board that ignored the ask.
+    course = await free_course_service.get_owned_course(
         db, user_id=user_id, course_id=course_id
-    ) is None:
+    )
+    if course is None:
         return None
     existing = await _owned_session(
         db, user_id=user_id, course_id=course_id, chapter_id=chapter_id
     )
     if existing is not None and existing.status == "active":
         if not restart:
-            return _wire_session(existing, steps=_plan_steps(existing))
-        # Archive every active row for this chapter, not just the newest: if an
+            return _wire_session(existing, steps=_plan_steps(existing))        # Archive every active row for this chapter, not just the newest: if an
         # earlier path ever left two behind, "start over" has to mean it.
         await db.execute(
             update(FreeCourseSession)
@@ -332,6 +336,10 @@ async def start_session(
         except Exception:  # noqa: BLE001 — a stale blueprint must not block teaching
             blueprint = None
 
+    # The learner's own tuning answers, in the vocabulary the planner knows.
+    # Read defensively: `tuning_json` is a nullable JSON blob that predates this
+    # call, and a course that was never tuned must still open a session.
+    tuning = course.tuning_json or {}
     try:
         plan = await plan_session(
             lesson_title=chapter.title,
@@ -339,6 +347,8 @@ async def start_session(
             sequence=list(blueprint.sequence) if blueprint else [],
             objects=objects,
             user_id=str(user_id),
+            pace=tuning.get("pace"),
+            depth=tuning.get("depth"),
         )
     except FreeCourseError as exc:
         raise SessionUnavailable(str(exc)) from exc
