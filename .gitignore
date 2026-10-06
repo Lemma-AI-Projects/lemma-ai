@@ -1,6 +1,9 @@
 .DS_Store
 /.cursor/
-/docs/
+# docs/ 整体不入库（多为本地草稿）。唯一例外：成就/能力视觉设计规范是
+# 团队长期引用的上位规范，必须入库，所以下面单独放行这一个文件。
+/docs/*
+!/docs/achievement-design-system.md
 /task-management/
 /temp/
 
