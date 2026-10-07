@@ -1,9 +1,11 @@
 .DS_Store
 /.cursor/
-# docs/ 整体不入库（多为本地草稿）。唯一例外：成就/能力视觉设计规范是
-# 团队长期引用的上位规范，必须入库，所以下面单独放行这一个文件。
+# docs/ 整体不入库（多为本地草稿）。例外有两份，都是团队会长期引用的文档：
+# 成就/能力视觉设计规范是上位规范；Free Course 的 README 是那份研究的入口 ——
+# 研究的 HTML 与三份计划在仓库根，而 B-04 那个建模决策要靠它被引用到。
 /docs/*
 !/docs/achievement-design-system.md
+!/docs/README-freecourse.md
 /task-management/
 /temp/
 
