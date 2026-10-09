@@ -142,6 +142,16 @@ class Settings(BaseSettings):
     ai_video_engine: str = "native"
     ai_routes_json: str = _DEFAULT_AI_ROUTES_JSON
 
+    # --- Speech (TTS) ---
+    # Delivery-layer audio (Free Course voice + board). Reuses the AiHubMix
+    # credential + base URL above — zero new secrets — and is deliberately NOT on
+    # the AI routing table (plan §2.1). Billed per input character, not per token.
+    # Model must be one of AiHubMix's TTS models (tts-1 / tts-1-hd /
+    # gpt-4o-mini-tts); voice is an OpenAI voice name (alloy, nova, shimmer, ...).
+    speech_tts_model: str = "gpt-4o-mini-tts"
+    speech_tts_voice: str = "alloy"
+    speech_tts_timeout_seconds: float = 30
+
     redis_url: str = "redis://localhost:6379/0"
     # Netscape-format cookie file for yt-dlp. B站 risk control (HTTP 412)
     # can still affect the yt-dlp fallback path. Primary anonymous B站 chapter

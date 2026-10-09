@@ -155,7 +155,7 @@ function CurrentState({ space }: { space: TrajectorySpace }) {
         <span className="font-mono-cjk text-[11px] tracking-widest text-muted-foreground uppercase">
           {space.domain}
         </span>
-        <span className="font-mono-cjk text-[11px] text-muted-foreground/70">{space.span}</span>
+        <span className="font-mono-cjk text-[11px] text-muted-foreground/70">{space.current.span}</span>
       </div>
 
       <p className="mt-5 max-w-2xl text-sm text-muted-foreground">{space.current.goal}</p>

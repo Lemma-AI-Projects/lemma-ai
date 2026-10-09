@@ -436,8 +436,9 @@ class TeachingSessionOut(BaseModel):
 class TeachingTurnIn(BaseModel):
     model_config = ConfigDict(**_ALIAS)
 
-    # answer | confused | interrupt — see ai/free_course/teaching/types.py.
-    signal: Literal["answer", "confused", "interrupt"]
+    # answer | confused | interrupt | no_response — see
+    # ai/free_course/teaching/types.py.
+    signal: Literal["answer", "confused", "interrupt", "no_response"]
     # Which step's question is being answered (absent for confused/interrupt).
     step_id: str | None = None
     text: str | None = Field(default=None, max_length=2000)

@@ -253,17 +253,25 @@ class TeachingTurn(BaseModel):
 class SessionSignal(BaseModel):
     """What the learner did at a stopping point.
 
-    Three kinds, matching the observed behaviour table:
-      answer    — replied to the question; the session continues.
-      confused  — "I don't get it, explain it another way": the ONE signal that
-                  changes the explanation AND the board (strongest in the
-                  reference session).
-      interrupt — pressed Stop and asked their own question; the current beat is
-                  abandoned rather than finished.
+    Four kinds, matching the observed behaviour table:
+      answer      — replied to the question; the session continues.
+      confused    — "I don't get it, explain it another way": the ONE signal that
+                    changes the explanation AND the board (strongest in the
+                    reference session).
+      interrupt   — pressed Stop and asked their own question; the current beat is
+                    abandoned rather than finished.
+      no_response — did nothing at all. Not a judgement about understanding and
+                    not a question: the learner let the stopping point pass, so
+                    the session picks the main line back up. It exists because a
+                    question is a hard stop — without it, a learner who only
+                    wants to read along is wedged at the first question forever.
+                    It is the one signal the *product* sends rather than the
+                    learner, which is why the prompt must never mention it back
+                    (see planner.respond_to).
     Skipping / jumping is deliberately absent: the observed product has no such
                   control, and V0 copies that.
     """
 
-    kind: Literal["answer", "confused", "interrupt"]
+    kind: Literal["answer", "confused", "interrupt", "no_response"]
     text: str | None = None
     option_id: str | None = None

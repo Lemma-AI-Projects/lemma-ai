@@ -139,7 +139,7 @@ export type TeachingBranch = 'intro' | 'continue' | 'reteach' | 'answer' | 'chec
 
 export interface SessionTranscriptEntry {
   stepId: string
-  signal: 'answer' | 'confused' | 'interrupt'
+  signal: 'answer' | 'confused' | 'interrupt' | 'no_response'
   text?: string | null
   optionId?: string | null
   verdict?: string | null
@@ -176,5 +176,17 @@ export interface SessionProgressInput {
   cursor: number
 }
 
-/** The three things a learner can do at a stopping point. */
-export type SessionSignalKind = 'answer' | 'confused' | 'interrupt'
+/**
+ * What a turn can carry.
+ *
+ * `answer` / `confused` / `interrupt` are the three things a learner *does*.
+ * `no_response` is the absence of all three: the learner let a stopping point
+ * pass, and the session picks the main line back up instead of waiting forever.
+ * It is the one signal the product sends on the learner's behalf — nothing in
+ * the rail produces it, only the idle timer does.
+ */
+export type SessionSignalKind =
+  | 'answer'
+  | 'confused'
+  | 'interrupt'
+  | 'no_response'

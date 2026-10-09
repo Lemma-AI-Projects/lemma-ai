@@ -25,7 +25,7 @@
  *   reason this is a class-shaped closure rather than a few `useEffect`s.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   EMPTY_BLOCK_STATE,
@@ -36,11 +36,29 @@ import {
   type BoardElement,
 } from './board'
 import { splitSentences } from './sentences'
-import { createBrowserVoice, createSilentVoice, type Voice } from './speech'
 import type { TeachingStep } from './types'
+import { useVoiceRuntime } from './voice/runtime'
 
 /** Beat between the last stroke of a sentence and the next sentence. */
 const INK_SETTLE_MS = 260
+
+/**
+ * How long "now you touch it" waits for the click before letting the timeline go
+ * on by itself.
+ *
+ * The reference product waits for that click indefinitely, and for a learner who
+ * is actually playing along that is the right behaviour. But a learner who is
+ * only reading never clicks — and an unbounded wait is not patience, it is a
+ * lesson that has stopped with the board drawn and nothing left to move. So the
+ * wait is bounded: long enough to still read as "take your time", short enough
+ * that nobody is ever stranded at it.
+ *
+ * Nothing is sent to the server when it expires. A missed click is not a
+ * question and not a statement about understanding, so the timeline simply
+ * carries on — asking the model to react to it would invent a turn the learner
+ * never had.
+ */
+const CLICK_WAIT_MS = 45_000
 
 export type PlaybackPhase =
   | 'idle'
@@ -123,16 +141,26 @@ export function useTeachingPlayback(options?: {
   const [sentenceIndex, setSentenceIndex] = useState(0)
   const [clickTarget, setClickTarget] = useState<string | null>(null)
   const [clickHint, setClickHint] = useState<string | null>(null)
-  const [muted, setMutedState] = useState(false)
 
-  const browserVoice = useMemo(() => createBrowserVoice(), [])
-  const silentVoice = useMemo(() => createSilentVoice(), [])
-  const mutedRef = useRef(false)
+  // The voice — and whether it is muted — belongs to the runtime, not to the
+  // timeline. `mutedRef` is borrowed only for the silent replay (see `start`).
+  const {
+    voice,
+    muted,
+    setMuted,
+    available: voiceAvailable,
+    mutedRef,
+    prefetch,
+  } = useVoiceRuntime()
+
   const cancelRef = useRef<(() => void) | null>(null)
   // Resolves the promise the timeline is parked on while waiting for a click.
   // Held in a ref because `stop()` has to be able to let go of it — a cancel
   // that leaves a wait pending freezes the lesson with no way back.
   const clickResolveRef = useRef<(() => void) | null>(null)
+  // The bounded wait on that click. Cleared however the wait ends, so a stale
+  // timer can never release a wait that a later step is parked on.
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const seqRef = useRef(0)
   const playedRef = useRef(0)
   const onStepDoneRef = useRef(options?.onStepDone)
@@ -140,30 +168,21 @@ export function useTeachingPlayback(options?: {
     onStepDoneRef.current = options?.onStepDone
   }, [options?.onStepDone])
 
-  const voice = useMemo<Voice>(
-    () => ({
-      available: browserVoice.available,
-      speak: (text, speakOptions) =>
-        (mutedRef.current ? silentVoice : browserVoice).speak(text, speakOptions),
-      cancel: () => {
-        browserVoice.cancel()
-        silentVoice.cancel()
-      },
-    }),
-    [browserVoice, silentVoice]
-  )
-
-  const setMuted = useCallback((next: boolean) => {
-    mutedRef.current = next
-    setMutedState(next)
-    if (next) {
-      // Silent immediately, not at the next sentence: a mute button that keeps
-      // talking is the kind of thing people press twice and then distrust.
-      browserVoice.cancel()
+  /**
+   * End the click wait, whoever ended it — the learner clicked, the timer
+   * expired, or the lesson was stopped.
+   *
+   * One path for all three, because the alternative is three copies of
+   * "clear the target, clear the hint, resolve the promise" that drift apart,
+   * and a wait released twice (or a timer left armed against the *next* step's
+   * wait) is exactly the kind of bug that shows up as a lesson skipping ahead on
+   * its own.
+   */
+  const releaseClickWait = useCallback(() => {
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current)
+      clickTimeoutRef.current = null
     }
-  }, [browserVoice])
-
-  const resolveClick = useCallback(() => {
     const resolve = clickResolveRef.current
     clickResolveRef.current = null
     setClickTarget(null)
@@ -171,17 +190,16 @@ export function useTeachingPlayback(options?: {
     resolve?.()
   }, [])
 
+  const resolveClick = releaseClickWait
+
   const stop = useCallback(() => {
     cancelRef.current?.()
     cancelRef.current = null
     // A click wait is the one place the loop can be parked outside `voice.speak`;
     // releasing it here is what keeps `stop()` from leaving the lesson wedged.
-    clickResolveRef.current?.()
-    clickResolveRef.current = null
-    setClickTarget(null)
-    setClickHint(null)
+    releaseClickWait()
     setPhase('idle')
-  }, [])
+  }, [releaseClickWait])
 
   const clearBoard = useCallback(() => {
     setBoard([])
@@ -265,6 +283,10 @@ export function useTeachingPlayback(options?: {
         // is settled here or the loop never returns.
         resolvePending?.()
         resolvePending = null
+        // The click wait parks the loop outside `voice.speak`, so it needs the
+        // same release — otherwise starting a new batch leaves this loop parked
+        // on a click that will never come.
+        releaseClickWait()
       }
       cancelRef.current = cancel
 
@@ -287,6 +309,12 @@ export function useTeachingPlayback(options?: {
           for (let index = 0; index < sentences.length; index += 1) {
             if (cancelled) return
             setSentenceIndex(index)
+            // Warm the next sentence while this one is being spoken. Synthesis is
+            // a round trip, and the board's pace should not wait on the network —
+            // one sentence ahead is enough, and prefetching the whole lesson would
+            // spend the learner's bandwidth on sentences a question may stop us
+            // before reaching.
+            if (index + 1 < sentences.length) prefetch(sentences[index + 1])
             await new Promise<void>((resolve) => {
               resolvePending = resolve
               voice.speak(sentences[index], { onEnd: resolve })
@@ -333,6 +361,12 @@ export function useTeachingPlayback(options?: {
               setPhase('awaiting_click')
               await new Promise<void>((resolve) => {
                 clickResolveRef.current = resolve
+                // Bounded, so "wait for the click" cannot become "wait forever".
+                // `releaseClickWait` clears this timer, so a click that lands
+                // first cannot leave the timer armed against the next step.
+                clickTimeoutRef.current = setTimeout(() => {
+                  releaseClickWait()
+                }, CLICK_WAIT_MS)
               })
               if (cancelled) return
               setPhase('playing')
@@ -359,7 +393,7 @@ export function useTeachingPlayback(options?: {
         }
       })()
     },
-    [voice]
+    [voice, releaseClickWait, prefetch, mutedRef]
   )
 
   return {
@@ -370,7 +404,7 @@ export function useTeachingPlayback(options?: {
     activeStepId,
     sentenceIndex,
     muted,
-    voiceAvailable: voice.available,
+    voiceAvailable,
     setMuted,
     start,
     stop,

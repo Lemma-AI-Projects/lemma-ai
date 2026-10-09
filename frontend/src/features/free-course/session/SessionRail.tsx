@@ -68,6 +68,7 @@ export function SessionRail({
   onConfused,
   onAsk,
   onStop,
+  onEngaged,
 }: {
   said: SaidLine[]
   question: TeachingQuestion | null
@@ -89,6 +90,13 @@ export function SessionRail({
   onConfused: () => void
   onAsk: (text: string) => void
   onStop: () => void
+  /**
+   * 学习者在输入框里动了——正在写，还没提交。
+   *
+   * 存在的唯一理由是那个"没人回应就往下讲"的空闲计时器：一个正在组织答案的人
+   * 不能被当成没回应的人。所以每次敲键都重置它。
+   */
+  onEngaged?: () => void
 }) {
   const [draft, setDraft] = useState('')
   // The chosen option is stored WITH the prompt it belongs to, so a new question
@@ -116,21 +124,31 @@ export function SessionRail({
           教学对话
         </span>
         <div className="ml-auto flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(
-              'h-7 gap-1.5 rounded-full px-2 text-[12px] font-normal text-zinc-500',
-              !voiceAvailable && 'invisible'
-            )}
-            onClick={() => onSetMuted(!muted)}
-            aria-pressed={muted}
-            title={muted ? '取消静音' : '静音'}
-          >
-            {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-            {muted ? '已静音' : '语音'}
-          </Button>
+          {/* 语音不可用时**说清楚**，而不是把按钮藏起来。藏起来的静音键会让学习者
+              以为是自己点坏了，而课程其实照常在推进——白板与字幕都还在。 */}
+          {voiceAvailable ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 rounded-full px-2 text-[12px] font-normal text-zinc-500"
+              onClick={() => onSetMuted(!muted)}
+              aria-pressed={muted}
+              title={muted ? '取消静音' : '静音'}
+            >
+              {muted ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+              {muted ? '已静音' : '语音'}
+            </Button>
+          ) : (
+            <span
+              className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[12px] font-normal text-zinc-400"
+              title="这个浏览器不支持语音朗读，白板与字幕照常推进"
+              data-session-voice-unavailable
+            >
+              <VolumeX className="size-3.5" />
+              语音不可用
+            </span>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -237,7 +255,10 @@ export function SessionRail({
               <div className="flex flex-col gap-2">
                 <Textarea
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) => {
+                    setDraft(event.target.value)
+                    onEngaged?.()
+                  }}
                   placeholder="用你自己的话说说看…"
                   rows={3}
                   className="text-[13px]"
@@ -263,7 +284,10 @@ export function SessionRail({
           <div className="flex flex-col gap-2">
             <Textarea
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value)
+                onEngaged?.()
+              }}
               placeholder="有问题随时打断…"
               rows={2}
               className="text-[13px]"

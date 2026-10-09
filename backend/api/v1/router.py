@@ -22,6 +22,7 @@ from api.v1 import (
     question_sets,
     scheduled_tasks,
     space_goals,
+    speech,
     user_home,
     users,
     webhooks,
@@ -51,6 +52,9 @@ api_router.include_router(knowledge.router)
 api_router.include_router(pages.router)
 # 自由课程（Free Course）：与视频课并行的另一条课程管线（courses.mode='free'）。
 api_router.include_router(free_courses.router)
+# 语音合成（Speech TTS）：delivery 层的音频源。不在 AI 路由表上（voice-v0 §2.1），
+# 复用 AiHubMix 凭据 + base URL，返回二进制音频（不落存储、不签 URL）。
+api_router.include_router(speech.router)
 # 学习方法（Method V0）：注册表只读；本轮用哪个 Method 由 chat 请求携带并记在会话上。
 api_router.include_router(methods.router)
 # 通知（Notification V0）：Feed 的通知项。读=列表，写=send()。

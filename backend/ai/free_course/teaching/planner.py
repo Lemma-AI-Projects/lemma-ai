@@ -194,6 +194,18 @@ async def respond_to(
             "**第一个 step 就是回答它**（narration 直接回答，不要先复述进度），"
             "可以在白板上为它画一小块东西；回答完，再用一个 step 接回主线。"
         )
+    elif signal.kind == "no_response":
+        # The one signal nobody uttered: the learner simply let the question pass.
+        # The instruction has to forbid acknowledging it, or the model will read
+        # "no answer" as "needs help" and either re-teach or nag — which turns a
+        # learner who was quietly reading along into one being chased.
+        instruction = (
+            "学习者在刚才那个停点上什么也没做：没有作答，没有说没懂，也没有提问，"
+            "只是让这个问题过去了。**不要提到他没有回答**——不要追问、不要提醒、"
+            "不要重复刚才那一段、也不要说「那我们继续」之类的过渡话。"
+            "顺着主线继续讲下一步内容，就像刚才那一步已经讲完了一样。"
+            "给 1 到 2 个新 step。"
+        )
     else:
         instruction = (
             "学习者回答了上一个问题。先给**简短**反馈（1 到 3 句，就事论事），"
@@ -224,11 +236,19 @@ async def respond_to(
         )
     )
 
+    # `no_response` has no text by definition, and the old fallback ("just pressed
+    # Stop") would be a lie about what happened — the model would then answer a
+    # question nobody asked. It gets its own phrasing so the prompt stays true.
+    if signal.kind == "no_response":
+        learner_input = "（没有输入：学习者没有作答，也没有提问）"
+    else:
+        learner_input = signal.text or "（没有输入，只是按了 Stop）"
+
     prompt = (
         f"本节课：{lesson_title}\n学习目标：{objective}\n"
         f"\n已经讲过的 step（不要重复它们的说法）：\n{already}\n"
         f"{question_block}\n"
-        f"\n学习者的输入：{signal.text or '（没有输入，只是按了 Stop）'}"
+        f"\n学习者的输入：{learner_input}"
         f"{answer_block}{verdict_block}\n\n{instruction}"
     )
     turn = await ai_client.generate(

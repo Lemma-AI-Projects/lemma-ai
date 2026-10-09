@@ -55,6 +55,20 @@ const PRINT_CSS = `
 }
 `
 
+/**
+ * 一个问题最多等多久，然后由产品替学习者放行（`no_response`）。
+ *
+ * 为什么需要它：停点是**硬停**。一个问题出现后时间线就 `return` 了，没有任何
+ * 东西会自己往下走——所以一个只想安静读下去、不想答题的学习者，会永远停在第一
+ * 个问题上。这跟有没有语音无关，它今天就已经是这样了。
+ *
+ * 时长是个取舍，而且是个**第一次猜的值**：太短会把正在思考的人推着走，太长等于
+ * 没修。真正的依据只能在真实课程里试出来，所以它是一个具名常量，改它不需要读别
+ * 的代码。正在打字的人不算"没回应"（见 `onEngaged`），所以这个值只对真正的沉默
+ * 生效。
+ */
+const IDLE_ADVANCE_MS = 60_000
+
 function messageOf(error: unknown, fallback: string): string {
   if (isAxiosError(error)) {
     const detail = error.response?.data as { detail?: unknown } | undefined
@@ -319,6 +333,73 @@ export function TeachingSessionView() {
   )
   const caption = playback.said[playback.said.length - 1]?.text ?? ''
 
+  /**
+   * 空闲放行：停在问题上、但学习者什么都没做时，替他说一句 `no_response`。
+   *
+   * 放在视图层而不是播放层，是因为时间线在问题上已经 `return` 了——它没有停在
+   * 任何 promise 上，所以"谁在等"这件事只有这里知道。
+   *
+   * `respond` 走 ref：它是 `useCallback`，把它放进依赖会让每次会话状态变化都重置
+   * 计时，那样一个正在思考的人永远不会被放行，等于没修。
+   */
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /**
+   * 已经替学习者放行过的那个 step。
+   *
+   * 一次就够。没有这个护栏时，如果模型这一步返回了空 steps（或请求失败），停点会
+   * 原地不动，计时重新起算，60 秒后再来一次——一个每分钟烧一次模型调用的死循环。
+   * 放行失败后学习者仍然可以自己作答、点"我没懂"或提问，手动路径一条都没少。
+   */
+  const autoAdvancedRef = useRef<string | null>(null)
+  const respondRef = useRef(respond)
+  useEffect(() => {
+    respondRef.current = respond
+  }, [respond])
+
+  const clearIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) {
+      clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = null
+    }
+  }, [])
+
+  const armIdleTimer = useCallback(() => {
+    clearIdleTimer()
+    idleTimerRef.current = setTimeout(() => {
+      idleTimerRef.current = null
+      autoAdvancedRef.current = questionStep?.id ?? null
+      void respondRef.current({
+        signal: 'no_response',
+        stepId: questionStep?.id ?? null,
+      })
+    }, IDLE_ADVANCE_MS)
+  }, [clearIdleTimer, questionStep?.id])
+
+  // 只有"真的在等一个回答"才计时。成就在弹、请求在飞、已经答过、已经放行过，
+  // 都不算。
+  const waitingOnQuestion =
+    awaiting &&
+    !answered &&
+    !thinking &&
+    !award &&
+    Boolean(questionStep) &&
+    autoAdvancedRef.current !== questionStep?.id
+
+  useEffect(() => {
+    if (!waitingOnQuestion) {
+      clearIdleTimer()
+      return
+    }
+    armIdleTimer()
+    return clearIdleTimer
+  }, [waitingOnQuestion, armIdleTimer, clearIdleTimer])
+
+  /** 正在打字的人不是"没回应"的人：每次敲键把计时重新起算。 */
+  const handleEngaged = useCallback(() => {
+    if (!waitingOnQuestion) return
+    armIdleTimer()
+  }, [waitingOnQuestion, armIdleTimer])
+
   const dismissAward = useCallback(() => {
     setAward(null)
     const pending = deferredStepsRef.current
@@ -526,6 +607,7 @@ export function TeachingSessionView() {
             onConfused={handleConfused}
             onAsk={handleAsk}
             onStop={playback.stop}
+            onEngaged={handleEngaged}
           />
           </div>
         </div>
