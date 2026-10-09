@@ -63,8 +63,21 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database import Base
 
-#: The two list-shaped sections of Home. Same lifecycle, different question.
-HOME_ITEM_KINDS = ("interest", "preference")
+#: The list-shaped sections of Home. Same lifecycle, different question.
+#:
+#: ⚠️ `about` was added when the page became a Context Studio: About Me used to
+#: be a **single `background` string** on `user_home`, which made it the one
+#: section a user could not add to — and the reason a page with three sections
+#: had two shapes. It is a list now, and the three sections finally behave alike.
+#:
+#: **The old column is kept and still rendered.** It is the only Home field some
+#: older accounts have, so dropping it would silently empty their profile; and a
+#: user who wrote a paragraph there should not lose it because a section became
+#: editable. What changed is that it is no longer the *only* way in.
+#:
+#: No DB-level CHECK constrains this tuple (`:149` is a bare `String`), so adding
+#: a kind is a Python-side change — no migration.
+HOME_ITEM_KINDS = ("about", "interest", "preference")
 
 #: `candidate` = proposed, visible to the user, never used in a prompt.
 HOME_ITEM_STATUSES = ("candidate", "confirmed")

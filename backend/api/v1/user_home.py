@@ -69,6 +69,7 @@ async def _home_out(db: AsyncSession, *, user_id: uuid.UUID) -> UserHomeOut:
         auto_about=home.auto_about if home else True,
         auto_interests=home.auto_interests if home else True,
         auto_preferences=home.auto_preferences if home else True,
+        about=[_item_out(item) for item in confirmed if item.kind == "about"],
         interests=[
             _item_out(item) for item in confirmed if item.kind == "interest"
         ],

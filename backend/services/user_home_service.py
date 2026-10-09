@@ -52,6 +52,10 @@ class PreferenceLayer:
 class UserHomeContext:
     language: str | None
     background: str | None
+    #: The list-shaped About Me entries. **`background` is the older, single-string
+    #: half and is still read** — see `models/user_home.py` for why it was not
+    #: dropped. This is the part the user can add to, edit and delete item by item.
+    about: list[str]
     interests: list[str]
     preferences: list[str]
     #: Proposals the user has not answered yet — carried so the UI and the agent
@@ -61,7 +65,11 @@ class UserHomeContext:
     @property
     def is_empty(self) -> bool:
         return not (
-            self.language or self.background or self.interests or self.preferences
+            self.language
+            or self.background
+            or self.about
+            or self.interests
+            or self.preferences
         )
 
 
@@ -320,6 +328,7 @@ async def read_user_home(db: AsyncSession, *, user_id: uuid.UUID) -> UserHomeCon
         background=home.background if home else None,
         interests=[row.text for row in confirmed if row.kind == "interest"],
         preferences=[row.text for row in confirmed if row.kind == "preference"],
+        about=[row.text for row in confirmed if row.kind == "about"],
         candidates=[row.text for row in candidates],
     )
 

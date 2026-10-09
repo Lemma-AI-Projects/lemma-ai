@@ -23,6 +23,12 @@ from services.user_home_service import PreferenceLayer, UserHomeContext
 #: readable at a glance in the inspector.
 INTEREST_CAP = 12
 PREFERENCE_CAP = 12
+#: Same order of magnitude as the other two, on purpose. This is not a budget
+#: decision so much as a shape one: a long list of "about them" stops being a
+#: self-description and becomes a dossier, and the lines past the cap are dropped
+#: silently — which is its own small dishonesty. Twelve is where the section
+#: still reads as a person rather than a record.
+ABOUT_CAP = 12
 ITEM_CHARS = 120
 
 #: Scope wording, shortest honest form. "this turn" outranks "this space"
@@ -57,6 +63,16 @@ def render_user_home(context: UserHomeContext) -> str:
         lines.append(f"- Language they want to be taught in: {context.language}")
     if context.background:
         lines.append(f"- Background: {_clip(context.background)}")
+    if context.about:
+        # The list-shaped About Me entries. Kept separate from `background`
+        # rather than merged into it: a background is one paragraph the user
+        # wrote once, while these are the statements they can add, reorder and
+        # delete one at a time. Flattening them together would make both harder
+        # to reason about — one of them would become the other's edit target.
+        lines.append("- About them, in their own words:")
+        lines.extend(
+            f"  - {_clip(text)}" for text in context.about[:ABOUT_CAP]
+        )
     if context.interests:
         lines.append(f"- Long-term interests: {'; '.join(context.interests[:INTEREST_CAP])}")
     if context.preferences:

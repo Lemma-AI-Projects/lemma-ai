@@ -24,7 +24,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-HomeItemKind = Literal["interest", "preference"]
+HomeItemKind = Literal["about", "interest", "preference"]
 HomeItemStatus = Literal["candidate", "confirmed"]
 
 
@@ -59,6 +59,10 @@ class UserHomeOut(_Camel):
     auto_about: bool = True
     auto_interests: bool = True
     auto_preferences: bool = True
+    #: The list-shaped About Me entries. `background` above is the older
+    #: single-string half and is still returned; this is the part the user can
+    #: add to, edit and delete one at a time.
+    about: list[UserHomeItemOut] = Field(default_factory=list)
     interests: list[UserHomeItemOut] = Field(default_factory=list)
     preferences: list[UserHomeItemOut] = Field(default_factory=list)
     candidates: list[UserHomeItemOut] = Field(default_factory=list)
