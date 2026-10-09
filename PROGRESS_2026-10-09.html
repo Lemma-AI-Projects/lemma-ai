@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Lemma AI · 进度同步</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  :root {
+    --paper: #FAF9F6;
+    --ink: #16191D;
+    --ink2: #454C56;
+    --ink3: #7A828E;
+    --line: #DED9CF;
+    --line2: #EDE9E1;
+    --accent: #1F5F8B;
+    --vision: #7A5A2E;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #555;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, sans-serif;
+    color: var(--ink);
+    font-size: 11pt;
+    line-height: 1.74;
+  }
+  .page {
+    position: relative;
+    width: 210mm; height: 297mm;
+    background: var(--paper);
+    padding: 15mm 17mm 16mm 17mm;
+    page-break-after: always;
+    overflow: hidden;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ── 左上角 logo ── */
+  .brand {
+    position: absolute; top: 14mm; left: 17mm;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .brand img {
+    height: 13mm; width: 13mm;
+    /* 源图是方形 PNG、白底；页面是米白底。multiply 让白底融进去，
+       否则左上角会出现一个刺眼的白方块。 */
+    mix-blend-mode: multiply;
+  }
+  .brand span {
+    font-size: 10.5pt; font-weight: 600; letter-spacing: .06em;
+    color: var(--ink); padding-bottom: 1.5mm;
+  }
+
+  .folio {
+    position: absolute; bottom: 9mm; left: 17mm; right: 17mm;
+    display: flex; justify-content: space-between;
+    font-size: 7.6pt; color: var(--ink3);
+    border-top: .35mm solid var(--line2); padding-top: 2.4mm;
+  }
+  .top-rule { position: absolute; top: 24mm; left: 17mm; right: 17mm; height: .5mm; background: var(--ink); }
+  .body { position: absolute; top: 30mm; left: 17mm; right: 17mm; bottom: 16mm; }
+
+  h1 { font-size: 30pt; line-height: 1.14; margin: 0 0 5mm; font-weight: 600; letter-spacing: -.015em; }
+  h2 { font-size: 17.5pt; line-height: 1.24; margin: 0 0 2.5mm; font-weight: 600; letter-spacing: -.01em; }
+  h3 { font-size: 12pt; margin: 0 0 1.6mm; font-weight: 600; }
+  h4 { font-size: 9.8pt; margin: 3.6mm 0 1.1mm; font-weight: 600; color: var(--ink); }
+  p  { margin: 0 0 3.1mm; }
+  .lede { font-size: 11.6pt; color: var(--ink2); line-height: 1.66; max-width: 158mm; }
+  .meta { font-size: 8.6pt; color: var(--ink3); letter-spacing: .02em; }
+
+  /* ── 三段配方：内容 / 实现 / 愿景 ── */
+  .band { margin-bottom: 7.4mm; }
+  .band > .tag {
+    display: inline-block; font-size: 7.6pt; letter-spacing: .14em;
+    color: var(--ink3); border-bottom: .5mm solid var(--ink);
+    padding-bottom: 1.1mm; margin-bottom: 2.6mm;
+  }
+  .band.vision > .tag { color: var(--vision); border-bottom-color: var(--vision); }
+
+  ul { margin: 0 0 2.4mm; padding-left: 4.6mm; }
+  li { margin-bottom: 2.1mm; }
+  li::marker { color: var(--ink3); }
+
+  .lede-list { list-style: none; padding: 0; margin: 0; }
+  .lede-list li {
+    display: grid; grid-template-columns: 24mm 1fr; gap: 0 4mm;
+    padding: 2.4mm 0; border-bottom: .3mm solid var(--line2);
+  }
+  .lede-list li:last-child { border-bottom: none; }
+  .lede-list .k { font-weight: 600; }
+  .lede-list .d { color: var(--ink2); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm 7mm; }
+
+  /* 断线表 */
+  table { width: 100%; border-collapse: collapse; font-size: 9.9pt; }
+  th, td { text-align: left; padding: 2.2mm 2.4mm; vertical-align: top; border-bottom: .3mm solid var(--line2); }
+  th {
+    font-size: 7.6pt; letter-spacing: .1em; color: var(--ink3); font-weight: 600;
+    border-bottom: .5mm solid var(--line);
+  }
+  td.k { font-weight: 600; white-space: nowrap; }
+  .bad { color: #A0413E; }
+
+  /* 链路图 */
+  .chain { display: flex; align-items: stretch; gap: 1.6mm; margin: 3mm 0 4mm; }
+  .node {
+    flex: 1; border: .35mm solid var(--line); padding: 2.4mm 2mm;
+    font-size: 8.8pt; text-align: center; line-height: 1.36; background: #fff;
+  }
+  .node.hit { border-color: #A0413E; color: #A0413E; }
+  .node.ok { border-color: var(--accent); }
+  .arw { align-self: center; color: var(--ink3); font-size: 8pt; }
+
+  /* 结尾的三个待拍板 */
+  .ask { display: grid; grid-template-columns: 7mm 1fr; gap: 0 3mm; margin-bottom: 4.6mm; }
+  .ask .n { color: var(--ink3); font-weight: 600; }
+  .ask .q { font-weight: 600; }
+  .ask .w { color: var(--ink2); grid-column: 2; font-size: 9.4pt; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ P1 · 封面 + 总览 ═══════════ -->
+<div class="page">
+  <div class="brand"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAALy0lEQVR4nOzdbWhbdf/H8XNqU3TThLFMVhiDWu0ibFpX0a6dRSElszOW4pgx06CzyqqDeVfvH1mme2CxijjFVeeE1XYOnOLUVQfOzWZiBeMNWBbHxFpdKkmbNDZJT/LHf8TLyyunzc35nu/vnHxej5y0Ob/zzbtJ+kuTVGYyGQnMIp1Oz83N/fP/zM3NpdPpv/+ZyWTm/wJJklKpVOmXKSMsoFDBvQAwJ4QFJBAWkEBYQAJhAQmEBSQQFpBAWEACYQEJhAUkEBaQQFhAAmEBCYQFJBAWkEBYQAJhAQmEBSQQFpBAWEACYQEJhAUkEBa5UChUW1t78OBB7oXoCmGRa29v//HHHzdt2jQ4OMi9Fv0gLFr33XffyMhI9r9vueWWvr6+ZDLJvShdZIBMb2/v/w7c5/OlUinupZHDS+yp7N27d+vWrTnHu2HDhgMHDpx//vkc69IJwiLxxhtvdHV1/fHHH2pf0NDQcPjw4QsvvFDfdekHYWlvcHDQ5/Mt+FiqpqbmyJEjF198sV7r0hXC0tjRo0edTmeeU12yZMmHH3541VVX0a9Lb/itUEvffPON2+3O/2c1HA6vX7/+zTffJF4XA4SlmXA47Ha74/F4Qd+VSqV8Pl9fXx/ZunggLG0kk8nNmzefOXOmuG/v7u5+4YUXtF4UK+79DpPw+XylXxcPPvigoijcp6INhKWBJ598Uouf8T95PJ5EIsF9QhpAWCVJJBKPPvqoVlVltbS0hMNh7jMrFcIqySOPPKJtVVlXXHHF6dOnuU+uJAireHv27KGoKqumpubEiRPcp1g8bJAW6fjx49dccw3pIWw22+DgoMvlIj0KEWw3FOPUqVObN2+mPsrU1NSWLVs++OAD6gNRQFgFC4VCGzdunJiY0OFYv//+e0dHx759+3Q4lsa474sNJhqNNjc363819fT0cJ96YRBWARRFuemmm/SvKqurqyuZTHLPIF8IK1+zs7NOp5OrqqyOjo5IJMI9ibwgrLzEYrGmpibeqrIuu+yyb7/9lnseC8N2w8LS6XRra+vRo0e5F/KXZcuWHT58+Morr+ReyHzwW+HCduzYIU5V2V9L161bNzo6yr2QeXHfZIpuYGDAYrFwX0s5LF26dHR0lHs8qiq55yO0jz/+2Ov1ivloIR6P/+tzTYWCu0JVfr+/vb1dzKpkWd6/f7/QfyzPfZMpqGAwaLfbua8cVXv27OGe0AIQVg7j4+O1tbXc8agyxC48wvq3M2fO1NTUcMej6rHHHjPEny8jrP+SSqUaGhq441HV2dnJPaF8Iaz/SCQSt99+O3c8qpqbm/FcoSHdc8893PGocjgc0WiUe0IFQFh/6enp4Y5H1cqVKycmJrgnVBg8V/inAwcO6PAXocWx2WzHjx9fvXo190IKgw1S6ZNPPhH2oZXFYjl48KDhqpKwQToyMmKz2bivhNwWLVq0f/9+7gkVqazDGh0dFbaqysrKvr4+7gkVr3zDmpiYcDgc3P2oevjhh7knVJIyDSscDlO/KrAUd911F/eESlWmYW3cuJE7HlVut9sQT9rMrxzDuvvuu7njUdXc3GysjVA1ZRcW0dt4aGLVqlVnz57lnpA2yius559/njseVXa7/dSpU9wT0kwZhXXo0CFZlrn7yW3p0qV+v597Qloql6d0AoHA+vXro9Eo90Jye/vttxlfY02hLJ7S+e677zZs2CBsVbt37zZZVVI5PKVz9uxZkT9Z5LnnnuOeEAmThxWLxVatWsUdj6qHHnqIe0JUzBxWLBZbt24ddzyqPB4P94QImTasRCLhdru541HlcrnM8bbbakwb1p133skdj6q1a9dOT09zT4iWObcbXnnllW3btnGvIrcLLrhgbGxs+fLl3AuhZcLthuHh4QceeIB7FblVVFQMDAyYvirJfNsNH330UVVVFfdQc7NYLMPDw9wT0omp7gr9fn9TU5OYZ3TeeecNDQ3dcMMN3AvRiXnuCr/++uuCPoRST7Is79u3r3yqkkxzVxgMBkV+Gw+zbq/PwwxhhcPhq6++mjseVdu3b+eeEAMzhMX+Ltnz6OjoMMHfGRfB8GEJu18lSVJdXZ3pN0LVGDusV199lTseVcuXL//++++5J8TGwGG99tprYr6fsSRJ1dXVJ0+e5J4QJ6OG9dZbb1VUCLpXsmLFis8++4x7QswMGdbw8PCiRYu4+8nNarUeO3aMe0L8jLfzHggEWlpapqamuBeS27vvvivyn+voRtB7EzU//PCDyFX19/ejqiwj3WJlMhmHwzE2Nsa9kNy2bdu2e/du7lWIwjC3WOl02uPxCFtVS0tLb28v9ypEwv0gL1/3338/96hUrVmzxjQvjdeKMcLq7u7mjkdVXV3d6dOnuSckHAOE9cQTT3DHo8rhcPz222/cExKR6GE9++yz3PGoslqtuAdUI/RvhQMDA16vl3sVudlstq+++uqiiy7iXoigxA1rbGzs0ksvTafT3AvJQZbl999///rrr+deiLgE3W6IRqPXXXedmFVJkrRz505UNT8Rw0qn0z6f75dffuFeSG6tra0i732IgvtBXg47duzgnoqq+vr6SCTCPSEDECssRVG2b9/OHY+q6urqX3/9lXtIxiBQWIqidHV1ccejau3atdwTMhKBwhL5g92amprM/eYwmhMlrNdff507HlX19fXYCC2UEPtYJ06ccLlcMzMz3AvJwWq1fvHFFyK/LaCY+Lcbfvrpp87OTjGrqqys7O/vR1XF4L3BjEQia9as4Z6BqhdffJF3PsbFGVYsFhP5Rcw9PT2MwzE6zrCE/Rhmc3ywGy+esBRFue2227jjUeXxeOLxOMtkTIMnrM7OTu54VHm9XmxZlY4hLJE3QhsbG8v2bTy0pXdYhw4dOvfcc7n7yW3lypVm+mA3XrpukI6MjDidzng8rtsR87dkyZJjx46tXr2aeyEmoV9YwWCwsbFxcnJSn8MVxGKxHDly5Nprr+VeiHnotPM+OTnpcrnErEqW5b1796IqbekR1szMjNvtDgaDOhyrCLt27RL2JRsGRv0gbnp6+pJLLuE+S1XPPPMM9QTKE21YkUjk8ssv544nN1mWX375ZdLTL2e0Yd1xxx3c/ajasmUL6bmXOcKwRH73lYaGhtnZWbpzB6rthqGhoZtvvpnikktXW1vr9/vtdjv3QsyMJKxPP/20tbU1lUppfsmls9vtfr9f5M9HMQfttxsCgUBbW5uYVS1evPi9995DVTrQOKyff/65ra1NzCdtzjnnnKGhocbGRu6FlAUtwxofH3e5XOPj4xpeplaqqqr6+/vb2tq4F1I2tPotIBQKCfsRXLIsP/3001qdKeRDm7BmZmba29u5+1HV3d2tyWlC/jQIS1GUrVu3csejyuv1ajEoKIwGYT3++OPc8ahyOp3hcFiLQUFhSg3rpZde4o5HVX19/dTUlEaDgsKUtEH6zjvvbNq0SVEUTXvQhizLTz311IoVKyRJSiaT+XzL3NxcPueSyWTy3KXL87jJZDKfa0H5fwt+WTqdznN5qVTq7+NardadO3fm8135KjrJzz//fPHixVouBfhUV1dreoOVKXIf68svv7zxxhvFfMMFEEIRMQYCgWXLlnEvHLTEf4sVCoVuvfXWUChEc4JgFgVlqCiKsNvrUArOW6xkMul2u0+ePEl5gmAW+Td47733ci8WqGh+i5VvWLt27eI+dyDEE1Zvb68sy9znDoR4wqqrq+M+caDFv90AkA+EBVL2iUhtLxBhgYSwwDAQFpBAWEACYQEJhAUkEBaQQFhAAmEBCYQFJBAWkEBYQAJhgZR9mau2F4iwQMq+KlrbC0RYQAJhAQmEBSQQFpBAWEACYQEJhAUkEBaQQFhAQtdPsf+XaDT6z39WVVXl810Wi6WiAj8PouMMC0wMP/pAAmEBCYQFJBAWkEBYQAJhAQmEBSQQFpBAWEACYQEJhAUkEBaQQFhAAmEBCYQFJBAWkEBYQAJhAQmEBSQQFpBAWEACYQEJhAUkEBaQQFhAAmEBCYQFJBAWkPi/AAAA//+/Wd+KIWQF0wAAAABJRU5ErkJggg==" alt=""><span>Lemma AI</span></div>
+  <div class="top-rule"></div>
+  <div class="body">
+    <h1>进度同步<br>为下一步开发做准备</h1>
+    <p class="lede">
+      这份材料回答两个问题：<strong>现在哪些东西真的能用了</strong>，以及
+      <strong>要让 Learn Space 真正转起来，还差哪几步</strong>。
+      全部以 <code>user-profile</code> 分支为准。
+    </p>
+
+    <div class="meta" style="margin-top:6mm">
+      2026-10-09 · user-profile · 三块内容：自由课程与语音 / 学习空间 / 用户画像
+    </div>
+
+    <div class="band" style="margin-top:11mm">
+      <span class="tag">一句话结论</span>
+      <p>
+        三块内容都已经<strong>各自跑通了一部分</strong>，但它们共同缺同一样东西：
+        <strong>一条能把「用户做了什么」变成「系统因此改变了什么」的通路</strong>。
+        这不是某一个页面的问题，是三条线在同一个地方断开。
+      </p>
+    </div>
+
+    <div class="band">
+      <span class="tag">三块内容现在各到哪一步</span>
+      <ul class="lede-list">
+        <li>
+          <span class="k">自由课程 · 语音</span>
+          <span class="d">课程能生成、能上课、能出声。最近修好了课程在课程中心点不进去、
+            进度恒为 0、白板课不听用户要求这三处；语音改为由服务端生成。
+            <strong>离「上线最小闭环」最近的一块。</strong></span>
+        </li>
+        <li>
+          <span class="k">学习空间</span>
+          <span class="d">空间记忆与空间上下文的设计已经定了并且都接进了对话。
+            聚焦模式（Focus）能读能写。<strong>但空间里学完之后，
+            「他到底学会没有」这件事系统记不下来。</strong></span>
+        </li>
+        <li>
+          <span class="k">用户画像</span>
+          <span class="d">三个分区（关于我 / 长期关注 / 如何工作）都在，Agent 可以提出建议、
+            但必须用户确认才生效。<strong>这是三块里控制权做得最严的一块。</strong></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="band">
+      <span class="tag">阅读方式</span>
+      <p class="meta" style="line-height:1.7">
+        每块内容分三段写：<strong>内容</strong>（这东西是什么、用户会怎么用）·
+        <strong>实现</strong>（这一轮做到了什么，不写技术细节）·
+        <strong>愿景</strong>（它应该变成什么）。
+      </p>
+    </div>
+  </div>
+  <div class="folio"><span>Lemma AI · 进度同步 · 2026-10-09</span><span>1 / 6</span></div>
+</div>
+
+<!-- ═══════════ P2 · 自由课程 + 语音 ═══════════ -->
+<div class="page">
+  <div class="brand"><img src="data:image/png;base64,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" alt=""><span>Lemma AI</span></div>
+  <div class="top-rule"></div>
+  <div class="body">
+    <h2>自由课程与语音</h2>
+    <p class="lede">让一个人在没有老师的情况下，从「我想学 X」走到「我真的会了一点」。</p>
+
+    <div class="band" style="margin-top:6mm">
+      <span class="tag">内容 · 这东西是什么</span>
+      <p>
+        用户说出想学的主题，系统把它拆成一门有结构的课——单元、课节、讲解、练习、随堂提问。
+        每一节课由白板课讲：<strong>AI 边讲边画，学习者可以随时打断、要求换一种讲法、
+        在关键处被点名回答。</strong>
+      </p>
+      <p>
+        上课前有四道选择题（体量、深度、侧重、节奏）。它们不是表单——
+        用户是在回答「你想怎么被教」，而不是在填配置。
+      </p>
+      <p>
+        <strong>语音是这门课的一部分，不是附加项。</strong>讲解的节奏本来就是按句子切的，
+        声音跟着句子走，学习者可以只读不看。
+      </p>
+    </div>
+
+    <div class="band">
+      <span class="tag">实现 · 这一轮做到了什么</span>
+      <ul>
+        <li>
+          <strong>课程在课程中心点不进去</strong> —— 之前自由课程会被当成视频课打开，
+          拉回来一棵空树。现在进的是它自己的页面。
+        </li>
+        <li>
+          <strong>课程进度恒显示 0%</strong> —— 之前只统计视频课的节数，
+          自由课程没有那种节，所以永远是 0/0、也永远进不了「已学完」。
+          现在按课节算，而且<strong>与课程页显示的完全一致</strong>。
+        </li>
+        <li>
+          <strong>答完题回到课程页，答题数没变</strong> —— 是刷新没带上，不是没记。
+        </li>
+        <li>
+          <strong>白板课不听用户要什么</strong> —— 用户选了「节奏紧凑」，
+          得到一份紧凑的文档，然后是一堂不理会这个选择的课。现在选择会传到白板课。
+        </li>
+        <li>
+          <strong>语音改由服务端生成</strong> —— 之前声音在浏览器里生成，
+          音色不可控、时长靠猜、也没法计量。现在音色与节奏是确定的、可计量的，
+          浏览器只作为兜底。
+        </li>
+        <li>
+          <strong>修掉一个会卡死的等待</strong> —— 只打算读、不打算答的学习者
+          会永远卡在第一个问题上。现在等待有上限，且<b>正在读题不会被误判成离开</b>。
+        </li>
+      </ul>
+    </div>
+
+    <div class="band vision">
+      <span class="tag">愿景</span>
+      <p>
+        <strong>课程应该能记住「这个人哪一类题总是错」</strong>，并在下一门课里体现出来。
+        现在每门课是独立的一次生成——学完就只留在那一门课里。
+        这是「最小闭环」的下一步，也是最值钱的一步。
+      </p>
+    </div>
+  </div>
+  <div class="folio"><span>Lemma AI · 进度同步 · 2026-10-09</span><span>2 / 6</span></div>
+</div>
+
+<!-- ═══════════ P3 · 学习空间：空间记忆与空间上下文 ═══════════ -->
+<div class="page">
+  <div class="brand"><img src="data:image/png;base64,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" alt=""><span>Lemma AI</span></div>
+  <div class="top-rule"></div>
+  <div class="body">
+    <h2>学习空间 · 空间记忆与空间上下文</h2>
+    <p class="lede">这是 Learn Space 与普通对话唯一的区别：<strong>它有一个跨会话的主体。</strong></p>
+
+    <div class="band" style="margin-top:6mm">
+      <span class="tag">内容 · 两种东西，两种寿命</span>
+      <p>
+        空间里沉淀的东西分两类，<strong>区别只在「活多久」和「能不能被改」</strong>：
+      </p>
+      <ul class="lede-list" style="margin-top:2mm">
+        <li>
+          <span class="k">空间上下文</span>
+          <span class="d">这个空间里有什么可读的东西——上传的资料、写的笔记。
+            <strong>它决定 AI 能看见什么</strong>，每轮对话都带上（有预算，会截断）。
+            用户随时可以增删改。</span>
+        </li>
+        <li>
+          <span class="k">空间记忆</span>
+          <span class="d">这个空间里发生过什么值得记住的事。
+            <strong>它决定 AI 记得什么</strong>，也会进对话，但只能由 AI 自己决定写。
+            用户的控制权目前弱于空间上下文——这是已知的不对称。</span>
+        </li>
+      </ul>
+      <p style="margin-top:2.4mm">
+        <strong>刻意不做的事：</strong>空间上下文<strong>不进</strong>用户的正式画像，
+        空间记忆<strong>不当作证据</strong>。前者是这一份材料，后者是一句话，
+        都不该被当成「用户是什么样的人」。
+      </p>
+    </div>
+
+    <div class="band">
+      <span class="tag">实现 · 这一轮做到了什么</span>
+      <ul>
+        <li>
+          <strong>聚焦模式（Focus）</strong>能读能写，写完自动存。
+          这是学习者真正待着的地方。
+        </li>
+        <li>
+          <strong>空间上下文与空间记忆都已进对话</strong>，每轮都在。
+        </li>
+        <li>
+          <strong>学习状态是「读时算」的</strong>——不存一个状态值，
+          而是需要的时候从「有哪些记录」现算。
+          <strong>这是有意的：它不可能被写坏。</strong>
+        </li>
+        <li>
+          <strong>课堂记录是忠实的</strong>——只记录发生了什么，不改写、不美化。
+          连「顶嘴」和「打断」都记。
+        </li>
+        <li>
+          <strong>用户回来看得见上次说过什么</strong>（对话能恢复），
+          <strong>但看不见自己当时的进度、当时的承诺、隔了多久</strong>。
+        </li>
+      </ul>
+    </div>
+
+    <div class="band vision">
+      <span class="tag">愿景</span>
+      <p>
+        <strong>空间应该有一份「走到今天的过程」。</strong>不是活动日志
+        （那回答「你做了什么」，而几周后的人不是这么问的），
+        而是<strong>「什么变了 · 凭什么变的 · 这对接下来的意义」</strong>。
+      </p>
+      <p>
+        这份东西今天缺的不是界面，<strong>是它要读的那几样数据还没被记录</strong>——
+        状态变化、目标变更、方法承诺，三样目前都存不下来。
+      </p>
+    </div>
+  </div>
+  <div class="folio"><span>Lemma AI · 进度同步 · 2026-10-09</span><span>3 / 6</span></div>
+</div>
+
+<!-- ═══════════ P4 · 用户画像 ═══════════ -->
+<div class="page">
+  <div class="brand"><img src="data:image/png;base64,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" alt=""><span>Lemma AI</span></div>
+  <div class="top-rule"></div>
+  <div class="body">
+    <h2>用户画像</h2>
+    <p class="lede">
+      <strong>唯一一条控制权规则：</strong>Agent 可以观察、归纳、提出建议，
+      但未经确认的推断<strong>永远不会变成「关于你的事实」</strong>。
+    </p>
+
+    <div class="band" style="margin-top:6mm">
+      <span class="tag">内容 · 三个分区，一份全局</span>
+      <ul class="lede-list">
+        <li>
+          <span class="k">关于我</span>
+          <span class="d">想用哪种语言被讲、背景是什么、以及用他们自己的话写的若干条陈述
+            （我是做什么的、现在准备什么）。</span>
+        </li>
+        <li>
+          <span class="k">长期关注</span>
+          <span class="d">跨学习空间持续发展的方向，不是某一次想问的问题。</span>
+        </li>
+        <li>
+          <span class="k">如何工作</span>
+          <span class="d">偏好的学习方式与协作习惯——先让我自己试、别直接给答案。</span>
+        </li>
+      </ul>
+      <p style="margin-top:2.4mm">
+        三个分区<strong>都是跨空间生效的</strong>。某一个空间里的上下文、
+        掌握程度、目标，都<strong>不属于这里</strong>，它们各有各的归属。
+      </p>
+    </div>
+
+    <div class="band">
+      <span class="tag">实现 · 这一轮做到了什么</span>
+      <ul>
+        <li>
+          <strong>「建议」与「事实」在数据结构上就是分开的。</strong>
+          一条建议进来时是「待确认」，只有用户点了确认，它才成为事实。
+          <strong>而且不是靠界面守这条规矩——是数据本身分成两种状态，
+          只有确认过的那种才会进对话。</strong>
+        </li>
+        <li>
+          <strong>来源被保留</strong>：一条信息是「你自己加的」还是
+          「AI 建议、你确认的」，一直带着。接受之后来源不改成「你写的」。
+        </li>
+        <li>
+          <strong>接受 ≠ 改写。</strong>用户可以在确认前先改内容再决定。
+          拒绝就是拒绝，不会留在别处。
+        </li>
+        <li>
+          <strong>对话来源的建议会跟着来源一起清理</strong>——
+          那段对话没了，建议也不该留着占位置。
+        </li>
+        <li>
+          <strong>「关于我」现在是可逐条增删改的列表</strong>——
+          之前它是两段固定文字，是三个分区里唯一不能「加一条」的，
+          形态不一致。这一轮把它变成和其它两区一样。
+        </li>
+      </ul>
+    </div>
+
+    <div class="band vision">
+      <span class="tag">愿景</span>
+      <p>
+        <strong>用户应该能看见并修改「AI 为什么这么认为」。</strong>
+        现在建议面板只给结论与来源，<strong>给不出依据</strong>——
+        所以还不能说「系统真的理解我」，只能说「我认可或��认可」。
+      </p>
+      <p>
+        另外，<strong>语音偏好目前是全局设置，不属于画像</strong>。
+        要让「我想让 AI 用什么声音讲」成为个人画像的一部分，
+        得先有一个属于用户的存储位置——今天还没有。
+      </p>
+    </div>
+  </div>
+  <div class="folio"><span>Lemma AI · 进度同步 · 2026-10-09</span><span>4 / 6</span></div>
+</div>
+
+<!-- ═══════════ P5 · 其他工作 + 断线地图 ═══════════ -->
+<div class="page">
+  <div class="brand"><img src="data:image/png;base64,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" alt=""><span>Lemma AI</span></div>
+  <div class="top-rule"></div>
+  <div class="body">
+    <h2>同期其他工作 · 与断线地图</h2>
+
+    <div class="band" style="margin-top:5mm">
+      <span class="tag">同期做了什么</span>
+      <table>
+        <thead><tr><th style="width:30mm">工作</th><th>做到了什么</th></tr></thead>
+        <tbody>
+          <tr><td class="k">教学方法成为插件</td>
+              <td>两种教法（直接讲 / 苏格拉底）从硬编码变成可注册的插件，各自声明它的四个要素。
+                <strong>新增教学法不再需要改主流程。</strong></td></tr>
+          <tr><td class="k">提示使用被记录</td>
+              <td>「我提示了他」这件事第一次被记下来。<strong>它是「他到底会不会」这个判断的前提</strong>——
+                而在此之前，这个区分根本不存在。</td></tr>
+          <tr><td class="k">决策与承诺分开</td>
+              <td>决策层能算出「继续 / 保持 / 结束」，也能把这一段承诺单独记下来、
+                并只从记录判断它有没有被兑现。</td></tr>
+          <tr><td class="k">能力与徽章的规范</td>
+              <td>一份「什么算一个能力」的设计规范——<strong>在第一枚徽章被画出来之前</strong>。</td></tr>
+          <tr><td class="k">轨迹（Trajectory）原型</td>
+              <td>「空间如何走到今天」这件事第一次变成可以打开看的页面。
+                <strong>而且它暴露了自己的数据前提缺什么</strong>——见下一页。</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="band">
+      <span class="tag">断线地图 · 三条线断在同一个地方</span>
+      <div class="chain">
+        <span class="node hit">知识结构<br><span style="font-weight:400">没有入口</span></span>
+        <span class="arw">→</span>
+        <span class="node hit">学习记录<br><span style="font-weight:400">写不进去</span></span>
+        <span class="arw">→</span>
+        <span class="node ok">学习状态<br><span style="font-weight:400">能算</span></span>
+        <span class="arw">→</span>
+        <span class="node hit">下一步决策<br><span style="font-weight:400">从不问</span></span>
+        <span class="arw">→</span>
+        <span class="node hit">教学方式<br><span style="font-weight:400">不兑现</span></span>
+      </div>
+      <p style="font-size:9.4pt;color:var(--ink2)">
+        <strong>三块内容各自的表现，其实是同一条链上的三处断裂：</strong>
+        学习空间卡在第一格（没有可记的对象）· 轨迹卡在第三格（状态会变，但「变化」没被记下来）·
+        自由课程卡在第二格（它的判分走的是另一条路，没进这条链）。
+      </p>
+    </div>
+
+    <div class="band">
+      <span class="tag">断线里的三种形态</span>
+      <ul>
+        <li><strong>没有入口</strong>——东西建好了、代码写完了、界面也画了，但没有任何产品路径会去用它。</li>
+        <li><strong>空转</strong>——机制在跑，产出停在最后一步。</li>
+        <li><strong>空壳</strong>——字段、枚举、表都在，但没有人生成它们。</li>
+      </ul>
+      <p style="font-size:9.4pt;color:var(--ink2);margin-top:1.6mm">
+        这三种都躲过了「组件存在吗」的检查——那是最容易问的问题。
+        真正的判据是：<strong>有没有人在写 · 谁在调用 · 读的是不是生产路径</strong>。
+      </p>
+    </div>
+  </div>
+  <div class="folio"><span>Lemma AI · 进度同步 · 2026-10-09</span><span>5 / 6</span></div>
+</div>
+
+<!-- ═══════════ P6 · 愿景与下一步 ═══════════ -->
+<div class="page">
+  <div class="brand"><img src="data:image/png;base64,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" alt=""><span>Lemma AI</span></div>
+  <div class="top-rule"></div>
+  <div class="body">
+    <h2>下一步</h2>
+
+    <div class="band" style="margin-top:5mm">
+      <span class="tag">P0 · 不接通就没有最基本的学习闭环</span>
+      <table>
+        <thead><tr><th style="width:34mm">要接通什么</th><th>为什么是它</th></tr></thead>
+        <tbody>
+          <tr><td class="k">让空间有可记的对象</td>
+              <td>新空间里目前<strong>没有任何可记录的东西</strong>——不是「少」，是「没有」。
+                所以学习记录写不进去，学习状态永远是空的。<strong>这一条不通，后面全部无法验证。</strong></td></tr>
+          <tr><td class="k">给聚焦模式一个能判对错的地方</td>
+              <td>用户在聚焦模式里能读能写能对话，<strong>但没有任何一个动作会产生学习记录</strong>。
+                它现在是一个文档阅读器加一个聊天框。</td></tr>
+          <tr><td class="k">每轮都问一次决策</td>
+              <td>决策层已经能算「继续还是结束」，但<strong>没有人每轮去问它</strong>。</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:9.4pt;color:var(--ink2);margin-top:2.4mm">
+        这三条<strong>都不在「引导流程」那一层</strong>。
+        也就是说：把「建空间 → 说意图 → 第一步做什么 → 进入学习」这条引导链做通，
+        是很便宜的（现有能力几乎都能复用），<strong>但它会把用户带到一个后面是空的房间里</strong>。
+      </p>
+    </div>
+
+    <div class="band vision">
+      <span class="tag">P1 · 接通之后才开始成立的</span>
+      <p>
+        回来时接得上上次 · 决定兑现（承诺 → 兑现 → 下一段）· 目标变更影响下一步 ·
+        提醒点得进去、到得了现场 · 轨迹真的有内容可读。
+      </p>
+    </div>
+
+    <div class="band">
+      <span class="tag">需要拍板的三件事</span>
+      <div class="ask">
+        <span class="n">1</span><span class="q">白板课的判分怎么记</span>
+        <span class="w">白板课上答的题与「课内练习」是两套不同的东西，
+          而正式记录只有一套。要么让它们共用一套（要动数据结构），
+          要么新建一套（读的时候要合并，合并规则就是新的分叉点）。<strong>我倾向让它们共用。</strong></span>
+      </div>
+      <div class="ask">
+        <span class="n">2</span><span class="q">轨迹要不要保留列表视图</span>
+        <span class="w">节点多之后树会变乱，而「从上往下读」对文字密集的内容仍然更好。
+          <strong>我倾向先不做</strong>——先把一种形态做到位。</span>
+      </div>
+      <div class="ask">
+        <span class="n">3</span><span class="q">语音偏好算不算用户画像的一部分</span>
+        <span class="w">现在语音是全局设置。<strong>要变成个人偏好，得先有一个属于用户的存储位置</strong>，
+          那是另一次改动，不该顺手塞进这一轮。</span>
+      </div>
+    </div>
+
+    <div class="band" style="margin-top:7mm">
+      <span class="tag">一句话</span>
+      <p style="font-size:10.6pt">
+        三块内容都不缺自己的零件，缺的是<strong>把它们串起来的那根线</strong>。
+        先接通这条线，三块会同时开始活。
+      </p>
+    </div>
+  </div>
+  <div class="folio"><span>Lemma AI · 进度同步 · 2026-10-09</span><span>6 / 6</span></div>
+</div>
+
+</body>
+</html>
