@@ -1,11 +1,14 @@
 .DS_Store
 /.cursor/
-# docs/ 整体不入库（多为本地草稿）。例外有两份，都是团队会长期引用的文档：
-# 成就/能力视觉设计规范是上位规范；Free Course 的 README 是那份研究的入口 ——
-# 研究的 HTML 与三份计划在仓库根，而 B-04 那个建模决策要靠它被引用到。
+# docs/ 整体不入库（多为本地草稿）。例外有三份，都是团队会长期引用的文档：
+# 成就/能力视觉设计规范是上位规范；Free Course 的 README 是那份研究的入口
+# （研究的 HTML 与三份计划在仓库根，B-04 那个建模决策要靠它被引用到）；
+# 这份工作总结是跨四天的进度索引——它本身引用的文件有一半在仓库根，
+# 不入库的话它就成了唯一拿不到的那一环。
 /docs/*
 !/docs/achievement-design-system.md
 !/docs/README-freecourse.md
+!/docs/WORK_SUMMARY_1006-1009.md
 /task-management/
 /temp/
 
