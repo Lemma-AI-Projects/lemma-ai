@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   ArrowRight,
   BookOpen,
-  ChevronDown,
   FileText,
   Flag,
   Lightbulb,
@@ -11,6 +10,7 @@ import {
   Target,
 } from 'lucide-react'
 
+import { BoardCanvas, type Viewport } from '@/features/board/BoardCanvas'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { TRAJECTORY_SPACES } from './mockData'
 import type {
@@ -23,319 +23,186 @@ import type {
 /**
  * Trajectory —— Learn Space 的纵向时间层。
  *
- * ## 它是什么，不是什么
+ * ## 它在画布上，不在文档流里
  *
- * 记录**一个 Space 随着用户持续行动而发生的变化**。所以它的最小单位不是
- * 「一次活动」，而是**一次有意义的改变** —— 而一次改变只有在四个问题都有答案时
- * 才值得占一行：发生了什么 · 什么变了 · 凭什么这么判断 · 这对接下来的意义是什么。
+ * 这一版接了 `BoardCanvas`（拖动 + 以指针为锚点缩放）。这不是为了"看起来像个
+ * 图"，而是因为**列表回答不了一个问题**："我走了多远"。长度能读，形状不能。
  *
- * 少了第四个，它就是日志；少了第三个，它就是 AI 在编故事。这两条是这一页的设计约束，
- * 而 `EvidenceDrawer` 存在的全部理由就是第三条。
+ * ⚠️ **画布内的东西会跟着缩放** —— 缩到 0.25× 时节点上的字就读不到了。
+ * 所以分工是：**画布里放紧凑的节点块**（时间、标题、类型标记），
+ * **完整内容在 hover 时用 HTML 浮层给出**（不参与缩放），点击进 drawer 看依据。
+ * 三层各自解决一件事：空间感、阅读、追溯。
  *
- * ## 与现有架构的关系
+ * ## 纵向是时间，横向是「这个变化触及了什么」
  *
- * 本页**不创建任何新的语义来源**。未来每条 node 的数据会来自已有的那几张表
- * （Goal / Space Memory / Learner State / Evidence / Artifact / Conversation），
- * 按时间维度组织起来。所以 `types.ts` 里的字段名刻意贴着那些既有概念的用词 ——
- * 将来换的是 mock 文件，不是组件。
- *
- * ## 视觉基调
- *
- * quiet / precise / spatial / reflective —— 一份研究笔记，不是一个 dashboard。
- * 所以：不用进度百分比、不用 streak、不用彩色标签墙；节点类型靠**形状与位置**区分，
- * 而不是靠颜色；唯一的强调色留给「判断」和「它的依据」。
+ * ⚠️ **这里没有画"依赖边"**，尽管它长得像科技树。科技树的语义是解锁
+ * （"要学这个得先解锁那个"），而真实的 Trajectory 节点不互相解锁 ——
+ * 9/26 那次突破不是 9/22 练习的解锁结果，是重讲之后的独立结果。
+ * 画前置边等于编造用户没经历过的因果。横向那几列是 `relatedFocus`：
+ * **同一个概念相关的节点落在同一列，于是"口语这件事我卡了三次"
+ * 从三段需要你记住的文本，变成一条看得见的竖线。**
  */
 
 const KIND_LABEL: Record<TrajectoryKind, string> = {
-  episode: '学习事件',
   breakthrough: '突破',
-  problem: '反复出现的困难',
+  problem: '反复出现',
   artifact: '产物',
   'goal-shift': '目标变化',
   'direction-shift': '方向转变',
   reflection: '回看',
   return: '回来',
+  episode: '学习事件',
 }
 
-/**
- * 节点类型的视觉差异 —— 靠**标记形状**而不是颜色。
- *
- * 八个类型要能被区分，但不能变成一排彩色标签。所以：只有三种「有分量」的
- * （突破 / 困难 / 产物）用实心标记，其余用细环；文字标签只给三种有分量的类型，
- * 因为其余五种之间的差别**在版式上已经能看出来**（一个是开放节点、一个是作品、
- * 一个是转向）。
- */
-const KIND_MARK: Record<TrajectoryKind, string> = {
-  breakthrough: 'filled',
-  problem: 'diamond',
-  artifact: 'square',
-  'goal-shift': 'ring-thick',
-  'direction-shift': 'ring-thick',
-  reflection: 'ring',
-  return: 'ring-dashed',
-  episode: 'ring',
-}
+/** 只有三种「有分量」的类型值得一个文字标签；其余五种靠位置和标记形状分辨。 */
+const KIND_LABELLED: TrajectoryKind[] = ['breakthrough', 'problem', 'artifact']
 
-const KIND_WEIGHT: Record<TrajectoryKind, string> = {
-  breakthrough: 'font-medium text-foreground',
-  problem: 'text-foreground',
-  artifact: 'text-foreground',
-  'goal-shift': 'text-foreground',
-  'direction-shift': 'text-foreground',
-  reflection: 'text-muted-foreground',
-  return: 'text-muted-foreground',
-  episode: 'text-muted-foreground',
-}
+/* 与 GoalBlock 同源的三档按钮类 —— 这一页不该有自己的一套按钮。 */
+const PRIMARY =
+  'inline-flex h-7 items-center gap-1 rounded-full bg-foreground px-3 text-[12px] font-medium text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-foreground/20 disabled:opacity-40'
+const QUIET =
+  'inline-flex h-7 items-center gap-1 rounded-full px-2 text-[12px] text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-foreground/10 disabled:opacity-40'
+
+/* ───────────────────────── 画布内的节点块 ───────────────────────── */
 
 function Mark({ kind }: { kind: TrajectoryKind }) {
-  const shape = KIND_MARK[kind]
-  if (shape === 'filled') {
-    return (
-      <span
-        aria-hidden
-        className="mt-[5px] block size-2.5 shrink-0 rounded-full bg-foreground ring-4 ring-background"
-      />
-    )
+  if (kind === 'breakthrough') {
+    return <span aria-hidden className="block size-3 shrink-0 rounded-full bg-zinc-900 ring-4 ring-white" />
   }
-  if (shape === 'diamond') {
-    return (
-      <span
-        aria-hidden
-        className="mt-[3px] block size-3 shrink-0 rotate-45 border border-foreground bg-background"
-      />
-    )
+  if (kind === 'problem') {
+    return <span aria-hidden className="block size-3 shrink-0 rotate-45 border border-zinc-900 bg-white" />
   }
-  if (shape === 'square') {
-    return (
-      <span
-        aria-hidden
-        className="mt-[3px] block size-2.5 shrink-0 border border-foreground bg-background"
-      />
-    )
+  if (kind === 'artifact') {
+    return <span aria-hidden className="block size-2.5 shrink-0 border border-zinc-900 bg-white" />
   }
-  if (shape === 'ring-thick') {
-    return (
-      <span
-        aria-hidden
-        className="mt-[3px] block size-3 shrink-0 rounded-full border-2 border-foreground bg-background"
-      />
-    )
+  if (kind === 'goal-shift' || kind === 'direction-shift') {
+    return <span aria-hidden className="block size-3 shrink-0 rounded-full border-2 border-zinc-900 bg-white" />
   }
-  if (shape === 'ring-dashed') {
-    return (
-      <span
-        aria-hidden
-        className="mt-[3px] block size-3 shrink-0 rounded-full border border-dashed border-muted-foreground bg-background"
-      />
-    )
+  if (kind === 'return') {
+    return <span aria-hidden className="block size-3 shrink-0 rounded-full border border-dashed border-zinc-400 bg-white" />
   }
-  return (
-    <span
-      aria-hidden
-      className="mt-[4px] block size-2 shrink-0 rounded-full border border-muted-foreground/60 bg-background"
-    />
-  )
+  return <span aria-hidden className="block size-2 shrink-0 rounded-full border border-zinc-300 bg-white" />
 }
 
-/* ───────────────────────── 顶部：Current State ───────────────────────── */
-
-/**
- * 顶部刻意很克制 —— 三句话 + 一个跨度，**没有任何 KPI**。
- *
- * 因为用户打开这一页的第一个问题不是"我学了多少"，是"我现在在哪"。
- * 而 KPI 会把注意力引到"数字好不好看"上，那正是这个页面要避免的东西。
- */
-function CurrentState({ space }: { space: TrajectorySpace }) {
+/** 画布里的一个节点。紧凑 —— 因为它会被缩放，而缩放后的正文没人读得动。 */
+function CanvasNode({
+  node,
+  top,
+  left,
+  focused,
+  onHover,
+  onOpen,
+}: {
+  node: TrajectoryNode
+  /** 画布坐标。⚠️ 必须显式给 —— `absolute` 少了 top/left 就是全部叠在原点，
+   *  而那不会报错，只会让所有节点看起来在同一处。 */
+  top: number
+  left: number
+  focused: boolean
+  onHover: (node: TrajectoryNode | null) => void
+  onOpen: (node: TrajectoryNode) => void
+}) {
+  const labelled = KIND_LABELLED.includes(node.kind)
   return (
-    <header className="border-b border-border pb-8">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="font-serif text-2xl leading-tight font-medium tracking-tight text-foreground">
-          {space.name}
-        </h1>
-        <span className="font-mono-cjk text-[11px] tracking-widest text-muted-foreground uppercase">
-          {space.domain}
+    <button
+      type="button"
+      style={{ top, left }}
+      onMouseEnter={() => onHover(node)}
+      onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(node)}
+      onClick={() => onOpen(node)}
+      className={`group absolute w-[268px] cursor-pointer rounded-xl border bg-white px-3.5 py-3 text-left transition-shadow ${
+        focused
+          ? 'border-zinc-400 shadow-[0_2px_12px_rgb(24_24_27/0.10)]'
+          : 'border-zinc-200 hover:border-zinc-300'
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <Mark kind={node.kind} />
+        <span className="font-mono text-[11px] tracking-[0.1em] text-zinc-400 uppercase">
+          {node.date}
         </span>
-        <span className="font-mono-cjk text-[11px] text-muted-foreground/70">{space.current.span}</span>
+        {labelled && (
+          <span className="rounded-full border border-zinc-200 px-1.5 py-px text-[10px] text-zinc-500">
+            {KIND_LABEL[node.kind]}
+          </span>
+        )}
       </div>
-
-      <p className="mt-5 max-w-2xl text-sm text-muted-foreground">{space.current.goal}</p>
-
-      <dl className="mt-7 grid gap-x-10 gap-y-5 sm:grid-cols-2">
-        <div>
-          <dt className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-            Currently
-          </dt>
-          <dd className="mt-1.5 text-[15px] leading-relaxed text-foreground">
-            {space.current.currently}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-            Recent change
-          </dt>
-          <dd className="mt-1.5 text-[15px] leading-relaxed text-foreground">
-            {space.current.recentChange}
-          </dd>
-        </div>
-      </dl>
-
-      <Overview space={space} />
-    </header>
+      <p className="mt-1.5 font-serif text-[15px] leading-snug font-medium text-zinc-900">
+        {node.title}
+      </p>
+      {node.relatedFocus && (
+        <p className="mt-1 truncate font-mono text-[10.5px] text-zinc-400">
+          {node.relatedFocus}
+        </p>
+      )}
+      <p className="mt-1.5 font-mono text-[10.5px] text-zinc-400">
+        {node.evidence.length > 0 ? `${node.evidence.length} 条依据` : '没有记录支撑'}
+      </p>
+    </button>
   )
 }
 
+/* ───────────────────────── hover 浮层（不参与缩放） ───────────────────────── */
+
 /**
- * 时间跨度上的一行关键节点。
+ * 节点的四问，浮在画布之上、**不跟着缩放**。
  *
- * ⚠️ **它不是进度条。** 所以：没有填充、没有百分比、没有完成态 ——
- * 只有位置和一个空心点。当前位置用一条竖线标出，而不是"你已经走了 70%"。
+ * 这是「可缩放」与「可读」两个要求的解法：画布负责空间感，浮层负责阅读。
+ * 位置跟着鼠标，但仍受画布边界约束，不会飘出视口。
  */
-function Overview({ space }: { space: TrajectorySpace }) {
-  const { overviewMarks, span } = space.current
+function HoverCard({ node, x, y }: { node: TrajectoryNode; x: number; y: number }) {
+  // 靠近右/下边缘时翻到另一侧，否则卡片会被视口切掉。
+  const flipX = x > window.innerWidth - 400
+  const flipY = y > window.innerHeight - 340
   return (
-    <div className="mt-8">
-      <div className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-        Trajectory
+    <div
+      className="pointer-events-none fixed z-40 w-[360px] rounded-xl border border-zinc-200 bg-white p-4 shadow-[0_8px_28px_rgb(24_24_27/0.12)]"
+      style={{
+        left: flipX ? x - 376 : x + 18,
+        top: flipY ? y - 300 : y + 18,
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <Mark kind={node.kind} />
+        <span className="font-mono text-[10.5px] tracking-[0.1em] text-zinc-400 uppercase">
+          {node.date}
+          {node.dateNote ? ` · ${node.dateNote}` : ''}
+        </span>
       </div>
-      <div className="relative mt-3 h-9">
-        {/* 基线：一条极淡的横线，代表时间本身 */}
-        <div className="absolute inset-x-0 top-[7px] h-px bg-border" aria-hidden />
-        {overviewMarks.map((m) => {
-          const isNow = m.at >= 1
-          // ⚠️ 两端用 `left-0` / `right-0`，中间才居中。
-          // `left:100%` 的 absolute 元素**可用宽度是 0**（父容器右边界就在那儿），
-          // 于是标签被压成竖排 —— 一列一个字，在真截图里非常明显。
-          // 改成 `right-0` 让它从右边界往左伸展，宽度由内容决定。
-          const atStart = m.at <= 0
-          const atEnd = m.at >= 1
-          return (
-            <div
-              key={m.id}
-              className={`absolute top-0 flex flex-col ${
-                atStart
-                  ? 'left-0 items-start'
-                  : atEnd
-                    ? 'right-0 items-end'
-                    : '-translate-x-1/2 items-center'
-              }`}
-              style={atStart || atEnd ? undefined : { left: `${m.at * 100}%` }}
-            >
-              <span
-                aria-hidden
-                className={
-                  isNow
-                    ? 'mt-[3px] block size-2.5 rounded-full border-2 border-foreground bg-background'
-                    : m.kind === 'breakthrough'
-                      ? 'mt-[4px] block size-2 rounded-full bg-foreground'
-                      : 'mt-[4.5px] block size-1.5 rounded-full border border-muted-foreground/60 bg-background'
-                }
-              />
-              <span
-                className={`mt-1.5 font-mono-cjk text-[10px] leading-tight whitespace-nowrap text-muted-foreground/70 ${
-                  atEnd ? 'text-right' : ''
-                }`}
-              >
-                {m.label}
-              </span>
-            </div>
-          )
-        })}
+      <p className="mt-1.5 font-serif text-[16px] leading-snug font-medium text-zinc-900">
+        {node.title}
+      </p>
+      <p className="mt-2 text-[13.5px] leading-6 text-zinc-600">{node.whatHappened}</p>
+
+      <div className="mt-3 border-l-2 border-zinc-900/20 pl-3">
+        <div className="font-mono text-[10px] tracking-[0.14em] text-zinc-400 uppercase">
+          What changed
+        </div>
+        <p className="mt-0.5 text-[13.5px] leading-6 text-zinc-900">{node.whatChanged}</p>
       </div>
-      {/*
-        ⚠️ 这一行**只留起点**，而且它与顶部标题旁的 `span` 也不重复 ——
-        顶部给的是完整的 `Sep 3 – Oct 2 · 8 周`，这里给的是"这条线从哪开始"。
-        之前这里左右各写一个（右边写「现在」），结果在真截图里「现在」与下面的
-        「8 周」上下紧挨着，看起来像同一个词被压成竖排 —— 那是两个不同层级的信息
-        撞在一起，不是渲染 bug，但读起来会误判。
-      */}
-      <div className="font-mono-cjk text-[10px] text-muted-foreground/50">
-        {span.split(' · ')[0]}
+
+      <div className="mt-3">
+        <div className="font-mono text-[10px] tracking-[0.14em] text-zinc-400 uppercase">
+          What this changes
+        </div>
+        <p className="mt-0.5 text-[13.5px] leading-6 text-zinc-800">{node.implication}</p>
       </div>
+
+      {node.whatRemains && (
+        <p className="mt-3 flex items-start gap-1.5 text-[12.5px] leading-5 text-zinc-500">
+          <Flag className="mt-0.5 size-3 shrink-0" aria-hidden />
+          未解决：{node.whatRemains}
+        </p>
+      )}
+      <p className="mt-3 font-mono text-[10.5px] text-zinc-400">
+        点开看依据 →
+      </p>
     </div>
   )
 }
 
 /* ───────────────────────── Evidence Drawer ───────────────────────── */
-
-/**
- * 「凭什么这么判断」的展开面板。
- *
- * 这一页最重要的交互。**Trajectory 里的每一句语义判断都必须能被追到它的来源** ——
- * 否则它就是 AI 在编故事，而用户没有理由相信它。所以每条 evidence 都能再点开一层，
- * 显示它指向的原始对象（一次交互 / 一份产物摘录 / 一条记录）。
- *
- * 视觉上刻意做成「档案」而不是「详情」：文件名 + 一段摘录 + 出处类型，
- * 像翻一份原始材料，而不是在看一个调试面板。
- */
-function EvidenceDrawer({
-  open,
-  onOpenChange,
-  claim,
-  items,
-}: {
-  open: boolean
-  onOpenChange: (v: boolean) => void
-  claim: string
-  items: TrajectoryEvidence[]
-}) {
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetTitle className="font-serif text-lg font-medium">
-          为什么这么判断
-        </SheetTitle>
-        <SheetDescription className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          「{claim}」
-        </SheetDescription>
-
-        <div className="mt-8">
-          <div className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-            Evidence
-          </div>
-
-          {items.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              这一条没有记录支撑 —— 它是一个判断，还没有被证据接住。
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-5">
-              {items.map((ev) => (
-                <li key={ev.id} className="border-l border-border pl-4">
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <span className="text-sm font-medium text-foreground">{ev.label}</span>
-                    {typeof ev.count === 'number' && (
-                      <span className="font-mono-cjk text-[11px] text-muted-foreground/70">
-                        × {ev.count}
-                      </span>
-                    )}
-                    {ev.independent === true && (
-                      <span className="font-mono-cjk text-[10px] tracking-wider text-muted-foreground/70 uppercase">
-                        独立
-                      </span>
-                    )}
-                    {ev.independent === false && (
-                      <span className="font-mono-cjk text-[10px] tracking-wider text-muted-foreground/50 uppercase">
-                        有提示
-                      </span>
-                    )}
-                  </div>
-                  {ev.detail && (
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      {ev.detail}
-                    </p>
-                  )}
-                  {ev.sourceExcerpt && (
-                    <SourceExcerpt evidence={ev} />
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  )
-}
 
 const SOURCE_ICON: Record<string, typeof FileText> = {
   artifact: FileText,
@@ -351,7 +218,6 @@ const SOURCE_LABEL: Record<string, string> = {
   interaction: '原始交互',
 }
 
-/** 一次「再点一层」—— 从证据追到它指向的那个东西。 */
 function SourceExcerpt({ evidence }: { evidence: TrajectoryEvidence }) {
   const [open, setOpen] = useState(false)
   const Icon = SOURCE_ICON[evidence.sourceKind ?? 'evidence'] ?? FileText
@@ -362,7 +228,7 @@ function SourceExcerpt({ evidence }: { evidence: TrajectoryEvidence }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 inline-flex items-center gap-1.5 font-mono-cjk text-[11px] text-muted-foreground/70 transition-colors hover:text-foreground"
+        className={`${QUIET} mt-1.5`}
       >
         <Icon className="size-3" aria-hidden />
         打开来源
@@ -370,352 +236,220 @@ function SourceExcerpt({ evidence }: { evidence: TrajectoryEvidence }) {
       </button>
     )
   }
-
   return (
-    <div className="mt-2 border border-border bg-muted/30 px-3 py-2.5">
-      <div className="flex items-center gap-1.5 font-mono-cjk text-[10px] tracking-[0.14em] text-muted-foreground/60 uppercase">
+    <div className="mt-2 border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+      <div className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.14em] text-zinc-400 uppercase">
         <Icon className="size-3" aria-hidden />
         {label}
       </div>
-      <pre className="mt-2 font-mono-cjk text-[12px] leading-relaxed whitespace-pre-wrap text-foreground/80">
+      <pre className="mt-1.5 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-zinc-800">
         {evidence.sourceExcerpt}
       </pre>
     </div>
   )
 }
 
-/* ───────────────────────── 时间线节点 ───────────────────────── */
-
-function NodeCard({
-  node,
-  onAskEvidence,
+/**
+ * 「凭什么这么判断」。
+ *
+ * 这一页存在的核心理由。**Trajectory 里的每一句语义判断都必须能被追到它的来源** ——
+ * 否则它就是 AI 在编故事，而用户没有理由相信它。
+ */
+function EvidenceDrawer({
+  open,
+  onOpenChange,
+  claim,
+  items,
 }: {
-  node: TrajectoryNode
-  onAskEvidence: (node: TrajectoryNode) => void
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  claim: string
+  items: TrajectoryEvidence[]
 }) {
-  const [open, setOpen] = useState(false)
-  const isHeavy = node.kind === 'breakthrough' || node.kind === 'problem' || node.kind === 'artifact'
-  const hasEvidence = node.evidence.length > 0
-
   return (
-    <article className="relative pl-8">
-      {/* 时间线主干：只画到最后一个节点之前，最后一段交给 Today 锚点 */}
-      <span
-        aria-hidden
-        className="absolute top-0 bottom-0 left-[5px] w-px bg-foreground/20"
-      />
-      <div className="relative -ml-8 flex items-start pb-1">
-        <span className="absolute top-4 left-0 flex size-[11px] items-center justify-center">
-          <Mark kind={node.kind} />
-        </span>
-      </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full overflow-y-auto border-l border-zinc-200 sm:max-w-xl">
+        <SheetTitle className="font-serif text-lg font-medium">为什么这么判断</SheetTitle>
+        <SheetDescription className="mt-3 text-sm leading-relaxed text-zinc-500">
+          「{claim}」
+        </SheetDescription>
 
-      <div className="pb-10">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="font-mono-cjk text-[11px] tracking-[0.12em] text-muted-foreground/70 uppercase">
-            {node.date}
-          </span>
-          {node.dateNote && (
-            <span className="text-[11px] text-muted-foreground/50">{node.dateNote}</span>
-          )}
-          {isHeavy && (
-            <span className="font-mono-cjk text-[10px] tracking-[0.14em] text-muted-foreground/60 uppercase">
-              {KIND_LABEL[node.kind]}
-            </span>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="group mt-2 block w-full text-left"
-        >
-          <h3
-            className={`font-serif text-[19px] leading-snug tracking-tight ${
-              KIND_WEIGHT[node.kind]
-            } group-hover:underline group-hover:decoration-border group-hover:underline-offset-4`}
-          >
-            {node.title}
-          </h3>
-        </button>
-
-        <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-foreground/85">
-          {node.whatHappened}
-        </p>
-
-        {/* 变化：这一条为什么值得占一行 */}
-        <div className="mt-4 border-l-2 border-foreground/25 pl-3.5">
-          <div className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-            What changed
+        <div className="mt-8">
+          <div className="font-mono text-[10.5px] tracking-[0.16em] text-zinc-400 uppercase">
+            Evidence
           </div>
-          <p className="mt-1 max-w-2xl text-[15px] leading-relaxed text-foreground">
-            {node.whatChanged}
-          </p>
-        </div>
-
-        {/* Implication：整个页面最重要的一项，所以给它最安静但最实的排版 */}
-        <div className="mt-4 max-w-2xl">
-          <div className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-            What this changes
-          </div>
-          <p className="mt-1 text-[15px] leading-relaxed text-foreground/90">{node.implication}</p>
-        </div>
-
-        {/* 依据：永远可见（不是藏在展开里），因为它是可信度的来源 */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <button
-            type="button"
-            onClick={() => onAskEvidence(node)}
-            disabled={!hasEvidence}
-            className="inline-flex items-center gap-1.5 font-mono-cjk text-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Lightbulb className="size-3" aria-hidden />
-            {hasEvidence
-              ? `${node.evidence.length} 条依据`
-              : '没有记录支撑'}
-            <ArrowRight className="size-3" aria-hidden />
-          </button>
-
-          {node.relatedArtifact && (
-            <span className="inline-flex items-center gap-1.5 font-mono-cjk text-[11px] text-muted-foreground/70">
-              <FileText className="size-3" aria-hidden />
-              {node.relatedArtifact.name}
-            </span>
-          )}
-          {node.relatedFocus && (
-            <span className="inline-flex items-center gap-1.5 font-mono-cjk text-[11px] text-muted-foreground/70">
-              <Target className="size-3" aria-hidden />
-              {node.relatedFocus}
-            </span>
-          )}
-
-          {node.whatRemains && (
-            <span className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground">
-              <Flag className="size-3" aria-hidden />
-              未解决：{node.whatRemains}
-            </span>
-          )}
-        </div>
-
-        {open && (
-          <div className="mt-4 border-l border-border pl-4">
-            <div className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-              Evidence
-            </div>
-            <ul className="mt-2 space-y-2.5">
-              {node.evidence.map((ev) => (
-                <li key={ev.id} className="text-[14px] text-foreground/85">
-                  <span className="text-foreground">{ev.label}</span>
-                  {ev.detail && <span className="text-muted-foreground"> — {ev.detail}</span>}
-                  {typeof ev.count === 'number' && (
-                    <span className="font-mono-cjk text-[11px] text-muted-foreground/70">
-                      {' '}
-                      × {ev.count}
-                    </span>
+          {items.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-500">
+              这一条没有记录支撑 —— 它是一个判断，还没有被证据接住。
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-5">
+              {items.map((ev) => (
+                <li key={ev.id} className="border-l border-zinc-200 pl-4">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="text-sm font-medium text-zinc-900">{ev.label}</span>
+                    {typeof ev.count === 'number' && (
+                      <span className="font-mono text-[11px] text-zinc-400">× {ev.count}</span>
+                    )}
+                    {ev.independent === true && (
+                      <span className="rounded-full border border-zinc-200 px-1.5 py-px text-[10px] text-zinc-500">
+                        独立
+                      </span>
+                    )}
+                    {ev.independent === false && (
+                      <span className="rounded-full border border-zinc-200 px-1.5 py-px text-[10px] text-zinc-500">
+                        有提示
+                      </span>
+                    )}
+                  </div>
+                  {ev.detail && (
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-600">{ev.detail}</p>
                   )}
+                  {ev.sourceExcerpt && <SourceExcerpt evidence={ev} />}
                 </li>
               ))}
-              {node.evidence.length === 0 && (
-                <li className="text-[14px] text-muted-foreground">
-                  这一条还没有记录支撑。它是一个判断。
-                </li>
-              )}
             </ul>
-            {node.relatedArtifact?.excerpt && (
-              <>
-                <div className="mt-5 font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-                  Related artifact
-                </div>
-                <blockquote className="mt-1.5 border-l border-border pl-3 font-serif text-[14px] leading-relaxed text-foreground/80 italic">
-                  {node.relatedArtifact.excerpt}
-                </blockquote>
-              </>
-            )}
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="mt-3 inline-flex items-center gap-1 font-mono-cjk text-[11px] text-muted-foreground/60 transition-colors hover:text-foreground"
-        >
-          <ChevronDown
-            className={`size-3 transition-transform ${open ? 'rotate-180' : ''}`}
-            aria-hidden
-          />
-          {open ? '收起' : '展开'}
-        </button>
-      </div>
-    </article>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 
-/* ───────────────────────── Period / Milestone ───────────────────────── */
+/* ───────────────────────── Current State ───────────────────────── */
 
-/** 一段连续的学习阶段 —— 介于单个事件与里程碑之间的尺度。 */
-function PeriodBlock({
-  title,
-  dateRange,
-  summary,
-  count,
+function CurrentState({
+  space,
+  viewport,
+  onResetToNow,
 }: {
-  title: string
-  dateRange: string
-  summary: string
-  count: number
+  space: TrajectorySpace
+  viewport: Viewport
+  /** 回到现在。⚠️ 必须由外面传进来 —— 这个组件在模块级，
+   *  它拿不到 TrajectoryView 里的 setResetKey，而 tsc 不会报那个错
+   *  （见下面那条注释）。 */
+  onResetToNow: () => void
 }) {
+  const zoom = Math.round(viewport.scale * 100)
   return (
-    <div className="relative py-5 pl-8">
-      <span aria-hidden className="absolute top-0 bottom-0 left-[5px] w-px bg-foreground/20" />
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className="font-serif text-[15px] font-medium tracking-tight text-foreground/90">
-          {title}
-        </h3>
-        <span className="font-mono-cjk text-[11px] text-muted-foreground/70">{dateRange}</span>
-        <span className="font-mono-cjk text-[10.5px] text-muted-foreground/50">
-          {count} 个事件
+    <header className="border-b border-zinc-200 pb-7">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <h1 className="font-serif text-2xl leading-tight font-medium tracking-tight text-zinc-900">
+          {space.name}
+        </h1>
+        <span className="font-mono text-[11px] tracking-widest text-zinc-400 uppercase">
+          {space.domain}
         </span>
-      </div>
-      <p className="mt-1 max-w-2xl text-[14.5px] leading-relaxed text-muted-foreground">
-        {summary}
-      </p>
-    </div>
-  )
-}
-
-/** 跨越一个阶段的变化 —— 第三个时间尺度，也是时间线上唯一"竖出来"的东西。 */
-function MilestoneBlock({
-  title,
-  date,
-  because,
-}: {
-  title: string
-  date: string
-  because: string
-}) {
-  return (
-    <div className="relative py-7 pl-8">
-      <span aria-hidden className="absolute top-0 bottom-0 left-[5px] w-px bg-foreground/20" />
-      <div className="relative -ml-8 mb-3 flex items-center gap-2.5">
-        <span
-          aria-hidden
-          className="mt-0.5 block size-2.5 shrink-0 rounded-full bg-foreground ring-4 ring-background"
-        />
-        <span className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-          Milestone
-        </span>
-        <span className="font-mono-cjk text-[11px] text-muted-foreground/60">{date}</span>
-      </div>
-      <h3 className="font-serif text-[21px] leading-snug font-medium tracking-tight text-foreground">
-        {title}
-      </h3>
-      <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">{because}</p>
-    </div>
-  )
-}
-
-/* ───────────────────────── Today 锚点 ───────────────────────── */
-
-/**
- * 「你现在在哪」—— 用户不该在历史里迷路。
- *
- * 所以时间线的末端不是"结束"，而是一个明确的现在：此刻在做什么、刚刚变了什么、
- * 还有什么没解决。Past ↓ Current 这个方向由它收口。
- */
-function TodayAnchor({ space }: { space: TrajectorySpace }) {
-  return (
-    <div className="relative pt-8 pb-2 pl-8">
-      <span aria-hidden className="absolute top-0 bottom-0 left-[5px] w-px bg-foreground/20" />
-      <div className="relative -ml-8 mb-4 flex items-center gap-2.5">
-        <span
-          aria-hidden
-          className="block size-3 shrink-0 rounded-full border-2 border-foreground bg-background"
-        />
-        <span className="font-mono-cjk text-[10.5px] tracking-[0.2em] text-foreground uppercase">
-          Today
-        </span>
+        <span className="font-mono text-[11px] text-zinc-400">{space.span}</span>
       </div>
 
-      <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+      <p className="mt-4 max-w-2xl text-sm text-zinc-500">{space.current.goal}</p>
+
+      <div className="mt-6 grid gap-x-10 gap-y-5 sm:grid-cols-3">
         <div>
-          <div className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
-            Current state
+          <div className="font-mono text-[10.5px] tracking-[0.16em] text-zinc-400 uppercase">
+            Currently
           </div>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-foreground">
+          <dd className="mt-1.5 text-[15px] leading-relaxed text-zinc-900">
             {space.current.currently}
-          </p>
+          </dd>
         </div>
         <div>
-          <div className="font-mono-cjk text-[10.5px] tracking-[0.16em] text-muted-foreground/70 uppercase">
+          <div className="font-mono text-[10.5px] tracking-[0.16em] text-zinc-400 uppercase">
+            Recent change
+          </div>
+          <dd className="mt-1.5 text-[15px] leading-relaxed text-zinc-900">
+            {space.current.recentChange}
+          </dd>
+        </div>
+        <div>
+          <div className="font-mono text-[10.5px] tracking-[0.16em] text-zinc-400 uppercase">
             What remains
           </div>
-          <p className="mt-1.5 text-[15px] leading-relaxed text-foreground">
+          <dd className="mt-1.5 text-[15px] leading-relaxed text-zinc-900">
             {space.current.whatRemains}
-          </p>
+          </dd>
         </div>
       </div>
 
-      <button
-        type="button"
-        className="mt-6 inline-flex items-center gap-1.5 border border-border px-3 py-1.5 font-mono-cjk text-[11px] text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
-      >
-        <MessageSquare className="size-3" aria-hidden />
-        问 Agent 关于这段轨迹
-      </button>
-    </div>
+      {/* 缩放指示：缩到 0.25× 之后「我在哪」只能靠这个读出来 */}
+      <div className="mt-6 flex items-center gap-2">
+        <span className="font-mono text-[10.5px] tracking-[0.16em] text-zinc-400 uppercase">
+          View
+        </span>
+        <span className="font-mono text-[12px] text-zinc-600">{zoom}%</span>
+        <button
+          type="button"
+          onClick={onResetToNow}
+          className={PRIMARY}
+          title="回到起点（现在）"
+        >
+          <RefreshCw className="size-3" aria-hidden />
+          回到现在
+        </button>
+      </div>
+    </header>
   )
 }
 
 /* ───────────────────────── 页面 ───────────────────────── */
 
-/**
- * @param defaultSpaceId 初始选中的空间。路由不传（用第一个），
- *   离屏 harness 传 —— 这样"产物驱动的那条轨迹"能被单独断言，
- *   而不用在页面里加一个只为测试存在的开关。
- * @param spaceOverride 整个空间对象的替换。**只为离屏 harness 的"无依据"态存在**，
- *   那个状态在真实数据里会出现（用户做了一件事但没有记录），
- *   而它必须在页面上被看到。
- */
-export function TrajectoryView({
-  defaultSpaceId,
-  spaceOverride,
-}: {
-  defaultSpaceId?: string
-  spaceOverride?: TrajectorySpace
-} = {}) {
-  const [spaceId, setSpaceId] = useState(defaultSpaceId ?? TRAJECTORY_SPACES[0].id)
-  const [drawer, setDrawer] = useState<{ claim: string; items: TrajectoryEvidence[] } | null>(
-    null
-  )
+/** 画布上：最新在上，从原点往下 —— 所以「回到原点」就是「回到现在」。 */
+const ROW_H = 132
+const COL_W = 292
+const COL_PAD = 24
+
+export function TrajectoryView() {
+  const [spaceId, setSpaceId] = useState(TRAJECTORY_SPACES[0].id)
+  const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, scale: 1 })
+  const [hover, setHover] = useState<{ node: TrajectoryNode; x: number; y: number } | null>(null)
+  const [drawer, setDrawer] = useState<{ claim: string; items: TrajectoryEvidence[] } | null>(null)
+  const [resetKey, setResetKey] = useState(0)
 
   const space = useMemo(
-    () =>
-      spaceOverride ??
-      TRAJECTORY_SPACES.find((s) => s.id === spaceId) ??
-      TRAJECTORY_SPACES[0],
-    [spaceId, spaceOverride]
+    () => TRAJECTORY_SPACES.find((s) => s.id === spaceId) ?? TRAJECTORY_SPACES[0],
+    [spaceId]
   )
 
-  // 时间线：倒序（新的在上）—— 因为这一页的读者通常是"先看最近发生了什么"。
-  // 未来的真实数据里这一点会由用户自己选，但默认倒序更符合"打开就想知道最新"的动作。
+  /**
+   * 横向分列：同一个 focus 永远落在同一列。
+   *
+   * ⚠️ 列位置必须**稳定** —— 否则同一件事在两次渲染里会跳到别的列，图就开始抖。
+   * 所以 key 用 focus 名字本身，并按首次出现的顺序编号。
+   */
+  const columns = useMemo(() => {
+    const order: string[] = []
+    for (const node of space.nodes) {
+      const f = node.relatedFocus
+      if (f && !order.includes(f)) order.push(f)
+    }
+    return new Map(order.map((f, i) => [f, i]))
+  }, [space.nodes])
+
   const ordered = useMemo(() => [...space.nodes].reverse(), [space.nodes])
+  const onViewportChange = useCallback((v: Viewport) => setViewport(v), [])
+
+  const trackMouse = useCallback((e: MouseEvent) => {
+    setHover((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))
+  }, [])
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-4xl px-6 py-14 sm:px-8">
-        {/* 空间切换：三个刻意不同的学习过程，用来验证 Trajectory 能不能表达不同的走法 */}
-        <nav aria-label="选择 Learn Space" className="mb-10 flex flex-wrap gap-2">
+    <div className="min-h-screen bg-background" onMouseMove={trackMouse}>
+      <div className="mx-auto max-w-4xl px-6 pt-10 sm:px-8">
+        <nav aria-label="选择 Learn Space" className="mb-8 flex flex-wrap gap-2">
           {TRAJECTORY_SPACES.map((s) => (
             <button
               key={s.id}
               type="button"
-              onClick={() => setSpaceId(s.id)}
+              onClick={() => {
+                setSpaceId(s.id)
+                setResetKey((k) => k + 1)
+              }}
               aria-current={s.id === space.id ? 'true' : undefined}
-              className={`border px-3 py-1.5 font-mono-cjk text-[11.5px] transition-colors ${
+              className={`h-7 rounded-full px-3 text-[12px] transition-colors ${
                 s.id === space.id
-                  ? 'border-foreground/40 text-foreground'
-                  : 'border-border text-muted-foreground hover:text-foreground'
+                  ? 'bg-foreground text-background'
+                  : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
               }`}
             >
               {s.name}
@@ -723,57 +457,84 @@ export function TrajectoryView({
           ))}
         </nav>
 
-        <CurrentState space={space} />
+        <CurrentState
+          space={space}
+          viewport={viewport}
+          onResetToNow={() => setResetKey((k) => k + 1)}
+        />
+      </div>
 
-        <section className="pt-12" aria-label="Trajectory 时间线">
-          <h2 className="sr-only">Trajectory</h2>
-
-          {ordered.map((node) => {
-            // 里程碑插在它对应的那条节点之前 —— 三个时间尺度共用一条主干，
-            // 而不是三条并排的轨道（那会让"跨度"这件事失��）。
-            const milestone = space.milestones.find(
-              (m) => m.nodeId === node.id
-            )
-            const period = space.periods.find((p) => p.nodeIds.includes(node.id))
-            const firstInPeriod = period && period.nodeIds[0] === node.id
-
-            return (
-              <div key={node.id}>
-                {firstInPeriod && period && (
-                  <PeriodBlock
-                    title={period.title}
-                    dateRange={period.dateRange}
-                    summary={period.summary}
-                    count={period.nodeIds.length}
-                  />
-                )}
-                {milestone && (
-                  <MilestoneBlock
-                    title={milestone.title}
-                    date={milestone.date}
-                    because={milestone.because}
-                  />
-                )}
-                <NodeCard
+      {/*
+        The canvas. `resetSignal` is the "back to now" mechanism, and it works
+        because the origin IS the present: the newest node is drawn first, so
+        resetting the viewport to `{0,0,1}` puts today back under the reader's
+        eye. The alternative — a controlled viewport — would be the tidier API and
+        the riskier change, since this component also hosts `/sandbox/board` and
+        nothing there should move for a page that does not exist yet.
+      */}
+      <div className="relative mt-6 h-[560px] overflow-hidden border-y border-zinc-200">
+        <BoardCanvas onViewportChange={onViewportChange} resetSignal={resetKey}>
+          <div className="relative" style={{ width: COL_W * 3, height: ordered.length * ROW_H }}>
+            {ordered.map((node, row) => {
+              const col = node.relatedFocus ? (columns.get(node.relatedFocus) ?? 0) : 0
+              return (
+                <CanvasNode
+                  key={node.id}
                   node={node}
-                  onAskEvidence={(n) =>
-                    setDrawer({ claim: n.whatChanged, items: n.evidence })
+                  top={row * ROW_H}
+                  left={COL_PAD + col * COL_W}
+                  focused={hover?.node.id === node.id}
+                  onHover={(n) =>
+                    setHover(
+                      n
+                        ? { node: n, x: window.innerWidth / 2, y: 120 }
+                        : null
+                    )
                   }
+                  onOpen={(n) => setDrawer({ claim: n.whatChanged, items: n.evidence })}
                 />
-              </div>
-            )
-          })}
+              )
+            })}
+            {/* Today 锚点：画布上的最后一行 */}
+            <div
+              className="absolute flex items-center gap-2"
+              style={{ top: ordered.length * ROW_H, left: 0 }}
+            >
+              <span className="block size-3 rounded-full border-2 border-zinc-900 bg-white" />
+              <span className="font-mono text-[11px] tracking-[0.2em] text-zinc-900 uppercase">
+                Today
+              </span>
+            </div>
+          </div>
+        </BoardCanvas>
 
-          <TodayAnchor space={space} />
-        </section>
+        {hover && <HoverCard node={hover.node} x={hover.x} y={hover.y} />}
 
-        <footer className="mt-16 border-t border-border pt-6">
-          <p className="max-w-2xl text-[13.5px] leading-relaxed text-muted-foreground/70">
-            <RefreshCw className="mr-1.5 inline size-3" aria-hidden />
-            这一页读到的是**已有的那几张表**（目标 · 记忆 · 学习状态 · 记录 · 产物 · 对话），
-            不是另一套数据。当前是 mock。
-          </p>
-        </footer>
+        {/* 画布上的操作提示 —— 一次性的，不做成常驻控件 */}
+        <div className="pointer-events-none absolute right-4 bottom-3 flex items-center gap-1.5 font-mono text-[10.5px] text-zinc-400">
+          拖动平移 · Ctrl/⌘ + 滚轮缩放（或用右下角 ±）· 悬停看细节 · 点开看依据
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl px-6 py-8 sm:px-8">
+        <p className="max-w-2xl text-[13.5px] leading-relaxed text-zinc-400">
+          <Lightbulb className="mr-1.5 inline size-3" aria-hidden />
+          这一页读到的是**已有的那几张表**（目标 · 记忆 · 学习状态 · 记录 · 产物 · 对话），
+          不是另一套数据。当前是 mock。
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDrawer({ claim: space.current.recentChange, items: [] })}
+            className={QUIET}
+          >
+            <Target className="size-3" aria-hidden />
+            最近一次变化的依据
+          </button>
+          <span className="font-mono text-[11px] text-zinc-400">
+            {space.nodes.length} 个节点 · {space.milestones.length} 个里程碑
+          </span>
+        </div>
       </div>
 
       <EvidenceDrawer
@@ -787,3 +548,4 @@ export function TrajectoryView({
     </div>
   )
 }
+

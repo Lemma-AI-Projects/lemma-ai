@@ -103,7 +103,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '还不知道 117 分里哪个部分最缺 —— 目标本身不回答这个问题。',
       implication:
         '有了方向之后，「我现在做的事有没有用」第一次变成一个可以问的问题。诊断因此变得必要。',
-      relatedFocus: 'TOEFL',
+      relatedFocus: null,
     },
     {
       id: 'n2',
@@ -133,7 +133,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '不知道「没词」是词汇量问题还是不敢开口。',
       implication:
         '这一步的价值不是结论，是把一个笼统的怕拆成了两个可以分别验证的可能 —— 而下面的两周就是在验证第二个。',
-      relatedFocus: '口语 · 流利度',
+      relatedFocus: '口语',
     },
     {
       id: 'n3',
@@ -164,7 +164,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '「不敢开口」这个猜测还没有被验证过 —— 它只是被提出来了。',
       implication:
         '内容正确率 78% 说明知识没缺。所以后面该试的不是补知识，而是换一个假设。',
-      relatedFocus: '口语 · 流利度',
+      relatedFocus: '口语',
     },
     {
       id: 'n4',
@@ -195,7 +195,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '全部记录都带着提示，所以还不能算作「他会了」。',
       implication:
         '这一条让「撤除帮助」这件事变得可操作 —— 而它需要系统能看见「这次有没有提示」才谈得上撤。',
-      relatedFocus: '口语 · 停顿',
+      relatedFocus: '口语',
     },
     {
       id: 'n5',
@@ -226,7 +226,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '只出现过一次，还不能说是稳定能力。',
       implication:
         '重复「说不出来」的练习价值已经明显下降 —— 它不是不会，是没形成习惯。下一步更值得验证的是这个能力在别的题型上是否也在。',
-      relatedFocus: '口语 · 流利度',
+      relatedFocus: '口语',
     },
     {
       id: 'n6',
@@ -257,7 +257,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '不知道「掉的」是不是「原来就没稳的」。',
       implication:
         '这周的两周间隔本身是数据：它告诉你这个空间的遗忘速度在口语上明显更快 —— 而这是下一步该练什么的直接依据。',
-      relatedFocus: '口语 · 保持',
+      relatedFocus: '口语',
     },
     {
       id: 'n7',
@@ -288,7 +288,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '这个结论只在口语里被验证过。',
       implication:
         '后面该练的东西变了：不是背更多句式，是降低「自己造句」的成本。这个方向的改变比上一个突破更重要，因为它决定接下来三周练什么。',
-      relatedFocus: '口语 · 启动速度',
+      relatedFocus: '口语',
     },
     {
       id: 'n8',
@@ -312,7 +312,7 @@ const TOEFL: TrajectorySpace = {
       whatRemains: '6 秒空白还没有解释 —— 可能是检索，可能是编排句子。',
       implication:
         '如果空白在别的题型上不出现，那么问题就只剩一个：造句。这让下一步变得非常具体。',
-      relatedFocus: '口语 · 迁移',
+      relatedFocus: '口语',
     },
   ],
 }

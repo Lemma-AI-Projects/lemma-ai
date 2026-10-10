@@ -28,7 +28,7 @@ const MAX_SCALE = 3
 const ZOOM_STEP = 1.2
 const GRID_SPACING = 24
 
-interface Viewport {
+export interface Viewport {
   x: number
   y: number
   scale: number
@@ -48,11 +48,52 @@ function zoomAround(viewport: Viewport, factor: number, x: number, y: number): V
   }
 }
 
-export function BoardCanvas({ children }: { children?: ReactNode }) {
+/**
+ * A draggable, zoomable surface for board-shaped content.
+ *
+ * `onViewportChange` is an **outward-facing seam, not a feature**: the canvas
+ * owns the viewport but its callers legitimately need to know it — Trajectory
+ * shows the current zoom and needs a way back to "today" once the user has
+ * zoomed out, because at 0.25× a long timeline has no visible "you are here".
+ *
+ * It is optional and has no default behaviour, so `/sandbox/board` — the other
+ * host — is unaffected: same gestures, same clamp, same keyboard.
+ */
+export function BoardCanvas({
+  children,
+  onViewportChange,
+  resetSignal,
+}: {
+  children?: ReactNode
+  onViewportChange?: (viewport: Viewport) => void
+  /**
+   * Bump this to snap the viewport back to the origin.
+   *
+   * ⚠️ **Adjusted during render, not in an effect.** An effect that calls
+   * `setViewport` synchronously is a second render pass for something the render
+   * already knew — and the linter is right about the cascade, not about this
+   * particular case. React's own guidance for "state that must follow a prop" is
+   * to compare the previous value during render and adjust, which is what the two
+   * lines below do. The alternative — remounting on `key` — works too, and throws
+   * away the children's state to move a rectangle, which is a bad trade for a page
+   * whose nodes hold an open drawer.
+   */
+  resetSignal?: number
+}) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null)
   const [viewport, setViewport] = useState(INITIAL_VIEWPORT)
   const [isDragging, setIsDragging] = useState(false)
+  const [lastResetSignal, setLastResetSignal] = useState(resetSignal)
+
+  if (resetSignal !== undefined && resetSignal !== lastResetSignal) {
+    setLastResetSignal(resetSignal)
+    setViewport(INITIAL_VIEWPORT)
+  }
+
+  useEffect(() => {
+    onViewportChange?.(viewport)
+  }, [viewport, onViewportChange])
 
   useEffect(() => {
     const surface = surfaceRef.current
