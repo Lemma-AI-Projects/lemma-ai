@@ -124,3 +124,10 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe \
 ```
 
 前端与后端：后端 `127.0.0.1:8001`、前端 `http://localhost:5173`（进「AI for Math」）。
+
+## 与证据回流的关系
+
+本文件讲 Space Memory 的规划与边界。
+**证据如何跨模式流动、Space Source 与 Space Memory 在回流里的分工**，见 `EVIDENCE_FEEDBACK_V0.md` 的 T3 / T4。
+⚠️ 那里记录了一处控制权的不对称：Space Memory **目前只有 Agent 的 `remember` 一个写入面，
+用户没有入口** —— 而 User Home 那套 candidate/confirmed 分层是有的。

@@ -89,3 +89,10 @@ discipline). No network, no database, no model.
   `derive_state`. They know about projects; the core does not.
 * `test_portability.py` — it scans *this repo's* package path and has no meaning
   outside it. The self-test above is `test_state.py`.
+
+
+---
+
+## This is the core; it is not the whole loop
+
+The procedure above is about keeping this directory liftable. Whether anything **calls** it is a separate question, answered in `EVIDENCE_FEEDBACK_V0.md` — which records that production has two entry points, and that Free Course's `CourseLessonObservation` is only ever `count()`ed, never admitted.
