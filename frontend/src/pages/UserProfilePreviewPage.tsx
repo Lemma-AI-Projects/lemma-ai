@@ -20,7 +20,7 @@ const previewQueryClient = new QueryClient({
 
 function item(
   id: string,
-  kind: 'interest' | 'preference',
+  kind: 'about' | 'interest' | 'preference',
   text: string,
   status: 'candidate' | 'confirmed' = 'confirmed',
   origin: 'user' | 'agent' = 'user'
@@ -54,9 +54,17 @@ const previewHome: UserHome = {
   // One proposal per block: an interest one (renders as a dashed tag) and a
   // preference one (renders as a dashed sentence row), so both dotted titles and
   // both proposal shapes are visible without scrolling through a long list.
+  // One CONFIRMED about entry, so the section's list shape is visible above the
+  // fold — a preview that only showed the add-line would not show the thing that
+  // changed: About Me is a list now, not two fields.
+  about: [item('preview-a1', 'about', '两年后想转去做产品，而不是一直做技术')],
+  // One of each kind, so the inbox shows all three labels — and the About one
+  // is here because the section is list-shaped now, and a preview that only shows
+  // two kinds would hide the one that just changed.
   candidates: [
     item('preview-c1', 'interest', '线性代数', 'candidate', 'agent'),
     item('preview-c2', 'preference', '以后都尽量简洁一点', 'candidate', 'agent'),
+    item('preview-c3', 'about', '两年后想转去做产品，而不是一直做技术', 'candidate', 'agent'),
   ],
 }
 

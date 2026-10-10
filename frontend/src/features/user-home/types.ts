@@ -8,7 +8,7 @@
  * fact is the one mistake this feature exists to prevent.
  */
 
-export type HomeItemKind = 'interest' | 'preference'
+export type HomeItemKind = 'about' | 'interest' | 'preference'
 export type HomeItemStatus = 'candidate' | 'confirmed'
 
 export interface UserHomeItem {
@@ -27,7 +27,13 @@ export interface UserHome {
   /** Lives in `profiles`; shown here because it is the same person. */
   nickname: string | null
   language: string | null
+  /**
+   * The older, single-paragraph half of About Me. Still returned and still
+   * rendered — it is the only About field some accounts have — but no longer the
+   * only way in: `about` below is the list a user can add to, edit and delete.
+   */
   background: string | null
+  about: UserHomeItem[]
   interests: UserHomeItem[]
   preferences: UserHomeItem[]
   candidates: UserHomeItem[]
