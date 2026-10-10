@@ -179,6 +179,6 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe \
 ## 证据从哪里来
 
 本文件讲 Learner State **是什么、怎么算**。
-**证据如何进入它、以及进入之后有没有真的改变下一次教学**，见 `EVIDENCE_FEEDBACK_V0.md`。
+**证据如何进入它、以及进入之后有没有真的改变下一次教学**，见 `EVIDENCE_FLOW.md`。
 ⚠️ 那份文档记录了一条已核实的事实：本仓库**三处证据来源中只有一条真的进这套机制**
 （对话的 `evidence_entry`；Free Course 的作答记录只被 `count()` 读过）。

@@ -78,3 +78,11 @@ Method 只**读** Learner State，**不写**。用户作答产生的 Evidence �
 3. Method 选择记在**对话**上（`ai_conversations.method`），不记在「学习目标」上。
 4. 选择在**下一次发送**时落库（本轮请求就带 `method`）；选了但没发就刷新，会回到上次用过的那个。
 5. 首页那个新会话输入框暂不放入口（入口在对话页与 Learn Space 的输入框底栏）。
+
+---
+
+## 完成判定与证据回流
+
+本文件讲两种教法的插件化。**「这一轮干预什么时候算完成」属于证据回流**，见
+`EVIDENCE_FLOW.md` §3.4 ——记录了一件已核实的事：`ai/methods/completion.py` 整个模块**生产零调用**，`method_episodes` 也**零写入方**，
+当前只有 `method_status` 提供了“现在在怎么教”的文案。

@@ -95,4 +95,4 @@ discipline). No network, no database, no model.
 
 ## This is the core; it is not the whole loop
 
-The procedure above is about keeping this directory liftable. Whether anything **calls** it is a separate question, answered in `EVIDENCE_FEEDBACK_V0.md` — which records that production has two entry points, and that Free Course's `CourseLessonObservation` is only ever `count()`ed, never admitted.
+The procedure above is about keeping this directory liftable. Whether anything **calls** it is a separate question, answered in `EVIDENCE_FLOW.md` — which records that production has two entry points, and that Free Course's `CourseLessonObservation` is only ever `count()`ed, never admitted.

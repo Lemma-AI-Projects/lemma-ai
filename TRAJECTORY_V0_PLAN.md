@@ -239,3 +239,14 @@ BoardCanvas 正好是那个尺寸的宿主（它现在是 `/sandbox/board` 的�
 **下一步**：先推进 Free Course 那条线（见 `free-course-bugfix-plan.md` 与
 `free-course-rebuild-plan.md`）。本计划保持在第 1 步之前的状态 —— 一行代码未动。
 
+
+---
+
+## 语义边界在哪里
+
+本文件记的是 **交互形态**（可拖动 / 缩放 / hover）。
+**它不拥有学习语义数据库** —— 那属于
+`EVIDENCE_FLOW.md` §10：Trajectory 是既有语义来源在时间轴上的**投影**，
+而不是第二套 Evidence System。
+⚠️ 那份文档同时记录了数据前提：State Change / Goal Change / Method / Milestone
+四项缺失或弱 ⇒ 它今天只能是 mock。
