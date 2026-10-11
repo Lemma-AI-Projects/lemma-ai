@@ -17,8 +17,15 @@ class QuestionSet(Base):
     generating (bounded retries end in failed). `empty` means XKW had too few
     usable questions for the spec.
 
-    First phase only knows the developer entry (`origin_kind='dev'`); course
-    / conversation origins arrive later as extra nullable columns + CHECK values.
+    ⚠️ `origin_kind` was CHECKed to `'dev'` alone until a1b2c3d4e5f6. That was a
+    deliberate V0 lock — only a developer could build a set — and it is now widened
+    to the product triggers. `context_kind` / `context_ref` are the two nullable
+    columns that answer "which learning experience, and what triggered it"; they
+    are attributes of one activity rather than four activity tables, which is why
+    they are columns and not subclasses.
+
+    ⚠️ There is still **no `project_id`**: a question cannot belong to a Learn
+    Space yet. The column waits for the first surface that can actually write it.
     """
 
     __tablename__ = "question_sets"
@@ -30,7 +37,15 @@ class QuestionSet(Base):
         CheckConstraint(
             "status in ('generating', 'ready', 'empty', 'failed')", name="ck_question_sets_status"
         ),
-        CheckConstraint("origin_kind in ('dev')", name="ck_question_sets_origin_kind"),
+        CheckConstraint(
+            "origin_kind in ('dev', 'subcourse', 'on_demand', 'daily', 'learn_space', 'manual')",
+            name="ck_question_sets_origin_kind",
+        ),
+        CheckConstraint(
+            "context_kind is null or context_kind in "
+            "('subcourse', 'on_demand', 'daily', 'learn_space', 'manual')",
+            name="ck_question_sets_context_kind",
+        ),
         Index("ix_question_sets_user_id_updated_at", "user_id", "updated_at"),
         # Empty-result cache: "same spec came back empty in the last 24h".
         Index("ix_question_sets_spec_hash_created_at", "spec_hash", "created_at"),
@@ -46,6 +61,13 @@ class QuestionSet(Base):
     mode: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
+    #: Which learning experience this set came from. Null means "not recorded",
+    #: which is a different statement from "a developer built it".
+    context_kind: Mapped[str | None] = mapped_column(String, nullable=True)
+    #: An identifier for whatever the context refers to — a course id, a subcourse
+    #: id. Opaque string on purpose: Learn Space ids and course ids live in
+    #: different namespaces and a foreign key here would have to pick one.
+    context_ref: Mapped[str | None] = mapped_column(String, nullable=True)
     origin_kind: Mapped[str] = mapped_column(String, nullable=False)
     query_spec_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     spec_hash: Mapped[str] = mapped_column(String, nullable=False)
