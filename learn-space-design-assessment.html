@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Learn Space — 设计与创新评估</title>
+<style>
+:root{
+  --paper:#FAF9F6; --ink:#16191D; --ink2:#454C56; --ink3:#7A828E;
+  --line:#DED9CF; --line2:#EDE9E1;
+  --ok:#1F5F8B; --warn:#8A5A1F; --bad:#A0413E; --vision:#5B4B8A;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font:16px/1.75 "PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,sans-serif;
+}
+.wrap{max-width:960px;margin:0 auto;padding:56px 28px 120px}
+header.top{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:14px}
+h1{font-size:34px;line-height:1.2;margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--ink2);font-size:15px;margin:0}
+.meta{color:var(--ink3);font-size:13px;margin-top:10px;font-family:ui-monospace,Menlo,monospace}
+h2{font-size:23px;margin:56px 0 6px;padding-top:14px;border-top:1px solid var(--line);letter-spacing:-.01em}
+h3{font-size:17px;margin:30px 0 4px}
+h4{font-size:15px;margin:20px 0 3px;color:var(--ink2)}
+p{margin:0 0 13px}
+ul,ol{margin:0 0 13px;padding-left:22px}
+li{margin-bottom:5px}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.88em;background:#fff;border:1px solid var(--line2);padding:1px 4px;border-radius:3px}
+pre{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ink);padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.6;margin:0 0 16px}
+pre code{background:none;border:none;padding:0}
+a{color:var(--ok);text-decoration:none;border-bottom:1px solid #b8cfdd}
+a:hover{border-bottom-color:var(--ok)}
+blockquote{margin:0 0 16px;padding:10px 0 10px 18px;border-left:3px solid var(--line);color:var(--ink2);font-size:15px}
+
+.tag{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.06em;
+  padding:1px 6px;border-radius:3px;border:1px solid;vertical-align:middle;margin-right:6px;white-space:nowrap}
+.t-fact{color:var(--ok);border-color:#b8cfdd;background:#f2f7fa}
+.t-res{color:var(--vision);border-color:#c9c0e0;background:#f6f4fa}
+.t-inf{color:var(--warn);border-color:#ddc9a8;background:#fbf7f0}
+.t-hyp{color:var(--ink2);border-color:var(--line);background:#fff}
+.t-unk{color:var(--bad);border-color:#e0bcbc;background:#fbf3f3}
+
+table{width:100%;border-collapse:collapse;font-size:14px;margin:0 0 18px}
+th,td{text-align:left;padding:9px 11px;vertical-align:top;border-bottom:1px solid var(--line2)}
+th{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.1em;color:var(--ink3);
+  border-bottom:1.5px solid var(--line);text-transform:uppercase}
+td.k{font-weight:600;white-space:nowrap}
+.st{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;white-space:nowrap}
+.st-yes{color:var(--ok)}.st-part{color:var(--warn)}.st-no{color:var(--bad)}
+
+.card{border:1px solid var(--line);background:#fff;padding:16px 18px;margin:0 0 16px;border-radius:2px}
+.card.bad{border-left:3px solid var(--bad)}
+.card.warn{border-left:3px solid var(--warn)}
+.card.ok{border-left:3px solid var(--ok)}
+
+.verdict{background:#fff;border:2px solid var(--ink);padding:24px 26px;margin:0 0 32px}
+.verdict h3{margin-top:0;font-size:19px}
+
+.chain{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:0 0 18px}
+.node{flex:1;min-width:120px;border:1px solid var(--line);background:#fff;padding:10px 12px;font-size:13px;line-height:1.45;text-align:center}
+.node.hit{border-color:var(--bad);color:var(--bad)}
+.node.ok{border-color:var(--ok);color:var(--ok)}
+.node small{display:block;color:var(--ink3);font-size:11px;margin-top:3px}
+.arw{align-self:center;color:var(--ink3)}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:720px){.two{grid-template-columns:1fr}.chain{flex-direction:column}}
+.foot{margin-top:70px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink3);font-size:13px}
+.refs{font-size:13.5px;line-height:1.7}
+.refs li{margin-bottom:9px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>Learn Space — 设计与创新评估</h1>
+  <p class="sub">它究竟先进在哪里，哪些只是已有思想的重新组合，哪些设计尚未成立，以及它有没有机会成为下一代 AI Learning Experience 的基础。</p>
+  <p class="meta">2026-10-11 · user-profile @ 01a33bde · 独立评估，不改产品代码</p>
+</header>
+
+<div class="verdict">
+  <h3>Executive Verdict</h3>
+  <p><span class="tag t-fact">Observed</span>
+  <strong>Learn Space 的核心命题是成立的、且在文献里没有现成对应物</strong> —— 但它今天<strong>没有任何一条端到端链路是通的</strong>。</p>
+
+  <p><span class="tag t-inf">Inference</span>
+  真正的判断题不是「这个架构先进吗」，而是<strong>「它是否可能是一份重新组合」</strong>。逐项核下来：
+  Evidence、Learner State、Coordinator、Method 四个部件<strong>全部有成熟前例</strong>；
+  <strong>唯一看起来是原创的组合是「把四种方法做成可注册插件、并由决策层按证据选择」</strong> ——
+  而它恰好也是今天<strong>完全没接通的那一个</strong>（executor 三种动作一律空转）。</p>
+
+  <p><span class="tag t-res">Research</span>
+  文献给出的最大警告不是「AI 教不了」，而是<strong>效应量在规模化与无教师配置下会大幅缩小</strong>：
+  ITS 对个别化人类辅导 <strong>g = −0.11</strong>（Ma et al. 2014）；
+  元认知提示在预注册 N=1005 的 RCT 里<strong>全为 null</strong>（Zengilowski et al. 2025）；
+  智能辅导系统规模化第一年<strong>零效果</strong>（Pane et al. 2014）。</p>
+
+  <p><span class="tag t-hyp">Hypothesis</span>
+  最强的差异化假设是<strong>「Learning Loop 是一条只能整体成立的链」</strong> ——
+  四个部件各自都弱，但接起来可能比任何单点强。<strong class="bad-text">这个假设今天一次也没被测过</strong>，
+  而它是全部投资逻辑的地基。</p>
+
+  <p style="margin-bottom:0"><span class="tag t-unk">Unknown</span>
+  <strong>最大的结构性问题不在架构，在定位</strong>：首发 MVP 的三个模式
+  （Free Course / Video Course / Casual Chat）<strong>没有一个走 Learn Space 的认知闭环</strong>。
+  ⇒ 我们在<strong>卖</strong>的东西和我们在<strong>验证</strong>的东西不是同一个，
+  而且短期内不会交汇。</p>
+</div>
+
+<h2>1 · 它真正在解决什么问题</h2>
+
+<p><span class="tag t-hyp">Hypothesis</span>命题是：<strong>AI 不只提供答案，而是围绕一个人的长期目标、经历与认知状态，持续调整交互方式，帮助人发展能力。</strong></p>
+
+<h3>为什么普通 Chat 不够</h3>
+<p>不是「Chat 记不住」这一件事，而是三件事同时缺失：</p>
+<ul>
+  <li><strong>Chat 的优化目标是「这次对话有用」，不是「这个人变强了」</strong>。回答得越直接，本次越有用。</li>
+  <li><strong>Chat 没有「用户学会了」的判据</strong>。流畅的对话可以掩盖零学习。</li>
+  <li><strong>Chat 没有承诺</strong>。今天说「下次先给例子」，下次不记得；而承诺正是让用户能规划自己的东西。</li>
+</ul>
+<p><span class="tag t-res">Research</span>
+  最硬的证据来自 Bastani et al. 2025（PNAS，约 1000 名高中生，50 个班）：
+  练习期用无护栏的 GPT，**成绩 +48%**；但撤走 AI 后的无辅助考试，
+  <strong>该组比从未用 AI 的对照组低 17%</strong>。
+  ⇒ <strong>「这节课聊得顺」与「这个人学会了」可以反向相关。</strong>
+  这是整个 Learn Space 命题最有力的一条外部支撑，也是对现有 Chat 产品最直接的批评。</p>
+
+<h3>为什么保存长期聊天历史仍然不够</h3>
+<p><span class="tag t-inf">Inference</span>
+历史是<strong>事件序列</strong>，而决策需要的是<strong>状态判断</strong>。
+两者之间隔着「解读」——而解读必须可追溯、可修正、可作废。把聊天记录直接喂给模型，
+得到的是<strong>更长的上下文</strong>，不是<strong>更了解这个人</strong>。</p>
+<p><span class="tag t-res">Research</span>
+  LongMemEval（ICLR 2025）给了这条判断一个量化版本：商业聊天助手与长上下文模型在
+  持续交互的<strong>记忆准确率反而下降约 30%</strong>。
+  <strong>「记得更多」与「理解得更准」不是同一件事，而前者会拖垮后者。</strong></p>
+
+<h3>如果移除某个机制，会失去什么</h3>
+<table>
+<thead><tr><th style="width:24%">机制</th><th>移除后失去什么</th><th style="width:15%">判断</th></tr></thead>
+<tbody>
+<tr><td class="k">Evidence</td>
+  <td>失去「凭什么这么判断」。用户无法申诉，系统无法修正。剩下的是模型的主观输出。</td>
+  <td class="st st-part">必要，但今天只有一处真在写</td></tr>
+<tr><td class="k">Learner State</td>
+  <td>失去跨会话的判断依据。每次对话都从零开始 —— 那就是 Chat。</td>
+  <td class="st st-part">必要，但冷启动为空</td></tr>
+<tr><td class="k">Coordinator</td>
+  <td>失去「什么时候该换教法」的依据。会退回「每次都最像的那个做法」。</td>
+  <td class="st st-no">今天零作用</td></tr>
+<tr><td class="k">Method 插件</td>
+  <td>失去「同一状态换教法能产生不同行为」这个可检验的命题。</td>
+  <td class="st st-no">只有文案接进 UI</td></tr>
+<tr><td class="k">Trajectory</td>
+  <td>失去「几周后我回头看，能知道发生了什么」。</td>
+  <td class="st st-no">今天只能 mock</td></tr>
+</tbody>
+</table>
+<p><span class="tag t-inf">Inference</span>
+<strong>四个必要机制里，两个今天完全没有作用。</strong>
+「删掉会失去什么」这个问题在今天只能靠设计回答，不能靠行为回答 ——
+这是这份评估里最需要被记住的一句话。</p>
+
+<h2>2 · 架构与运行现实的差距</h2>
+
+<p>以下每一行都能追到代码或一次查询；完整清单见 <code>learn-space-wiring-report.md</code>
+与 <code>EVIDENCE_FLOW.md</code>。</p>
+
+<div class="chain">
+  <span class="node hit">知识结构<small>新产品没有 · 只有 seed 脚本能写</small></span>
+  <span class="arw">→</span>
+  <span class="node hit">Evidence<small>Focus 里零个交互能产生</small></span>
+  <span class="arw">→</span>
+  <span class="node ok">Learner State<small>✅ 读时算，每轮重算</small></span>
+  <span class="arw">→</span>
+  <span class="node hit">Coordinator<small>turn_start 零生产者</small></span>
+  <span class="arw">→</span>
+  <span class="node hit">Method<small>executor 三种动作空转</small></span>
+</div>
+
+<table>
+<thead><tr><th style="width:30%">部件</th><th>运行现实</th><th style="width:16%">状态</th></tr></thead>
+<tbody>
+<tr><td class="k">分析核心 <code>ai/knowledge/</code></td>
+  <td><code>admit</code> / <code>derive_state</code> / <code>revise</code> / fringes 完整，有可移植性测试守着</td>
+  <td class="st st-yes">IMPLEMENTED</td></tr>
+<tr><td class="k">生产触发点</td>
+  <td>只有 2 个，都是 Agent 的 <code>record_evidence</code>；其中一处的 UI 在 <code>/schedule</code> 的 dev 面板上</td>
+  <td class="st st-part">被调用不足</td></tr>
+<tr><td class="k">Free Course 作答</td>
+  <td><code>course_lesson_observations</code> 五字段齐全、正常写入，但<strong>三个读取点全是 <code>count()</code></strong></td>
+  <td class="st st-part">PARTIAL</td></tr>
+<tr><td class="k">Focus 交互</td>
+  <td>五类交互逐个核过，<strong>零个通向 evidence</strong>。没有提问机制</td>
+  <td class="st st-no">未实现</td></tr>
+<tr><td class="k">Coordinator 规则</td>
+  <td><code>rules.py</code> 对 <code>goal</code> <strong>grep 零命中</strong> —— 快照填了，规则层不读</td>
+  <td class="st st-no">未实现</td></tr>
+<tr><td class="k">Method 承诺</td>
+  <td><code>method_episodes</code> 有表有约束有数据，<strong>零生产写入方</strong>；完成判定模块只在测试里被调</td>
+  <td class="st st-no">未实现</td></tr>
+<tr><td class="k">Trajectory</td>
+  <td>UI 已是画布版（可拖动缩放），数据是 mock；四项数据前提缺或弱</td>
+  <td class="st st-no">仅 UI</td></tr>
+</tbody>
+</table>
+
+<div class="card bad">
+<h4>最扎人的一条</h4>
+<p style="margin:0"><span class="tag t-fact">Observed</span>
+<code>CourseLessonObservation</code> 的 docstring 自己写着
+<code>response_json</code> 是 kept <em>"so the learner-state work can re-read it later"</em>
+—— <strong>而那个 learner-state work 不存在。</strong>
+这说明缺口是被<strong>预见并写下</strong>的，只是没有发生。</p>
+</div>
+
+<h2>3 · 科学基础：文献说了什么，以及它在哪挑战这套设计</h2>
+
+<p><span class="tag t-res">Research</span>
+以下全部可核实；<strong>每条都同时给出「它确立了什么」与「它在哪构成限制」</strong>。
+未找到确切出处的说法一律不写。</p>
+
+<h3>Knowledge Tracing</h3>
+<p><strong>确立</strong>： Corbett &amp; Anderson 1995（<a href="https://doi.org/10.1023/A:1008653813766">DOI</a>）
+能从答题序列推断知识状态。<br>
+<strong>限制</strong>： Yamkovenko et al. 2024（Khan Academy，<strong>50 万学生 / 1 亿次交互</strong>，
+<a href="http://files.eric.ed.gov/fulltext/ED675595.pdf">ERIC ED675595</a>）实测 DKT：
+全局 AUC 尚可，但<strong>对新学生预测很差</strong>、难以检测答错、预测随题目顺序不合理变动。
+Sarsa et al. 2022（JEDM 14(2)）更狠：<strong>几乎无预测力的简单基线在 accuracy 上能超过 DLKT</strong>。<br>
+<span class="tag t-inf">Inference</span> <strong>Lemma 的 1v1 场景冷启动比课堂更严重</strong>，
+而这恰好是 Learner State 今天的状态（冷启动返回「还没有任何证据」）。</p>
+
+<h3>Mastery Learning</h3>
+<p><strong>确立</strong>： Kulik, Kulik &amp; Bangert-Drowns 1990（RER 60(2)，<a href="https://doi.org/10.3102/00346543060002265">DOI</a>）
+103 项研究，ES≈0.52。<br>
+<strong>限制</strong>： 同一论战另一方可核实 —— 用<strong>教师自编测验</strong>测得 ES≈0.4–0.9，
+用<strong>标准化测验</strong>测得仅 0.1–0.13。<strong>测量工具决定结论大小。</strong><br>
+<span class="tag t-inf">Inference</span> Lemma 目前能自证的只有<strong>读时答题正确率</strong>，
+按上述论战，这<strong>正好落在最乐观的那一端</strong>。这是它最容易被挑战的地方。</p>
+
+<h3>Scaffolding 与 fading</h3>
+<p><strong>确立</strong>： Wood, Bruner &amp; Ross 1976（<a href="https://doi.org/10.1111/j.1469-7610.1976.tb00381.x">DOI</a>）。<br>
+<strong>限制（直接挑战 Lemma 的差异化机制）</strong>： Belland et al. 2017（RER 87(2)，
+144 项实验，ḡ=0.46，<a href="https://doi.org/10.3102/0034654316670999">DOI</a>）报告
+<strong>脚手架效应不因「有无 fading」而变化</strong> —— 「渐进撤除」这条设计原则
+<strong>在因果上未被证明</strong>。<br>
+<span class="tag t-inf">Inference</span> fading 是 Lemma 的卖点之一，但<strong>不能引用文献支持它</strong>；
+若要保留，必须自行举证。</p>
+
+<h3>元认知与自我调节</h3>
+<p><strong>确立</strong>： Guo 2022（JCAL 38(3)，<a href="https://doi.org/10.1111/jcal.12650">DOI</a>）
+元认知提示对学习结果 g=0.40。<br>
+<strong>限制（最强的一条反例）</strong>： Zengilowski et al. 2025（ACM L@S，<strong>预注册 N=1005</strong>，
+<a href="https://doi.org/10.1145/3698205.3729547">DOI</a>）：<strong>结果全为 null</strong> ——
+对使用率、重做率、练习表现、后测表现均无差异，且高低先验知识学生之间无差异。<br>
+<span class="tag t-inf">Inference</span> 「元认知提示有效」在实验室均值上成立，在产品级 RCT 中为零。
+若 Lemma 把它做成 Method 插件，<strong>要承认它可能只是无害</strong>。</p>
+
+<h3>Formative Assessment</h3>
+<p><strong>确立</strong>： Black &amp; Wiliam 1998（<a href="https://doi.org/10.1080/0969595980050102">DOI</a>）；
+Hattie &amp; Timperley 2007（RER 77(1)，<a href="https://doi.org/10.3102/003465430298487">DOI</a>）
+196 项研究、d=0.79，但 praise 仅 0.14、纠正性反馈 0.37，且<strong>607 个效应量中超过三分之一为负</strong>。<br>
+<strong>结构性限制</strong>： FA 研究的自变量是<strong>教师行为</strong>，
+教师同时是反馈生成者、实施者与受益方。<strong>没有任何研究验证过
+「无教师、用户自选节奏、AI 承担全部 formative judgment」这一配置。</strong><br>
+<span class="tag t-unk">Unknown</span> 这是 Lemma 最大的未验证假设，<strong>不只是外部效度问题</strong>。</p>
+
+<h3>Intelligent Tutoring Systems</h3>
+<p><strong>必须区分两个问题</strong>：<br>
+<span class="tag t-res">Research</span> Ma, Adesope, Nesbit &amp; Liu 2014（JEP 106(4)，107 个效应量 / 14,321 人，
+<a href="https://doi.org/10.1037/a0037123">DOI</a>）：
+vs 大班授课 g=0.42、vs 非 ITS 计算机 g=0.57，
+<strong>vs 个别化人类辅导 g=−0.11（无显著差异）</strong>。<br>
+<span class="tag t-res">Research</span> VanLehn 2011（Educ Psych 46(4)，<a href="https://doi.org/10.1080/00461520.2011.611369">DOI</a>）
+把 Bloom 的 2σ 降级为：人类一对一 d=0.79，<strong>ITS d=0.76</strong>。<br>
+<span class="tag t-inf">Inference</span> ⇒ <strong>「ITS 接近人类导师」这个流行说法本身来自一次降级。</strong>
+Lemma 若目标是「替代优质导师」，按现有文献这是<strong>未被证实</strong>的目标；
+若是「把 d≈0.4–0.8 的优质个别化教学规模化」，那是<strong>被支持</strong>的。</p>
+
+<h3>规模化的真实代价</h3>
+<p><span class="tag t-res">Research</span>
+Pane, Griffin, McCaffrey &amp; Karam 2014（EEPA 36(2)，<strong>73 校 / 11,066 人</strong>，
+<a href="https://doi.org/10.3102/0162373713507480">DOI</a>）：Cognitive Tutor Algebra I
+<strong>第一年零效果</strong>，第二年高中 +0.21 SD，初中仍不显著。作者称之为
+<strong>implementation learning curve</strong>，且效果出现在<strong>学校层面</strong>。<br>
+<span class="tag t-inf">Inference</span> <strong>个人产品没有「学校」这一层来吸收实施学习曲线</strong> ——
+这是对 Lemma 规模化路径的直接预警。</p>
+
+<h3>LLM Tutor：正反两面</h3>
+<div class="two">
+<div class="card bad">
+<h4>质疑</h4>
+<p style="margin:0 0 8px">Bastani et al. 2025（PNAS 122(26)，<a href="https://doi.org/10.1073/pnas.2422633122">DOI</a>）：
+无护栏 GPT 练习期 +48%，<strong>撤走 AI 后无辅助考试 −17%</strong>。
+有教学护栏的 GPT Tutor 组与对照无差异 —— <strong>护栏消掉了伤害，但没带来净学习增益</strong>。</p>
+</div>
+<div class="card ok">
+<h4>支持</h4>
+<p style="margin:0 0 8px">Kestin et al. 2025（Sci Reports 15:17458，<a href="https://doi.org/10.1038/s41598-025-97652-6">DOI</a>）：
+哈佛物理 N=194，效应量 0.63，用时少 18%。<strong>作者自己限定</strong>：首次学习特定知识适用。</p>
+<p style="margin:0">Wang et al. 2025 Tutor CoPilot（<a href="https://arxiv.org/abs/2410.03017">arXiv:2410.03017</a>）：
+900 导师 / 1,800 学生，主题掌握率 +4pp，低评级导师组 +9pp。</p>
+</div>
+</div>
+<p><span class="tag t-inf">Inference</span>
+两者的差别不是「有没有效果」，而是<strong>谁承担认知工作</strong>：
+Kestin 的导师内置完整教学法，Bastani 的护栏只做了「不给答案」。
+<strong>Lemma 的 Method 插件结构上在 Kestin 一侧，但没有独立于开发团队的证据证明它落在这一侧。</strong></p>
+
+<h3>长期记忆与个性化</h3>
+<p><span class="tag t-res">Research</span>
+MemBench（ACL 2025，<a href="https://arxiv.org/abs/2506.21605">arXiv:2506.21605</a>）：
+现有记忆机制在「<strong>从行为推断高层偏好</strong>」上显著弱于事实记忆。<br>
+<span class="tag t-unk">Unknown</span>
+<strong>我找不到任何「长期记忆 / 深度个性化导致用户能力提升」的 RCT 或大规模产品实验。</strong>
+所有长记忆研究停在基准准确率层面，<strong>没有一篇把记忆质量与人的能力变化相关联</strong>。<br>
+<span class="tag t-inf">Inference</span> Lemma 的 Trajectory 若依赖长期记忆，
+其有效性目前<strong>只有工程学论证，没有结果侧证据</strong>。</p>
+
+<h3>信任与校准 —— 对 Coordinator 最直接的风险</h3>
+<p><span class="tag t-res">Research</span>
+Fügener, Grahl, Gupta &amp; Ketter 2022（ISR 33(2)，<a href="https://doi.org/10.1287/isre.2021.1079">DOI</a>）：
+人机协作只在「<strong>AI 委派给人</strong>」时提升表现；<strong>人委派给 AI 时没有提升</strong>。
+原因是 <strong>metaknowledge 缺失</strong> —— 人无法准确评估自己在具体任务上的可靠性，
+且这种缺陷是无意识的、动机和训练都改不动。<br>
+<span class="tag t-unk">Unknown</span> 「AI 判断你现在的状态，据此选教学法」正是这个问题的镜像 ——
+<strong>用户察觉不到 Coordinator 选错，也无法申诉，而 Lemma 恰恰缺少能积累这类反馈的闭环。</strong></p>
+
+<h2>4 · 创新评估</h2>
+
+<p>不把「行业里没有一模一样」当创新。分五档。</p>
+<table>
+<thead><tr><th style="width:20%">部件</th><th style="width:17%">判定</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td class="k">Evidence 准入与结构修订</td><td class="st st-yes">Established</td>
+  <td>Corbett &amp; Anderson 1994/1995 与 knowledge tracing 文献三十年积累。Lemma 的实现（反驳两次才退役、人确认过的不退役）是已知设计的变体</td></tr>
+<tr><td class="k">Learner State 读时算</td><td class="st st-part">Recombination</td>
+  <td>「不存状态、由证据推导」本身是成熟主张（可追溯性好处明显）。<strong>新的是它冷启动时返回空</strong>，而这一点在 KT 的大规模实测里正是被点名的问题（Yamkovenko 2024）</td></tr>
+<tr><td class="k">Coordinator 事件驱动</td><td class="st st-part">Recombination</td>
+  <td>「事件触发 + 结构化输入 + 明确决策」是规则式系统的标准做法。<strong>不新</strong></td></tr>
+<tr><td class="k">Method 作为可注册插件</td><td class="st st-part">Potential Innovation</td>
+  <td><strong>这是全套设计里唯一我认为可能是原创的组合</strong>：把「教学法」变成声明四要素的可注册单元，由决策层按证据选择。<strong>但它今天完全没接通</strong>（executor 空转）⇒ 创新点与实现缺口重合</td></tr>
+<tr><td class="k">fading / 撤除支架</td><td class="st st-no">Unnecessary Complexity（待证）</td>
+  <td>Wood et al. 1976 提出，但 Belland et al. 2017 的 144 项实验显示<strong>效应不随 fading 变化</strong>。保留它需要 Lemma 自己举证，而不是引文献</td></tr>
+<tr><td class="k">Trajectory 四问</td><td class="st st-part">Recombination</td>
+  <td>learning analytics 的可解释性要求（ Worthén &amp; Slade 的可解释性准则）是成熟规范。<strong>「Why we think so」有抽屉可追，是实现层的具体化，不是概念创新</strong></td></tr>
+<tr><td class="k">跨学科 Method System</td><td class="st st-hyp" style="color:var(--ink2)">Unverified Hypothesis</td>
+  <td><strong>「教写作和教数学该用同一套方法插件」是一个未被检验的强主张。</strong>它的价值主张是<em>复用</em>（同一份 Socratic 逻辑在两个领域），而不是<em>更有效</em>。⚠️ 而通用性通常是<strong>换来的，不是同时拥有的</strong> —— 同一方法在两域的有效性必须分别测</td></tr>
+</tbody>
+</table>
+
+<div class="card warn">
+<h4>我试图推翻自己而没成功的地方</h4>
+<p style="margin:0">
+我想论证「Method System 只是换了术语」—— <strong>但换不了的是组合方式</strong>：
+Cognitive Apprenticeship（Collins, Brown &amp; Newman 1989）提出的是<strong>一整套教学序列</strong>，
+而 Lemma 把「教学法」拆成<strong>可独立注册、按证据选择的四个要素</strong>。
+<strong>这个拆分是新的，尽管它借来的每个部件都不新。</strong>
+⚠️ 而这个唯一可能原创的点，恰好是今天实现最薄的一点。</p>
+</div>
+
+<h2>5 · 架构必要性：删掉会失去什么</h2>
+
+<p>不追求找出最多问题，只识别<strong>哪些假设决定了它能否成立</strong>。</p>
+
+<h3>决定成立与否的三个假设</h3>
+<ol>
+<li><strong>「Learning Loop 必须整体接通才产生价值」</strong><span class="tag t-hyp">Hypothesis</span><br>
+  如果这是对的，那么四个部件各自弱是可以接受的；<strong>如果它是错的</strong>（即单个部件就能带来价值），
+  那当前状态（四个都半通）<strong>比什么都不做更糟</strong> —— 因为它增加了成本却没有闭环。</li>
+<li><strong>「新空间可以先无结构，靠证据逐步长出结构」</strong><span class="tag t-inf">Inference</span><br>
+  这个假设<strong>今天不成立</strong>，而它挡住了第一格：
+  <code>resolve_item</code> 要求知识点已存在 ⇒ 新空间的第一条证据永远写不进去。
+  ⇒ <strong>要么先建结构，要么承认冷启动期没有任何学习闭环。</strong></li>
+<li><strong>「用户能理解并修正 AI 对自己能力的判断」</strong><span class="tag t-unk">Unknown</span><br>
+  Trajectory 把它当作设计承诺（四个节点里三个有「判断」）。
+  <strong>而 Fügener et al. 2022 表明人无法校准 AI 对自己的评估</strong>
+  ⇒ 这条承诺<strong>可能无法兑现</strong>，而它是「用户掌控」叙事的支柱。</li>
+</ol>
+
+<h3>确认存在的架构问题</h3>
+<table>
+<thead><tr><th style="width:30%">问题</th><th>证据</th><th style="width:14%">严重</th></tr></thead>
+<tbody>
+<tr><td class="k">只有定义没有消费方的 Evidence</td>
+  <td>Free Course 的 observation 只被 <code>count()</code>；<code>POST /knowledge/evidence</code> 的 UI 在 dev 面板</td>
+  <td class="st st-no">高</td></tr>
+<tr><td class="k">没有真实输出作用的 Coordinator</td>
+  <td><code>turn_start</code> 零生产者；executor 三种动作一律 <code>return "handed_to_global_agent"</code></td>
+  <td class="st st-no">高</td></tr>
+<tr><td class="k">名义上的插件系统</td>
+  <td>注册表与四要素契约都在，<strong>但 Method 从不真正执行</strong></td>
+  <td class="st st-no">高</td></tr>
+<tr><td class="k">只存不回的 Memory</td>
+  <td>Space Memory 只有 Agent 的 <code>remember</code> 一个写入面，用户无入口，无检索</td>
+  <td class="st st-part">中</td></tr>
+<tr><td class="k">与 Global Agent 职责重叠</td>
+  <td>Coordinator 决定「做什么类别」，Agent 执行「怎么说」——<strong>但代码里 executor 不调用任何人，所以这条边界目前只存在于文档</strong></td>
+  <td class="st st-part">中</td></tr>
+</tbody>
+</table>
+
+<h2>6 · 完整学习闭环：一个都跑不通</h2>
+
+<div class="card bad">
+<p style="margin:0"><span class="tag t-fact">Observed</span>
+从 <code>Space Creation</code> 到 <code>Next Decision</code>，<strong>第一处断点在第 3 步</strong>：
+没有任何交互能产生 Evidence。后续连锁：结构为空 ⇒ 写不进去 ⇒ 状态永远是空的 ⇒
+决策层从不问 ⇒ 承诺层永不存在。<strong>四层断，修任何一层都不会让闭环转起来。</strong></p>
+</div>
+
+<p><span class="tag t-inf">Inference</span>
+值得注意的是<strong>断点的位置</strong>：不在「决策」或「方法」，而在最前面的「有没有东西可记」。
+⇒ <strong>更多决策逻辑不会让它更接近闭环</strong>，而这正是继续加组件最自然的动机。</p>
+
+<h2>7 · 用户生命周期：两个场景</h2>
+
+<h3>Scenario A · TOEFL（长期目标型）</h3>
+<table>
+<thead><tr><th style="width:24%">环节</th><th>今天能做到吗</th></tr></thead>
+<tbody>
+<tr><td class="k">建 Space</td><td>✅ 写一个名字</td></tr>
+<tr><td class="k">说清意图</td><td>⚠️ 要绕到网格里的 Goal 面板，不是创建后的自然下一步</td></tr>
+<tr><td class="k">第一次动作</td><td>⚠️ 只能进一个空 Focus（无材料时），或先去找材料</td></tr>
+<tr><td class="k">产生证据</td><td>❌ <strong>Focus 零出口</strong></td></tr>
+<tr><td class="k">中断后回来</td><td>⚠️ 能恢复对话文本；<strong>看不到上次的承诺、进度、隔了多久</strong></td></tr>
+<tr><td class="k">调整策略</td><td>❌ 无证据可依据</td></tr>
+<tr><td class="k">迁移到新题</td><td>❌ 无任何测量能力</td></tr>
+</tbody>
+</table>
+<p><span class="tag t-inf">Inference</span>
+TOEFL 这类<strong>有明确终点、有客观判定</strong>的目标，是四步闭环里<strong>唯一能被完整验证</strong>的形状。
+它应该作为第一个实验场景 —— 不是因为它最典型，而是因为<strong>它最容易证伪</strong>。</p>
+
+<h3>Scenario B · 哲学论文（能力习得型）</h3>
+<p><span class="tag t-inf">Inference</span>
+这个场景把两个假设同时押上：<strong>「同一 Method 插件可跨学科」</strong>与
+<strong>「作品能作为能力证据但不等于能力」</strong>。</p>
+<p>今天的实际：<strong>比 TOEFL 更糟</strong>。论文需要<strong>产物修订</strong>，
+而页面保存<strong>整页删掉重插</strong> ⇒ 无版本历史 ⇒
+「修改前后」这个概念<strong>在数据层无法还原</strong>
+⇒ Trajectory 最想展示的「把第一稿推翻」这件事，<strong>系统无法作证</strong>。</p>
+
+<h3>三类会被这套设计劝退的用户</h3>
+<ul>
+  <li><strong>浅度用户</strong>：四次点击才看到第一次有价值的内容，而那一步还没有。</li>
+  <li><strong>不提供材料的用户</strong>：新空间是空的 ⇒ 第一格就断 ⇒ 什么都没发生。</li>
+  <li><strong>长时间不返回的用户</strong>：三周后回来，提醒会一次性全部涌进来
+  （容忍过去时间），而承诺层不存在 ⇒ <strong>「我上次说要做什么」无法回答</strong>。</li>
+</ul>
+
+<h2>8 · 失败模式与未验证假设</h2>
+
+<table>
+<thead><tr><th style="width:19%">风险</th><th style="width:29%">当前掌握的证据</th><th>什么结果会推翻假设</th></tr></thead>
+<tbody>
+<tr><td class="k">Validity</td>
+  <td><span class="tag t-res">Research</span> Yamkevenko 2024：KT 在真实规模下对冷启动用户预测差、难以检测答错。<span class="tag t-fact">Observed</span> 本项目只会更极端（新空间零结构）</td>
+  <td>若一次答错后的状态变更能在<strong>独立复测</strong>上预测后续表现，Validity 质疑被削弱</td></tr>
+<tr><td class="k">Adaptation</td>
+  <td><span class="tag t-unk">Unknown</span> 证据驱动的调整<strong>完全没有实现</strong>，所以既无风险也无证据</td>
+  <td>若按证据调整的学生<strong>不如</strong>不调整的学生，Adaptation 路线证伪</td></tr>
+<tr><td class="k">Complexity</td>
+  <td><span class="tag t-fact">Observed</span> 组件数量已远超用户能感知的价值数量；四问的第三、四问需要先有闭环</td>
+  <td>若新用户首次价值时间<strong>不优于</strong>一个纯 Chat 产品，Complexity 成立</td></tr>
+<tr><td class="k">Continuity</td>
+  <td><span class="tag t-res">Research</span> <strong>没有任何研究把长期记忆与能力提升相关联</strong>（LongMemEval / MemBench 都停在基准准确率）</td>
+  <td>若隔周返回的用户<strong>不优于</strong>当场连续的用户，Continuity 的核心假设证伪</td></tr>
+<tr><td class="k">Generalization</td>
+  <td><span class="tag t-unk">Unknown</span> 跨学科 Method 系统从未被检验</td>
+  <td>若同一方法插件在数学有效而在写作无效，Generalization 证伪</td></tr>
+<tr><td class="k">Product</td>
+  <td><span class="tag t-fact">Observed</span> 首发三模式<strong>都不走这套闭环</strong> ⇒ 架构不进首发</td>
+  <td>—</td></tr>
+<tr><td class="k">Architectural</td>
+  <td><span class="tag t-fact">Observed</span> 六条链路<strong>没有一条端到端</strong></td>
+  <td>见 §6：断点在最前面，<strong>加决策逻辑不会让它更接近闭环</strong></td></tr>
+</tbody>
+</table>
+
+<h2>9 · 投资视角</h2>
+
+<h3>为什么 Lemma 不是「ChatGPT 的一个学习功能」</h3>
+<p><span class="tag t-inf">Inference</span>
+不是因为功能更多，而是因为<strong>它赌的是一个不同的因果假设</strong>：
+Chat 优化「这次对话有用」，Lemma 赌「<strong>约束 AI 不给答案 + 记录证据 + 按证据换教法</strong>会提高能力」。
+⇒ 这条假设<strong>可证伪</strong>（Bastani 2025 的 −17% 就是一次证伪的样本）。
+<span class="tag t-unk">Unknown</span>
+<strong>但我们还没做过自己那次实验。</strong></p>
+
+<h3>最难被复制的部分（以及哪些不是壁垒）</h3>
+<div class="two">
+<div>
+<h4>可能构成壁垒</h4>
+<ul>
+<li><strong>长期证据的纵向积累</strong>：三个月的 Evidence 序列无法被复制 —— 但今天连一条闭环都没有</li>
+<li><strong>Trajectory 作为可申诉的界面</strong>：用户能说「这条不对」并修正它</li>
+<li><strong>跨学科 Method 系统</strong>（若被验证）</li>
+</ul>
+</div>
+<div>
+<h4>不构成壁垒</h4>
+<ul>
+<li><strong>架构复杂度</strong> —— 复杂不等于难复制；任何模型厂商都能画出同样的图</li>
+<li><strong>「我们读了 learning science」</strong> —— 论文是公开的</li>
+<li><strong>当前的用户画像 / 偏好系统</strong> —— 是常规做法</li>
+</ul>
+</div>
+</div>
+
+<h3>为什么这个类别可能值得做 —— 即使 Lemma 不赢</h3>
+<p><span class="tag t-res">Research</span>
+即使 Lemma 失败，Bastani 2025 的结果本身已经说明一件事：
+<strong>「AI 辅导会不会让人变差」是一个真实且可测的问题</strong>，
+而今天绝大多数产品<strong>不做这个区分</strong>。
+⇒ 类别机会可能不在「更好的 AI 家教」，而在<strong>「能证明自己没让人变差的教育 AI」</strong> ——
+这需要的正是 Lemma 这套「证据 + 可回溯」的形状。</p>
+<p><span class="tag t-inf">Inference</span>
+⚠️ 但这条推理有一个前提：<strong>市场是否愿意为「被证明没伤害」付费</strong>。
+<span class="tag t-unk">Unknown</span> 我没有证据。这是投资论点里最弱的一环。</p>
+
+<h3>两条轨道的边界（回应 §10 的要求）</h3>
+<table>
+<thead><tr><th style="width:22%">轨道</th><th>内容</th><th style="width:26%">它能得到什么证据</th></tr></thead>
+<tbody>
+<tr><td class="k">Launch Track</td><td>Free Course · Video Course · Casual Chat</td>
+  <td><strong>能验证「用户愿不愿意用」与「内容质量够不够」</strong>；<strong>不能验证任何认知架构假设</strong></td></tr>
+<tr><td class="k">Research Track</td><td>Evidence → State → Coordinator → Method</td>
+  <td><strong>唯一能验证核心假设的地方</strong>，但<strong>从首发得不到任何数据</strong></td></tr>
+</tbody>
+</table>
+<div class="card warn">
+<p style="margin:0"><span class="tag t-hyp">Hypothesis</span>
+<strong>两条轨道短期内不会交汇</strong> —— 这不是问题，因为它们本来就不该交汇。
+但必须诚实承认：<strong>Research Track 的每一步都要自己制造实验条件，而没有实验就没有认知增量。</strong>
+⇒ 风险不是「架构研究拖慢上线」，而是<strong>「架构研究无限期地不需要被证伪」</strong>。</p>
+</div>
+
+<h2>10 · 最高价值的四个实验</h2>
+
+<p>标准：<strong>能验证核心假设 + 能依托现有代码形成最小闭环</strong>。按价值排序。</p>
+
+<div class="card">
+<h4>E1 · 一次作答能不能改变下一次教学 <span style="color:var(--ok)">← 最该先做</span></h4>
+<table style="margin-bottom:0">
+<tr><td class="k" style="width:16%">验证</td><td>Evidence → State → 决策这条链是否有<strong>任何</strong>因果作用</td></tr>
+<tr><td class="k">形式</td><td>只做一件事：把 Free Course 的 <code>is_correct</code> 接进<strong>已存在</strong>的 <code>admit_outcome</code>。不新增表、不改 prompt、不改 UI</td></tr>
+<tr><td class="k">支持</td><td>答错后同一知识点在下一轮被针对性处理（而非泛泛重讲）</td></tr>
+<tr><td class="k">推翻</td><td>写入失败（结构为空）或写入后下一轮 prompt <strong>无任何可辨差异</strong></td></tr>
+<tr><td class="k">影响</td><td>失败也给出关键信息：<strong>它会指出是先补结构写入面，还是这条路本身不成立</strong></td></tr>
+</table>
+</div>
+
+<div class="card">
+<h4>E2 · 护栏对照（复现 Bastani 的关键分叉）</h4>
+<table style="margin-bottom:0">
+<tr><td class="k" style="width:16%">验证</td><td>「有教学法 vs 不给答案」在 Lemma 自己的场景里差多少</td></tr>
+<tr><td class="k">形式</td><td>同一个知识点、两个 Method 配置（<strong>直接讲</strong> vs <strong>苏格拉底</strong>），课后立即测<strong>无辅助</strong>的迁移题</td></tr>
+<tr><td class="k">支持</td><td>Method 配置<strong>在无辅助条件下</strong>产生可测差异</td></tr>
+<tr><td class="k">推翻</td><td>练习期表现有差异但<strong>撤走 AI 后无差异</strong>（= Bastani 的模式）</td></tr>
+<tr><td class="k">影响</td><td>这直接决定 Method System 是否值得继续 —— <strong>它是唯一可能原创的那个部件</strong></td></tr>
+</table>
+</div>
+
+<div class="card">
+<h4>E3 · 冷启动基线（Validity 的正面测量）</h4>
+<table style="margin-bottom:0">
+<tr><td class="k" style="width:16%">验证</td><td>读时算的 Learner State 是否真的<strong>预测</strong>后续表现，还是只描述过去</td></tr>
+<tr><td class="k">形式</td><td>同一批课节上，比较「按状态给差异化教学」与「统一教学」，用<strong>标准化题</strong>（不是本地题）测</td></tr>
+<tr><td class="k">支持</td><td>差异化组在<strong>标准化</strong>测验上更高</td></tr>
+<tr><td class="k">推翻</td><td>只在本地题上有差异（= Kulik 论战里效应量最小的那一端）</td></tr>
+<tr><td class="k">影响</td><td>决定能否对外声称任何效果主张</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h4>E4 · 用户能否读懂并修正 Trajectory</h4>
+<table style="margin-bottom:0">
+<tr><td class="k" style="width:16%">验证</td><td>Fügener 2022 的 metaknowledge 缺失是否也适用于这里</td></tr>
+<tr><td class="k">形式</td><td>给用户看三个节点，问「哪一条不对」。<strong>测量纠正率与纠正后的准确度</strong></td></tr>
+<tr><td class="k">支持</td><td>用户能定位错误节点，且纠正后系统判断变准</td></tr>
+<tr><td class="k">推翻</td><td>纠正率接近随机 ⇒ 「用户掌控」是<strong>不可兑现的承诺</strong>，应从设计中移除</td></tr>
+<tr><td class="k">影响</td><td>决定 Trajectory 是<strong>信任界面</strong>还是<strong>展示界面</strong></td></tr>
+</table>
+</div>
+
+<h2>11 · 最终战略评估</h2>
+
+<h3>Learn Space 当前处于什么阶段</h3>
+<p><span class="tag t-inf">Inference</span>
+<strong>「架构已定、闭环未通」的阶段 —— 而且已在这个阶段停留了一个多月。</strong>
+每轮工作的产出都是「发现又一处断线」，而不是「接通一段」。
+⇒ 这不是执行力问题，是<strong>路线顺序问题</strong>：
+<strong>先加组件、后接链路</strong>，而接通链路本该在第一个组件之前就发生一次。</p>
+
+<h3>最大的独特机会</h3>
+<p><span class="tag t-hyp">Hypothesis</span>
+<strong>Method 作为可注册插件，并由决策层按证据选择</strong>。
+它是全套设计里唯一我认为可能不是重新组合的部分，
+也是唯一同时满足「文献未解决」「结构上可替换」「可用受控实验证伪」三个条件的地方。</p>
+
+<h3>最大的未验证假设</h3>
+<div class="card bad">
+<p style="margin:0"><strong>「无教师、用户自选节奏、AI 承担全部 formative judgment」这一配置能提升学习结果。</strong></p>
+<p style="margin:8px 0 0">
+<span class="tag t-unk">Unknown</span>
+Formative Assessment 的全部证据都建立在<strong>教师在环</strong>的课堂上；
+ITS 的证据显示对个别化人类辅导 <strong>g=−0.11</strong>；
+元认知提示在产品级 RCT 中<strong>全为 null</strong>。
+<strong>Lemma 的配置在文献里没有被验证过 —— 而这正是它最大的卖点所在。</strong></p>
+</div>
+
+<h3>下一步应该做什么</h3>
+<ol>
+<li><strong>做 E1</strong>。它是唯一一个「无论成败都产出信息」的实验：通了就有第一条闭环，
+不通就证明了结构写入面是真正的第一格。</li>
+<li><strong>暂缓加组件</strong>。Coordinator 规则、Method 插件、Trajectory 后端
+<strong>在 E1 出结果之前都不会产生任何认知增量</strong>。</li>
+<li><strong>把 E2 排进首发之后</strong>，因为它需要两个 Method 配置真实可切换 ——
+而这要等 Coordinator 有输出。</li>
+<li><strong>接受一个事实</strong>：<span class="tag t-hyp">Research Track 从首发拿不到数据</span>。
+若不接受这一点，就会持续用「架构还没好」解释一切，
+而架构<strong>永远不会自己变好</strong>。</li>
+</ol>
+
+<div class="foot">
+<p><strong>标签说明</strong>：
+<span class="tag t-fact">Observed</span>代码或查询可核实 ·
+<span class="tag t-res">Research</span>有可核实文献出处 ·
+<span class="tag t-inf">Inference</span>架构推断 ·
+<span class="tag t-hyp">Hypothesis</span>待验证 ·
+<span class="tag t-unk">Unknown</span>证据不足</p>
+<p style="margin-top:10px">
+<strong>本报告未修改任何产品代码。</strong>实现现状的完整依据见
+<code>learn-space-wiring-report.md</code>（接线审计）、
+<code>EVIDENCE_FLOW.md</code>（证据流转与成熟度）、
+<code>docs/learn-space-user-behavior-map.html</code>（96 条用户行为）。
+⚠️ 报告中的实现判断<strong>未做登录后运行验证</strong>（需云端 Supabase 账号），
+因此全部为代码事实 + 本地库查询，而非运行时观察。</p>
+</div>
+
+</div>
+</body>
+</html>
