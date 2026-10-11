@@ -70,6 +70,16 @@ class Course(Base):
         ForeignKey("ai_conversations.id", ondelete="SET NULL"),
         nullable=True,
     )
+    # The Learn Space this course belongs to. SET NULL: deleting a space must
+    # never delete a course. NULL means "not yet placed" — the honest value for
+    # every course created before this column existed, and it has to stay honest:
+    # an evidence row needs a scope, and borrowing another space's would record
+    # knowledge the learner never gained in a place they were never in.
+    project_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     topic: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
     # Course blurb shown on the dashboard and the course-center card, written by
