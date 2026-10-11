@@ -1,11 +1,20 @@
 .DS_Store
 /.cursor/
-# docs/ 整体不入库（多为本地草稿）。例外有三份，都是团队会长期引用的文档：
-# 成就/能力视觉设计规范是上位规范；Free Course 的 README 是那份研究的入口
-# （研究的 HTML 与三份计划在仓库根，B-04 那个建模决策要靠它被引用到）；
-# 这份工作总结是跨四天的进度索引——它本身引用的文件有一半在仓库根，
-# 不入库的话它就成了唯一拿不到的那一环。
+# docs/ 整体不入库（多为本地草稿）。子计划目录是例外：**它们是交给 Coding Agent
+# 执行的指令**，不入库等于团队里只有一个人有 —— 那与写文档的目的相反。
 /docs/*
+
+# 放行 1 · 子计划目录。**否定规则必须写在 /docs/* 之后才生效** —— 这一点被坑过一次。
+!docs/plans/
+!docs/plans/practice-system/
+!docs/plans/practice-system/*.md
+
+# 放行 2 · 三份团队会长期引用的文档：成就/能力视觉设计规范是上位规范；
+# Free Course 的 README 是那份研究的入口；WORK_SUMMARY 是跨四天的进度索引。
+!docs/plans/
+!docs/plans/practice-system/
+!docs/plans/practice-system/*.md
+
 !/docs/achievement-design-system.md
 !/docs/README-freecourse.md
 !/docs/WORK_SUMMARY_1006-1009.md
