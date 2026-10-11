@@ -5,20 +5,18 @@
 /docs/*
 
 # 放行 1 · 子计划目录。**否定规则必须写在 /docs/* 之后才生效** —— 这一点被坑过一次。
-!docs/plans/
-!docs/plans/practice-system/
-!docs/plans/practice-system/*.md
 
 # 放行 2 · 三份团队会长期引用的文档：成就/能力视觉设计规范是上位规范；
 # Free Course 的 README 是那份研究的入口；WORK_SUMMARY 是跨四天的进度索引。
-!docs/plans/
-!docs/plans/practice-system/
-!docs/plans/practice-system/*.md
 
 !/docs/achievement-design-system.md
 !/docs/README-freecourse.md
 !/docs/WORK_SUMMARY_1006-1009.md
 /task-management/
+
+# 实施计划：本地工作稿。**不入库** —— 它们是给 Coding Agent 执行的指令，
+# 不是产品文档；入库会让「为什么还没做」和「计划是什么」一起进历史。
+/.plans/
 /temp/
 
 # 密钥：backend 从 CWD 读 .env，所以仓库根的 .env 和 backend/.env 都是
