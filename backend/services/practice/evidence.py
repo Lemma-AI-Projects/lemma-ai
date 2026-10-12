@@ -78,10 +78,15 @@ async def _already_admitted(
 
     row = (
         await db.execute(
-            select(KnowledgeEvidence.id, KnowledgeEvidence.response_ref)
-            .where(KnowledgeEvidence.response_ref["surface"].astext() == SURFACE)
+            select(KnowledgeEvidence.id)
+            # ⚠️ `col["key"].astext()` raises here — this SQLAlchemy version
+            # resolves it as an attribute, not a method, so the call fails with
+            # "BinaryExpression object is not callable". `as_string()` is the
+            # supported spelling and compiles to `->>`.
+            .where(KnowledgeEvidence.response_ref["surface"].as_string() == SURFACE)
             .where(
-                KnowledgeEvidence.response_ref["practiceRef"].astext() == response_ref
+                KnowledgeEvidence.response_ref["practiceRef"].as_string()
+                == response_ref
             )
             .limit(1)
         )
