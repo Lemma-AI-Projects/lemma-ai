@@ -64,6 +64,15 @@ export interface BlockEditorProps {
   onSelectionToggle?: (key: string) => void
   /** 清空圈选（Esc）。 */
   onSelectionClear?: () => void
+  /**
+   * 「回到出处」：临时高亮这一块。⚠️ **不是选中** —— 选中是"这被圈了"，
+   * 高亮是"你看这儿"；两者必须能区分（一个盲用户靠听，需要知道"我在哪"和
+   * "我圈了什么"是两件事）。
+   *
+   * 宿主负责计时（加了值、过一会儿撤掉），这里只负责画 —— 因为"亮多久"
+   * 是产品决定，不是编辑器的事。
+   */
+  flashKey?: string | null
 }
 
 const HEADING_CLASS: Record<number, string> = {
@@ -85,6 +94,13 @@ const SELECTED_BAR_CLASS = 'absolute left-0 top-0 h-full w-1 rounded-full bg-for
 const SELECTED_TEXT_CLASS = 'text-zinc-950 dark:text-zinc-50'
 /** hover 只是预告，不是选中 —— 所以只有一层极淡的底，没有色条。 */
 const HOVER_BLOCK_CLASS = 'hover:bg-zinc-50 dark:hover:bg-zinc-900'
+/**
+ * 「回到出处」的高亮。⚠️ 用 **ring 而不是色条** —— 色条已经被"选中"占了，
+ * 两种意思共用一套视觉语言会让人分不清"我圈了它"和"我在看它"。
+ * `transition-shadow` 常驻在块上，所以加 ring 和撤 ring 都有 200ms 过渡
+ * （淡入淡出是计划里的验收项，而它是这么来的，不是靠 keyframes）。
+ */
+const FLASH_BLOCK_CLASS = 'ring-2 ring-zinc-300 dark:ring-zinc-600'
 
 /**
  * 聚焦模式里的正文编辑器 —— **自研、零依赖，每个块就是一个 `<textarea>`**。
@@ -111,6 +127,7 @@ export function BlockEditor({
   selectedKeys,
   onSelectionToggle,
   onSelectionClear,
+  flashKey,
 }: BlockEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   /**
@@ -239,14 +256,17 @@ export function BlockEditor({
     >
       {blocks.map((block) => {
         const isSelected = selectedKeys?.has(block.key) ?? false
+        const isFlashing = flashKey != null && flashKey === block.key
         return (
           <div
             key={block.key}
             data-block-key={block.key}
             data-selected={isSelected ? 'true' : undefined}
+            data-flash={isFlashing ? 'true' : undefined}
             className={[
-              'group relative rounded-md',
+              'group relative rounded-md transition-shadow',
               isSelected ? '' : HOVER_BLOCK_CLASS,
+              isFlashing ? FLASH_BLOCK_CLASS : '',
             ].join(' ')}
             onClick={(event) => {
               if (!onSelectionToggle) return

@@ -6,8 +6,13 @@ import { totalItems, visibleChips, type MalaBundleChip } from './malaChipsOps'
 
 const noop = () => undefined
 
-function chip(id: string, itemCount: number, label: string | null = null): MalaBundleChip {
-  return { id, itemCount, label }
+function chip(
+  id: string,
+  itemCount: number,
+  label: string | null = null,
+  firstShapeId: string | null = id
+): MalaBundleChip {
+  return { id, itemCount, label, firstShapeId }
 }
 
 describe('visibleChips', () => {
@@ -42,11 +47,11 @@ describe('MalaChips（静态断言）', () => {
   const chips = [chip('a', 3, '第一组'), chip('b', 2)]
 
   it('没有材料包时什么都不渲染', () => {
-    expect(renderToStaticMarkup(<MalaChips chips={[]} onRemove={noop} />)).toBe('')
+    expect(renderToStaticMarkup(<MalaChips chips={[]} onRemove={noop} onLocate={noop} />)).toBe('')
   })
 
   it('每个 chip 带一个可点的撤掉按钮（aria-label 说明撤的是哪组）', () => {
-    const markup = renderToStaticMarkup(<MalaChips chips={chips} onRemove={noop} />)
+    const markup = renderToStaticMarkup(<MalaChips chips={chips} onRemove={noop} onLocate={noop} />)
     expect(markup).toContain('aria-label="撤掉第一组"')
     expect(markup).toContain('aria-label="撤掉第 2 组"')
     // 按钮数量 = chip 数量，不能多也不能少
@@ -54,14 +59,38 @@ describe('MalaChips（静态断言）', () => {
   })
 
   it('显示总计：几组、几块', () => {
-    const markup = renderToStaticMarkup(<MalaChips chips={chips} onRemove={noop} />)
+    const markup = renderToStaticMarkup(<MalaChips chips={chips} onRemove={noop} onLocate={noop} />)
     expect(markup).toContain('圈了 2 组 · 5 块')
   })
 
   it('超出的收起来，且露出一个 +N 而不是把排挤爆', () => {
     const many = Array.from({ length: 7 }, (_, i) => chip(`b${i}`, 1))
-    const markup = renderToStaticMarkup(<MalaChips chips={many} onRemove={noop} />)
+    const markup = renderToStaticMarkup(<MalaChips chips={many} onRemove={noop} onLocate={noop} />)
     expect(markup).toContain('+3 组')
     expect(markup.match(/aria-label="撤掉/g)?.length).toBe(4)
+  })
+})
+
+describe('MalaChips 「回到出处」', () => {
+  it('chip 上有回到出处的按钮，且与撤掉按钮平级（不嵌套）', () => {
+    const markup = renderToStaticMarkup(
+      <MalaChips chips={[chip('a', 2, '第一组')]} onRemove={noop} onLocate={noop} />
+    )
+    expect(markup).toContain('回到第一组在文档里的位置')
+    expect(markup.match(/aria-label="撤掉/g)?.length).toBe(1)
+    // 两个 button 不能互相嵌套：数一下开标签
+    expect(markup.match(/<button/g)?.length).toBe(2)
+  })
+
+  it('没有 firstShapeId（那几块已不在这一页）⇒ 按钮禁用并说明', () => {
+    const markup = renderToStaticMarkup(
+      <MalaChips
+        chips={[chip('a', 2, '第一组', null)]}
+        onRemove={noop}
+        onLocate={noop}
+      />
+    )
+    expect(markup).toContain('disabled')
+    expect(markup).toContain('那几块已经不在这一页了')
   })
 })

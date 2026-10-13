@@ -13,6 +13,14 @@ export interface MalaBundleChip {
   itemCount: number
   /** 圈选时给的名字；没给就是 null。 */
   label: string | null
+  /**
+   * 这批材料里第一块的 key —— 「回到出处」用它。
+   *
+   * ⚠️ 为什么存 key 而不是存位置：位置是**创建那一刻**的快照，而用户接下来可能
+   * 编辑、挪动、甚至删掉那块。key 至少能在块还在的时候精确找到它；位置只能
+   * 指向"曾经在那儿"。所以主路径是 key，位置（`boundingBox`）只是兜底。
+   */
+  firstShapeId: string | null
 }
 
 /** 一次最多露几个 chip。再多就收成 `+N 组` —— 收起来的那些仍可删（见展开）。 */

@@ -29,7 +29,11 @@ function textareaClassOf(markup: string, blockKey: string): string {
   return found ? found[1] : ''
 }
 
-function render(blocks: DraftBlock[], selected?: ReadonlySet<string>): string {
+function render(
+  blocks: DraftBlock[],
+  selected?: ReadonlySet<string>,
+  flashKey?: string | null
+): string {
   return renderToStaticMarkup(
     <BlockEditor
       blocks={blocks}
@@ -37,6 +41,7 @@ function render(blocks: DraftBlock[], selected?: ReadonlySet<string>): string {
       selectedKeys={selected}
       onSelectionToggle={noop}
       onSelectionClear={noop}
+      flashKey={flashKey}
     />
   )
 }
@@ -93,3 +98,29 @@ describe('BlockEditor 圈选（静态断言）', () => {
 /** 与 BlockEditor 里的 `SELECTED_TEXT_CLASS` 对应。⚠️ 改了那边要改这里 ——
  *  这个重复是刻意的：测试不该 import 被测模块的常量，否则是被测代码证明被测代码。 */
 const SELECTED_TONE = 'text-zinc-950 dark:text-zinc-50'
+
+describe('BlockEditor 「回到出处」的高亮（静态断言）', () => {
+  const blocks = [newBlock('paragraph'), newBlock('paragraph')]
+
+  it('flashKey 那一块带 data-flash 与 ring，其它块不带', () => {
+    const markup = render(blocks, undefined, blocks[0].key)
+    const firstAt = markup.indexOf(`data-block-key="${blocks[0].key}"`)
+    const secondAt = markup.indexOf(`data-block-key="${blocks[1].key}"`)
+    expect(markup.slice(firstAt, firstAt + 200)).toContain('data-flash="true"')
+    expect(markup.slice(firstAt, secondAt)).toContain('ring-zinc-300')
+    expect(markup.slice(secondAt, secondAt + 200)).not.toContain('data-flash')
+  })
+
+  /**
+   * ⚠️ **这条守的是"两种意思不共用一套视觉语言"**：选中用左侧色条，
+   * 高亮用 ring。混在一起的话，用户分不清"我圈了它"和"我在看它" ——
+   * 而一个只能听屏幕的用户，需要这是两件事。
+   */
+  it('高亮与选中是两套视觉：ring 不冒充色条，色条也不冒充 ring', () => {
+    const flashed = render(blocks, undefined, blocks[0].key)
+    expect(flashed).not.toContain('bg-foreground')
+    const selected = render(blocks, new Set([blocks[0].key]))
+    const at = selected.indexOf(`data-block-key="${blocks[0].key}"`)
+    expect(selected.slice(at, at + 300)).not.toContain('ring-zinc-300')
+  })
+})

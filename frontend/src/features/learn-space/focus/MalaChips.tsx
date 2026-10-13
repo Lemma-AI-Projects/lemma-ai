@@ -28,9 +28,12 @@ export type { MalaBundleChip }
 export function MalaChips({
   chips,
   onRemove,
+  onLocate,
 }: {
   chips: readonly MalaBundleChip[]
   onRemove: (bundleId: string) => void
+  /** 「回到出处」：那一批材料在文档里的位置。 */
+  onLocate: (bundleId: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const { shown, overflow } = useMemo(() => visibleChips(chips), [chips])
@@ -45,25 +48,40 @@ export function MalaChips({
         圈了 {chips.length} 组 · {total} 块
       </span>
 
-      {list.map((chip, index) => (
-        <span
-          key={chip.id}
-          className="inline-flex max-w-[168px] items-center gap-1 rounded-full border border-zinc-200 bg-white py-0.5 pl-2.5 pr-1 text-[12px] text-zinc-600"
-        >
-          <span className="truncate">
-            {chip.label ?? `第 ${index + 1} 组`} · {chip.itemCount} 块
-          </span>
-          <button
-            type="button"
-            onClick={() => onRemove(chip.id)}
-            aria-label={`撤掉${chip.label ?? `第 ${index + 1} 组`}`}
-            title="撤掉这一组（发送时就不带它了）"
-            className="rounded-full p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+      {list.map((chip, index) => {
+        const name = chip.label ?? `第 ${index + 1} 组`
+        return (
+          <span
+            key={chip.id}
+            className="inline-flex max-w-[168px] items-center gap-1 rounded-full border border-zinc-200 bg-white py-0.5 pl-2.5 pr-1 text-[12px] text-zinc-600"
           >
-            <X className="size-3" />
-          </button>
-        </span>
-      ))}
+            {/* 「回到出处」。⚠️ 与撤掉按钮**平级**而不是嵌套 —— 嵌套 button 是
+                非法 HTML，而且点撤掉时会顺带触发回到出处。 */}
+            <button
+              type="button"
+              disabled={!chip.firstShapeId}
+              onClick={() => onLocate(chip.id)}
+              title={
+                chip.firstShapeId
+                  ? `回到${name}在文档里的位置`
+                  : '那几块已经不在这一页了'
+              }
+              className="max-w-[104px] truncate rounded-full text-left transition-colors hover:text-zinc-900 disabled:cursor-default disabled:text-zinc-300"
+            >
+              {name} · {chip.itemCount} 块
+            </button>
+            <button
+              type="button"
+              onClick={() => onRemove(chip.id)}
+              aria-label={`撤掉${name}`}
+              title="撤掉这一组（发送时就不带它了）"
+              className="rounded-full p-0.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        )
+      })}
 
       {overflow > 0 && !expanded && (
         <button

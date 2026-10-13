@@ -236,6 +236,53 @@ function FocusDocument({
   const [bundles, setBundles] = useState<MalaBundleChip[]>([])
   const [malaBusy, setMalaBusy] = useState(false)
   const [malaError, setMalaError] = useState<string | null>(null)
+  /** 「回到出处」：临时高亮哪一块。宿主计时（1.5s 后撤），编辑器只管画。 */
+  const [flashKey, setFlashKey] = useState<string | null>(null)
+  const flashTimerRef = useRef<number | null>(null)
+
+  /**
+   * 「回到出处」—— 点 chips 上的一组，回文档里看一眼它当初圈的是什么。
+   *
+   * ⚠️ **两条路，主次分明**：主路是按 `shapeId`（= 块 key）找到那一块，精确；
+   * 兜底是 bundle 里的 `boundingBox`（创建那一刻的前端坐标快照）。位置**会过期**
+   * —— 用户接着编辑、挪动、删掉都很正常 —— 所以它只能说"那一带"，不能说"那块"。
+   *
+   * ⚠️ 高亮**不常驻**：1.5s 后撤。常驻的高亮会和"选中"混在一起，而那是两件事
+   * （"我在看它" vs "我圈了它"）。卸载时清计时器，否则快速点两个 chip 会让
+   * 第一个的计时器把第二个的高亮提前撤掉。
+   */
+  const handleLocateBundle = useCallback(
+    (bundleId: string) => {
+      const bundle = bundles.find((row) => row.id === bundleId)
+      const key = bundle?.firstShapeId
+      if (!key) return
+      if (flashTimerRef.current !== null) {
+        window.clearTimeout(flashTimerRef.current)
+      }
+      setFlashKey(key)
+      // ⚠️ **遍历而不是 `querySelector('[data-block-key="…"]')`**：块的 key 是
+      // 本地生成的，但那是实现细节 —— 拼进选择器字符串意味着任何将来"key 里
+      // 出现引号/空格"的改变都会变成一次选择器语法错误，而且错得悄无声息
+      // （查询不到 ⇒ 只是不高亮）。用属性值比较没有这个问题。
+      const target = [...document.querySelectorAll('[data-block-key]')].find(
+        (el) => el.getAttribute('data-block-key') === key
+      )
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      flashTimerRef.current = window.setTimeout(() => {
+        setFlashKey(null)
+        flashTimerRef.current = null
+      }, 1500)
+    },
+    [bundles]
+  )
+
+  // 卸载时撤掉还没跑完的计时器 —— 否则它会去 set 一个已卸载组件的 state。
+  useEffect(
+    () => () => {
+      if (flashTimerRef.current !== null) window.clearTimeout(flashTimerRef.current)
+    },
+    []
+  )
 
   /**
    * 点 Mala：圈中的块 → 一个材料包。
@@ -260,7 +307,12 @@ function FocusDocument({
       })
       setBundles((prev) => [
         ...prev,
-        { id: bundle.id, itemCount: bundle.itemCount, label: bundle.label },
+        {
+          id: bundle.id,
+          itemCount: bundle.itemCount,
+          label: bundle.label,
+          firstShapeId: bundle.items[0]?.shapeId ?? null,
+        },
       ])
     } catch (error) {
       setMalaError(malaFailureText(error))
@@ -723,6 +775,7 @@ function FocusDocument({
                       selectedKeys={selectedKeys}
                       onSelectionToggle={toggleBlockSelected}
                       onSelectionClear={clearBlockSelection}
+                      flashKey={flashKey}
                     />
                   )}
                 </div>
@@ -745,6 +798,7 @@ function FocusDocument({
                   onRemove={(bundleId) =>
                     setBundles((prev) => prev.filter((bundle) => bundle.id !== bundleId))
                   }
+                  onLocate={(bundleId) => handleLocateBundle(bundleId)}
                 />
                 {/* 打包失败的一行小字。⚠️ 不是按钮下面一段红字 —— 那是这个产品
                     里最难看的一种错误态；`reason` 原话保留，用户能照着改。 */}
