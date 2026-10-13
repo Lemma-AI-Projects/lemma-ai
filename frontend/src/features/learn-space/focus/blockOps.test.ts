@@ -17,6 +17,7 @@ import {
   signatureOf,
   splitAt,
   textOf,
+  toggleKey,
   typeAfterEnter,
   updateText,
   type DraftBlock,
@@ -241,5 +242,30 @@ describe('挪动与增删', () => {
 
   it('newBlock 每次给不同的本地 key', () => {
     expect(newBlock().key).not.toBe(newBlock().key)
+  })
+})
+
+describe('toggleKey（Mala 圈选）', () => {
+  it('连点三块，三块都留下 —— 这是组件层那个覆盖 bug 的规则侧防线', () => {
+    // ⚠️ 这条**测不到**组件里的覆盖 bug（那是基于 prop 旧值算新集合，
+    // 只能靠函数式更新修，也只能靠真界面验）。它钉住的是规则本身：
+    // 给定"上一批"，切换一块该得到什么。
+    let selected: ReadonlySet<string> = new Set()
+    selected = toggleKey(selected, 'a')
+    selected = toggleKey(selected, 'b')
+    selected = toggleKey(selected, 'c')
+    expect([...selected].sort()).toEqual(['a', 'b', 'c'])
+  })
+
+  it('再点一次是取消，不是重复', () => {
+    const selected = toggleKey(toggleKey(new Set(), 'a'), 'a')
+    expect(selected.size).toBe(0)
+  })
+
+  it('不改传入的集合（调用方的那份不能被顺手改掉）', () => {
+    const before = new Set(['a'])
+    const after = toggleKey(before, 'b')
+    expect([...before]).toEqual(['a'])
+    expect(after).not.toBe(before)
   })
 })

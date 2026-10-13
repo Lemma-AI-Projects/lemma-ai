@@ -40,6 +40,7 @@ import {
   draftFromBlocks,
   outlineOf,
   signatureOf,
+  toggleKey,
   type DraftBlock,
 } from './blockOps'
 import { applyFrozenOrder } from './focusOrder'
@@ -198,6 +199,25 @@ function FocusDocument({
     serverUpdatedAt: string | null
   } | null>(null)
   const [isDiffOpen, setDiffOpen] = useState(false)
+  /**
+   * Mala 圈选中的块。⚠️ **刻意与 `draft` 分开**：它不是文档内容（不进草稿、不
+   * 触发保存、不参与冲突比较），而是"这一次想交给 Agent 什么"的临时意图 ——
+   * 两者生命周期不同，混在一起会让"取消圈选"看起来像"删了一段字"。
+   *
+   * 换页自动归零：`FocusDocument` 以 `pageId` 为 key **重挂**（见 :150 那段注释），
+   * 所以页码一变这批 key 就没了 —— 不需要一个"pageId 变了就清空"的 effect。
+   */
+  const [selectedKeys, setSelectedKeys] = useState<ReadonlySet<string>>(() => new Set())
+  /**
+   * 圈选是**意图式**更新，不是"设成新集合"。
+   * ⚠️ 用户圈选时会连着点三四块，那些点击落在同一个 React 批次里、只重渲染一次。
+   * 若每次都基于 `selectedKeys` 的旧值算新集合，第二块就会覆盖第一块 —— 而且
+   * **没有任何报错**，只是 quietly 少了几块。函数式更新让批处理累积它们。
+   */
+  const toggleBlockSelected = useCallback((key: string) => {
+    setSelectedKeys((prev) => toggleKey(prev, key))
+  }, [])
+  const clearBlockSelection = useCallback(() => setSelectedKeys(new Set()), [])
   // 对话面板三档：正常 / 全屏 / 收起。面板里那条「折起」收到 `hidden`，顶栏那个
   // 图标按钮按档位换脸（收起时变「打开对话」）—— 两者是同一件事的两个入口。
   const [panelMode, setPanelMode] = useState<FocusPanelMode>('normal')
@@ -486,6 +506,7 @@ function FocusDocument({
           methodStatus={methodBar}
           onExit={() => (spaceId ? navigate(`/learn-spaces/${spaceId}`) : navigate('/learn-spaces'))}
           malaDisabledReason="Mala 的投送还没接线（后端已就绪，下一轮接上）"
+          malaCount={selectedKeys.size}
           edit={
             canEdit
               ? {
@@ -619,6 +640,9 @@ function FocusDocument({
                       blocks={draft}
                       onChange={handleDraftChange}
                       onSaveShortcut={() => void performSave()}
+                      selectedKeys={selectedKeys}
+                      onSelectionToggle={toggleBlockSelected}
+                      onSelectionClear={clearBlockSelection}
                     />
                   )}
                 </div>

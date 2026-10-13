@@ -452,3 +452,29 @@ export function updateText(
   }
   return replaceAt(draft, index, { ...block, content: { ...block.content, text } })
 }
+
+/**
+ * 圈选（Mala）的切换规则 —— **也是纯函数**，理由和上面那些编辑规则一样：
+ * 它是"对这一批选中块的变换"，不是对某一个 DOM 的变换。
+ *
+ * ⚠️ **为什么必须抽出来**：这条规则的第一版写在组件里，形式是
+ * `const next = new Set(selectedKeys); … onSelectionChange(next)` ——
+ * 基于 **prop 的旧值**算新集合。用户圈选时会连着点三四块，那些点击在同一个
+ * React 批次里只重渲染一次，于是第二块基于"还没有第一块"的旧值算，**把第一块
+ * 静默覆盖掉**。点了三块只选中一块，没有任何报错。
+ *
+ * 纯函数化不自动修好那个 bug（它靠函数式更新 `setState(prev => …)` 修），
+ * 但让"切换"这条规则本身有了测试 —— 而组件层的覆盖问题**测试抓不到**：
+ * 本仓库没有 jsdom（`vite.config.ts` 的 `environment: 'node'`），
+ * 所有组件测试都是 `renderToStaticMarkup` 的静态断言，跑不了事件序列。
+ * ⇒ **那条只能靠真界面验**，别以为有绿测试就等于验过了。
+ */
+export function toggleKey(
+  selected: ReadonlySet<string>,
+  key: string
+): ReadonlySet<string> {
+  const next = new Set(selected)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  return next
+}

@@ -46,6 +46,13 @@ export interface FocusTopBarProps {
   /** Mala 这一轮还没接上投送 —— 传了原因就渲染成禁用并写清楚为什么。 */
   malaDisabledReason?: string
   /**
+   * 圈中的块数。**这是用户能看到的第一个 Mala 反馈**：投送还没接线，所以按钮
+   * 依然是禁用的，但文案从 `Mala` 变成 `Mala · 3` —— 圈了多少，系统是知道的。
+   *
+   * ⚠️ 0 不显示（`Mala` 而不是 `Mala · 0`）—— 0 是默认状态，说出来是噪音。
+   */
+  malaCount?: number
+  /**
    * `edit` 下拉（新建笔记／文件夹、上传）—— **传了才渲染**。
    *
    * 聚焦的判据 4 是"写完能就地开新的一份，不用回网格"。它复用网格那一个
@@ -112,6 +119,7 @@ export function FocusTopBar({
   methodStatus,
   onExit,
   malaDisabledReason,
+  malaCount = 0,
   edit,
   onTogglePanel,
   panelMode,
@@ -204,14 +212,32 @@ export function FocusTopBar({
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        {/* ⚠️ 原来是紫色（`text-violet-700 ring-violet-200`）—— 那是这个产品里
+            少见的彩色控件，而 `--primary` 是 `220 13% 14%` 深灰黑：高级感来自
+            克制，不来自颜色。现在按三档按钮走：禁用 = 退到 zinc，可用 = 实心
+            深灰黑（它是这一屏唯一的主操作）。 */}
         <button
           type="button"
           disabled={Boolean(malaDisabledReason)}
-          title={malaDisabledReason ?? 'Mala：圈出你要交给 Agent 的部分'}
-          className="flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-violet-700 ring-1 ring-violet-200 transition-colors hover:bg-violet-50 disabled:text-zinc-400 disabled:ring-zinc-200 disabled:hover:bg-transparent"
+          title={
+            malaDisabledReason ??
+            (malaCount > 0
+              ? `把圈出的 ${malaCount} 块交给 Agent`
+              : 'Mala：圈出你要交给 Agent 的部分 · 按住 ⌘（或 Ctrl）点选块')
+          }
+          className={cn(
+            'inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-[12px] font-medium transition-colors',
+            malaDisabledReason
+              ? 'cursor-not-allowed text-zinc-300 dark:text-zinc-600'
+              : 'bg-foreground text-background hover:opacity-90'
+          )}
         >
           <Lasso className="size-4" />
           <span>Mala</span>
+          {/* 圈中的块数。⚠️ 0 不显示 —— 0 是默认状态，说出来是噪音。 */}
+          {malaCount > 0 && (
+            <span className="tabular-nums opacity-70">· {malaCount}</span>
+          )}
         </button>
 
         {edit && <WorkspaceEditMenu {...edit} />}

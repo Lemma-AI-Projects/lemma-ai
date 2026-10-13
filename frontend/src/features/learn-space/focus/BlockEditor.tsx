@@ -47,6 +47,23 @@ export interface BlockEditorProps {
   /** Cmd/Ctrl+S。没给就没有快捷键（预览页不需要）。 */
   onSaveShortcut?: () => void
   placeholder?: string
+  /**
+   * Mala 的圈选：当前被选中的块的 key。
+   *
+   * ⚠️ **受控，且刻意不写进 `blocks`** —— 选中不是文档内容。草稿会被整页重存
+   * （`doc_service.save_page_blocks` 删掉再插），而圈选点一下就变、Esc 就没了；
+   * 把它塞进草稿等于把"临时 UI 状态"当"用户写的内容"，还会污染保存与冲突比较。
+   */
+  selectedKeys?: ReadonlySet<string>
+  /**
+   * 切换某一块的选中。⚠️ **意图式，不是"这是新集合"** ——
+   * 在同一个点击批次里连点三块（用户圈选时的正常速度），传集合会让第二次基于
+   * 第一次之前的旧值，**前两块的选择被静默丢掉**。意图式让 React 的批处理累积
+   * 它们，每一块都留得下。
+   */
+  onSelectionToggle?: (key: string) => void
+  /** 清空圈选（Esc）。 */
+  onSelectionClear?: () => void
 }
 
 const HEADING_CLASS: Record<number, string> = {
@@ -54,6 +71,20 @@ const HEADING_CLASS: Record<number, string> = {
   2: 'text-lg font-medium leading-7',
   3: 'text-base font-medium leading-7',
 }
+
+/**
+ * 选中态的样式常量。⚠️ **必须集中在这里**（见 `.plans/mala-note/selected-block-language.md` §4）——
+ * 散落在每个块里拼 class 的话，改一处漏四处，离屏断言也无从挂。
+ *
+ * 三条约定，一条不多：
+ * - **左侧 4px 色条**（不铺整块底 —— 长块会变成一大片灰，文档的阅读节奏被打断）
+ * - **文字加深**（`text-zinc-800` → `text-zinc-950`；仅此一项排版变化）
+ * - **边框不动**（块本来就有边框，再套一层是双边框）
+ */
+const SELECTED_BAR_CLASS = 'absolute left-0 top-0 h-full w-1 rounded-full bg-foreground'
+const SELECTED_TEXT_CLASS = 'text-zinc-950 dark:text-zinc-50'
+/** hover 只是预告，不是选中 —— 所以只有一层极淡的底，没有色条。 */
+const HOVER_BLOCK_CLASS = 'hover:bg-zinc-50 dark:hover:bg-zinc-900'
 
 /**
  * 聚焦模式里的正文编辑器 —— **自研、零依赖，每个块就是一个 `<textarea>`**。
@@ -77,6 +108,9 @@ export function BlockEditor({
   readOnly = false,
   onSaveShortcut,
   placeholder = '写点什么…',
+  selectedKeys,
+  onSelectionToggle,
+  onSelectionClear,
 }: BlockEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   /**
@@ -85,6 +119,18 @@ export function BlockEditor({
    * layout effect 的分工。
    */
   const pendingFocusRef = useRef<FocusRequest | null>(null)
+
+  /**
+   * 圈选手势是 **⌘/Ctrl + 点击**，不是单击。
+   *
+   * ⚠️ 块本身是一个可编辑的 `textarea`，单击必须留给编辑 —— 那是这个编辑器
+   * 存在的原因。修饰键是这个场景里唯一不与输入冲突的鼠标手势。
+   *
+   * ⚠️ 而"切换"是**意图**（`onSelectionToggle(key)`）而不是"这是新集合"：
+   * 圈选时用户会连着点三四块，那些点击落在同一个批次里，React 只重渲染一次。
+   * 若每次点击都基于 prop 里的旧集合算新集合，第二块就会把第一块的选择覆盖掉
+   * —— 而且**没有任何报错**，只是 quietly 少了几块。
+   */
 
   const emit = useCallback(
     (next: DraftBlock[], focus?: FocusRequest) => {
@@ -179,9 +225,37 @@ export function BlockEditor({
     'w-full resize-none overflow-hidden bg-transparent outline-none placeholder:text-zinc-300'
 
   return (
-    <div ref={containerRef} className="space-y-1">
-      {blocks.map((block) => (
-        <div key={block.key} data-block-key={block.key} className="group relative">
+    <div
+      ref={containerRef}
+      className="space-y-1"
+      onKeyDown={(event) => {
+        // Esc 清空圈选。⚠️ 挂在容器上而不是每块上：圈了三块之后，焦点不一定在
+        // 最后一块里，而"我现在想全取消"这个意图与焦点在哪无关。
+        if (event.key !== 'Escape') return
+        if (!selectedKeys || selectedKeys.size === 0) return
+        event.preventDefault()
+        onSelectionClear?.()
+      }}
+    >
+      {blocks.map((block) => {
+        const isSelected = selectedKeys?.has(block.key) ?? false
+        return (
+          <div
+            key={block.key}
+            data-block-key={block.key}
+            data-selected={isSelected ? 'true' : undefined}
+            className={[
+              'group relative rounded-md',
+              isSelected ? '' : HOVER_BLOCK_CLASS,
+            ].join(' ')}
+            onClick={(event) => {
+              if (!onSelectionToggle) return
+              if (!(event.metaKey || event.ctrlKey)) return
+              event.preventDefault()
+              onSelectionToggle(block.key)
+            }}
+          >
+            {isSelected && <span className={SELECTED_BAR_CLASS} />}
           {!readOnly && (
             <div className="absolute -left-9 top-1 hidden items-center group-hover:flex group-focus-within:flex">
               <BlockMenu
@@ -225,7 +299,9 @@ export function BlockEditor({
             <ListBlock
               block={block}
               readOnly={readOnly}
-              className={fieldClass}
+              className={
+                isSelected ? `${fieldClass} ${SELECTED_TEXT_CLASS}` : fieldClass
+              }
               onKeyDown={handleKeyDown}
               onChangeText={changeText}
             />
@@ -250,11 +326,14 @@ export function BlockEditor({
                     : block.type === 'code'
                       ? 'rounded-lg bg-zinc-100 p-3 font-mono text-xs leading-5 dark:bg-zinc-900'
                       : 'text-sm leading-6 text-zinc-800 dark:text-zinc-100',
+                // 选中只改文字浓度，不改字号/行高/对齐 —— 选中是标记，不是重排。
+                isSelected ? SELECTED_TEXT_CLASS : '',
               ].join(' ')}
             />
           )}
         </div>
-      ))}
+        )
+      })}
 
       {!readOnly && blocks.length > 0 && (
         <div className="pt-2">
