@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isAxiosError } from 'axios'
-import { Grid3x3, Loader2, Paperclip } from 'lucide-react'
+import { Grid3x3, Loader2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import {
-  fetchMaterialObjectUrl,
+  useCreatePageMutation,
+  useDeletePageMutation,
   usePageBlocksQuery,
   useProjectPagesQuery,
+  useRenamePageMutation,
   useSavePageBlocksMutation,
+  useUploadMaterialMutation,
 } from '@/features/docs/docApi'
+import {
+  describeMaterialError,
+  isMaterialName,
+  materialMimeFor,
+} from '@/features/docs/importFile'
 import type { DocBlock } from '@/features/docs/types'
 import { ConversationPanel } from '@/features/learn-space/workspace/ConversationPanel'
 import { useProjectQuery } from '@/features/project/projectApi'
@@ -21,8 +29,11 @@ import {
 import { cn } from '@/lib/utils'
 
 import { BlockEditor } from './BlockEditor'
+import { ConflictPanel } from './ConflictPanel'
 import { FocusRail } from './FocusRail'
-import { FocusTopBar } from './FocusTopBar'
+import { FocusRoamBar } from './FocusRoamBar'
+import { FocusTopBar, type FocusPanelMode } from './FocusTopBar'
+import { MaterialView } from './MaterialView'
 import {
   appendBlock,
   blocksFromDraft,
@@ -31,6 +42,7 @@ import {
   signatureOf,
   type DraftBlock,
 } from './blockOps'
+import { applyFrozenOrder } from './focusOrder'
 
 /** 预览/评审用：不连后端，直接渲染这一份数据（`/preview/focus`）。 */
 export interface FocusPreviewData {
@@ -47,11 +59,26 @@ export interface FocusPreviewData {
   methodStatus?: MethodStatus
   title: string
   blocks: DocBlock[]
-  pages: { id: string; title: string }[]
+  /**
+   * 空间的资料。上传件（PDF／图片）**没有 `blocks`**，靠 `originalName` / `mime`
+   * 才能在聚焦里认出它——预览里也把这两个字段带上，好演练"非文本资料"那一支。
+   */
+  pages: {
+    id: string
+    title: string
+    originalName?: string | null
+    mime?: string | null
+  }[]
   /** 当前这一份在 `pages` 里的下标（页码胶囊显示的就是它）。 */
   pageIndex: number
   /** 当前这一份的 id —— 左栏靠它把"你在哪"标出来。 */
   pageId?: string
+}
+
+/** 一份资料是不是"文件在后面撑着"（上传件）——只看这两个字段。 */
+interface FocusPageMeta {
+  originalName?: string | null
+  mime?: string | null
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'conflict' | 'error'
@@ -66,21 +93,63 @@ const AUTOSAVE_DELAY = 1200
  * 以及**在资料之间一直往前走**。设计见 `.workbuddy/research/focus-mode-design.md`。
  *
  * 这一版实装的：新顶栏（空间名+聚焦 · method 状态栏 · 页码 · Mala · 对话全屏）·
- * 左栏大纲与空间资料 · **可编辑正文**（自研块编辑器，六种块）· 前后漫游 · 空态。
- * **没实装（也不假装）**：Mala 的投送接线、边注、语义层、PDF 渲染、阅读位置 ——
- * 各自在页面上有说明，或者干脆不出现。
+ * 左栏大纲与空间资料 · **可编辑正文**（自研块编辑器，六种块）· 前后漫游 · 空态 ·
+ * **非文本资料**（上传的 PDF／图片：文件卡与内联预览，看 `MaterialView`）·
+ * **次序冻结**（进聚焦时抄下次序，刷新才重排，看 `FocusSession` / `focusOrder`）·
+ * **就地 edit**（顶栏「编辑」下拉：新建笔记／文件夹、上传；左栏资料项悬停重命名／
+ * 删除 —— 只在真页面上给，预览是评审入口，见 `canEdit`）·
+ * **冲突面板**（`ConflictPanel`：抽出来好让离屏 harness 直接钉住它那三句话与三个出口）。
+ * **没实装（也不假装）**：Mala 的投送接线、边注、语义层、PDF 渲染（只给"在新标签
+ * 打开"这个出口）、阅读位置 —— 各自在页面上有说明，或者干脆不出现。
  */
 export function FocusView({ preview }: { preview?: FocusPreviewData }) {
   const params = useParams<{ id: string; pageId?: string }>()
   if (preview) return <FocusDocument key="preview" preview={preview} />
-  // **换一份资料就重挂一次**（key 用 pageId）：草稿、脏标记、冲突状态全部跟着
-  // 归零，不需要一个"pageId 变了就手动清一堆 state"的 effect —— 那种 effect
-  // 既难写对（顺序、竞态），又是 react-hooks 规则明确不鼓励的形状。
+  return <FocusSession spaceId={params.id} pageId={params.pageId} />
+}
+
+/**
+ * 一次聚焦会话的外壳 —— **次序在这里冻结**。
+ *
+ * 为什么不在 `FocusDocument` 里：换一份资料时它按 `key` 重挂（草稿、脏标记、
+ * 冲突状态全部归零），冻结的次序不能跟着一起归零。它挂在重挂边界**之上**，只在
+ * 整页刷新时重算 —— 这正是 v1-plan §6 拍的口径（进聚焦时冻结，刷新才重排）。
+ */
+function FocusSession({ spaceId, pageId }: { spaceId?: string; pageId?: string }) {
+  const pagesQuery = useProjectPagesQuery(spaceId)
+  const [frozenIds, setFrozenIds] = useState<string[] | null>(null)
+
+  const serverPages = pagesQuery.data
+  // 第一次拿到列表就把次序抄下来，之后不再改。抄的是**次序**不是快照 —— 新建的
+  // （不在序列里）接末尾、删掉的（找不到项）自然跳过，等着 `applyFrozenOrder`。
+  useEffect(() => {
+    if (frozenIds !== null) return
+    if (!serverPages || serverPages.length === 0) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFrozenIds(serverPages.map((page) => page.id))
+  }, [frozenIds, serverPages])
+
+  const materials = useMemo(
+    () =>
+      applyFrozenOrder(
+        (serverPages ?? []).map((page) => ({ id: page.id, title: page.title })),
+        frozenIds
+      ),
+    [frozenIds, serverPages]
+  )
+  const pageMeta = (serverPages ?? []).find((row) => row.id === pageId)
+
   return (
     <FocusDocument
-      key={params.pageId ?? 'empty'}
-      spaceId={params.id}
-      pageId={params.pageId}
+      // **换一份资料就重挂一次**（key 用 pageId）：草稿、脏标记、冲突状态全部跟着
+      // 归零，不需要一个"pageId 变了就手动清一堆 state"的 effect —— 那种 effect
+      // 既难写对（顺序、竞态），又是 react-hooks 规则明确不鼓励的形状。
+      key={pageId ?? 'empty'}
+      spaceId={spaceId}
+      pageId={pageId}
+      materials={materials}
+      isPagesLoading={pagesQuery.isPending}
+      pageMeta={pageMeta}
     />
   )
 }
@@ -89,17 +158,32 @@ function FocusDocument({
   spaceId,
   pageId,
   preview,
+  materials: sessionMaterials = [],
+  isPagesLoading: sessionPagesLoading = false,
+  pageMeta: sessionPageMeta,
 }: {
   spaceId?: string
   pageId?: string
   preview?: FocusPreviewData
+  /** 空间里的资料（已按冻结次序排好）——漫游与左栏用。 */
+  materials?: { id: string; title: string }[]
+  isPagesLoading?: boolean
+  /** 当前这一份的资料元数据（上传件才有 `originalName` / `mime`）。 */
+  pageMeta?: FocusPageMeta
 }) {
   const navigate = useNavigate()
 
   const projectQuery = useProjectQuery(spaceId)
-  const pagesQuery = useProjectPagesQuery(spaceId)
   const blocksQuery = usePageBlocksQuery(pageId)
   const saveMutation = useSavePageBlocksMutation()
+
+  // 聚焦里的 edit（M4）：写完想就地开新的一份，不用回网格。三件事全都复用网格
+  // 那一套 mutation —— 新建落到当前空间，上传走 `material_storage`。
+  const createPage = useCreatePageMutation(spaceId ?? '')
+  const renamePage = useRenamePageMutation(spaceId ?? '')
+  const deletePage = useDeletePageMutation(spaceId ?? '')
+  const uploadMaterial = useUploadMaterialMutation(spaceId ?? '')
+  const [materialNote, setMaterialNote] = useState<string | null>(null)
 
   const [draft, setDraft] = useState<DraftBlock[]>(() =>
     preview ? draftFromBlocks(preview.blocks) : []
@@ -111,7 +195,11 @@ function FocusDocument({
     serverUpdatedAt: string | null
   } | null>(null)
   const [isDiffOpen, setDiffOpen] = useState(false)
-  const [isPanelFull, setPanelFull] = useState(false)
+  // 对话面板三档：正常 / 全屏 / 收起。面板里那条「折起」收到 `hidden`，顶栏那个
+  // 图标按钮按档位换脸（收起时变「打开对话」）—— 两者是同一件事的两个入口。
+  const [panelMode, setPanelMode] = useState<FocusPanelMode>('normal')
+  const isPanelFull = panelMode === 'full'
+  const isPanelHidden = panelMode === 'hidden'
   const [conversationId, setConversationId] = useState<string | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -144,14 +232,13 @@ function FocusDocument({
     conversationId
   )
   const methodBar = preview ? preview.methodStatus : methodStatus
-  const materials = useMemo(
-    () => (preview?.pages ?? (pagesQuery.data ?? []).map((page) => ({ id: page.id, title: page.title }))),
-    [pagesQuery.data, preview?.pages]
-  )
+  // 预览只有一份 fixture；真实页面上次序已经在 `FocusSession` 冻结好了。
+  const materials = preview ? preview.pages : sessionMaterials
   const currentIndex = preview
     ? preview.pageIndex
     : materials.findIndex((page) => page.id === pageId)
   const hasPage = Boolean(pageId) || Boolean(preview)
+  const pagesLoading = preview ? false : sessionPagesLoading
 
   const goToPage = useCallback(
     (index: number) => {
@@ -160,6 +247,81 @@ function FocusDocument({
       navigate(`/learn-spaces/${spaceId}/docs/${target.id}`)
     },
     [materials, navigate, spaceId]
+  )
+
+  // 底部漫游条的数据。只有一份资料（或站在列表外）时是 `null` —— 底部那条整个
+  // 不出现，而不是画一个点了没用的 1/1。
+  const roam =
+    currentIndex >= 0 && materials.length > 1
+      ? {
+          index: currentIndex,
+          count: materials.length,
+          onPrev: () => goToPage(currentIndex - 1),
+          onNext: () => goToPage(currentIndex + 1),
+        }
+      : null
+
+  // `edit` 三个入口只在真页面上给（预览是免登录的评审入口，连不上后端，接上去
+  // 就是点了没反应的东西）。
+  const canEdit = !preview && Boolean(spaceId)
+
+  const handleNewPage = useCallback(
+    (kind: 'note' | 'folder') => {
+      if (!spaceId) return
+      createPage.mutate(
+        { title: kind === 'folder' ? '新建文件夹' : '未命名笔记', kind },
+        {
+          // 新建的笔记**直接进去写**；它是冻结次序里没有的 id，`applyFrozenOrder`
+          // 会把它接在末尾 —— 正是 §4.1 拍的那条。文件夹留在原地不动。
+          onSuccess: (created) => {
+            if (kind === 'note') navigate(`/learn-spaces/${spaceId}/docs/${created.id}`)
+          },
+        }
+      )
+    },
+    [createPage, navigate, spaceId]
+  )
+
+  const handleUpload = useCallback(
+    (files: File[]) => {
+      if (!spaceId) return
+      setMaterialNote(null)
+      for (const file of files) {
+        if (!isMaterialName(file.name)) {
+          setMaterialNote(`「${file.name}」不是支持的格式：只收 PDF 与图片。`)
+          continue
+        }
+        uploadMaterial.mutate(
+          { file, mime: materialMimeFor(file) },
+          { onError: (error) => setMaterialNote(describeMaterialError(error)) }
+        )
+      }
+    },
+    [spaceId, uploadMaterial]
+  )
+
+  const handleRenamePage = useCallback(
+    (targetId: string, title: string) => {
+      if (!spaceId) return
+      renamePage.mutate({ pageId: targetId, title })
+    },
+    [renamePage, spaceId]
+  )
+
+  const handleDeletePage = useCallback(
+    (targetId: string) => {
+      if (!spaceId) return
+      deletePage.mutate(targetId)
+      // 删掉的正是脚下这一份 → 退回冻结次序里**前一份**（§4.1）；没有前一份就回网格。
+      if (targetId === pageId) {
+        const index = materials.findIndex((row) => row.id === targetId)
+        const fallback = index > 0 ? materials[index - 1] : null
+        navigate(
+          fallback ? `/learn-spaces/${spaceId}/docs/${fallback.id}` : `/learn-spaces/${spaceId}`
+        )
+      }
+    },
+    [deletePage, materials, navigate, pageId, spaceId]
   )
 
   // 服务端 → 草稿。两种情况下不动草稿：用户正在写（这时服务端变了 = 冲突），
@@ -279,17 +441,19 @@ function FocusDocument({
       ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   }, [])
 
-  const openFile = useCallback(async () => {
-    if (!pageId) return
-    const url = await fetchMaterialObjectUrl(pageId)
-    window.open(url, '_blank', 'noopener')
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  }, [pageId])
-
   const outline = useMemo(() => outlineOf(draft), [draft])
   const page = preview ? undefined : blocksQuery.data
-  const pageMeta = (pagesQuery.data ?? []).find((row) => row.id === pageId)
-  const isFileBacked = Boolean(pageMeta?.mime)
+  // 当前这一份的资料元数据：上传件才有 `originalName`（`doc/types.ts` 的约定）。
+  const pageMeta = preview
+    ? preview.pages.find((row) => row.id === preview.pageId)
+    : sessionPageMeta
+  const materialName = pageMeta?.originalName ?? null
+  const isFileBacked = Boolean(materialName)
+  // PDF 会渲染成一整页可翻的版面，`max-w-2xl` 太窄 —— 单独放宽到 `max-w-4xl`。
+  // 判据与 `MaterialView` 一致：先看 mime，再退回扩展名。
+  const isPdfMaterial =
+    (pageMeta?.mime ?? '').includes('application/pdf') ||
+    /\.pdf$/i.test(materialName ?? '')
 
   const saveLabel =
     saveState === 'saving'
@@ -314,21 +478,29 @@ function FocusDocument({
           isNameLoading={!preview && projectQuery.isPending}
           goalLine={direction}
           methodStatus={methodBar}
-          roam={
-            currentIndex >= 0 && materials.length > 1
-              ? {
-                  index: currentIndex,
-                  count: materials.length,
-                  onPrev: () => goToPage(currentIndex - 1),
-                  onNext: () => goToPage(currentIndex + 1),
-                }
-              : null
-          }
           onExit={() => (spaceId ? navigate(`/learn-spaces/${spaceId}`) : navigate('/learn-spaces'))}
           malaDisabledReason="Mala 的投送还没接线（后端已就绪，下一轮接上）"
-          onTogglePanel={() => setPanelFull((value) => !value)}
-          isPanelFull={isPanelFull}
+          edit={
+            canEdit
+              ? {
+                  onNewFolder: () => handleNewPage('folder'),
+                  onNewNote: () => handleNewPage('note'),
+                  onUpload: handleUpload,
+                }
+              : undefined
+          }
+          onTogglePanel={() =>
+            // 正常 ⇄ 全屏；收起时这一步就是"把面板叫回来"。
+            setPanelMode((mode) => (mode === 'normal' ? 'full' : 'normal'))
+          }
+          panelMode={panelMode}
         />
+
+        {materialNote && (
+          <p className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-1 text-[12px] text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            {materialNote}
+          </p>
+        )}
 
         <div className="relative flex min-h-0 flex-1">
           {!isPanelFull && (
@@ -340,7 +512,9 @@ function FocusDocument({
               onSelectPage={(id) =>
                 spaceId ? navigate(`/learn-spaces/${spaceId}/docs/${id}`) : undefined
               }
-              isPagesLoading={!preview && pagesQuery.isPending}
+              isPagesLoading={pagesLoading}
+              onRenamePage={canEdit ? handleRenamePage : undefined}
+              onDeletePage={canEdit ? handleDeletePage : undefined}
             />
           )}
 
@@ -349,19 +523,19 @@ function FocusDocument({
               {!hasPage ? (
                 <FocusEmptyState
                   pages={materials}
-                  isPagesLoading={!preview && pagesQuery.isPending}
+                  isPagesLoading={pagesLoading}
                   spaceId={spaceId ?? ''}
                   onOpenPage={(id) => navigate(`/learn-spaces/${spaceId}/docs/${id}`)}
                 />
               ) : (
-              <div className="mx-auto max-w-2xl px-8 py-6">
+              <div
+                className={cn(
+                  'mx-auto px-8 py-6',
+                  isPdfMaterial ? 'max-w-4xl' : 'max-w-2xl'
+                )}
+              >
                 <div className="flex items-baseline gap-2">
                   <h1 className="truncate text-base font-medium">{title}</h1>
-                  {isFileBacked && (
-                    <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800">
-                      文件资料
-                    </span>
-                  )}
                   <span
                     className={cn(
                       'ml-auto shrink-0 text-[11px]',
@@ -375,60 +549,28 @@ function FocusDocument({
                 </div>
 
                 {saveState === 'conflict' && conflict && (
-                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-                    <p>
-                      这份资料在别处被改过，<strong>你手上的这一版还没落</strong>。
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setDiffOpen(true)}
-                        className="rounded border border-amber-300 px-2 py-1 text-xs hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900"
-                      >
-                        看差异
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void performSave(conflict.serverUpdatedAt)}
-                        className="rounded bg-amber-600 px-2 py-1 text-xs text-white hover:bg-amber-700"
-                      >
-                        用我的覆盖
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDraft(conflict.serverDraft)
-                          setDirty(false)
-                          setConflict(null)
-                          setSaveState('idle')
-                          void blocksQuery.refetch()
-                        }}
-                        className="rounded border border-amber-300 px-2 py-1 text-xs hover:bg-amber-100 dark:border-amber-800 dark:hover:bg-amber-900"
-                      >
-                        用服务器上的（丢掉我的）
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {isFileBacked && pageId && !preview && (
-                  <div className="mt-4 flex items-center gap-2 rounded-lg border border-zinc-200 p-3 text-[13px] dark:border-zinc-800">
-                    <Paperclip className="size-4 shrink-0 text-zinc-400" />
-                    <span className="min-w-0 flex-1 truncate text-zinc-600 dark:text-zinc-300">
-                      {pageMeta?.originalName ?? '上传的文件'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => void openFile()}
-                      className="shrink-0 rounded border border-zinc-200 px-2 py-1 text-xs hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
-                    >
-                      打开文件
-                    </button>
-                  </div>
+                  <ConflictPanel
+                    onShowDiff={() => setDiffOpen(true)}
+                    onOverwrite={() => void performSave(conflict.serverUpdatedAt)}
+                    onUseServer={() => {
+                      setDraft(conflict.serverDraft)
+                      setDirty(false)
+                      setConflict(null)
+                      setSaveState('idle')
+                      void blocksQuery.refetch()
+                    }}
+                  />
                 )}
 
                 <div className="mt-4">
-                  {!preview && blocksQuery.isPending ? (
+                  {isFileBacked ? (
+                    <MaterialView
+                      pageId={pageId ?? preview?.pageId ?? ''}
+                      originalName={materialName ?? ''}
+                      mime={pageMeta?.mime}
+                      isPreview={Boolean(preview)}
+                    />
+                  ) : !preview && blocksQuery.isPending ? (
                     <div className="space-y-3">
                       {[0, 1, 2, 3].map((index) => (
                         <div
@@ -451,9 +593,7 @@ function FocusDocument({
                     </div>
                   ) : draft.length === 0 ? (
                     <div className="pt-10 text-center">
-                      <p className="text-[13px] text-zinc-500">
-                        {isFileBacked ? '这块板还没有你写的正文' : '这一块板还没有内容'}
-                      </p>
+                      <p className="text-[13px] text-zinc-500">这一块板还没有内容</p>
                       <button
                         type="button"
                         onClick={() => {
@@ -486,7 +626,13 @@ function FocusDocument({
             spaceName={spaceName || '这个空间'}
             conversationId={conversationId}
             onConversationChange={setConversationId}
-            className={isPanelFull ? 'flex-1' : undefined}
+            // 「折起」：面板收到 `hidden`（宽度归零/不占位，但保持挂载 —— 草稿与
+            // 流式输出都留着），再打开走顶栏那个图标按钮。
+            onCollapse={() => setPanelMode('hidden')}
+            className={cn(
+              isPanelHidden && 'hidden',
+              isPanelFull && 'flex-1'
+            )}
           />
 
           {isDiffOpen && conflict && (
@@ -516,6 +662,10 @@ function FocusDocument({
             </div>
           )}
         </div>
+
+        {/* 翻页钉在页面最下面 —— 正文在滚，它不滚。对话全屏时藏起来：那时正文
+            根本没显示，翻页没有意义。 */}
+        {!isPanelFull && roam && <FocusRoamBar {...roam} />}
       </div>
     </div>
   )

@@ -1,3 +1,7 @@
+import { useState } from 'react'
+import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
+
+import { ActionMenu, ActionMenuItem } from '@/components/ActionMenu'
 import { cn } from '@/lib/utils'
 import type { OutlineRow } from './blockOps'
 
@@ -10,6 +14,14 @@ export interface FocusRailProps {
   currentPageId?: string
   onSelectPage: (pageId: string) => void
   isPagesLoading?: boolean
+  /**
+   * 资料项上的**重命名 / 删除**（M4）—— 两个都给才渲染那个悬停菜单。
+   *
+   * 聚焦以前只能读，想改个名字、删掉一份都得退回网格。这里复用网格那两个
+   * mutation。只给一个的话菜单不出来：一个点了没反应的菜单项，比少一个菜单更糟。
+   */
+  onRenamePage?: (pageId: string, title: string) => void
+  onDeletePage?: (pageId: string) => void
   className?: string
 }
 
@@ -31,8 +43,20 @@ export function FocusRail({
   currentPageId,
   onSelectPage,
   isPagesLoading = false,
+  onRenamePage,
+  onDeletePage,
   className,
 }: FocusRailProps) {
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const hasMenu = Boolean(onRenamePage && onDeletePage)
+
+  const commitRename = (pageId: string) => {
+    const next = draft.trim()
+    if (next) onRenamePage?.(pageId, next)
+    setEditingId(null)
+  }
+
   return (
     <aside
       className={cn(
@@ -83,21 +107,71 @@ export function FocusRail({
           <ul className="space-y-0.5">
             {pages.map((page) => {
               const isCurrent = page.id === currentPageId
+              const label = page.title || '未命名'
               return (
-                <li key={page.id}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectPage(page.id)}
-                    aria-current={isCurrent ? 'true' : undefined}
-                    className={cn(
-                      'block w-full truncate rounded px-1 py-1 text-left text-[13px] transition-colors',
-                      isCurrent
-                        ? 'bg-violet-50 text-violet-800 dark:bg-violet-950 dark:text-violet-200'
-                        : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
-                    )}
-                  >
-                    {page.title || '未命名'}
-                  </button>
+                <li key={page.id} className="group relative">
+                  {editingId === page.id ? (
+                    <input
+                      autoFocus
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') commitRename(page.id)
+                        if (event.key === 'Escape') setEditingId(null)
+                      }}
+                      onBlur={() => setEditingId(null)}
+                      className="w-full rounded border border-violet-300 bg-white px-1 py-0.5 text-[13px] outline-none dark:border-violet-700 dark:bg-zinc-900"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onSelectPage(page.id)}
+                      aria-current={isCurrent ? 'true' : undefined}
+                      className={cn(
+                        'block w-full truncate rounded px-1 py-1 text-left text-[13px] transition-colors',
+                        hasMenu && 'pr-7',
+                        isCurrent
+                          ? 'bg-violet-50 text-violet-800 dark:bg-violet-950 dark:text-violet-200'
+                          : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800'
+                      )}
+                    >
+                      {label}
+                    </button>
+                  )}
+
+                  {hasMenu && editingId !== page.id && (
+                    <span className="absolute right-0.5 top-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                      <ActionMenu
+                        align="end"
+                        width="sm"
+                        trigger={
+                          <button
+                            type="button"
+                            data-focus-page-menu
+                            aria-label={`${label} 的更多操作`}
+                            className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-700 dark:hover:bg-zinc-700"
+                          >
+                            <Ellipsis className="size-3.5" />
+                          </button>
+                        }
+                      >
+                        <ActionMenuItem
+                          icon={Pencil}
+                          label="重命名"
+                          onSelect={() => {
+                            setDraft(page.title)
+                            setEditingId(page.id)
+                          }}
+                        />
+                        <ActionMenuItem
+                          icon={Trash2}
+                          label="删除"
+                          destructive
+                          onSelect={() => onDeletePage?.(page.id)}
+                        />
+                      </ActionMenu>
+                    </span>
+                  )}
                 </li>
               )
             })}

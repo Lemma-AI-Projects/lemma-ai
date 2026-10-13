@@ -249,6 +249,8 @@ export function useConversationChat({
   const lastUserTextRef = useRef<string | null>(null)
   /** Tool used by the last send, so a retry re-runs the same tool (not plain chat). */
   const lastToolRef = useRef<ConversationToolRef['type'] | undefined>(undefined)
+  /** Mala 投送：上一次 send 带上的材料包 id，让首字后重试仍带着同一批材料。 */
+  const lastBundleIdsRef = useRef<string[] | undefined>(undefined)
   /** 项目内发起新会话的目标项目；记住它使首字前失败后的重发仍落进项目。 */
   const targetProjectIdRef = useRef<string | null>(null)
 
@@ -288,6 +290,7 @@ export function useConversationChat({
     pendingIdRef.current = null
     lastUserTextRef.current = null
     lastToolRef.current = undefined
+    lastBundleIdsRef.current = undefined
     targetProjectIdRef.current = null
     selfCreatedIdRef.current = null
     // 路由驱动的一次性重置（prev 守卫保证不级联），且必须与上面的
@@ -307,7 +310,8 @@ export function useConversationChat({
     content: string,
     activeConversationId: string | undefined,
     projectId: string | undefined,
-    tool: ConversationToolRef['type'] | undefined
+    tool: ConversationToolRef['type'] | undefined,
+    contextBundleIds: string[] | undefined
   ) => {
     controllerRef.current?.abort()
     const controller = new AbortController()
@@ -333,6 +337,7 @@ export function useConversationChat({
           conversationId: activeConversationId,
           projectId,
           tool,
+          contextBundleIds,
           signal: controller.signal,
           onConversationId: (id) => {
             if (requestIdRef.current === requestId) {
@@ -402,7 +407,12 @@ export function useConversationChat({
 
   const send = (
     content: string,
-    options?: { projectId?: string; tool?: ConversationToolRef['type'] }
+    options?: {
+      projectId?: string
+      tool?: ConversationToolRef['type']
+      /** Mala 投送：本轮要带上的材料包 id（`POST /board/contexts` 的返回值）。 */
+      contextBundleIds?: string[]
+    }
   ) => {
     const trimmed = content.trim()
     const { status } = stateRef.current
@@ -414,6 +424,7 @@ export function useConversationChat({
     }
     lastUserTextRef.current = trimmed
     lastToolRef.current = options?.tool
+    lastBundleIdsRef.current = options?.contextBundleIds
     apply({ type: 'send', content: trimmed, createdAt: new Date().toISOString() })
     const activeConversationId =
       conversationId ?? selfCreatedIdRef.current ?? undefined
@@ -422,7 +433,8 @@ export function useConversationChat({
       activeConversationId,
       // 仅新会话需要目标项目；已有会话时后端忽略该字段，干脆不发
       activeConversationId ? undefined : targetProjectIdRef.current ?? undefined,
-      options?.tool
+      options?.tool,
+      options?.contextBundleIds
     )
   }
 
@@ -431,7 +443,10 @@ export function useConversationChat({
     if (stateRef.current.status !== 'error') return
     const text = lastUserTextRef.current
     if (!text) return
-    send(text, { tool: lastToolRef.current })
+    send(text, {
+      tool: lastToolRef.current,
+      contextBundleIds: lastBundleIdsRef.current,
+    })
   }
 
   const stop = () => {

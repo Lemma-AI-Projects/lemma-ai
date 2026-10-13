@@ -1,8 +1,15 @@
-import { ChevronLeft, ChevronRight, Lasso, Maximize2, Minimize2 } from 'lucide-react'
+import { Lasso, Maximize2, Minimize2, PanelRightOpen, Sparkles } from 'lucide-react'
 
 import { Skeleton } from '@/components/ui/skeleton'
+import { WorkspaceEditMenu } from '@/features/learn-space/workspace/WorkspaceMenus'
 import { cn } from '@/lib/utils'
 import type { MethodStatus } from '@/features/learn-space/method/methodApi'
+
+/**
+ * 对话面板现在在哪一档。三种都得有名字，因为顶栏那一个图标按钮要**按档位**
+ * 换脸：面板收起时必须变成「打开对话」，否则 (`onCollapse`) 收起来就再也打不开。
+ */
+export type FocusPanelMode = 'hidden' | 'normal' | 'full'
 
 export interface FocusTopBarProps {
   spaceName: string
@@ -25,19 +32,30 @@ export interface FocusTopBarProps {
    * `focus` 不在里面：这一刻还没有人说话，所以"这一轮连到哪个知识点"没有答案。
    */
   methodStatus?: MethodStatus | null
-  /** 页码 = 漫游位置。没有资料可漫游时传 `null`（不是画一个 1/1 的假页码）。 */
-  roam?: {
-    index: number
-    count: number
-    onPrev: () => void
-    onNext: () => void
-  } | null
   /** 左上角的空间名就是出去的路（点它回网格）。 */
   onExit: () => void
   /** Mala 这一轮还没接上投送 —— 传了原因就渲染成禁用并写清楚为什么。 */
   malaDisabledReason?: string
+  /**
+   * `edit` 下拉（新建笔记／文件夹、上传）—— **传了才渲染**。
+   *
+   * 聚焦的判据 4 是"写完能就地开新的一份，不用回网格"。它复用网格那一个
+   * `WorkspaceEditMenu`（同一套文案、同一套禁用口径），差别只在动作落在哪：
+   * 这里新建的笔记直接进聚焦、接在冻结次序末尾。预览是免登录的评审入口，
+   * 连不上后端，所以不传 —— 那三个入口在预览里根本不出现，而不是点了没反应。
+   */
+  edit?: {
+    onNewFolder: () => void
+    onNewNote: () => void
+    onUpload: (files: File[]) => void
+  }
+  /**
+   * 对话面板当前档位。面板里那条「折起」把面板收成 `hidden` —— 于是这一个
+   * 图标按钮必须跟着换脸，否则收起来就再也打不开。
+   */
+  panelMode: FocusPanelMode
+  /** 按当前档位循环：`normal → full → normal`，`hidden → normal`（就是"打开对话"）。 */
   onTogglePanel: () => void
-  isPanelFull: boolean
   className?: string
 }
 
@@ -45,8 +63,14 @@ export interface FocusTopBarProps {
  * 聚焦模式的顶栏 ——四段，按用户 09-29 给的版式。
  *
  * 左：**空间名 + 「聚焦」标识**（空间名本身就是出去的路，所以没有返回箭头）
- * 中：**method 状态栏**（这一条的主位）
- * 右：**页码**（= 漫游位置）· **Mala** · **一个小 SVG 图标按钮**（对话全屏）
+ * 中：**「当前建议」**入口（hover/focus 才展开那条 method 状态栏）
+ * 右：**Mala** · **edit 下拉** · **一个小 SVG 图标按钮**（对话全屏／打开对话）
+ *
+ * 「聚焦」标识与「当前建议」都**默认不显示**，hover/focus 各自那个按钮才露出来 ——
+ * 顶栏默认是一条干净的工具条。两者都只是 `hidden`，元素仍在 DOM 里。
+ *
+ * 翻页（上一份 / 页码 / 下一份）**不在这儿了** —— 它是"读的节奏"，钉在页面最下面
+ * （`FocusRoamBar`）。顶栏这一条说的是"我在哪个空间、现在在被怎么教"。
  *
  * `dimension` 不在这儿：它属于"空间"层级，不属于某一份资料。
  *
@@ -64,15 +88,24 @@ export function FocusTopBar({
   isNameLoading = false,
   goalLine = null,
   methodStatus,
-  roam = null,
   onExit,
   malaDisabledReason,
+  edit,
   onTogglePanel,
-  isPanelFull,
+  panelMode,
   className,
 }: FocusTopBarProps) {
   const iconButton =
     'rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10 disabled:opacity-40 disabled:hover:bg-transparent'
+
+  // 面板收起时这一个按钮就是"打开对话"（否则点它没别的出口能把面板叫回来）；
+  // 全屏/正常两档才是"对话全屏 / 收起全屏对话"。图标与文案同源，不会各说各话。
+  const panelToggle =
+    panelMode === 'hidden'
+      ? { label: '打开对话', Icon: PanelRightOpen }
+      : panelMode === 'full'
+        ? { label: '收起全屏对话', Icon: Minimize2 }
+        : { label: '对话全屏', Icon: Maximize2 }
 
   return (
     <header
@@ -81,17 +114,22 @@ export function FocusTopBar({
         className
       )}
     >
-      <button
-        type="button"
-        onClick={onExit}
-        title="回到这个空间"
-        className="max-w-56 truncate rounded px-1 py-1 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10 dark:text-zinc-100"
-      >
-        {isNameLoading ? '读取中…' : spaceName || '这个空间'}
-      </button>
-      <span className="shrink-0 rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-200">
-        聚焦
-      </span>
+      {/* 左段：空间名（出去的路）+「聚焦」标识。标识**默认不显示**，hover/focus
+          空间名时才露出来 —— 顶栏默认是一条干净的工具条。元素留在 DOM 里（只是
+          `hidden`），所以离屏断言照样找得到它。 */}
+      <div className="group/focus flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={onExit}
+          title="回到这个空间"
+          className="max-w-56 truncate rounded px-1 py-1 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10 dark:text-zinc-100"
+        >
+          {isNameLoading ? '读取中…' : spaceName || '这个空间'}
+        </button>
+        <span className="hidden shrink-0 rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-200 group-focus-within/focus:inline-block group-hover/focus:inline-block">
+          聚焦
+        </span>
+      </div>
 
       {goalLine && (
         <span
@@ -102,35 +140,27 @@ export function FocusTopBar({
         </span>
       )}
 
+      {/* 中段：「当前建议」入口。默认只给一个触发按钮，hover/focus 它才展开成
+          那条三事实胶囊（`MethodStatusPill`）。只**增**不**藏**按钮 —— 藏掉正在
+          聚焦的触发件会把键盘焦点弄丢。 */}
       <div className="mx-auto flex min-w-0 items-center">
-        <MethodStatusPill status={methodStatus} />
+        <div className="group/method flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label="当前建议"
+            title="当前建议"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 px-2.5 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            <Sparkles className="size-3.5" />
+            <span>当前建议</span>
+          </button>
+          <div className="hidden min-w-0 group-focus-within/method:flex group-hover/method:flex">
+            <MethodStatusPill status={methodStatus} />
+          </div>
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {roam && roam.count > 1 && (
-          <div className="flex items-center rounded-full border border-zinc-200 px-0.5 dark:border-zinc-700">
-            <button
-              type="button"
-              onClick={roam.onPrev}
-              aria-label="上一份资料"
-              className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-40"
-            >
-              <ChevronLeft className="size-3.5" />
-            </button>
-            <span className="px-1 text-xs tabular-nums text-zinc-600 dark:text-zinc-300">
-              {roam.index + 1} / {roam.count}
-            </span>
-            <button
-              type="button"
-              onClick={roam.onNext}
-              aria-label="下一份资料"
-              className="rounded-full p-1 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-40"
-            >
-              <ChevronRight className="size-3.5" />
-            </button>
-          </div>
-        )}
-
         <button
           type="button"
           disabled={Boolean(malaDisabledReason)}
@@ -141,14 +171,16 @@ export function FocusTopBar({
           <span>Mala</span>
         </button>
 
+        {edit && <WorkspaceEditMenu {...edit} />}
+
         <button
           type="button"
           onClick={onTogglePanel}
-          aria-label={isPanelFull ? '收起全屏对话' : '对话全屏'}
-          title={isPanelFull ? '收起全屏对话' : '对话全屏'}
+          aria-label={panelToggle.label}
+          title={panelToggle.label}
           className={iconButton}
         >
-          {isPanelFull ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+          <panelToggle.Icon className="size-4" />
         </button>
       </div>
     </header>

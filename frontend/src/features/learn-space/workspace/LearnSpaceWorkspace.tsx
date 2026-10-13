@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react'
 
 import type { CurrentUser } from '@/features/auth/useCurrentUser'
 import { ShelterDrawer } from '@/features/docs/ShelterDrawer'
+import { cn } from '@/lib/utils'
 import {
   fetchMaterialObjectUrl,
   useCreatePageMutation,
@@ -118,6 +119,9 @@ export function LearnSpaceWorkspace({
   const isBriefOpen = briefOpenChoice ?? brief !== undefined
   const [isDocumentsOpen, setIsDocumentsOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  // 右侧「新对话」面板的显隐。默认打开＝保持现状；本次会话内以用户为准（与 brief 一致，不落库）。
+  // 收起是「把宽度收成 0」而不是卸载：面板自持草稿与流式输出，卸载会丢。
+  const [isConversationOpen, setIsConversationOpen] = useState(true)
   // undefined = 还没选，跟着这个空间最近的一段对话走；null = 明确要一段新的。
   // 不额外查一次：画布上的节点就是本空间的对话列表。
   const [conversationChoice, setConversationChoice] = useState<
@@ -177,6 +181,15 @@ export function LearnSpaceWorkspace({
     setIsDocumentsOpen(false)
   }, [isBriefOpen])
   const handleCloseBrief = useCallback(() => setBriefOpenChoice(false), [])
+  const handleToggleConversation = useCallback(
+    () => setIsConversationOpen((current) => !current),
+    []
+  )
+  // 面板里那个「折起」：只收不放 —— 打开要靠顶栏的开关（收起来之后面板自己没了）。
+  const handleCollapseConversation = useCallback(
+    () => setIsConversationOpen(false),
+    []
+  )
 
   // --- 资料目录（网格）的三个动作 + 打开 --------------------------------------
 
@@ -288,6 +301,8 @@ export function LearnSpaceWorkspace({
             onZoomReset={handleZoomReset}
             pageIndex={1}
             pageCount={1}
+            isConversationOpen={isConversationOpen}
+            onToggleConversation={handleToggleConversation}
             onClose={onClose}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
@@ -350,15 +365,26 @@ export function LearnSpaceWorkspace({
           </div>
         </div>
 
-        <ConversationPanel
-          className="w-[22rem]"
-          projectId={projectId}
-          spaceName={spaceName}
-          conversationId={activeConversationId}
-          conversationTitle={activeConversationTitle}
-          onConversationChange={setConversationChoice}
-          onOpenDocuments={isDocumentsAvailable ? handleToggleDocuments : undefined}
-        />
+        {/* 收起时宽度归零：面板保持挂载，草稿与流式输出都不受影响。
+            父级是 flex + gap-4，收起时用 -ms-4 抵消那条 16px 缝隙。 */}
+        <div
+          className={cn(
+            'shrink-0 overflow-hidden transition-[width,opacity,margin] duration-200',
+            isConversationOpen ? 'w-[22rem] opacity-100' : 'w-0 -ms-4 opacity-0'
+          )}
+          aria-hidden={!isConversationOpen}
+        >
+          <ConversationPanel
+            className="w-[22rem]"
+            projectId={projectId}
+            spaceName={spaceName}
+            conversationId={activeConversationId}
+            conversationTitle={activeConversationTitle}
+            onConversationChange={setConversationChoice}
+            onOpenDocuments={isDocumentsAvailable ? handleToggleDocuments : undefined}
+            onCollapse={handleCollapseConversation}
+          />
+        </div>
       </div>
 
       <HomeSettingsDialog

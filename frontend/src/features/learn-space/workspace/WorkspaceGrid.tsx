@@ -18,7 +18,6 @@ import { Input } from '@/components/ui/input'
 import type { DocPage } from '@/features/docs/types'
 import { cn } from '@/lib/utils'
 import {
-  SOURCE_LABELS,
   groupKeyOf,
   groupMaterials,
   type MaterialGroupKey,
@@ -43,15 +42,24 @@ function formatDay(iso: string): string {
   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
 }
 
-/** 卡片上那个小标记：来源。类型已经由它所在的组说清楚了，不重复。 */
-function SourceBadge({ source }: { source: DocPage['source'] }) {
-  const label = SOURCE_LABELS[source]
-  if (!label) return null
-  return (
-    <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500">
-      {label}
-    </span>
-  )
+/**
+ * 缩略图那一层的「类型色浅底 + 图标色」。
+ *
+ * 参考稿里每张卡的主体都是**一整块缩略图**，文件名退到它下面 —— 缩略图自己
+ * 说明"这是什么"。我们渲染不出 PDF 的首屏（仓库里没有 pdf.js），所以统一用
+ * 类型色浅底 + 大号类型图标来代替真实预览：是诚实的占位，不假装有预览。
+ */
+const THUMB_TINT: Record<MaterialGroupKey, string> = {
+  pdf: 'bg-red-50 text-red-500',
+  word: 'bg-blue-50 text-blue-500',
+  spreadsheet: 'bg-emerald-50 text-emerald-600',
+  presentation: 'bg-orange-50 text-orange-500',
+  image: 'bg-indigo-50 text-indigo-500',
+  media: 'bg-purple-50 text-purple-500',
+  other: 'bg-zinc-100 text-zinc-500',
+  note: 'bg-amber-50 text-amber-600',
+  canvas: 'bg-sky-50 text-sky-600',
+  folder: 'bg-amber-100/70 text-amber-700',
 }
 
 function Card({
@@ -67,11 +75,12 @@ function Card({
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(page.title)
-  const Icon = GROUP_ICONS[groupKeyOf(page)]
+  const groupKey = groupKeyOf(page)
+  const Icon = GROUP_ICONS[groupKey]
 
   if (editing) {
     return (
-      <div className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-3">
+      <div className="flex flex-col gap-2 rounded-2xl border border-zinc-200 bg-white p-3">
         <Input
           autoFocus
           value={draft}
@@ -115,27 +124,29 @@ function Card({
   }
 
   return (
-    <div className="group relative flex flex-col rounded-xl border border-zinc-200 bg-white p-3 transition-colors hover:border-zinc-300 hover:bg-zinc-50">
+    <div className="group relative">
       <button
         type="button"
         onClick={() => onOpen(page)}
-        className="flex items-start gap-3 text-left"
+        title={`${page.title} · ${formatDay(page.updatedAt)}`}
+        className="flex w-full flex-col items-center rounded-2xl p-1.5 text-center transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500">
-          <Icon className="size-4" />
+        {/* 缩略图是卡片的主体：整块面积、大圆角，类型由底色与图标说明。
+            来源与日期不再挂在卡面上（参考稿的克制），改挂在 title 上，鼠标停一下还能看。 */}
+        <span
+          className={cn(
+            'flex aspect-[4/5] w-full items-center justify-center rounded-2xl',
+            THUMB_TINT[groupKey]
+          )}
+        >
+          <Icon className="size-10" strokeWidth={1.5} />
         </span>
-        <span className="min-w-0 flex-1 pe-6">
-          <span className="block truncate text-[14px] font-medium text-zinc-900">
-            {page.title}
-          </span>
-          <span className="mt-1 flex items-center gap-1.5">
-            <SourceBadge source={page.source} />
-            <span className="text-[11px] text-zinc-400">{formatDay(page.updatedAt)}</span>
-          </span>
+        <span className="mt-2.5 line-clamp-2 w-full text-[13px] leading-5 text-zinc-700">
+          {page.title}
         </span>
       </button>
 
-      <span className="absolute right-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+      <span className="absolute right-1.5 top-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
         <ActionMenu
           align="end"
           width="sm"
@@ -144,8 +155,8 @@ function Card({
               type="button"
               aria-label="卡片操作"
               className={cn(
-                'flex size-7 items-center justify-center rounded-full text-zinc-400',
-                'transition-colors hover:bg-zinc-100 hover:text-zinc-700'
+                'flex size-7 items-center justify-center rounded-full bg-white/80 text-zinc-500 shadow-sm backdrop-blur',
+                'transition-colors hover:bg-white hover:text-zinc-800'
               )}
             >
               <Ellipsis className="size-4" />
@@ -219,16 +230,16 @@ export function WorkspaceGrid({
 
   return (
     <div className="scrollbar-fade h-full overflow-y-auto">
-      <div className="mx-auto w-full max-w-[1180px] px-8 py-6">
+      <div className="mx-auto w-full max-w-[1180px] px-9 py-8">
         {groups.map((group) => (
-          <section key={group.key} className="mb-8 last:mb-0">
-            <div className="mb-3 flex items-baseline gap-2">
-              <h2 className="text-[15px] font-medium text-zinc-900">{group.label}</h2>
+          <section key={group.key} className="mb-10 last:mb-0">
+            <div className="mb-4 flex items-baseline gap-2">
+              <h2 className="text-[13px] font-medium text-zinc-500">{group.label}</h2>
               <span className="text-[12px] tabular-nums text-zinc-400">
                 {group.items.length}
               </span>
             </div>
-            <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
+            <div className="grid gap-x-4 gap-y-5 [grid-template-columns:repeat(auto-fill,minmax(150px,1fr))]">
               {group.items.map((page) => (
                 <Card
                   key={page.id}

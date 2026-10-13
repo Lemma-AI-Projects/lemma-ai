@@ -15,7 +15,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { FocusEmptyState } from '@/features/learn-space/focus/FocusView'
-import { FOCUS_PREVIEW } from '@/features/learn-space/focus/previewFixture'
+import {
+  FOCUS_PREVIEW,
+  FOCUS_PREVIEW_IMAGE,
+  FOCUS_PREVIEW_PDF,
+} from '@/features/learn-space/focus/previewFixture'
 import { FocusView } from '@/features/learn-space/focus/FocusView'
 
 function Providers({ children }: { children: React.ReactNode }) {
@@ -39,6 +43,28 @@ export function FocusRenderHarness() {
   return (
     <Providers>
       <FocusView preview={FOCUS_PREVIEW} />
+    </Providers>
+  )
+}
+
+/**
+ * 非文本资料的两屏（M1）：上传的 PDF 与图片，正文区**不该是一片空白**。
+ *
+ * 上传件后端没有 `blocks`，所以这两份 fixture 的 `blocks` 也是空的 —— 和真实数据
+ * 同形。它们要证明的正是"没有 blocks 也能看到该看到的东西"。
+ */
+export function FocusPdfRenderHarness() {
+  return (
+    <Providers>
+      <FocusView preview={FOCUS_PREVIEW_PDF} />
+    </Providers>
+  )
+}
+
+export function FocusImageRenderHarness() {
+  return (
+    <Providers>
+      <FocusView preview={FOCUS_PREVIEW_IMAGE} />
     </Providers>
   )
 }

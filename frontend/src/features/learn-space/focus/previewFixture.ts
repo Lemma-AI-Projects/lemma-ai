@@ -136,5 +136,57 @@ export const FOCUS_PREVIEW: FocusPreviewData = {
   ],
 }
 
+/**
+ * 两份**非文本资料**的 fixture —— M1 的演练对象（上传件没有 `blocks`）。
+ *
+ * 为什么另起两份、而不是往上面那份里塞：上面那份正跑着一组"正文可编辑"的断言
+ * （12 个 textarea、三条大纲、六份资料…），塞一份 PDF 进去会把那组断言搅浑 ——
+ * 两边都要改，最后谁都说不清是被测的东西变了还是夹具变了。
+ *
+ * 各带 3 份资料，好让页码胶囊（漫游位置）也有东西可显示；当前那一份的
+ * `originalName` / `mime` 就是"它是文件"的全部判据。
+ */
+function materialPreview(page: {
+  id: string
+  title: string
+  originalName: string
+  mime: string
+}): FocusPreviewData {
+  return {
+    spaceName: FOCUS_PREVIEW.spaceName,
+    goalLine: FOCUS_PREVIEW.goalLine,
+    methodStatus: FOCUS_PREVIEW.methodStatus,
+    title: page.title,
+    // 上传件后端没有 blocks —— 这里也空着，和真实数据同形。
+    blocks: [],
+    pageIndex: 1,
+    pageId: page.id,
+    pages: [
+      { id: 'p1', title: '讲义 · 向量与线性组合.md' },
+      {
+        id: page.id,
+        title: page.title,
+        originalName: page.originalName,
+        mime: page.mime,
+      },
+      { id: 'p2', title: '笔记 · 向量' },
+    ],
+  }
+}
+
+export const FOCUS_PREVIEW_PDF = materialPreview({
+  id: 'p-pdf',
+  title: '讲义 · 线性代数第一讲.pdf',
+  originalName: '线性代数第一讲.pdf',
+  mime: 'application/pdf',
+})
+
+export const FOCUS_PREVIEW_IMAGE = materialPreview({
+  id: 'p-img',
+  title: '示意图 · 特征向量.png',
+  originalName: '特征向量示意图.png',
+  mime: 'image/png',
+})
+
 /** 可编辑的输入框个数（正文的每一块一个；列表按项算；分割线没有）。 */
 export const FOCUS_PREVIEW_TEXTAREA_COUNT = 12

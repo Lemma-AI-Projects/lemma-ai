@@ -1,4 +1,14 @@
-import { ChevronLeft, ChevronRight, Flag, Minus, Plus, Settings, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  Minus,
+  PanelRightClose,
+  PanelRightOpen,
+  Plus,
+  Settings,
+  X,
+} from 'lucide-react'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -43,6 +53,9 @@ export interface WorkspaceTopBarProps {
   /** 画布分页：当前只渲染一页，箭头保持禁用。只在聚焦模式下渲染。 */
   pageIndex: number
   pageCount: number
+  /** 右侧「新对话」面板是否展开。顶栏在所有视角都在，开关放这里才「随时够得着」。 */
+  isConversationOpen: boolean
+  onToggleConversation: () => void
   onClose: () => void
   onOpenSettings: () => void
 }
@@ -63,6 +76,8 @@ export function WorkspaceTopBar({
   onZoomReset,
   pageIndex,
   pageCount,
+  isConversationOpen,
+  onToggleConversation,
   onClose,
   onOpenSettings,
 }: WorkspaceTopBarProps) {
@@ -189,6 +204,21 @@ export function WorkspaceTopBar({
         className={WORKSPACE_ICON_BUTTON}
       >
         <Flag className="size-[18px]" />
+      </button>
+
+      {/* 右侧「新对话」面板的显示 / 隐藏。所有视角都在（网格 / 画板都要用到）。 */}
+      <button
+        type="button"
+        onClick={onToggleConversation}
+        aria-label={isConversationOpen ? '隐藏对话' : '显示对话'}
+        aria-pressed={isConversationOpen}
+        className={WORKSPACE_ICON_BUTTON}
+      >
+        {isConversationOpen ? (
+          <PanelRightClose className="size-[18px]" />
+        ) : (
+          <PanelRightOpen className="size-[18px]" />
+        )}
       </button>
 
       <button

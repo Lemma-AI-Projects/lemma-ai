@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Lightbulb,
   ListChecks,
+  PanelRightClose,
   SquarePen,
   Upload,
 } from 'lucide-react'
@@ -97,6 +98,14 @@ export interface ConversationPanelProps {
    * 预览页缺一个图标就看不出它长什么样。
    */
   onOpenDocuments?: () => void
+  /**
+   * 「折起」：把这个面板就地收回。
+   *
+   * 面板自己持有开关吗？不 —— 它自持草稿与流式输出，所以显隐由宿主
+   * （LearnSpaceWorkspace）管，这里只发一个"请收起来"的信号。收起之后面板本身
+   * 已经不在了，再想打开得靠顶栏那个开关 —— 两者互补，不是重复。
+   */
+  onCollapse?: () => void
   className?: string
 }
 
@@ -121,6 +130,7 @@ export function ConversationPanel({
   conversationTitle,
   onConversationChange,
   onOpenDocuments,
+  onCollapse,
   className,
 }: ConversationPanelProps) {
   const [draft, setDraft] = useState('')
@@ -282,6 +292,18 @@ export function ConversationPanel({
             className={HEADER_ICON_BUTTON}
           >
             <FolderOpen className="size-4" />
+          </button>
+          {/* 「折起」——摆在标题右边那一排的最末端：就地收起来，不用跑回顶栏。
+              收起后这个按钮随面板一起消失，要再打开走顶栏那个开关。 */}
+          <button
+            type="button"
+            onClick={onCollapse}
+            disabled={!onCollapse}
+            aria-label="折起"
+            title="折起"
+            className={HEADER_ICON_BUTTON}
+          >
+            <PanelRightClose className="size-4" />
           </button>
         </div>
       </header>

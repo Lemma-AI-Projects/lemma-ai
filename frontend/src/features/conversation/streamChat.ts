@@ -28,6 +28,11 @@ export interface StreamChatOptions {
   projectId?: string
   /** 本轮启用的工具（输入菜单开关）；省略则是普通文本回合。 */
   tool?: ConversationToolRef['type']
+  /**
+   * Mala 投送：本轮要带上的材料包 id（`POST /board/contexts` 的返回值）。
+   * 顺序有意义 —— 那是用户选择的次序，服务端按原序注入。空数组等同于没带。
+   */
+  contextBundleIds?: string[]
   signal: AbortSignal
   /**
    * 新会话时后端通过响应头 X-Conversation-Id 返回预生成 id，
@@ -47,6 +52,33 @@ export interface StreamChatOptions {
 }
 
 /**
+ * 把一次请求拼成 wire body。**纯函数**：键名一律 camelCase（后端
+ * `alias_generator=to_camel`），而写错的键不会 422、会被**静默忽略** —— Mala
+ * 投送因此会白投，所以这件事必须能被单测钉住，而不是只能靠读代码相信。
+ *
+ * `projectId` 只在新会话有意义（已有会话时后端忽略它，干脆不发）；
+ * `contextBundleIds` 传空数组等同于「没带」—— 不占位、也不发空数组。
+ */
+export function buildChatRequestBody(input: {
+  content: string
+  conversationId?: string
+  projectId?: string
+  tool?: ConversationToolRef['type']
+  contextBundleIds?: string[]
+}): Record<string, unknown> {
+  const { content, conversationId, projectId, tool, contextBundleIds } = input
+  return {
+    ...(conversationId ? { conversationId } : {}),
+    ...(!conversationId && projectId ? { projectId } : {}),
+    ...(tool ? { tool } : {}),
+    ...(contextBundleIds && contextBundleIds.length > 0
+      ? { contextBundleIds }
+      : {}),
+    messages: [{ role: 'user', content }],
+  }
+}
+
+/**
  * POST /api/v1/chat 的 SSE 流式客户端。
  *
  * 此接口不能走 lib/apiClient（axios 拿不到流式增量），也不能用
@@ -62,6 +94,7 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     conversationId,
     projectId,
     tool,
+    contextBundleIds,
     signal,
     onConversationId,
     onDelta,
@@ -89,12 +122,15 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
         Accept: 'text/event-stream',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({
-        ...(conversationId ? { conversationId } : {}),
-        ...(!conversationId && projectId ? { projectId } : {}),
-        ...(tool ? { tool } : {}),
-        messages: [{ role: 'user', content }],
-      }),
+      body: JSON.stringify(
+        buildChatRequestBody({
+          content,
+          conversationId,
+          projectId,
+          tool,
+          contextBundleIds,
+        })
+      ),
       signal,
     }
   )
