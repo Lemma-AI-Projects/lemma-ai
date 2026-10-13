@@ -89,9 +89,25 @@ describe('createBoardContext', () => {
 })
 
 describe('malaFailureText', () => {
-  it('后端的拒绝原话就是答案 —— 不包一层「出错了」', () => {
-    const error = { response: { data: { detail: '选区里一条文本都读不出' } } }
-    expect(malaFailureText(error)).toBe('选区里一条文本都读不出')
+  it('已知拒绝码翻成人话 —— 用户不该看到 snake_case 的接口文档', () => {
+    expect(malaFailureText({ response: { data: { detail: 'empty_selection' } } })).toBe(
+      '还没有圈出任何块'
+    )
+    expect(malaFailureText({ response: { data: { detail: 'too_many_items' } } })).toBe(
+      '一次最多 24 块，分两次投'
+    )
+    expect(malaFailureText({ response: { data: { detail: 'no_readable_text' } } })).toBe(
+      '圈中的块里没有可读的文字'
+    )
+    expect(malaFailureText({ response: { data: { detail: 'project_not_found' } } })).toBe(
+      '这个空间不存在，可能已经被删掉'
+    )
+  })
+
+  it('未知的拒绝码：兜底一句，原码附在括号里给开发', () => {
+    const text = malaFailureText({ response: { data: { detail: 'something_new' } } })
+    expect(text).toContain('这批材料没法投送')
+    expect(text).toContain('something_new')
   })
 
   it('pydantic 的数组 detail 没有给人看的话，兜底一句', () => {

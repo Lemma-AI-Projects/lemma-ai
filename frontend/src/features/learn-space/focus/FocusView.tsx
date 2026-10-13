@@ -270,6 +270,19 @@ function FocusDocument({
   }, [draft, malaBusy, selectedKeys, spaceId])
 
   /**
+   * 圈中的块里有没有一句可读的话。⚠️ 后端的 `no_readable_text` 拒绝**整批**，
+   * 而一次注定被拒的点击该被省掉 —— 所以在点之前就查，而不是等它 422 之后再说。
+   * 分割线算"没有文本"：它本来就没有字。
+   */
+  const pickedHasText = useMemo(
+    () =>
+      draft.some(
+        (block) => selectedKeys.has(block.key) && textOf(block).trim() !== ''
+      ),
+    [draft, selectedKeys]
+  )
+
+  /**
    * Mala 为什么点不动。⚠️ **空选区预先禁用**，而不是点了才告诉用户空 ——
    * 那是浪费一次点击。上限提示也在这里：后端超 24 项直接 422，而 422 之后用户
    * 要重新圈一次，所以在还差几块的时候就该说。
@@ -282,7 +295,9 @@ function FocusDocument({
         ? '先圈出块：按住 ⌘（或 Ctrl）点选'
         : selectedKeys.size > MAX_MALA_ITEMS
           ? `一次最多 ${MAX_MALA_ITEMS} 块，分两次投`
-          : undefined
+          : !pickedHasText
+            ? '圈中的块里没有可读的文字'
+            : undefined
   // 对话面板三档：正常 / 全屏 / 收起。面板里那条「折起」收到 `hidden`，顶栏那个
   // 图标按钮按档位换脸（收起时变「打开对话」）—— 两者是同一件事的两个入口。
   const [panelMode, setPanelMode] = useState<FocusPanelMode>('normal')

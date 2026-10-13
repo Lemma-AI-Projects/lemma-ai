@@ -95,17 +95,35 @@ export async function createBoardContext(
 export const MAX_MALA_ITEMS = 24
 
 /**
+ * 后端的拒绝码 → 一句给人看的话。
+ *
+ * ⚠️ **原话不是答案。** `detail` 里是 `too_many_items` / `no_readable_text` 这种
+ * **机器可读的 snake_case**（`services/board_context_service.py:77-81`），
+ * 直接显示给用户等于把接口文档贴在错误提示上。第一版就是这么做的，还写了句
+ * "原话就是答案"的注释 —— 那句话是错的：那个字段是给调用方程序的，不是给人的。
+ */
+const REASON_TEXT: Record<string, string> = {
+  empty_selection: '还没有圈出任何块',
+  too_many_items: '一次最多 24 块，分两次投',
+  no_readable_text: '圈中的块里没有可读的文字',
+  project_not_found: '这个空间不存在，可能已经被删掉',
+}
+
+/**
  * 把一次失败的投送翻译成一句给人看的话。
  *
- * 后端的拒绝（空选区 / 超限 / 一条文本都读不出）都是 422 且 `detail` 是**字符串**
- * （`api/v1/board.py:38` 直接把 `exc.reason` 当 detail 抛）—— 所以正常路径下
- * 原话就是答案，不要包一层"出错了"。pydantic 自己的校验失败则是数组形状，
- * 那种没有给人看的话，只能兜底。
+ * 已知的拒绝码翻成中文；未知的兜底一句、并把原码附在括号里 —— 那是给开发看的，
+ * 用户至少知道"这是个技术细节而不是我又做错了"。pydantic 的校验失败是数组形状，
+ * 那种连原码都没有，只能兜底。
  */
 export function malaFailureText(error: unknown): string {
   const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data
     ?.detail
-  if (typeof detail === 'string' && detail.trim()) return detail
-  if (Array.isArray(detail) && detail.length > 0) return '这批材料里有不合法的内容，改一下再试'
+  if (typeof detail === 'string' && detail.trim()) {
+    return REASON_TEXT[detail] ?? `这批材料没法投送（${detail}）`
+  }
+  if (Array.isArray(detail) && detail.length > 0) {
+    return '这批材料里有不合法的内容，改一下再试'
+  }
   return '打包没成功，圈好的块还在，再试一次'
 }
