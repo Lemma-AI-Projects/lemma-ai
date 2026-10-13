@@ -1,4 +1,13 @@
-import { Lasso, Maximize2, Minimize2, PanelRightOpen, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import {
+  Lasso,
+  Maximize2,
+  Minimize2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightOpen,
+  Sparkles,
+} from 'lucide-react'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { WorkspaceEditMenu } from '@/features/learn-space/workspace/WorkspaceMenus'
@@ -56,6 +65,13 @@ export interface FocusTopBarProps {
   panelMode: FocusPanelMode
   /** 按当前档位循环：`normal → full → normal`，`hidden → normal`（就是"打开对话"）。 */
   onTogglePanel: () => void
+  /**
+   * 左栏（大纲 + 空间资料）现在开着没有。顶栏给一个开关，因为 224px 的左栏
+   * 是**固定宽度**的：窗口一窄，它就只能靠整个操作系统的窗口管理来躲开，
+   * 而这一屏内没有别的出口。收起时左栏整个不渲染（它没有值得留住的本地状态）。
+   */
+  railOpen: boolean
+  onToggleRail: () => void
   className?: string
 }
 
@@ -63,11 +79,17 @@ export interface FocusTopBarProps {
  * 聚焦模式的顶栏 ——四段，按用户 09-29 给的版式。
  *
  * 左：**空间名 + 「聚焦」标识**（空间名本身就是出去的路，所以没有返回箭头）
- * 中：**「当前建议」**入口（hover/focus 才展开那条 method 状态栏）
- * 右：**Mala** · **edit 下拉** · **一个小 SVG 图标按钮**（对话全屏／打开对话）
+ * 中：**「当前建议」**入口（hover 或点一下才展开那条 method 状态栏）
+ * 右：**Mala** · **edit 下拉** · **两个窗格开关**（左栏 · 对话）
  *
- * 「聚焦」标识与「当前建议」都**默认不显示**，hover/focus 各自那个按钮才露出来 ——
- * 顶栏默认是一条干净的工具条。两者都只是 `hidden`，元素仍在 DOM 里。
+ * 「聚焦」标识与「当前建议」都**默认不占位**，顶栏默认是一条干净的工具条。
+ * 但两者**不再只能靠 hover 拿到** —— 触屏没有 hover，而只挂在 `display:none`
+ * 上的东西读屏也读不到：
+ *
+ * - 「聚焦」标识用 `sr-only`：默认仍在无障碍树里（读屏读得到），hover/focus
+ *   空间名时才**显形**（`not-sr-only`）。它是个状态标注，不是入口，所以不需要可点。
+ * - 「当前建议」是一个**真的下拉**：`aria-expanded` + 点一下就展开/收起，
+ *   键盘 Enter 同样有效；hover 仍然即时展开。以前它只有 hover 一条路。
  *
  * 翻页（上一份 / 页码 / 下一份）**不在这儿了** —— 它是"读的节奏"，钉在页面最下面
  * （`FocusRoamBar`）。顶栏这一条说的是"我在哪个空间、现在在被怎么教"。
@@ -93,10 +115,20 @@ export function FocusTopBar({
   edit,
   onTogglePanel,
   panelMode,
+  railOpen,
+  onToggleRail,
   className,
 }: FocusTopBarProps) {
   const iconButton =
     'rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10 disabled:opacity-40 disabled:hover:bg-transparent'
+
+  // 点开的那条 method 状态栏。**除了 hover 还要能点开** —— 触屏没有 hover，
+  // 键盘用户也应该按 Enter 就能展开，而不是只能拿鼠标去蹭。
+  const [isMethodOpen, setMethodOpen] = useState(false)
+
+  const railToggle = railOpen
+    ? { label: '收起左栏', Icon: PanelLeftClose }
+    : { label: '展开左栏', Icon: PanelLeftOpen }
 
   // 面板收起时这一个按钮就是"打开对话"（否则点它没别的出口能把面板叫回来）；
   // 全屏/正常两档才是"对话全屏 / 收起全屏对话"。图标与文案同源，不会各说各话。
@@ -114,9 +146,10 @@ export function FocusTopBar({
         className
       )}
     >
-      {/* 左段：空间名（出去的路）+「聚焦」标识。标识**默认不显示**，hover/focus
-          空间名时才露出来 —— 顶栏默认是一条干净的工具条。元素留在 DOM 里（只是
-          `hidden`），所以离屏断言照样找得到它。 */}
+      {/* 左段：空间名（出去的路）+「聚焦」标识。标识**默认不占位**，hover/focus
+          空间名时才显形 —— 顶栏默认是一条干净的工具条。但它用的是 `sr-only`
+          而不是 `hidden`：读屏照样读得到"聚焦"，只是眼睛看不到。它是状态标注，
+          不是入口，所以没有做成按钮（空间名本身已经是出去的路，不能兼作开关）。 */}
       <div className="group/focus flex shrink-0 items-center gap-2">
         <button
           type="button"
@@ -126,7 +159,7 @@ export function FocusTopBar({
         >
           {isNameLoading ? '读取中…' : spaceName || '这个空间'}
         </button>
-        <span className="hidden shrink-0 rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-200 group-focus-within/focus:inline-block group-hover/focus:inline-block">
+        <span className="sr-only inline-block shrink-0 rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-200 group-focus-within/focus:not-sr-only group-hover/focus:not-sr-only">
           聚焦
         </span>
       </div>
@@ -140,13 +173,17 @@ export function FocusTopBar({
         </span>
       )}
 
-      {/* 中段：「当前建议」入口。默认只给一个触发按钮，hover/focus 它才展开成
+      {/* 中段：「当前建议」入口。默认只给一个触发按钮，hover 或点一下才展开成
           那条三事实胶囊（`MethodStatusPill`）。只**增**不**藏**按钮 —— 藏掉正在
-          聚焦的触发件会把键盘焦点弄丢。 */}
+          聚焦的触发件会把键盘焦点弄丢。`aria-expanded` 让读屏知道它是一开一关的，
+          触屏和键盘因此都有路可走（hover 不是唯一的路）。 */}
       <div className="mx-auto flex min-w-0 items-center">
         <div className="group/method flex min-w-0 items-center gap-2">
           <button
             type="button"
+            onClick={() => setMethodOpen((open) => !open)}
+            aria-expanded={isMethodOpen}
+            aria-controls="focus-method-status"
             aria-label="当前建议"
             title="当前建议"
             className="flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 px-2.5 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
@@ -154,7 +191,13 @@ export function FocusTopBar({
             <Sparkles className="size-3.5" />
             <span>当前建议</span>
           </button>
-          <div className="hidden min-w-0 group-focus-within/method:flex group-hover/method:flex">
+          <div
+            id="focus-method-status"
+            className={cn(
+              'min-w-0',
+              isMethodOpen ? 'flex' : 'hidden group-hover/method:flex'
+            )}
+          >
             <MethodStatusPill status={methodStatus} />
           </div>
         </div>
@@ -172,6 +215,19 @@ export function FocusTopBar({
         </button>
 
         {edit && <WorkspaceEditMenu {...edit} />}
+
+        {/* 窗格开关成对摆在一起：左边管左栏，右边管对话。两个都只**收/展**，
+            不销毁状态（对话面板收起来还留着草稿与流式输出）。 */}
+        <button
+          type="button"
+          onClick={onToggleRail}
+          aria-expanded={railOpen}
+          aria-label={railToggle.label}
+          title={railToggle.label}
+          className={iconButton}
+        >
+          <railToggle.Icon className="size-4" />
+        </button>
 
         <button
           type="button"

@@ -92,15 +92,18 @@ const AUTOSAVE_DELAY = 1200
  * 是对的（全屏、不套 AppLayout、自带标题），缺的是**能写**、**有语义层的位置**、
  * 以及**在资料之间一直往前走**。设计见 `.workbuddy/research/focus-mode-design.md`。
  *
- * 这一版实装的：新顶栏（空间名+聚焦 · method 状态栏 · 页码 · Mala · 对话全屏）·
- * 左栏大纲与空间资料 · **可编辑正文**（自研块编辑器，六种块）· 前后漫游 · 空态 ·
- * **非文本资料**（上传的 PDF／图片：文件卡与内联预览，看 `MaterialView`）·
+ * 这一版实装的：新顶栏（空间名+聚焦 · method 状态栏 · Mala · 左栏开关 · 对话窗格开关）·
+ * 左栏大纲与空间资料 · **可编辑正文**（自研块编辑器，六种块）· 前后漫游（钉在页面
+ * 最下面的 `FocusRoamBar`，页码也在那儿）· 空态 ·
+ * **非文本资料**（上传的图片内联预览、PDF 走 `features/docs/pdf/PdfViewer` 真渲染、
+ * 其它类型给文件卡 —— 分三支，看 `MaterialView`）·
  * **次序冻结**（进聚焦时抄下次序，刷新才重排，看 `FocusSession` / `focusOrder`）·
  * **就地 edit**（顶栏「编辑」下拉：新建笔记／文件夹、上传；左栏资料项悬停重命名／
  * 删除 —— 只在真页面上给，预览是评审入口，见 `canEdit`）·
  * **冲突面板**（`ConflictPanel`：抽出来好让离屏 harness 直接钉住它那三句话与三个出口）。
- * **没实装（也不假装）**：Mala 的投送接线、边注、语义层、PDF 渲染（只给"在新标签
- * 打开"这个出口）、阅读位置 —— 各自在页面上有说明，或者干脆不出现。
+ * **没实装（也不假装）**：Mala 的投送接线（按钮渲染成禁用并写明原因）、边注、语义层、
+ * 阅读位置 —— 各自在页面上有说明，或者干脆不出现。PDF 的文本选择／搜索／批注／
+ * 锚点与缩略图也没有，别把顶栏那点翻页当成"文档内第 N 页"。
  */
 export function FocusView({ preview }: { preview?: FocusPreviewData }) {
   const params = useParams<{ id: string; pageId?: string }>()
@@ -200,6 +203,9 @@ function FocusDocument({
   const [panelMode, setPanelMode] = useState<FocusPanelMode>('normal')
   const isPanelFull = panelMode === 'full'
   const isPanelHidden = panelMode === 'hidden'
+  // 左栏开着没有。它是 224px 固定宽，窗口一窄就只能靠操作系统去躲 —— 所以给
+  // 顶栏一个开关，收起时整个不渲染（`FocusRail` 没有值得留住的本地状态）。
+  const [isRailOpen, setRailOpen] = useState(true)
   const [conversationId, setConversationId] = useState<string | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -494,6 +500,8 @@ function FocusDocument({
             setPanelMode((mode) => (mode === 'normal' ? 'full' : 'normal'))
           }
           panelMode={panelMode}
+          railOpen={isRailOpen}
+          onToggleRail={() => setRailOpen((open) => !open)}
         />
 
         {materialNote && (
@@ -503,7 +511,7 @@ function FocusDocument({
         )}
 
         <div className="relative flex min-h-0 flex-1">
-          {!isPanelFull && (
+          {!isPanelFull && isRailOpen && (
             <FocusRail
               outline={outline}
               onJump={jumpToBlock}
