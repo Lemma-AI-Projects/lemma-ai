@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from 'react'
 import {
   FileText,
   Folder,
@@ -93,6 +100,18 @@ export interface ConversationPanelProps {
   conversationTitle?: string
   onConversationChange: (conversationId: string | null) => void
   /**
+   * Mala 投送：本轮要带上的材料包 id（`POST /board/contexts` 的返回值）。
+   * 顺序有意义 —— 那是用户圈选的次序，服务端按原序注入。
+   *
+   * ⚠️ **宿主持有，面板不自持**：一次圈选发生在左侧的文档上，而"发出去"发生
+   * 在这里，两边必须看到同一批包。所以清空的时机也由宿主决定（见下）。
+   */
+  contextBundleIds?: string[]
+  /** 这一轮发完了，那批材料包用掉了 —— 宿主据此清空 chips。 */
+  onContextBundlesConsumed?: () => void
+  /** Mala 的 chips 容器（插在输入框上方）。不给就不渲染那一行。 */
+  malaChips?: ReactNode
+  /**
    * 顶栏「空间资料」入口：打开左侧文档系统。
    * 不给（mock 预览页）时图标仍占位但置灰 —— 顶栏是一整条功能栏，
    * 预览页缺一个图标就看不出它长什么样。
@@ -132,6 +151,9 @@ export function ConversationPanel({
   onOpenDocuments,
   onCollapse,
   className,
+  contextBundleIds,
+  onContextBundlesConsumed,
+  malaChips,
 }: ConversationPanelProps) {
   const [draft, setDraft] = useState('')
   const [uploadNotice, setUploadNotice] = useState<{
@@ -196,7 +218,12 @@ export function ConversationPanel({
   }, [chat.status])
 
   const handleSend = (text: string) => {
-    chat.send(text, { projectId })
+    // ⚠️ 材料包在**发送的那一刻**被取走并清空：晚一步清，下一轮会重复带上同一批
+    // （后端不截断，重复投 = 上下文里出现两份同样的内容）；早一步清，流式失败时
+    // 用户就丢了那批圈选，得重新圈一次。
+    const bundles = contextBundleIds
+    chat.send(text, { projectId, contextBundleIds: bundles })
+    if (bundles && bundles.length > 0) onContextBundlesConsumed?.()
   }
 
   const handleNewConversation = () => {
@@ -364,6 +391,8 @@ export function ConversationPanel({
             ))}
           </div>
         )}
+
+        {malaChips}
 
         {projectId ? (
           <ConversationInput

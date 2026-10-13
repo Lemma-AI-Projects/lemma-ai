@@ -4,7 +4,11 @@ const { post } = vi.hoisted(() => ({ post: vi.fn() }))
 
 vi.mock('@/lib/apiClient', () => ({ apiClient: { post } }))
 
-import { buildBoardContextBody, createBoardContext } from './boardContextApi'
+import {
+  buildBoardContextBody,
+  createBoardContext,
+  malaFailureText,
+} from './boardContextApi'
 
 beforeEach(() => {
   post.mockReset()
@@ -81,5 +85,26 @@ describe('createBoardContext', () => {
       items: [{ shapeId: 'blk-1', type: 'block', text: '矩阵' }],
     })
     expect(result).toBe(bundle)
+  })
+})
+
+describe('malaFailureText', () => {
+  it('后端的拒绝原话就是答案 —— 不包一层「出错了」', () => {
+    const error = { response: { data: { detail: '选区里一条文本都读不出' } } }
+    expect(malaFailureText(error)).toBe('选区里一条文本都读不出')
+  })
+
+  it('pydantic 的数组 detail 没有给人看的话，兜底一句', () => {
+    const error = { response: { data: { detail: [{ loc: ['body'], msg: 'field required' }] } } }
+    expect(malaFailureText(error)).toBe('这批材料里有不合法的内容，改一下再试')
+  })
+
+  it('空 detail 与网络错误都落到「圈好的块还在」——那是用户最想知道的事', () => {
+    expect(malaFailureText({ response: { data: { detail: '  ' } } })).toBe(
+      '打包没成功，圈好的块还在，再试一次'
+    )
+    expect(malaFailureText(new Error('Network Error'))).toBe(
+      '打包没成功，圈好的块还在，再试一次'
+    )
   })
 })

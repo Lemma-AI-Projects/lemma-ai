@@ -33,17 +33,25 @@ import { ConflictPanel } from './ConflictPanel'
 import { FocusRail } from './FocusRail'
 import { FocusRoamBar } from './FocusRoamBar'
 import { FocusTopBar, type FocusPanelMode } from './FocusTopBar'
+import { MalaChips } from './MalaChips'
 import { MaterialView } from './MaterialView'
+import type { MalaBundleChip } from './malaChipsOps'
 import {
   appendBlock,
   blocksFromDraft,
   draftFromBlocks,
   outlineOf,
   signatureOf,
+  textOf,
   toggleKey,
   type DraftBlock,
 } from './blockOps'
 import { applyFrozenOrder } from './focusOrder'
+import {
+  MAX_MALA_ITEMS,
+  createBoardContext,
+  malaFailureText,
+} from '@/features/board/boardContextApi'
 
 /** 预览/评审用：不连后端，直接渲染这一份数据（`/preview/focus`）。 */
 export interface FocusPreviewData {
@@ -218,6 +226,63 @@ function FocusDocument({
     setSelectedKeys((prev) => toggleKey(prev, key))
   }, [])
   const clearBlockSelection = useCallback(() => setSelectedKeys(new Set()), [])
+  /**
+   * Mala 投出去的材料包 —— **一次圈选一个包**。
+   *
+   * ⚠️ 与 `selectedKeys` 分开的两层状态：圈着的是"我正在选什么"，投出去的是
+   * "我已经交给 Agent 什么"。前者随时可变、Esc 就没；后者要一直挂在那儿直到
+   * 下一轮发送把它用掉。混成一个状态的话，"取消圈选"会长得像"撤回过一次的投送"。
+   */
+  const [bundles, setBundles] = useState<MalaBundleChip[]>([])
+  const [malaBusy, setMalaBusy] = useState(false)
+  const [malaError, setMalaError] = useState<string | null>(null)
+
+  /**
+   * 点 Mala：圈中的块 → 一个材料包。
+   *
+   * ⚠️ **不过滤空块**：按钮上的数字就是 `selectedKeys.size`，而"界面上的条数
+   * 必须等于实际带上的条数"（后端绝不截断，超限直接 422）。提前过滤会让这两个
+   * 数字对不上，而用户没有任何办法看出差别 —— 宁可让后端用它的原话拒绝。
+   */
+  const handleMalaClick = useCallback(async () => {
+    if (!spaceId || selectedKeys.size === 0 || malaBusy) return
+    setMalaBusy(true)
+    setMalaError(null)
+    try {
+      const picked = draft.filter((block) => selectedKeys.has(block.key))
+      const bundle = await createBoardContext({
+        projectId: spaceId,
+        items: picked.map((block) => ({
+          shapeId: block.key,
+          type: block.type,
+          text: textOf(block),
+        })),
+      })
+      setBundles((prev) => [
+        ...prev,
+        { id: bundle.id, itemCount: bundle.itemCount, label: bundle.label },
+      ])
+    } catch (error) {
+      setMalaError(malaFailureText(error))
+    } finally {
+      setMalaBusy(false)
+    }
+  }, [draft, malaBusy, selectedKeys, spaceId])
+
+  /**
+   * Mala 为什么点不动。⚠️ **空选区预先禁用**，而不是点了才告诉用户空 ——
+   * 那是浪费一次点击。上限提示也在这里：后端超 24 项直接 422，而 422 之后用户
+   * 要重新圈一次，所以在还差几块的时候就该说。
+   */
+  const malaDisabledReason = malaBusy
+    ? '正在打包…'
+    : !spaceId
+      ? '预览页没有真实空间，圈选暂不可用'
+      : selectedKeys.size === 0
+        ? '先圈出块：按住 ⌘（或 Ctrl）点选'
+        : selectedKeys.size > MAX_MALA_ITEMS
+          ? `一次最多 ${MAX_MALA_ITEMS} 块，分两次投`
+          : undefined
   // 对话面板三档：正常 / 全屏 / 收起。面板里那条「折起」收到 `hidden`，顶栏那个
   // 图标按钮按档位换脸（收起时变「打开对话」）—— 两者是同一件事的两个入口。
   const [panelMode, setPanelMode] = useState<FocusPanelMode>('normal')
@@ -368,7 +433,6 @@ function FocusDocument({
     if (dirtyRef.current) {
       if (previousUpdatedAt && serverUpdatedAt !== previousUpdatedAt) {
         updatedAtRef.current = serverUpdatedAt
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setConflict({ serverDraft, serverUpdatedAt })
         setSaveState('conflict')
       }
@@ -505,8 +569,9 @@ function FocusDocument({
           goalLine={direction}
           methodStatus={methodBar}
           onExit={() => (spaceId ? navigate(`/learn-spaces/${spaceId}`) : navigate('/learn-spaces'))}
-          malaDisabledReason="Mala 的投送还没接线（后端已就绪，下一轮接上）"
+          malaDisabledReason={malaDisabledReason}
           malaCount={selectedKeys.size}
+          onMalaClick={() => void handleMalaClick()}
           edit={
             canEdit
               ? {
@@ -658,6 +723,23 @@ function FocusDocument({
             spaceName={spaceName || '这个空间'}
             conversationId={conversationId}
             onConversationChange={setConversationId}
+            malaChips={
+              <>
+                <MalaChips
+                  chips={bundles}
+                  onRemove={(bundleId) =>
+                    setBundles((prev) => prev.filter((bundle) => bundle.id !== bundleId))
+                  }
+                />
+                {/* 打包失败的一行小字。⚠️ 不是按钮下面一段红字 —— 那是这个产品
+                    里最难看的一种错误态；`reason` 原话保留，用户能照着改。 */}
+                {malaError && (
+                  <p className="mb-2 px-1 text-[12px] text-zinc-500">{malaError}</p>
+                )}
+              </>
+            }
+            contextBundleIds={bundles.map((bundle) => bundle.id)}
+            onContextBundlesConsumed={() => setBundles([])}
             // 「折起」：面板收到 `hidden`（宽度归零/不占位，但保持挂载 —— 草稿与
             // 流式输出都留着），再打开走顶栏那个图标按钮。
             onCollapse={() => setPanelMode('hidden')}

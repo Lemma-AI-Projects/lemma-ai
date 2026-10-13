@@ -340,7 +340,7 @@ function CurrentState({
         <span className="font-mono text-[11px] tracking-widest text-zinc-400 uppercase">
           {space.domain}
         </span>
-        <span className="font-mono text-[11px] text-zinc-400">{space.span}</span>
+        <span className="font-mono text-[11px] text-zinc-400">{space.current.span}</span>
       </div>
 
       <p className="mt-4 max-w-2xl text-sm text-zinc-500">{space.current.goal}</p>
@@ -429,7 +429,7 @@ export function TrajectoryView() {
   const ordered = useMemo(() => [...space.nodes].reverse(), [space.nodes])
   const onViewportChange = useCallback((v: Viewport) => setViewport(v), [])
 
-  const trackMouse = useCallback((e: MouseEvent) => {
+  const trackMouse = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setHover((h) => (h ? { ...h, x: e.clientX, y: e.clientY } : h))
   }, [])
 

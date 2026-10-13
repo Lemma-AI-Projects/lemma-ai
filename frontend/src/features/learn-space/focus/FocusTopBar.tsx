@@ -43,15 +43,17 @@ export interface FocusTopBarProps {
   methodStatus?: MethodStatus | null
   /** 左上角的空间名就是出去的路（点它回网格）。 */
   onExit: () => void
-  /** Mala 这一轮还没接上投送 —— 传了原因就渲染成禁用并写清楚为什么。 */
+  /** Mala 点不动的原因（空选区 / 预览页没有空间 / 正在打包）。给了就禁用。 */
   malaDisabledReason?: string
   /**
-   * 圈中的块数。**这是用户能看到的第一个 Mala 反馈**：投送还没接线，所以按钮
-   * 依然是禁用的，但文案从 `Mala` 变成 `Mala · 3` —— 圈了多少，系统是知道的。
+   * 圈中的块数。**这是用户能看到的第一个 Mala 反馈** —— 按钮可能还点不动，
+   * 但文案从 `Mala` 变成 `Mala · 3`：圈了多少，系统是知道的。
    *
    * ⚠️ 0 不显示（`Mala` 而不是 `Mala · 0`）—— 0 是默认状态，说出来是噪音。
    */
   malaCount?: number
+  /** 点 Mala：把圈中的块打包交给 Agent。禁用时不会触发。 */
+  onMalaClick?: () => void
   /**
    * `edit` 下拉（新建笔记／文件夹、上传）—— **传了才渲染**。
    *
@@ -120,6 +122,7 @@ export function FocusTopBar({
   onExit,
   malaDisabledReason,
   malaCount = 0,
+  onMalaClick,
   edit,
   onTogglePanel,
   panelMode,
@@ -219,6 +222,7 @@ export function FocusTopBar({
         <button
           type="button"
           disabled={Boolean(malaDisabledReason)}
+          onClick={onMalaClick}
           title={
             malaDisabledReason ??
             (malaCount > 0

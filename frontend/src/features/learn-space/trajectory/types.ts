@@ -66,7 +66,7 @@ export interface TrajectoryNode {
   /** 关联的产物（未来接 Artifact）。 */
   relatedArtifact?: { name: string; excerpt?: string }
   /** 这一段涉及的知识项（未来接 Knowledge Structure）。 */
-  relatedFocus?: string
+  relatedFocus?: string | null
 }
 
 /** 一段连续的学习阶段（介于单个 episode 与里程碑之间的时间尺度）。 */
