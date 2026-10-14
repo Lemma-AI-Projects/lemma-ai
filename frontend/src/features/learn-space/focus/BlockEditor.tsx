@@ -38,6 +38,7 @@ import {
   type DraftBlock,
   type FocusRequest,
 } from './blockOps'
+import { isAnnotationShortcut } from './annotationOps'
 
 export interface BlockEditorProps {
   blocks: DraftBlock[]
@@ -73,6 +74,15 @@ export interface BlockEditorProps {
    * 是产品决定，不是编辑器的事。
    */
   flashKey?: string | null
+  /**
+   * 选中了一段并按 `N` —— 用户想在这儿记一句。
+   *
+   * ⚠️ **不是每次选中都触发**：选一段文字最常见的意图是**复制**，
+   * 选中就弹框等于打扰每一次复制。所以这一步必须由 `N` 显式发起。
+   *
+   * `quote` 是选中的那串字（已经 slice 出来，调用方不用再碰 DOM）。
+   */
+  onAnnotationRequest?: (block: DraftBlock, quote: string) => void
 }
 
 const HEADING_CLASS: Record<number, string> = {
@@ -128,6 +138,7 @@ export function BlockEditor({
   onSelectionToggle,
   onSelectionClear,
   flashKey,
+  onAnnotationRequest,
 }: BlockEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   /**
@@ -198,6 +209,22 @@ export function BlockEditor({
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
       event.preventDefault()
       onSaveShortcut?.()
+      return
+    }
+    // 选中了一段 + `N` ⇒ 在这儿记一句。规则提在 `annotationOps`：组件这边
+    // 没有事件序列测试（仓库无 jsdom），只有纯函数那一份能被断言钉住。
+    if (
+      isAnnotationShortcut({
+        key: event.key,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        selectionStart: field.selectionStart,
+        selectionEnd: field.selectionEnd,
+      })
+    ) {
+      event.preventDefault()
+      onAnnotationRequest?.(block, field.value.slice(field.selectionStart, field.selectionEnd))
       return
     }
     if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {

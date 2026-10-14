@@ -17,7 +17,7 @@ import {
   isMaterialName,
   materialMimeFor,
 } from '@/features/docs/importFile'
-import type { DocBlock } from '@/features/docs/types'
+import type { BlockIn, DocBlock } from '@/features/docs/types'
 import { ConversationPanel } from '@/features/learn-space/workspace/ConversationPanel'
 import { useProjectQuery } from '@/features/project/projectApi'
 import { useActiveGoalQuery } from '@/features/learn-space/goal/goalApi'
@@ -28,6 +28,7 @@ import {
 } from '@/features/learn-space/method/methodApi'
 import { cn } from '@/lib/utils'
 
+import { AnnotationInput } from './AnnotationInput'
 import { BlockEditor } from './BlockEditor'
 import { ConflictPanel } from './ConflictPanel'
 import { FocusRail } from './FocusRail'
@@ -47,6 +48,7 @@ import {
   type DraftBlock,
 } from './blockOps'
 import { applyFrozenOrder } from './focusOrder'
+import { buildAnnotationSource } from './annotationOps'
 import {
   MAX_MALA_ITEMS,
   createBoardContext,
@@ -150,6 +152,14 @@ function FocusSession({ spaceId, pageId }: { spaceId?: string; pageId?: string }
     [frozenIds, serverPages]
   )
   const pageMeta = (serverPages ?? []).find((row) => row.id === pageId)
+  /**
+   * 「这份资料的笔记」= 这一份的**子页**（边注就住在它里面，方案 A：投影）。
+   * ⚠️ 零迁移：`parentPageId` 早就有，只是从来没人用它做这件事。
+   * 在这里算出来传下去，而不是让 `FocusDocument` 再拉一次整份列表 ——
+   * 它只需要知道"笔记页是哪一页"。
+   */
+  const notePageId =
+    (serverPages ?? []).find((row) => row.parentPageId === pageId)?.id ?? null
 
   return (
     <FocusDocument
@@ -160,6 +170,7 @@ function FocusSession({ spaceId, pageId }: { spaceId?: string; pageId?: string }
       spaceId={spaceId}
       pageId={pageId}
       materials={materials}
+      notePageId={notePageId}
       isPagesLoading={pagesQuery.isPending}
       pageMeta={pageMeta}
     />
@@ -173,6 +184,7 @@ function FocusDocument({
   materials: sessionMaterials = [],
   isPagesLoading: sessionPagesLoading = false,
   pageMeta: sessionPageMeta,
+  notePageId,
 }: {
   spaceId?: string
   pageId?: string
@@ -182,6 +194,8 @@ function FocusDocument({
   isPagesLoading?: boolean
   /** 当前这一份的资料元数据（上传件才有 `originalName` / `mime`）。 */
   pageMeta?: FocusPageMeta
+  /** 「这份资料的笔记」子页；还没有就是 null（第一次记的时候才建）。 */
+  notePageId?: string | null
 }) {
   const navigate = useNavigate()
 
@@ -193,6 +207,12 @@ function FocusDocument({
   // 那一套 mutation —— 新建落到当前空间，上传走 `material_storage`。
   const createPage = useCreatePageMutation(spaceId ?? '')
   const renamePage = useRenamePageMutation(spaceId ?? '')
+  /**
+   * 边注住在「这份资料的笔记」子页里（方案 A：投影）。
+   * ⚠️ 那是一个**独立的页**，所以它的块要单独读 —— 不能拿当前这一份的 `blocksQuery`。
+   */
+  const noteBlocksQuery = usePageBlocksQuery(preview ? undefined : (notePageId ?? undefined))
+  const noteSaveMutation = useSavePageBlocksMutation()
   const deletePage = useDeletePageMutation(spaceId ?? '')
   const uploadMaterial = useUploadMaterialMutation(spaceId ?? '')
   const [materialNote, setMaterialNote] = useState<string | null>(null)
@@ -238,6 +258,16 @@ function FocusDocument({
   const [malaError, setMalaError] = useState<string | null>(null)
   /** 「回到出处」：临时高亮哪一块。宿主计时（1.5s 后撤），编辑器只管画。 */
   const [flashKey, setFlashKey] = useState<string | null>(null)
+  /**
+   * 正在写的那条边注（null = 没在写）。
+   * ⚠️ 它记的是**锚点原料**（哪一块 + 引用哪句），不是最终锚点 ——
+   * 最终锚点要等提交时才拼（`buildAnnotationSource`），因为那一刻的
+   * `position` 才是真的。
+   */
+  const [annotationDraft, setAnnotationDraft] = useState<{
+    blockKey: string
+    quote: string
+  } | null>(null)
   const flashTimerRef = useRef<number | null>(null)
 
   /**
@@ -332,6 +362,78 @@ function FocusDocument({
         (block) => selectedKeys.has(block.key) && textOf(block).trim() !== ''
       ),
     [draft, selectedKeys]
+  )
+
+  /**
+   * 写一条边注：那句话落进「这份资料的笔记」，带一个指向**这一份**的锚点。
+   *
+   * ⚠️ 三条顺序不能换：
+   * 1. **先拼锚点** —— 用**这一刻**的 `draft` 算 position，晚一步用户可能又编辑了；
+   * 2. **笔记页没有就现建** —— 子页，`parentPageId` = 这一份；
+   * 3. **先读再写** —— `save_page_blocks` 是整页删重插，拿一份空数组去存
+   *    会把已有的边注**全删掉**。所以笔记页已有块时必须等它读完。
+   */
+  const handleAnnotationSubmit = useCallback(
+    async (text: string) => {
+      const pending = annotationDraft
+      setAnnotationDraft(null)
+      if (!pending || !spaceId || !pageId) return
+      const source = buildAnnotationSource(draft, pending.blockKey, pending.quote, pageId)
+      if (!source) return
+      // 笔记页存在但还没读完 ⇒ 现在存会覆盖它已有的边注。放弃这一次，
+      // 用户再按一次回车就好（比删掉他之前写的所有话好得多）。
+      if (notePageId && noteBlocksQuery.isPending) return
+      try {
+        let targetId = notePageId ?? null
+        if (!targetId) {
+          const created = await createPage.mutateAsync({
+            // 标题从 props 里的资料列表取 —— 不用函数体后面那个 `title`，
+            // 它在 700 行之后才声明（useCallback 的依赖数组在渲染时就要求值）。
+            title: `${sessionMaterials.find((row) => row.id === pageId)?.title ?? '这份资料'} · 笔记`,
+            kind: 'note',
+            parentPageId: pageId,
+          })
+          targetId = created.id
+        }
+        const existing = noteBlocksQuery.data?.blocks ?? []
+        const next: BlockIn[] = [
+          ...existing.map((block, index) => ({
+            id: block.id,
+            type: block.type,
+            position: index,
+            content: block.content,
+            meta: block.meta,
+          })),
+          {
+            id: null,
+            type: 'paragraph',
+            position: existing.length,
+            content: { text },
+            meta: { source },
+          },
+        ]
+        await noteSaveMutation.mutateAsync({
+          pageId: targetId,
+          blocks: next,
+          updatedAt: noteBlocksQuery.data?.updatedAt ?? '',
+        })
+      } catch {
+        // 写失败**不重开输入框**：那句话是用户刚打的，重开等于让他再打一遍
+        // 而且不知道上一次成没成。错就错在库里没落上，界面不假装。
+      }
+    },
+    [
+      annotationDraft,
+      createPage,
+      draft,
+      noteBlocksQuery.data,
+      noteBlocksQuery.isPending,
+      notePageId,
+      noteSaveMutation,
+      pageId,
+      sessionMaterials,
+      spaceId,
+    ]
   )
 
   /**
@@ -679,8 +781,14 @@ function FocusDocument({
             />
           )}
 
+          {/* ⚠️ `relative` 是给边注输入框定位用的：它以**这个滚动容器**为参照，
+              所以滚动时不脱轨、不需要监听 scroll。 */}
           {!isPanelFull && (
-            <div ref={scrollRef} className="min-w-0 flex-1 overflow-y-auto">
+            <div
+              ref={scrollRef}
+              data-focus-scroller
+              className="relative min-w-0 flex-1 overflow-y-auto"
+            >
               {!hasPage ? (
                 <FocusEmptyState
                   pages={materials}
@@ -776,11 +884,24 @@ function FocusDocument({
                       onSelectionToggle={toggleBlockSelected}
                       onSelectionClear={clearBlockSelection}
                       flashKey={flashKey}
+                      /* ⚠️ 预览页也传：评审页的用途就是看交互形态，而**提交**
+                         那一步在没有真实空间时会自己返回（`!spaceId`）——
+                         所以预览里能打开输入框、写不进去，这是它该有的样子。 */
+                      onAnnotationRequest={(block, quote) =>
+                        setAnnotationDraft({ blockKey: block.key, quote })
+                      }
                     />
                   )}
                 </div>
 
                 {draft.length > 0 && !isFileBacked && <FocusFooterHint />}
+                {annotationDraft && (
+                  <AnnotationInput
+                    blockKey={annotationDraft.blockKey}
+                    onSubmit={(text) => void handleAnnotationSubmit(text)}
+                    onCancel={() => setAnnotationDraft(null)}
+                  />
+                )}
               </div>
               )}
             </div>
