@@ -82,6 +82,11 @@ export function AnnotationRail({
       {placed.map((group) => (
         <div
           key={group.blockKey}
+          /* ⚠️ `data-rail-for` 是**给验收用的钩子**：§4 第 2 条要求"边注与所锚段落
+             同一水平线（偏差 ≤ 4px）"，而那只能在一个真的排版引擎里量。有了这个
+             属性，量法就是 `[data-rail-for=KEY]` 的 top 减去 `[data-block-key=KEY]`
+             的 top —— 与仓库里 `data-block-key` / `data-flash` / `data-selected` 同一个路数。 */
+          data-rail-for={group.blockKey}
           className="absolute inset-x-0 space-y-2"
           style={tops[group.blockKey] === undefined ? undefined : { top: tops[group.blockKey] }}
         >
@@ -98,7 +103,7 @@ export function AnnotationRail({
       {/* 原话已经不在这一页了。⚠️ **不猜位置** —— 猜出来的位置会把用户的话挂到
           一段他没说过的话旁边第一次归零：这里不假装它们还对得上，但也**不丢**。 */}
       {layout.loose.length > 0 && (
-        <div className="absolute inset-x-0 bottom-0 space-y-2">
+        <div data-rail-loose="true" className="absolute inset-x-0 bottom-0 space-y-2">
           {layout.loose.map((annotation) => (
             <RailRow key={annotation.key} text={annotation.text} />
           ))}

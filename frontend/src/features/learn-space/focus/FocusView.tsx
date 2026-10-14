@@ -225,6 +225,15 @@ function FocusDocument({
    */
   const noteBlocksQuery = usePageBlocksQuery(preview ? undefined : (notePageId ?? undefined))
   const noteSaveMutation = useSavePageBlocksMutation()
+  /**
+   * 评审页（`/preview/focus`）的边注 —— 真实页面上这一份来自后端。
+   *
+   * ⚠️ **它存在的唯一理由是"让评审页真的能走完一遍"**：写完 → 回车 → 右边那一列
+   * 立刻多出你刚写的那句。没有它的话，评审页上按回车什么都不会发生（`!spaceId`
+   * 自己返回），而"看不出来"就等于这一批没验过。
+   * 真实路由那条完全不走这里（数据来自笔记页）。
+   */
+  const [previewNotes, setPreviewNotes] = useState<DocBlock[]>(() => preview?.notes ?? [])
   const deletePage = useDeletePageMutation(spaceId ?? '')
   const uploadMaterial = useUploadMaterialMutation(spaceId ?? '')
   const [materialNote, setMaterialNote] = useState<string | null>(null)
@@ -401,9 +410,27 @@ function FocusDocument({
     async (text: string) => {
       const pending = annotationDraft
       setAnnotationDraft(null)
-      if (!pending || !spaceId || !pageId) return
-      const source = buildAnnotationSource(draft, pending.blockKey, pending.quote, pageId)
+      if (!pending) return
+      // 评审页没有空间、也没有真正的笔记页，但**锚点还是照真算**（`pageId` 从
+      // fixture 拿）—— 那样写出来的注在轨上的位置和真实页面上一样。
+      const anchorPageId = pageId ?? preview?.pageId
+      if (!anchorPageId) return
+      const source = buildAnnotationSource(draft, pending.blockKey, pending.quote, anchorPageId)
       if (!source) return
+      if (preview) {
+        setPreviewNotes((prev) => [
+          ...prev,
+          {
+            id: `preview-note-${prev.length}`,
+            type: 'paragraph',
+            position: prev.length,
+            content: { text },
+            meta: { source },
+          },
+        ])
+        return
+      }
+      if (!spaceId || !pageId) return
       // 笔记页存在但还没读完 ⇒ 现在存会覆盖它已有的边注。放弃这一次，
       // 用户再按一次回车就好（比删掉他之前写的所有话好得多）。
       if (notePageId && noteBlocksQuery.isPending) return
@@ -455,6 +482,7 @@ function FocusDocument({
       notePageId,
       noteSaveMutation,
       pageId,
+      preview,
       sessionMaterials,
       spaceId,
     ]
@@ -737,9 +765,7 @@ function FocusDocument({
    * 空轨在 A7 下本来就什么都不渲染，用户看到的是"还没写边注"，而不是一条错的。
    */
   const railLayout = useMemo(() => {
-    const rows = preview
-      ? (preview.notes ?? [])
-      : (noteBlocksQuery.data?.blocks ?? [])
+    const rows = preview ? previewNotes : (noteBlocksQuery.data?.blocks ?? [])
     const notes: NoteBlock[] = rows.map((row) => ({
       key: row.id,
       type: row.type,
@@ -747,7 +773,7 @@ function FocusDocument({
       source: readAnnotationSource(row.meta),
     }))
     return buildRailGroups(draft, notes)
-  }, [draft, noteBlocksQuery.data, preview])
+  }, [draft, noteBlocksQuery.data, preview, previewNotes])
   const page = preview ? undefined : blocksQuery.data
   // 当前这一份的资料元数据：上传件才有 `originalName`（`doc/types.ts` 的约定）。
   const pageMeta = preview

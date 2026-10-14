@@ -98,4 +98,23 @@ describe('AnnotationRail 分组（A5）', () => {
     // 两组 = 两个定位容器；组内多条共用它 ⇒ 只数最外层的那些。
     expect(markup.match(/class="absolute inset-x-0 space-y-2"/g) ?? []).toHaveLength(2)
   })
+
+  /**
+   * ⚠️ 这两个钩子是 §4 第 2 条（偏差 ≤ 4px）**唯一量得到的方式** —— 静态断言量不到
+   * 排版，只能靠一个真排版引擎按块查。钩子被删掉的话，那条验收就悄悄做不成了。
+   */
+  it('每组带 data-rail-for=<块 key>，好让真浏览器按块量对齐', () => {
+    const markup = render({
+      placed: [
+        { blockKey: 'b1', position: 1, annotations: [{ key: 'n0', text: '甲' }] },
+        { blockKey: 'b2', position: 2, annotations: [{ key: 'n1', text: '乙' }] },
+      ],
+      loose: [{ key: 'n9', text: '找不到原话的' }],
+    })
+    expect(markup).toContain('data-rail-for="b1"')
+    expect(markup).toContain('data-rail-for="b2"')
+    // loose 那一组不锚任何块 ⇒ 不给 data-rail-for（给了就等于说它对得上）
+    expect(markup).toContain('data-rail-loose="true"')
+    expect(markup.match(/data-rail-for=/g) ?? []).toHaveLength(2)
+  })
 })
