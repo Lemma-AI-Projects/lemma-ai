@@ -108,6 +108,59 @@ const BLOCKS: DocBlock[] = [
   },
 ]
 
+/**
+ * 「这一份的笔记」—— 边注就住在这里，靠 `meta.source` 锚回上面那份讲义的某一段。
+ *
+ * ⚠️ **它是为了让边注轨在评审页上真的出现**。没有它，`/preview/focus` 永远看不到
+ * 轨（真实页面上这份笔记来自后端），而"看不到"就等于这一批没验过。
+ *
+ * 锚点的形状与 `annotationOps.AnnotationSource` 一致：`position + quote + occurrence`。
+ * 这里刻意造出三种情形，好一次看全：
+ * 1. 普通一条（锚在第二段）；
+ * 2. 同一段上**两条**（A5 的纵向堆叠）；
+ * 3. 锚在一个 **list 块**上（列表文本是拼出来的，最容易漏）；
+ * 4. 一条**原话已经不在这一页了**的（落到轨的最下面，见 A7 的降级）。
+ */
+const NOTE_BLOCKS: DocBlock[] = [
+  {
+    id: 'n1',
+    type: 'paragraph',
+    position: 0,
+    content: { text: '这里说的"方向没变"是关键 —— 变的是长度，不是朝向。' },
+    meta: { source: { pageId: 'p3', position: 1, quote: '方向没变', occurrence: 0 } },
+  },
+  {
+    id: 'n2',
+    type: 'paragraph',
+    position: 1,
+    content: { text: '把矩阵当动作、不当表格 —— 这个换法值得背下来。' },
+    meta: { source: { pageId: 'p3', position: 3, quote: '特征值就是', occurrence: 0 } },
+  },
+  {
+    id: 'n3',
+    type: 'paragraph',
+    position: 2,
+    content: { text: '力度为负为什么是反向？画个单位圆就看出来了。' },
+    meta: { source: { pageId: 'p3', position: 3, quote: '力度为正', occurrence: 0 } },
+  },
+  {
+    id: 'n4',
+    type: 'paragraph',
+    position: 3,
+    content: { text: '旋转矩阵是实矩阵却没有实特征值 —— 考试爱考这个反例。' },
+    meta: {
+      source: { pageId: 'p3', position: 4, quote: 'λ 可以是复数', occurrence: 0 },
+    },
+  },
+  {
+    id: 'n5',
+    type: 'paragraph',
+    position: 4,
+    content: { text: '这句是我从别处抄的，原本那段已经删了。' },
+    meta: { source: { pageId: 'p3', position: 9, quote: '这一段已经不在这一页了', occurrence: 0 } },
+  },
+]
+
 export const FOCUS_PREVIEW: FocusPreviewData = {
   spaceName: '线性代数 · 期末冲刺',
   // 空间名旁边那一行方位。真实页面上它由 `/projects/{id}/goals/active` 算出来，
@@ -124,6 +177,7 @@ export const FOCUS_PREVIEW: FocusPreviewData = {
   },
   title: '讲义 · 特征值.md',
   blocks: BLOCKS,
+  notes: NOTE_BLOCKS,
   pageIndex: 2,
   pageId: 'p3',
   pages: [

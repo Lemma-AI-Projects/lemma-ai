@@ -29,15 +29,20 @@ export function AnnotationInput({
   onCancel: () => void
 }) {
   const [value, setValue] = useState('')
-  const [top, setTop] = useState<number | null>(null)
+  /** 相对滚动容器的位置。`null` = 还没量到（这时不画，别画在左上角）。 */
+  const [box, setBox] = useState<{ top: number; left: number; width: number } | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   /**
-   * 位置：块相对**滚动容器**的偏移。
+   * 位置：那一块相对**滚动容器**的偏移。
    *
    * ⚠️ 滚动容器是**从 DOM 上找的**（`[data-focus-scroller]`），不是自己的 ref ——
-   * 把自己这个 `absolute` 的壳当参照是循环依赖：壳的位置由 `top` 决定，
-   * 而 `top` 又要用壳的位置算出来。第一版就是这么写的，结果框偏了 909px。
+   * 把自己这个 `absolute` 的壳当参照是循环依赖：壳的位置由 `box` 决定，
+   * 而 `box` 又要用壳的位置算出来。第一版就是这么写的，结果框偏了 909px。
+   *
+   * ⚠️ **横向也照着那一块量**（`left` + `width`），不是 `inset-x-0 mx-auto` ——
+   * 边注轨出现时正文列会往左让，居中会把输入框摆到正文与轨道之间那片空地上，
+   * 看起来像"在给轨写注"。宽度就是那一块的宽度：输入框**属于那句话**。
    *
    * ⚠️ 两条纪律沿用别处：遍历 + 属性比较（不把 key 拼进选择器），
    * 以及 `getBoundingClientRect + scrollTop` 而不是 `offsetTop`（后者依赖
@@ -52,7 +57,11 @@ export function AnnotationInput({
       if (!block || !host) return
       const hostBox = host.getBoundingClientRect()
       const blockBox = block.getBoundingClientRect()
-      setTop(blockBox.bottom - hostBox.top + host.scrollTop)
+      setBox({
+        top: blockBox.bottom - hostBox.top + host.scrollTop,
+        left: blockBox.left - hostBox.left + host.scrollLeft,
+        width: blockBox.width,
+      })
     }
     place()
     // 打开时用户可能正在滚动，或者窗口被缩放 —— 两者都让位置失效。
@@ -65,28 +74,33 @@ export function AnnotationInput({
   }, [])
 
   return (
-    <div className="absolute inset-x-0 z-10 px-8" style={{ top: top ?? undefined }}>
-      <div className="mx-auto max-w-2xl">
-        <textarea
-          ref={inputRef}
-          rows={1}
-          value={value}
-          placeholder="记一句…"
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault()
-              if (value.trim()) onSubmit(value.trim())
-              return
-            }
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              onCancel()
-            }
-          }}
-          className="w-full resize-none overflow-hidden border-b border-zinc-300 bg-transparent px-1 py-1 text-[13px] leading-6 text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500 dark:text-zinc-100 dark:border-zinc-600"
-        />
-      </div>
+    <div
+      className="absolute z-10"
+      style={
+        box === null
+          ? { visibility: 'hidden' }
+          : { top: box.top, left: box.left, width: box.width }
+      }
+    >
+      <textarea
+        ref={inputRef}
+        rows={1}
+        value={value}
+        placeholder="记一句…"
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault()
+            if (value.trim()) onSubmit(value.trim())
+            return
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            onCancel()
+          }
+        }}
+        className="w-full resize-none overflow-hidden border-b border-zinc-300 bg-transparent px-1 py-1 text-[13px] leading-6 text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-600 dark:text-zinc-100"
+      />
     </div>
   )
 }

@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils'
 
 import { AnnotationInput } from './AnnotationInput'
+import { AnnotationRail } from './AnnotationRail'
 import { BlockEditor } from './BlockEditor'
 import { ConflictPanel } from './ConflictPanel'
 import { FocusRail } from './FocusRail'
@@ -48,7 +49,12 @@ import {
   type DraftBlock,
 } from './blockOps'
 import { applyFrozenOrder } from './focusOrder'
-import { buildAnnotationSource } from './annotationOps'
+import {
+  buildAnnotationSource,
+  buildRailGroups,
+  readAnnotationSource,
+  type NoteBlock,
+} from './annotationOps'
 import {
   MAX_MALA_ITEMS,
   createBoardContext,
@@ -84,6 +90,12 @@ export interface FocusPreviewData {
   pageIndex: number
   /** 当前这一份的 id —— 左栏靠它把"你在哪"标出来。 */
   pageId?: string
+  /**
+   * 「这一份的笔记」里的块（边注就住在它里面）—— 真实页面上来自
+   * `GET /pages/{笔记页}/blocks`。评审页没有后端，所以在这里给一份，
+   * **否则边注轨在 `/preview/focus` 上永远不出现**（而没有真图的验证等于没验）。
+   */
+  notes?: DocBlock[]
 }
 
 /** 一份资料是不是"文件在后面撑着"（上传件）——只看这两个字段。 */
@@ -271,39 +283,51 @@ function FocusDocument({
   const flashTimerRef = useRef<number | null>(null)
 
   /**
+   * 「看这里」—— 滚到某一块 + ring 高亮 1.5 秒。
+   *
+   * 两个入口共用（Mala 的 chips、边注轨的那一行），所以提出来：它们的动作
+   * **是同一件事**（"回到出处"），各写一份迟早会分叉成两种时长/两种滚动位置。
+   *
+   * ⚠️ **高亮不常驻**：常驻的高亮会和"选中"混在一起，而那是两件事
+   * （"我在看它" vs "我圈了它"）。每次先清上一个计时器，否则快点两次会让
+   * 第一个的计时器把第二个的高亮提前撤掉。
+   *
+   * ⚠️ **遍历而不是 `querySelector('[data-block-key="…"]')`**：块的 key 是本地生成
+   * 的，但那是实现细节 —— 拼进选择器字符串意味着任何将来"key 里出现引号/空格"
+   * 的改变都会变成一次静默的语法错误（查不到 ⇒ 只是不高亮）。
+   */
+  const flashBlock = useCallback((key: string) => {
+    if (flashTimerRef.current !== null) {
+      window.clearTimeout(flashTimerRef.current)
+    }
+    setFlashKey(key)
+    const target = [...document.querySelectorAll('[data-block-key]')].find(
+      (el) => el.getAttribute('data-block-key') === key
+    )
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    flashTimerRef.current = window.setTimeout(() => {
+      setFlashKey(null)
+      flashTimerRef.current = null
+    }, 1500)
+  }, [])
+
+  /**
    * 「回到出处」—— 点 chips 上的一组，回文档里看一眼它当初圈的是什么。
    *
    * ⚠️ **两条路，主次分明**：主路是按 `shapeId`（= 块 key）找到那一块，精确；
    * 兜底是 bundle 里的 `boundingBox`（创建那一刻的前端坐标快照）。位置**会过期**
    * —— 用户接着编辑、挪动、删掉都很正常 —— 所以它只能说"那一带"，不能说"那块"。
    *
-   * ⚠️ 高亮**不常驻**：1.5s 后撤。常驻的高亮会和"选中"混在一起，而那是两件事
-   * （"我在看它" vs "我圈了它"）。卸载时清计时器，否则快速点两个 chip 会让
-   * 第一个的计时器把第二个的高亮提前撤掉。
+   * ⚠️ 高亮与滚动都由 `flashBlock` 负责（与边注轨共用同一条"回到出处"）。
    */
   const handleLocateBundle = useCallback(
     (bundleId: string) => {
       const bundle = bundles.find((row) => row.id === bundleId)
       const key = bundle?.firstShapeId
       if (!key) return
-      if (flashTimerRef.current !== null) {
-        window.clearTimeout(flashTimerRef.current)
-      }
-      setFlashKey(key)
-      // ⚠️ **遍历而不是 `querySelector('[data-block-key="…"]')`**：块的 key 是
-      // 本地生成的，但那是实现细节 —— 拼进选择器字符串意味着任何将来"key 里
-      // 出现引号/空格"的改变都会变成一次选择器语法错误，而且错得悄无声息
-      // （查询不到 ⇒ 只是不高亮）。用属性值比较没有这个问题。
-      const target = [...document.querySelectorAll('[data-block-key]')].find(
-        (el) => el.getAttribute('data-block-key') === key
-      )
-      target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      flashTimerRef.current = window.setTimeout(() => {
-        setFlashKey(null)
-        flashTimerRef.current = null
-      }, 1500)
+      flashBlock(key)
     },
-    [bundles]
+    [bundles, flashBlock]
   )
 
   // 卸载时撤掉还没跑完的计时器 —— 否则它会去 set 一个已卸载组件的 state。
@@ -701,6 +725,29 @@ function FocusDocument({
   }, [])
 
   const outline = useMemo(() => outlineOf(draft), [draft])
+
+  /**
+   * 边注轨的内容：把笔记页的块摊成「锚在某一段上的几组」。
+   *
+   * ⚠️ **必须和 `draft` 一起重算** —— 位置是按**今天**的正文反查出来的；用户编辑完
+   * 正文之后锚点会移位，轨不跟着走就会指着段落的旧位置。规则的账（分组、降级、
+   * 不丢）都在 `buildRailGroups` 里，这个 memo 只负责把两种块喂进去。
+   *
+   * ⚠️ 笔记页还没读到（`isPending`）时这里是空的 —— **不显示比显示错的强**：
+   * 空轨在 A7 下本来就什么都不渲染，用户看到的是"还没写边注"，而不是一条错的。
+   */
+  const railLayout = useMemo(() => {
+    const rows = preview
+      ? (preview.notes ?? [])
+      : (noteBlocksQuery.data?.blocks ?? [])
+    const notes: NoteBlock[] = rows.map((row) => ({
+      key: row.id,
+      type: row.type,
+      content: row.content as { text?: string; items?: string[] },
+      source: readAnnotationSource(row.meta),
+    }))
+    return buildRailGroups(draft, notes)
+  }, [draft, noteBlocksQuery.data, preview])
   const page = preview ? undefined : blocksQuery.data
   // 当前这一份的资料元数据：上传件才有 `originalName`（`doc/types.ts` 的约定）。
   const pageMeta = preview
@@ -713,6 +760,16 @@ function FocusDocument({
   const isPdfMaterial =
     (pageMeta?.mime ?? '').includes('application/pdf') ||
     /\.pdf$/i.test(materialName ?? '')
+
+  /**
+   * 轨上有没有东西可显示。用来决定中栏要不要腾出右边那条窄列。
+   *
+   * ⚠️ **没有边注时整条轨（含它占的宽度）都不存在** —— 正文宽度与从前**逐像素相同**。
+   * 这是 A7「空态什么都不渲染」在版面层的同一件事：不留一条空列在那儿。
+   * 文件资料（PDF/上传件）没有块，也就没有可锚的段落 ⇒ 永远没有轨。
+   */
+  const hasRail =
+    !isFileBacked && (railLayout.placed.length > 0 || railLayout.loose.length > 0)
 
   const saveLabel =
     saveState === 'saving'
@@ -782,12 +839,15 @@ function FocusDocument({
           )}
 
           {/* ⚠️ `relative` 是给边注输入框定位用的：它以**这个滚动容器**为参照，
-              所以滚动时不脱轨、不需要监听 scroll。 */}
+              所以滚动时不脱轨、不需要监听 scroll。
+              ⚠️ `@container` 是给边注轨判"这儿放得下吗"用的：判据必须是**这一栏实际
+              有多宽**，不是视口有多宽 —— 左栏和右栏都占着地方，而且都能折叠，
+              用视口断点会既早又晚。窄了整条轨不渲染（正文宽度不变）。 */}
           {!isPanelFull && (
             <div
               ref={scrollRef}
               data-focus-scroller
-              className="relative min-w-0 flex-1 overflow-y-auto"
+              className="@container relative min-w-0 flex-1 overflow-y-auto"
             >
               {!hasPage ? (
                 <FocusEmptyState
@@ -800,9 +860,19 @@ function FocusDocument({
               <div
                 className={cn(
                   'mx-auto px-8 py-6',
-                  isPdfMaterial ? 'max-w-4xl' : 'max-w-2xl'
+                  isPdfMaterial ? 'max-w-4xl' : 'max-w-2xl',
+                  /* 有边注、且**这一栏**放得下（≥56rem）时：正文 + 右侧窄列并排。
+                     ⚠️ 断点判的是这一栏（`@container` 挂在滚动容器上），不是视口 ——
+                     左栏和右栏都占地方且都能折叠，视口断点会既早又晚。
+                     放不下时下面这些类一个都不生效 ⇒ 版面与「一条边注都没有」时
+                     **逐像素相同**（这是 A7 在版面层的同一件事：不硬塞）。 */
+                  hasRail &&
+                    '@min-[56rem]:flex @min-[56rem]:w-fit @min-[56rem]:max-w-none @min-[56rem]:gap-6'
                 )}
               >
+                {/* 正文列。⚠️ `38rem` = 608px，正是从前 `max-w-2xl`(672) 减去
+                    外层 `px-8`(64) 之后正文的宽度 ⇒ **正文的阅读宽度一格没变**。 */}
+                <div className={cn(hasRail && '@min-[56rem]:w-[38rem] @min-[56rem]:shrink-0')}>
                 <div className="flex items-baseline gap-2">
                   <h1 className="truncate text-base font-medium">{title}</h1>
                   <span
@@ -900,6 +970,17 @@ function FocusDocument({
                     blockKey={annotationDraft.blockKey}
                     onSubmit={(text) => void handleAnnotationSubmit(text)}
                     onCancel={() => setAnnotationDraft(null)}
+                  />
+                )}
+                </div>
+
+                {hasRail && (
+                  <AnnotationRail
+                    layout={railLayout}
+                    onJump={flashBlock}
+                    /* `12.5rem` = 200px（A2：固定宽 —— 随内容会让正文宽度随边注
+                       数量跳动）。放不下时整条不渲染。 */
+                    className="hidden w-[12.5rem] shrink-0 @min-[56rem]:block"
                   />
                 )}
               </div>

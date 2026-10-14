@@ -41,14 +41,18 @@ export interface AnnotationBlock {
 /** 只要文本、不要 key —— 反查时手上只有一页块，不需要知道它们叫什么。 */
 type TextCarrier = Omit<AnnotationBlock, 'key'>
 
-/** 这一页里第 `position` 块的文本（list 块拼接所有项）。 */
-function textAt(blocks: readonly TextCarrier[], position: number): string {
-  const block = blocks[position]
-  if (!block) return ''
+/** 一块的可读文本（list 块拼接所有项，其余取 `content.text`）。 */
+export function blockText(block: TextCarrier): string {
   if (block.type === 'list') {
     return ((block.content.items as string[] | undefined) ?? []).join('\n')
   }
   return (block.content.text as string | undefined) ?? ''
+}
+
+/** 这一页里第 `position` 块的文本。 */
+function textAt(blocks: readonly TextCarrier[], position: number): string {
+  const block = blocks[position]
+  return block ? blockText(block) : ''
 }
 
 /**
@@ -124,4 +128,104 @@ export function isAnnotationShortcut(event: {
     !event.altKey &&
     event.selectionStart !== event.selectionEnd
   )
+}
+
+/**
+ * 从一块的 `meta` 里读出锚点。**读不出来就返回 null** —— 笔记页是用户能直接
+ * 编辑的普通页面，里面会有他手打的、没有锚点的普通块；那些不是边注。
+ *
+ * ⚠️ 逐字段校验而不是 `as AnnotationSource`：`meta` 在 wire 上是
+ * `Record<string, unknown>`，一个类型断言会让"锚点被写坏了"变成运行时才炸。
+ */
+export function readAnnotationSource(meta: unknown): AnnotationSource | null {
+  if (!meta || typeof meta !== 'object') return null
+  const source = (meta as { source?: unknown }).source
+  if (!source || typeof source !== 'object') return null
+  const raw = source as Record<string, unknown>
+  const { pageId, position, quote, occurrence } = raw
+  if (
+    typeof pageId !== 'string' ||
+    typeof position !== 'number' ||
+    typeof quote !== 'string' ||
+    typeof occurrence !== 'number'
+  ) {
+    return null
+  }
+  return { pageId, position, quote, occurrence }
+}
+
+/** 一条边注在轨上长成什么 —— 只有它自己那句话。 */
+export interface RailAnnotation {
+  key: string
+  text: string
+}
+
+/**
+ * 轨上的一**组**：锚在同一块的若干条边注。
+ *
+ * ⚠️ 分组不只是为了好看（A5 说同段的多条要纵向堆叠）—— 位置是**按块量出来的**，
+ * 一组的若干条共用一个 `top`，所以必须一起渲染，不能各自绝对定位（那会叠在一起）。
+ */
+export interface RailGroup {
+  blockKey: string
+  position: number
+  annotations: RailAnnotation[]
+}
+
+export interface RailLayout {
+  /** 找得到出处的那几组，按"写成"的顺序。 */
+  placed: RailGroup[]
+  /** 原话已经不在这一页了的那些 —— **不猜位置**，单独放。 */
+  loose: RailAnnotation[]
+}
+
+/** 笔记页里的一块：块的形状 + 它自己的锚点（没有就是用户手打的普通块）。 */
+export interface NoteBlock extends AnnotationBlock {
+  source: AnnotationSource | null
+}
+
+/**
+ * 把笔记页的块摊成轨上的两组东西。
+ *
+ * ⚠️ **不丢任何一条边注。** 锚点对不上时不猜一个邻近位置 —— 那样会把用户的话
+ * 挂到一段他没说过的话旁边，比"放在最下面"糟得多。设计的原话（§6.5）是
+ * "删正文不会删边注"：边注是**你的话**，正文没了它也不该跟着没。
+ */
+export function buildRailGroups(
+  material: readonly AnnotationBlock[],
+  notes: readonly NoteBlock[]
+): RailLayout {
+  const placed: RailGroup[] = []
+  const loose: RailAnnotation[] = []
+  const byBlock = new Map<string, RailGroup>()
+
+  for (const note of notes) {
+    if (!note.source) continue
+    const annotation = { key: note.key, text: blockText(note) }
+    const position = resolveAnnotationSource(material, note.source)
+    if (position === null) {
+      loose.push(annotation)
+      continue
+    }
+    const block = material[position]
+    if (!block) {
+      // 理论上到不了（position 来自 resolveAnnotationSource），真到了也不猜。
+      loose.push(annotation)
+      continue
+    }
+    const existing = byBlock.get(block.key)
+    if (existing) {
+      existing.annotations.push(annotation)
+      continue
+    }
+    const group: RailGroup = {
+      blockKey: block.key,
+      position,
+      annotations: [annotation],
+    }
+    byBlock.set(block.key, group)
+    placed.push(group)
+  }
+
+  return { placed, loose }
 }
