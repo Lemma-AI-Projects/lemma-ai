@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-15**（`practice-system` @ `49af22b`）
+> **最后更新：2026-10-15**（`practice-system` @ `8166078a`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -65,7 +65,9 @@
 ### B2 · 学习状态只知道"答对/答错"
 - **问题**：**一个人可以全答对而完全不理解，系统看不出区别。**
 - **当初怎么说的**（§16 附近，借鉴 ALEKS）：Knowledge State 由 assessment/evidence 推断；`Mastered / Not Mastered / Ready to Learn`。
-- **今天的证据**：认知/学习动作只承认一种（答对/答错）—— 全仓 grep `recall|retrieval|reflection|transfer` **零命中**。
+- **今天的证据**（2026-10-15 复核）：认知/学习动作只承认一种（答对/答错）。
+  `grep -rniE "recall|retrieval|reflection|transfer" backend --include="*.py"` 共 12 处命中，**全部**是
+  "网络检索 / 上传分块"（`no web retrieval`、`TransferConfig`）—— **没有一处**是认知动作。
 - **完成判据**：至少有一种"不是答题"的证据能改变状态（例如"复述/解释"）。
 
 ### B3 · 当初点名要的 Inspector 没有入口
@@ -77,7 +79,12 @@
 ### B4 · 结构性前提没有被真正消费
 - **问题**："掌握了 A ⇒ B 是合理的下一步"这条链在决定下一步时**没有被真的用上**（有一处回落还在按位置取）。
 - **当初怎么说的**（§66 第五节）：「Knowledge Structure 是 Learner State 的空间…作用不是展示漂亮知识图谱，而是回答：**如果用户掌握 A，那么 B 是否成为一个合理的下一步？**」
-- **今天的证据**（2026-10-05 核到，未复核）：`select_focus` 的 `outer_fringe[0]` 回落仍在（与 Coordinator 的 `NEXT_STEP` 目标重复），当时标注为"有日期的债"。
+- **今天的证据**（2026-10-05 核到；2026-10-15 复核仍在）：`select_focus` 的 `outer_fringe[0]` 回落
+  **仍然在**（`ai/methods/types.py:487-488`）—— `grep -rn "select_focus" backend` ⇒ 两个 method
+  （`socratic/method.py:105`、`direct_explanation/method.py:91`）各调一次、各算各的目标，与 Coordinator 的
+  `NEXT_STEP` 目标重复。docstring 自称由 `test_the_focus_fallback_is_a_dated_duplication` 钉住，
+  **那个名字的测试已经不在**（现名 `tests/services/test_methods.py:410 test_focus_falls_back_to_the_outer_fringe`）
+  —— 债还在，但"钉住它"的那个名字过期了。
 - **完成判据**：下一步的选择能指出"依据是 A→B 这条边"。
 
 ---
@@ -113,6 +120,25 @@
 - **当初怎么说的**（三模式 §4.3）：「将来各种"学习方法"的自定义流程也在这一屏里呈现」。
 - **今天的证据**：顶栏是只读展示（而且**不显示 method 名字**，这是刻意的）；契约只留了位。
 - **完成判据**：换一个做法，用户看得见界面真的不一样了。
+
+### C6 · 轨迹（Trajectory）只有原型：没有真数据、没有入口
+- **问题**：那条"我走了多远"的纵向时间层，今天是一张**用假数据画的图**，而且从真实导航里**进不去**。
+- **当初怎么说的**（推演）：那份 TOEFL 20 步推演本身就是一条**时间轴**，而清单顶部写明它是
+  「**验收口径和界面文案原话的来源**」。§82 的长期地图里也有独立的 **TIME** 层，并指出真正的核心是那个环
+  `Evidence → Learner State ↔ Knowledge Structure → Coordinator → Method → Experience → Evidence` —— 轨迹就是这个环的可视化。
+- **今天的证据**（2026-10-15 复核）：
+  - 前端有原型 `features/learn-space/trajectory/`（`TrajectoryView.tsx` + `mockData.ts`），挂在免登录的
+    `/preview/trajectory`（`AppRouter.tsx:91`）—— **仍然没有并进真实导航**。
+  - **后端 T1 已写出，但没提交、没验过**（2026-10-15 复核）：`services/trajectory_service.py`（375 行）·
+    `api/v1/trajectory.py` · `schemas/trajectory.py`，并把 `trajectory.router` 挂进了 `api/v1/router.py`
+    —— `git status` 里是 `?? trajectory.py ×3` + `M router.py`，**一个提交都没有**；
+    `ls backend/tests | grep -i traj` 空 ⇒ **零测试**；也**没有任何一次真跑的输出**（没有表行、没有截图、没有命令结果）。
+  - 计划在 `.plans/trajectory-mvp/INDEX.md`（10-15 写，用户拍板"先接真数据"：纯读、不调模型、不新增表）。
+    更早那版 `.workbuddy/plans/trajectory-rebuild-plan.md` 里「第 1 步之前，一行代码未动」已经过期。
+  - ⚠️ **契约本身要求"判断"而不只是"事实"**：`TrajectoryNode` 里的 `whatChanged / implication / whatRemains`
+    是叙事判断，不是任何表里的字段 ⇒ 接真数据**必须**有一样东西来写这些句子（人或模型）。
+- **完成判据**：真实空间的真实路由里能打开它，图上**每一个节点都能点回它的依据**（一次交互 / 一份产物 / 一行证据），
+  且**没有依据的节点显式写"没有记录支撑"** —— 而不是让模型补一句话。
 
 ---
 
