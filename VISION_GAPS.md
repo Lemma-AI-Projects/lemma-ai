@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-15**（`practice-system` @ `496b6d99`）
+> **最后更新：2026-10-15**（`practice-system` @ `ac832fd6`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -121,27 +121,30 @@
 - **今天的证据**：顶栏是只读展示（而且**不显示 method 名字**，这是刻意的）；契约只留了位。
 - **完成判据**：换一个做法，用户看得见界面真的不一样了。
 
-### C6 · 轨迹（Trajectory）只有原型：没有真数据、没有入口
-- **问题**：那条"我走了多远"的纵向时间层，今天是一张**用假数据画的图**，而且从真实导航里**进不去**。
+### C6 · 轨迹（Trajectory）：有真数据了，但仍是一页列表；「点回原处」没验过
+- **问题**：那条"我走了多远"的纵向时间层，今天**后端与入口都有了**，但它还是一页文档流列表 ——
+  不是头脑风暴里定的**可无限拖动的画布**；而且图上**每一块能不能点回原处，从没在真浏览器里验过**。
 - **当初怎么说的**（推演）：那份 TOEFL 20 步推演本身就是一条**时间轴**，而清单顶部写明它是
   「**验收口径和界面文案原话的来源**」。§82 的长期地图里也有独立的 **TIME** 层，并指出真正的核心是那个环
   `Evidence → Learner State ↔ Knowledge Structure → Coordinator → Method → Experience → Evidence` —— 轨迹就是这个环的可视化。
-- **今天的证据**（2026-10-15 第二次复核，T1/T2 已落地）：
-  - 前端原型 `features/learn-space/trajectory/`（`TrajectoryView.tsx` + `mockData.ts`）**没动**，挂在免登录的
-    `/preview/trajectory`（`AppRouter.tsx:91`）—— 它仍然是假数据。
-  - **后端已提交**：`cc7ef40` 落 `services/trajectory_service.py` + `api/v1/trajectory.py` +
-    `schemas/trajectory.py` + 挂进 `api/v1/router.py`（`GET /projects/{id}/trajectory`，纯读、不调模型）。
-    **有真跑的输出**：探针 `.workbuddy/localdb/verify_trajectory.py` 对真库跑通九类事件、排除无锚点的块、
-    标出近似时间与无归属通知、空空间为空；后端 526 passed / 0 skipped。
-  - **真路由已挂**：`496b6d9` 落 `/learn-spaces/:id/trajectory` + `pages/TrajectorySpacePage.tsx`
-    （纵向列表；没 `href` 的行不给链接）。前端 323 passed · tsc / eslint / build 干净。
-  - ⚠️ **但「点回原处」与有内容的列表没在真浏览器里看过** —— 这条路由要 token，本机没有（见 E3）。
-    ⇒ 这一条**尚不满足完成判据**，卡在登录态上，不是卡在代码上。
-  - ⚠️ **入口还没有**：从空间页进不去，只有 URL 能到（T4 未做）。
-  - ⚠️ **契约本身要求"判断"而不只是"事实"**：`TrajectoryNode` 里的 `whatChanged / implication / whatRemains`
-    是叙事判断，不是任何表里的字段。**这一版刻意一句不写**（没依据就留白）⇒ 要真正"完成"，
-    还缺一个决定：那些句子由谁写、凭什么写。
-  - 计划在 `.plans/trajectory-mvp/INDEX.md`（T1 ✅ T2 ✅，T3/T4 未做）。
+- **今天的证据**（2026-10-15 第三次复核）：
+  - **后端 `cc7ef40`**：`services/trajectory_service.py` + `api/v1/trajectory.py` + `schemas/trajectory.py`，
+    挂进 `api/v1/router.py`（`GET /projects/{id}/trajectory`，纯读、不调模型）。**有真跑的输出**：
+    探针 `.workbuddy/localdb/verify_trajectory.py` 对真库跑通九类事件、排除无锚点的块、标出近似时间与
+    无归属通知、空空间为空；后端 526 passed / 0 skipped。
+  - **真路由 `496b6d9`**：`/learn-spaces/:id/trajectory` + `pages/TrajectorySpacePage.tsx`（纵向列表）。
+    前端 323 passed · tsc / eslint / build 干净。
+  - **入口有了 `ac832fd`**：切换栏第四项「轨迹」（与「聚焦」同一条路：独立路由）。
+    ⚠️ 头脑风暴更倾向**原地换**（与网格同类），**尚未定**。
+  - **免登录评审路由 `6f9cf85`**：`/preview/trajectory-events`（同一段代码 + fixture，`?state=empty` 看空态），
+    已真截图看过。⚠️ 与旧原型 `/preview/trajectory`（假数据、画布+四问+抽屉）**并存，不许合并**。
+  - 前端原型 `TrajectoryView.tsx`（551 行）仍是假数据；它**已经接了 `BoardCanvas`**（拖动 + 指针锚点缩放），
+    即**画布骨架已存在**，T5 只是把真事件喂进去（见计划 §8.2）。
+  - ⚠️ **「点回原处」与有内容的画面没在真浏览器里看过** —— 这条路由要 token，本机没有（见 E3）。
+    ⇒ 按完成判据**尚未满足**，卡在登录态上（画布版还额外卡在"还没做"）。
+  - ⚠️ **"判断"那些句子仍然没人写**：`whatChanged / implication / whatRemains` 不是任何表里的字段，
+    本版**刻意一句不写**（没依据就留白）。
+  - 计划 `.plans/trajectory-mvp/INDEX.md`（T1/T2/T2.5/T4 ✅；**T5 画布版 = 下一步，见 §8**；T3/T6 未做）。
     更早那版 `.workbuddy/plans/trajectory-rebuild-plan.md` 里「第 1 步之前，一行代码未动」已过期。
 - **完成判据**：真实空间的真实路由里能打开它，图上**每一个节点都能点回它的依据**（一次交互 / 一份产物 / 一行证据），
   且**没有依据的节点显式写"没有记录支撑"** —— 而不是让模型补一句话。
