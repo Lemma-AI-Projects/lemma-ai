@@ -23,6 +23,7 @@ from api.v1 import (
     scheduled_tasks,
     space_goals,
     speech,
+    trajectory,
     user_home,
     users,
     webhooks,
@@ -75,3 +76,6 @@ api_router.include_router(board.router)
 # 目标属于空间不属于人，所以它与 /projects/{id}/preferences 同一条路，而
 # user_home 那几条路由永远写不到它。
 api_router.include_router(space_goals.router)
+# 轨迹（Trajectory）：这个空间真实发生过什么。**只读、不调模型** ——
+# 图上每一行都对应某张表里的一行；没有依据的位置留白，不补一句话。
+api_router.include_router(trajectory.router)
