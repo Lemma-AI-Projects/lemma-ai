@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-15**（`practice-system` @ `8166078a`）
+> **最后更新：2026-10-15**（`practice-system` @ `496b6d99`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -126,17 +126,23 @@
 - **当初怎么说的**（推演）：那份 TOEFL 20 步推演本身就是一条**时间轴**，而清单顶部写明它是
   「**验收口径和界面文案原话的来源**」。§82 的长期地图里也有独立的 **TIME** 层，并指出真正的核心是那个环
   `Evidence → Learner State ↔ Knowledge Structure → Coordinator → Method → Experience → Evidence` —— 轨迹就是这个环的可视化。
-- **今天的证据**（2026-10-15 复核）：
-  - 前端有原型 `features/learn-space/trajectory/`（`TrajectoryView.tsx` + `mockData.ts`），挂在免登录的
-    `/preview/trajectory`（`AppRouter.tsx:91`）—— **仍然没有并进真实导航**。
-  - **后端 T1 已写出，但没提交、没验过**（2026-10-15 复核）：`services/trajectory_service.py`（375 行）·
-    `api/v1/trajectory.py` · `schemas/trajectory.py`，并把 `trajectory.router` 挂进了 `api/v1/router.py`
-    —— `git status` 里是 `?? trajectory.py ×3` + `M router.py`，**一个提交都没有**；
-    `ls backend/tests | grep -i traj` 空 ⇒ **零测试**；也**没有任何一次真跑的输出**（没有表行、没有截图、没有命令结果）。
-  - 计划在 `.plans/trajectory-mvp/INDEX.md`（10-15 写，用户拍板"先接真数据"：纯读、不调模型、不新增表）。
-    更早那版 `.workbuddy/plans/trajectory-rebuild-plan.md` 里「第 1 步之前，一行代码未动」已经过期。
+- **今天的证据**（2026-10-15 第二次复核，T1/T2 已落地）：
+  - 前端原型 `features/learn-space/trajectory/`（`TrajectoryView.tsx` + `mockData.ts`）**没动**，挂在免登录的
+    `/preview/trajectory`（`AppRouter.tsx:91`）—— 它仍然是假数据。
+  - **后端已提交**：`cc7ef40` 落 `services/trajectory_service.py` + `api/v1/trajectory.py` +
+    `schemas/trajectory.py` + 挂进 `api/v1/router.py`（`GET /projects/{id}/trajectory`，纯读、不调模型）。
+    **有真跑的输出**：探针 `.workbuddy/localdb/verify_trajectory.py` 对真库跑通九类事件、排除无锚点的块、
+    标出近似时间与无归属通知、空空间为空；后端 526 passed / 0 skipped。
+  - **真路由已挂**：`496b6d9` 落 `/learn-spaces/:id/trajectory` + `pages/TrajectorySpacePage.tsx`
+    （纵向列表；没 `href` 的行不给链接）。前端 323 passed · tsc / eslint / build 干净。
+  - ⚠️ **但「点回原处」与有内容的列表没在真浏览器里看过** —— 这条路由要 token，本机没有（见 E3）。
+    ⇒ 这一条**尚不满足完成判据**，卡在登录态上，不是卡在代码上。
+  - ⚠️ **入口还没有**：从空间页进不去，只有 URL 能到（T4 未做）。
   - ⚠️ **契约本身要求"判断"而不只是"事实"**：`TrajectoryNode` 里的 `whatChanged / implication / whatRemains`
-    是叙事判断，不是任何表里的字段 ⇒ 接真数据**必须**有一样东西来写这些句子（人或模型）。
+    是叙事判断，不是任何表里的字段。**这一版刻意一句不写**（没依据就留白）⇒ 要真正"完成"，
+    还缺一个决定：那些句子由谁写、凭什么写。
+  - 计划在 `.plans/trajectory-mvp/INDEX.md`（T1 ✅ T2 ✅，T3/T4 未做）。
+    更早那版 `.workbuddy/plans/trajectory-rebuild-plan.md` 里「第 1 步之前，一行代码未动」已过期。
 - **完成判据**：真实空间的真实路由里能打开它，图上**每一个节点都能点回它的依据**（一次交互 / 一份产物 / 一行证据），
   且**没有依据的节点显式写"没有记录支撑"** —— 而不是让模型补一句话。
 
