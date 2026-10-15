@@ -4,6 +4,7 @@ import {
   FilePlus2,
   FolderPlus,
   Focus,
+  History,
   LayoutGrid,
   SquarePen,
   Upload,
@@ -18,83 +19,113 @@ import {
 import { MATERIAL_EXTENSIONS } from '@/features/docs/importFile'
 import { cn } from '@/lib/utils'
 
-/** 三种视角。网格是默认；画板与聚焦还在设计里（见 learn-space-design.md）。 */
-export type WorkspaceView = 'grid' | 'board' | 'focus'
+/**
+ * 切换器里的四项 —— 但**它们是两类东西**，这一点必须写在类型里：
+ *
+ *   * **视图（view）**：网格 / 画板 —— 切换是**原地换布局**，`view` 这个 state 会变；
+ *   * **去处（jump）**：聚焦 / 轨迹 —— 它们是**另一屏**（各有独立路由），点下去是
+ *     "走过去"，`view` 不变。所以触发按钮上永远显示的是当前那个**视图**。
+ *
+ * ⚠️ 这里原来是三个值（`'grid' | 'board' | 'focus'`），但 `view` **从来没有**等于过
+ * `'focus'` —— 聚焦那条路一直是 `onOpenFocus()` 走掉的。类型写着三个、实际只可能是两个，
+ * 是一句会误导人的注释。现在把"去处"从类型里拿出来，两类的区别就摆在了明面上。
+ */
+export type WorkspaceView = 'grid' | 'board'
 
-const VIEW_ORDER: WorkspaceView[] = ['grid', 'board', 'focus']
-
-const VIEW_LABELS: Record<WorkspaceView, string> = {
-  grid: '网格',
-  board: '画板',
-  focus: '聚焦',
+/**
+ * ⚠️ **加了轨迹之后，「同一份数据、三种摆法」这句话不再成立。**
+ * 网格 / 画板 / 聚焦确实是同一批内容的三种摆法；而**轨迹是按时间读的那一条**
+ * （它讲"发生过什么"，不是"有什么"，而且它今天只画得出有行的事件）。
+ * 所以菜单底下的说明改成「怎么看这个空间」—— 四个都装得下。
+ */
+interface MenuEntry {
+  key: WorkspaceView | 'focus' | 'trajectory'
+  label: string
+  icon: typeof LayoutGrid
+  /** 点了是"走过去"（另一屏），不是原地换布局。 */
+  jump?: 'focus' | 'trajectory'
 }
 
-const VIEW_ICONS: Record<WorkspaceView, typeof LayoutGrid> = {
-  grid: LayoutGrid,
-  board: Waypoints,
-  focus: Focus,
-}
+const MENU_ENTRIES: MenuEntry[] = [
+  { key: 'grid', label: '网格', icon: LayoutGrid },
+  { key: 'board', label: '画板', icon: Waypoints },
+  { key: 'focus', label: '聚焦', icon: Focus, jump: 'focus' },
+  { key: 'trajectory', label: '轨迹', icon: History, jump: 'trajectory' },
+]
 
 const TRIGGER =
   'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-zinc-900/10'
 
 /**
- * `dimension` —— 顶部最右那个位置（别家产品放"排序方式"）放的是**视角**。
+ * `dimension` —— 顶部最右那个位置（别家产品放"排序方式"）放的是**怎么看这个空间**。
  *
- * 它不是排序、不是筛选：切换视角不改变"空间里有什么"，只改变"这一屏怎么摆"。
+ * 四项，两类：
+ *  * **原地换**（网格 / 画板）：只改变"这一屏怎么摆"，空间里有什么一点不变；
+ *  * **走过去**（聚焦 / 轨迹）：各有独立路由的另一屏 —— 所以它们不把这一屏的 state
+ *    改掉（改了会画出一片空白），而是调各自的 `onOpen*`。
  *
- * **网格与聚焦现在都能选**：网格在这一屏原地换；聚焦是**另一屏**（单份资料，
- * 独立路由），所以它走 `onOpenFocus` 而不是把这一屏的 state 改掉 —— 后者会画
- * 出一片空白。画板**列出来但不可选**：一个点不动的菜单项，比一个假装能切的项
- * 诚实（沿用仓库纪律：不做点了没反应的东西）。
+ * 画板**列出来但不可选**：一个点不动的菜单项，比一个假装能切的项诚实
+ * （沿用仓库纪律：不做点了没反应的东西）。轨迹可真去（`/learn-spaces/:id/trajectory`）。
  */
 export function WorkspaceModeMenu({
   view,
   onChange,
   onOpenFocus,
+  onOpenTrajectory,
   className,
 }: {
   view: WorkspaceView
   onChange: (view: WorkspaceView) => void
   onOpenFocus?: () => void
+  onOpenTrajectory?: () => void
   className?: string
 }) {
+  const current = MENU_ENTRIES.find((entry) => !entry.jump && entry.key === view)!
+  const CurrentIcon = current.icon
+
   return (
     <ActionMenu
       align="end"
       width="md"
       trigger={
         <button type="button" aria-label="切换视角" className={cn(TRIGGER, className)}>
-          <Waypoints className="size-4" />
-          <span>{VIEW_LABELS[view]}</span>
+          <CurrentIcon className="size-4" />
+          <span>{current.label}</span>
           <ChevronDown className="size-3.5 text-zinc-400" />
         </button>
       }
     >
-      {VIEW_ORDER.map((option) => {
-        const Icon = VIEW_ICONS[option]
-        const isCurrent = option === view
-        const isReady = option === 'grid' || (option === 'focus' && Boolean(onOpenFocus))
+      {MENU_ENTRIES.map((entry) => {
+        const Icon = entry.icon
+        const isCurrent = entry.key === view
+        // 去哪一屏需要那个回调真的给了（预览页就没有空间，给不出来）。
+        const isReady = entry.jump
+          ? Boolean(entry.jump === 'focus' ? onOpenFocus : onOpenTrajectory)
+          : true
         return (
           <ActionMenuItem
-            key={option}
+            key={entry.key}
             icon={Icon}
             disabled={!isReady}
-            label={isCurrent ? `${VIEW_LABELS[option]}（当前）` : VIEW_LABELS[option]}
+            label={isCurrent ? `${entry.label}（当前）` : entry.label}
             onSelect={() => {
               if (!isReady) return
-              if (option === 'focus') {
+              if (entry.jump === 'focus') {
                 onOpenFocus?.()
                 return
               }
-              onChange(option)
+              if (entry.jump === 'trajectory') {
+                onOpenTrajectory?.()
+                return
+              }
+              onChange(entry.key as WorkspaceView)
             }}
           />
         )
       })}
       <ActionMenuSeparator />
       <p className="px-2 py-1.5 text-[12px] leading-4 text-zinc-400">
-        聚焦是另一屏（单份资料，能在里面写）。画板还在设计里。
+        聚焦是一屏一份资料；轨迹是这个空间发生过什么。画板还在设计里。
       </p>
     </ActionMenu>
   )
@@ -161,5 +192,3 @@ export function WorkspaceEditMenu({
     </>
   )
 }
-
-export { VIEW_LABELS }

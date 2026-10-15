@@ -68,6 +68,8 @@ export interface LearnSpaceWorkspaceProps {
    * 不在这个工作台上原地换布局。不给就按不可选处理（预览页）。
    */
   onOpenFocus?: () => void
+  /** 切换器里的「轨迹」：这个空间发生过什么（独立路由）。 */
+  onOpenTrajectory?: () => void
   /**
    * Learning Brief 数据。`undefined` = 板块未启用（dock 抽屉退回不渲染、面板不出现）；
    * `null` = 读取中（面板先出骨架）；对象 = 有数据。默认打开。
@@ -102,6 +104,7 @@ export function LearnSpaceWorkspace({
   onOpenNode,
   onOpenPage,
   onOpenFocus,
+  onOpenTrajectory,
   brief,
   onOpenBriefStep,
   onRefreshBrief,
@@ -292,6 +295,7 @@ export function LearnSpaceWorkspace({
             view={view}
             onChangeView={setView}
             onOpenFocus={onOpenFocus}
+            onOpenTrajectory={onOpenTrajectory}
             onNewFolder={handleNewFolder}
             onNewNote={handleNewNote}
             onUpload={handleUpload}

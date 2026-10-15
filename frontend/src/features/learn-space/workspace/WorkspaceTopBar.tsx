@@ -41,6 +41,12 @@ export interface WorkspaceTopBarProps {
    * 而不是把 view 改成 'focus' 然后画一片空白。
    */
   onOpenFocus?: () => void
+  /**
+   * 切到**轨迹**（这个空间发生过什么）。和聚焦同理：它有独立路由
+   * （`learn-spaces/:id/trajectory`），是"走过去"而不是原地换布局。
+   * 没给这个回调时那一项禁用 —— 预览页没有真实空间，过去了也读不到东西。
+   */
+  onOpenTrajectory?: () => void
   /** `edit` 的两个新建动作与上传（网格 / 画板里都能用）。 */
   onNewFolder: () => void
   onNewNote: () => void
@@ -67,6 +73,7 @@ export function WorkspaceTopBar({
   view,
   onChangeView,
   onOpenFocus,
+  onOpenTrajectory,
   onNewFolder,
   onNewNote,
   onUpload,
@@ -81,11 +88,15 @@ export function WorkspaceTopBar({
   onClose,
   onOpenSettings,
 }: WorkspaceTopBarProps) {
-  // 缩放与页面切换是**聚焦**的工具：网格是目录、画板是全景，都不需要它们。
-  // 状态仍然留在 LearnSpaceWorkspace 里（聚焦要用），这里只是不渲染。
-  const showsCanvasControls = view === 'focus'
-  // `edit` 往空间里放东西：聚焦是读/写单件的地方，不放这一组。
-  const showsEdit = view !== 'focus'
+  // ⚠️ 这里原来写的是 `view === 'focus'` / `view !== 'focus'`，而 `view` **从来不可能**
+  // 等于 'focus'（聚焦是最外层另一条路由，不在这块工作台上）。把类型收窄成
+  // `'grid' | 'board'` 之后这件事才露出来：
+  //   * `showsEdit` 恒为 true ⇒ 编辑菜单**一直在渲染**（下面直接渲染，去掉这个标志）；
+  //   * `showsCanvasControls` 恒为 false ⇒ **缩放控件从来没有渲染过**，也就是说
+  //     画板的 `zoom` 一直恒为 100（`WorkspaceCanvas` 没有滚轮缩放）。
+  // 这一轮只收拾切换栏，**不改这个行为**：保持不渲染，问题如实记在这里，
+  // 「要不要给画板补一个真的缩放入口」是另一个决定（代码在 git 历史里，随时能捡回来）。
+  const showsCanvasControls = false
 
   return (
     <header className="flex h-11 shrink-0 items-center gap-2">
@@ -126,13 +137,11 @@ export function WorkspaceTopBar({
 
       <div className="min-w-0 flex-1" />
 
-      {showsEdit && (
-        <WorkspaceEditMenu
-          onNewFolder={onNewFolder}
-          onNewNote={onNewNote}
-          onUpload={onUpload}
-        />
-      )}
+      <WorkspaceEditMenu
+        onNewFolder={onNewFolder}
+        onNewNote={onNewNote}
+        onUpload={onUpload}
+      />
 
       {showsCanvasControls && (
         <>
@@ -194,6 +203,7 @@ export function WorkspaceTopBar({
         view={view}
         onChange={onChangeView}
         onOpenFocus={onOpenFocus}
+        onOpenTrajectory={onOpenTrajectory}
       />
 
       {/* 标记：参考稿有此按钮，行为未定义 → 禁用而不是假装可点。 */}

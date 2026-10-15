@@ -111,6 +111,11 @@ export function LearnSpaceWorkspacePage() {
     navigate(`/learn-spaces/${id}/focus`)
   }, [id, navigate])
 
+  // dimension → 轨迹：同理，它是另一屏（这个空间发生过什么）。只读、不调模型。
+  const handleOpenTrajectory = useCallback(() => {
+    navigate(`/learn-spaces/${id}/trajectory`)
+  }, [id, navigate])
+
   let errorText: string | undefined
   if (projectQuery.isError) {
     errorText = isNotFoundError(projectQuery.error)
@@ -133,6 +138,7 @@ export function LearnSpaceWorkspacePage() {
       onOpenNode={handleOpenNode}
       onOpenPage={handleOpenPage}
       onOpenFocus={handleOpenFocus}
+      onOpenTrajectory={handleOpenTrajectory}
       brief={brief}
       onOpenBriefStep={handleOpenBriefStep}
       onRefreshBrief={refreshBrief}
