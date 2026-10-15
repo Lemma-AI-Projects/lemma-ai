@@ -28,6 +28,7 @@ import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
 import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
+import { TrajectoryEventsPreviewPage } from '@/pages/TrajectoryEventsPreviewPage'
 import { TrajectoryPreviewPage } from '@/pages/TrajectoryPreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { OnboardingPreviewPage } from '@/pages/OnboardingPreviewPage'
@@ -91,6 +92,15 @@ const routes: RouteObject[] = [
     // 将来 Shelter 只需要指向这条路径，不必先改现有导航结构。
     path: '/preview/trajectory',
     element: <TrajectoryPreviewPage />,
+  },
+  {
+    // 轨迹的**真数据版**（与上面那条不是一回事）：这一条渲染的是真实路由
+    // `/learn-spaces/:id/trajectory` 用的**同一段代码**（`TrajectoryTimeline`），
+    // 只是数据来自 fixture。免登录，所以能在本机看到它长什么样。
+    // ⚠️ 上面那条是旧原型（画布 + 四问 + 依据抽屉），讲"我走了多远"；
+    // 这一条讲"到底发生了什么"。两条并存是有意的。
+    path: '/preview/trajectory-events',
+    element: <TrajectoryEventsPreviewPage />,
   },
   {
     // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。
