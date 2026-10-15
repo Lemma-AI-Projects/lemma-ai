@@ -34,6 +34,7 @@ import { OnboardingPreviewPage } from '@/pages/OnboardingPreviewPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
+import { TrajectorySpacePage } from '@/pages/TrajectorySpacePage'
 import { SchedulePreviewPage } from '@/pages/SchedulePreviewPage'
 import { UserProfilePreviewPage } from '@/pages/UserProfilePreviewPage'
 
@@ -141,6 +142,13 @@ const routes: RouteObject[] = [
         // 不是"没加载完"。dimension 下拉里的「聚焦」落到这里。
         path: 'learn-spaces/:id/focus',
         element: <FocusView />,
+      },
+      {
+        // 轨迹（Trajectory）：这个空间**真实发生过什么**。
+        // 只读、不套 AppLayout（和上面两条一样是"一屏到底"的页）。
+        // ⚠️ 这一版只画事实、不写判断 —— 见 pages/TrajectorySpacePage.tsx 顶部。
+        path: 'learn-spaces/:id/trajectory',
+        element: <TrajectorySpacePage />,
       },
       {
         element: <AppLayout />,
