@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom'
 
-import type {
-  TrajectoryEvent,
-  TrajectoryKind,
-  TrajectoryResponse,
-} from './trajectoryApi'
+import type { TrajectoryEvent, TrajectoryResponse } from './trajectoryApi'
+import { KIND_LABEL } from './trajectoryLabels'
+import { ApproxMark } from './trajectoryMarks'
 
 /**
  * 轨迹的时间线（**真数据版**）—— 这个空间真实发生过什么。**只收 props，不取数。**
@@ -30,30 +28,6 @@ import type {
  * 2. **归不到这个空间的东西**：通知表没有空间字段，取不到的那些**数出来**放在末尾。
  * 3. **空就是空**：什么都没发生过时说"还没有可追溯的记录"，不编一条占位。
  */
-
-const KIND_LABEL: Record<TrajectoryKind, string> = {
-  material: '资料',
-  annotation: '边注',
-  goal: '目标',
-  memory: '记住',
-  conversation: '对话',
-  evidence: '证据',
-  bundle: '圈选',
-  decision: '决定',
-  notification: '提醒',
-}
-
-/** 「时间≈」—— 近似时间的标记。它必须比标题显眼一点点，否则没人会看见。 */
-function ApproxMark() {
-  return (
-    <span
-      title="这张表里没有时间戳，这里用的是它所在页的更新时间"
-      className="shrink-0 rounded border border-dashed border-zinc-300 px-1 text-[10px] text-zinc-400 dark:border-zinc-600"
-    >
-      时间≈
-    </span>
-  )
-}
 
 function Row({ event }: { event: TrajectoryEvent }) {
   const when = new Date(event.at)
