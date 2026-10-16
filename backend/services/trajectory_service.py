@@ -30,7 +30,7 @@ from models.ai_conversation import AiConversation
 from models.board_context import BoardContextBundle
 from models.coordinator_decision import CoordinatorDecision
 from models.doc import Block, Page
-from models.knowledge import KnowledgeEvidence
+from models.knowledge import KnowledgeEdge, KnowledgeEvidence, KnowledgeItem
 from models.notification import Notification
 from models.space_goal import SpaceGoal
 from models.space_memory import SpaceMemory
@@ -40,6 +40,10 @@ from models.space_memory import SpaceMemory
 _MAX_EVENTS = 500
 #: 每个来源各自的上限，防止单一来源（例如几百条边注）把别的来源挤掉。
 _MAX_PER_SOURCE = 200
+
+#: 一个空间的知识骨架最多读这么多点/边。今天的量级是十几个，
+#: 但这是**读的地方**，得有个上限 —— 否则一个坏掉的库能拖死这一屏。
+_MAX_ITEMS = 800
 
 #: 时间精度。`APPROX` 全部用在"表里没有时间戳、只能拿邻居的时间"的场合。
 EXACT = "exact"
@@ -57,6 +61,30 @@ class TrajectoryEvent:
     title: str
     source: dict[str, Any]
     href: str | None = None
+    #: 这一行属于哪个知识点。**今天只有证据有**（`knowledge_evidence.item_id`）；
+    #: 其余八类没有这个字段 —— 所以树上大部分经历会挂在"挂不上"那一栏。
+    #: **那不是 bug，是它要如实反映的现实**（要么是没记，要么是没得可挂）。
+    item_id: uuid.UUID | None = None
+
+
+@dataclass(frozen=True)
+class KnowledgePoint:
+    """骨架上的一个知识点。它**不是一条事件** —— 它没有"发生在某天"，它是"存在"。"""
+
+    id: uuid.UUID
+    label: str
+    kind: str
+    origin: str
+    status: str
+
+
+@dataclass(frozen=True)
+class PrereqEdge:
+    """一条先修关系：`from` 是前提，`to` 是它之后才谈得上的那个。"""
+
+    from_item_id: uuid.UUID
+    to_item_id: uuid.UUID
+    confidence: str
 
 
 @dataclass(frozen=True)
@@ -66,6 +94,9 @@ class Trajectory:
     #: 归不到这个空间、但也确实发生了的东西，按来源计数（目前只有通知）。
     unattributed: dict[str, int] = field(default_factory=dict)
     truncated: bool = False
+    #: 这个空间的知识骨架 —— **树的那一根主干**。它不是事件，所以不跟事件排在一起。
+    points: list[KnowledgePoint] = field(default_factory=list)
+    prereqs: list[PrereqEdge] = field(default_factory=list)
 
     @property
     def span(self) -> tuple[datetime | None, datetime | None]:
@@ -278,6 +309,9 @@ async def assemble(
                 title=title,
                 source={"table": "knowledge_evidence", "id": str(row.id)},
                 href=_space_href(project_id),
+                # ⚠️ 这是今天**唯一**一条"经历挂得到知识上"的真实边。
+                # 别的八类都没有这个字段 —— 树上它们只能站在"挂不上"那一栏。
+                item_id=row.item_id,
             )
         )
 
@@ -367,9 +401,52 @@ async def assemble(
     if len(events) > _MAX_EVENTS:
         events = events[-_MAX_EVENTS:]  # 留最近的这些
 
+    # ---------------------------------------------------------------- 知识骨架
+    # ⚠️ **它不跟事件排在一起，也不是事件。** 事件回答"哪天发生了什么"；
+    # 知识点回答"存在哪些要学的东西"。把它塞进 events 会让它跟着时间轴滚走，
+    # 而树需要它一直在那儿当主干。
+    points = (
+        await db.execute(
+            select(KnowledgeItem)
+            .where(KnowledgeItem.project_id == project_id)
+            .order_by(KnowledgeItem.created_at)
+            .limit(_MAX_ITEMS)
+        )
+    ).scalars().all()
+    prereqs = (
+        await db.execute(
+            select(KnowledgeEdge)
+            .where(KnowledgeEdge.project_id == project_id)
+            .order_by(KnowledgeEdge.created_at)
+            .limit(_MAX_ITEMS)
+        )
+    ).scalars().all()
+    known = {point.id for point in points}
+
     return Trajectory(
         space_id=project_id,
         events=events,
         unattributed=unattributed,
         truncated=truncated,
+        points=[
+            KnowledgePoint(
+                id=point.id,
+                label=point.label,
+                kind=point.kind,
+                origin=point.origin,
+                status=point.status,
+            )
+            for point in points
+        ],
+        # ⚠️ 丢掉指向不在这个空间里的点 —— 半个边画不出树，而画一条悬空的线
+        # 比不画更糟（看起来像"这里有个东西"，其实没有）。
+        prereqs=[
+            PrereqEdge(
+                from_item_id=edge.from_item_id,
+                to_item_id=edge.to_item_id,
+                confidence=edge.confidence,
+            )
+            for edge in prereqs
+            if edge.from_item_id in known and edge.to_item_id in known
+        ],
     )

@@ -42,6 +42,41 @@ class TrajectoryEventOut(BaseModel):
     source: dict[str, Any]
     #: 点回原处（前端路由）。没有可去的地方就是 null，而不是一个假链接。
     href: str | None = None
+    #: 这条经历挂在哪个知识点下面。**今天只有证据有**（`knowledge_evidence.item_id`），
+    #: 其余八类是 null —— 树上它们只能站在"挂不上"那一栏。别把它 null 当成"没读到"。
+    item_id: uuid.UUID | None = None
+
+
+class KnowledgePointOut(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    id: uuid.UUID
+    label: str
+    #: `concept` / …（`models/knowledge.py` 的取值）
+    kind: str
+    #: 这个点是**谁放进来的**（`agent_drafted` / `user_stated` / …）。
+    #: ⚠️ 不是判断，是这张表里存的一个字段 —— 界面上可以如实显示。
+    origin: str
+    status: str
+
+
+class PrereqEdgeOut(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    #: `from_item_id` 是**前提**；`to_item_id` 是它之后才谈得上的那个。
+    from_item_id: uuid.UUID
+    to_item_id: uuid.UUID
+    confidence: str
+
+
+class TrajectoryKnowledgeOut(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    #: 这个空间的知识骨架 —— **树的主干**。
+    #: ⚠️ 它**不是事件**：事件回答"哪天发生了什么"，它回答"存在哪些要学的东西"。
+    points: list[KnowledgePointOut]
+    #: 只包含两端都在 `points` 里的边；半个边画不出树。
+    prereqs: list[PrereqEdgeOut]
 
 
 class TrajectorySpanOut(BaseModel):
@@ -64,3 +99,5 @@ class TrajectoryOut(BaseModel):
     unattributed: dict[str, int]
     #: 事件数到了上限、只返回了最近的这些。
     truncated: bool
+    #: 知识骨架。**一个空空间也会返回它** —— 知识点不属于时间。
+    knowledge: TrajectoryKnowledgeOut

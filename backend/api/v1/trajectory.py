@@ -15,7 +15,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from core.security import CurrentUser, get_current_user
-from schemas.trajectory import TrajectoryEventOut, TrajectoryOut, TrajectorySpanOut
+from schemas.trajectory import (
+    KnowledgePointOut,
+    PrereqEdgeOut,
+    TrajectoryEventOut,
+    TrajectoryKnowledgeOut,
+    TrajectoryOut,
+    TrajectorySpanOut,
+)
 from services import project_service, trajectory_service
 
 router = APIRouter(prefix="/projects", tags=["trajectory"])
@@ -59,9 +66,30 @@ async def get_trajectory(
                 title=event.title,
                 source=event.source,
                 href=event.href,
+                item_id=event.item_id,
             )
             for event in trajectory.events
         ],
         unattributed=trajectory.unattributed,
         truncated=trajectory.truncated,
+        knowledge=TrajectoryKnowledgeOut(
+            points=[
+                KnowledgePointOut(
+                    id=point.id,
+                    label=point.label,
+                    kind=point.kind,
+                    origin=point.origin,
+                    status=point.status,
+                )
+                for point in trajectory.points
+            ],
+            prereqs=[
+                PrereqEdgeOut(
+                    from_item_id=edge.from_item_id,
+                    to_item_id=edge.to_item_id,
+                    confidence=edge.confidence,
+                )
+                for edge in trajectory.prereqs
+            ],
+        ),
     )
