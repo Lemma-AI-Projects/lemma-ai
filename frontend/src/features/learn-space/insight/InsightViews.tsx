@@ -155,9 +155,8 @@ export function InsightPanel({
                     <span className="min-w-0 flex-1 text-[13px] leading-6" style={{ color: INK }}>
                       {row.what}
                     </span>
-                    <span className="shrink-0 text-[12px]" style={{ color: row.verdict === 'correct' ? MUTED : ACCENT }}>
-                      {row.verdict === 'correct' ? '对' : '错'}
-                    </span>
+                    {/* 对错已经在句子里说了（"做对了…"），这里只留**区别**：
+                        用了提示 vs 独立。四行都写一个"对"是噪音。 */}
                     {row.hinted ? (
                       <span
                         className="shrink-0 rounded-sm px-1 py-px text-[11px]"
@@ -212,13 +211,10 @@ export function InsightPanel({
                   key={item.key}
                   type="button"
                   onClick={() => onAction(item.key)}
-                  className="text-[13px] transition-opacity hover:opacity-60"
-                  style={{
-                    color: item.key === 'accepted' ? INK : MUTED,
-                    textDecoration: item.key === 'accepted' ? 'none' : 'underline',
-                    textDecorationColor: HAIR,
-                    textUnderlineOffset: 4,
-                  }}
+                  className="text-[13px] underline decoration-1 underline-offset-4 transition-opacity hover:opacity-60"
+                  /* ⚠️ 三个动作**同一种分量** —— 不能把"知道了"做成主按钮。
+                     那等于在暗示"接受是默认"，而这条观察只是一个观察。 */
+                  style={{ color: MUTED, textDecorationColor: HAIR }}
                 >
                   {item.label}
                 </button>
@@ -408,26 +404,28 @@ export function FocusView({
         </div>
       </section>
 
-      {/* 启示在聚焦里的样子：**贴在底部的一条带子**，不遮正文，不弹窗。
-          它只在"和手上这件事有关"的时候出现。 */}
+      {/* 启示在聚焦里的样子：**跟着这一页走的一条注**，不是压在正文上的浮条。
+          ⚠️ 早先做过 `sticky bottom-0`，结果在矮屏上把"交给她看"按钮盖住了 ——
+          那正是这一页要避免的事：它不该因为存在而打断你。所以放在正文之后、贴近这道题。 */}
       {!dismissed && (
-        <div className="sticky bottom-0 -mx-10 mt-10 px-10 pt-4 pb-5" style={{ background: 'linear-gradient(to top, #FBF9F4 62%, rgba(251,249,244,0))' }}>
-          <div
-            className="flex items-center gap-3 rounded-md px-4 py-3"
-            style={{ backgroundColor: SURFACE, border: `1px solid ${HAIR}` }}
-          >
-            <InsightMark />
-            <span className="min-w-0 flex-1 text-[12.5px] leading-5" style={{ color: MUTED }}>
-              这条启示和你正在做的题有关 —— 前三次做对都用了提示。
+        <div className="mt-9" style={{ borderTop: `1px solid ${HAIR}` }}>
+          <div className="flex items-start gap-2.5 pt-4">
+            <span className="mt-2">
+              <InsightMark />
             </span>
-            <button
-              type="button"
-              onClick={onOpenInsight}
-              className="shrink-0 text-[12.5px] transition-opacity hover:opacity-60"
-              style={{ color: ACCENT }}
-            >
-              看看
-            </button>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12.5px] leading-6" style={{ color: MUTED }}>
+                这条观察和你正在做的题有关 —— 前三次做对都用了提示。
+              </p>
+              <button
+                type="button"
+                onClick={onOpenInsight}
+                className="mt-1.5 text-[12.5px] underline decoration-1 underline-offset-4 transition-opacity hover:opacity-60"
+                style={{ color: ACCENT, textDecorationColor: HAIR }}
+              >
+                看看这条观察
+              </button>
+            </div>
           </div>
         </div>
       )}
