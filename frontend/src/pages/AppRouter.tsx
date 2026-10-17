@@ -28,6 +28,7 @@ import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
 import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
+import { InsightPreviewPage } from '@/pages/InsightPreviewPage'
 import { TrajectoryEventsPreviewPage } from '@/pages/TrajectoryEventsPreviewPage'
 import { TrajectoryPreviewPage } from '@/pages/TrajectoryPreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -101,6 +102,13 @@ const routes: RouteObject[] = [
     // 这一条讲"到底发生了什么"。两条并存是有意的。
     path: '/preview/trajectory-events',
     element: <TrajectoryEventsPreviewPage />,
+  },
+  {
+    // 启示（Insight）的评审入口：一条观察在**空间 / 聚焦 / 轨迹**三处的样子。
+    // 免登录、假数据、不连后端（回应只活在页面 state 里）。
+    // 设计：ADAPTIVE_INSIGHT_V0.md（§5 明确"表示形态只记约束、不锁视觉"）。
+    path: '/preview/insight',
+    element: <InsightPreviewPage />,
   },
   {
     // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。
