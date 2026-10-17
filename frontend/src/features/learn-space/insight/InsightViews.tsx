@@ -19,14 +19,73 @@ import {
  * 在空间里它是一条安静的行，在聚焦里它是一条贴在底部的带子，在轨迹里它是被引用那几行的左竖线。
  * 它们指向同一件事 —— 这就是"三个视图而不是三个产品"。
  */
-export const INK = '#1B1A17'
-export const MUTED = '#6E6960'
-export const FAINT = '#989285'
-export const HAIR = '#E7E2D7'
-export const ACCENT = '#8A5A2B'
-export const SURFACE = '#FFFFFF'
+/**
+ * 这一页的纸与墨。
+ *
+ * ⚠️ **值不在这里**，在 `index.css` 的 `--insight-*` 里。这么绕只为一件事：**暗色只改一处**。
+ * 之前这些色值以字面量散在两个文件里十几处，加暗色要一寸一寸改，漏一处就是暗底上的一块亮斑。
+ * 现在 `.dark` 覆盖同一组变量，这边一行都不用动。
+ *
+ * ⚠️ 它们故意**不叫** `--color-ink` 那种通用名：这不是全站语言（全站中性、这一页暖纸 + 赭）。
+ * 要不要合并是产品决定，记在计划 §6。
+ */
+export const INK = 'var(--insight-ink)'
+export const MUTED = 'var(--insight-muted)'
+export const FAINT = 'var(--insight-faint)'
+export const HAIR = 'var(--insight-hair)'
+export const ACCENT = 'var(--insight-accent)'
+export const SURFACE = 'var(--insight-surface)'
+/** 「用了提示」那枚小标签的底。它很淡，但必须比正文暖一点，否则看不见。 */
+export const TINT = 'var(--insight-tint)'
 
 /* ───────────────────────── 共用的小零件 ───────────────────────── */
+
+/**
+ * 一条记录的**说法**：一句话 + 它是"用了提示"还是"独立"。
+ *
+ * ⚠️ **三个视图共用这一个组件**，不是三处各写一遍。
+ * 这一页最大的冗余就是"同一批记录两种说法" —— 差一点点措辞，读者就以为是两件事。
+ * 所以：**措辞活在数据里（一处），标记活在组件里（一处）**。
+ *
+ * `hinted === undefined` 表示"这条不是证据"（资料、边注、对话、决定）⇒ 不打标记。
+ * 给它们打一个"独立"是在编 —— 那些事本来就没有"提示"这回事。
+ *
+ * `fill` 决定那句话要不要占满整行把标记推到最右：
+ * - 面板里**要**（标记成一列，四行对得齐）；
+ * - 轨迹里**不要** —— 那一行有一千像素宽，标记飘到最右边就和它描述的那句话失散了。
+ */
+function RecordLabel({
+  what,
+  hinted,
+  fill = true,
+}: {
+  what: string
+  hinted?: boolean
+  fill?: boolean
+}) {
+  return (
+    <>
+      <span
+        className={`min-w-0 text-[13px] leading-6 ${fill ? 'flex-1' : ''}`}
+        style={{ color: INK }}
+      >
+        {what}
+      </span>
+      {hinted === undefined ? null : hinted ? (
+        <span
+          className="shrink-0 rounded-sm px-1 py-px text-[11px]"
+          style={{ color: ACCENT, backgroundColor: TINT }}
+        >
+          用了提示
+        </span>
+      ) : (
+        <span className="shrink-0 text-[11px]" style={{ color: MUTED }}>
+          独立
+        </span>
+      )}
+    </>
+  )
+}
 
 /** 这条启示的记号：一个赭色小点。三处都用它，别处不用颜色。 */
 export function InsightMark({ size = 6 }: { size?: number }) {
@@ -41,7 +100,7 @@ export function InsightMark({ size = 6 }: { size?: number }) {
 
 function Micro({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[11.5px] tracking-[0.02em]" style={{ color: FAINT }}>
+    <span className="text-[11px] tracking-[0.02em]" style={{ color: FAINT }}>
       {children}
     </span>
   )
@@ -89,7 +148,7 @@ export function InsightPanel({
         <span className="text-[12px] tracking-[0.14em]" style={{ color: FAINT }}>
           启示
         </span>
-        <span className="font-mono-cjk text-[11.5px]" style={{ color: FAINT }}>
+        <span className="font-mono-cjk text-[11px]" style={{ color: FAINT }}>
           {INSIGHT.createdAt}
         </span>
         <button
@@ -106,7 +165,7 @@ export function InsightPanel({
       <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-8">
         <div className="flex items-center gap-2">
           <InsightMark size={7} />
-          <span className="text-[12.5px]" style={{ color: MUTED }}>
+          <span className="text-[12px]" style={{ color: MUTED }}>
             关于「{INSIGHT.about}」
           </span>
         </div>
@@ -118,7 +177,7 @@ export function InsightPanel({
               {line}
             </p>
           ))}
-          <p className="mt-3 text-[17px] leading-[1.7]" style={{ color: MUTED }}>
+          <p className="mt-3 text-[19px] leading-[1.7]" style={{ color: MUTED }}>
             {INSIGHT.ask}
           </p>
         </div>
@@ -152,26 +211,10 @@ export function InsightPanel({
                     <span className="font-mono-cjk w-[74px] shrink-0 text-[12px]" style={{ color: FAINT }}>
                       {row.at.slice(5)}
                     </span>
-                    <span className="min-w-0 flex-1 text-[13px] leading-6" style={{ color: INK }}>
-                      {row.what}
-                    </span>
-                    {/* 对错已经在句子里说了（"做对了…"），这里只留**区别**：
-                        用了提示 vs 独立。四行都写一个"对"是噪音。 */}
-                    {row.hinted ? (
-                      <span
-                        className="shrink-0 rounded-sm px-1 py-px text-[11px]"
-                        style={{ color: ACCENT, backgroundColor: '#F5EDE2' }}
-                      >
-                        用了提示
-                      </span>
-                    ) : (
-                      <span className="shrink-0 text-[11px]" style={{ color: MUTED }}>
-                        独立
-                      </span>
-                    )}
+                    <RecordLabel what={row.what} hinted={row.hinted} />
                   </button>
                   {open && (
-                    <p className="pb-3 pl-[86px] text-[12.5px] leading-6" style={{ color: MUTED }}>
+                    <p className="pb-3 pl-[86px] text-[12px] leading-6" style={{ color: MUTED }}>
                       {row.detail}
                     </p>
                   )}
@@ -188,19 +231,19 @@ export function InsightPanel({
             <div className="pt-4">
               {/* 撤销放在同一行右端 —— 它是"改口"的出口，藏到下面会找不到。 */}
               <div className="flex items-baseline gap-3">
-                <p className="text-[13.5px]" style={{ color: INK }}>
+                <p className="text-[13px]" style={{ color: INK }}>
                   {settled.title}
                 </p>
                 <button
                   type="button"
                   onClick={() => onAction(null)}
-                  className="ml-auto shrink-0 text-[12.5px] underline decoration-1 underline-offset-4 transition-opacity hover:opacity-60"
+                  className="ml-auto shrink-0 text-[12px] underline decoration-1 underline-offset-4 transition-opacity hover:opacity-60"
                   style={{ color: MUTED, textDecorationColor: HAIR }}
                 >
                   撤销
                 </button>
               </div>
-              <p className="mt-1.5 text-[12.5px] leading-6" style={{ color: MUTED }}>
+              <p className="mt-1.5 text-[12px] leading-6" style={{ color: MUTED }}>
                 {settled.note}
               </p>
             </div>
@@ -223,7 +266,7 @@ export function InsightPanel({
           )}
         </section>
 
-        <p className="mt-8 text-[11.5px] leading-5" style={{ color: FAINT }}>
+        <p className="mt-8 text-[11px] leading-5" style={{ color: FAINT }}>
           这条观察来自你留下来的那几条记录，不是对你的评估。你可以不同意它。
         </p>
       </div>
@@ -236,16 +279,22 @@ export function InsightPanel({
 export function SpaceView({
   onOpenInsight,
   dismissed,
+  insightOpen,
 }: {
   onOpenInsight: () => void
   dismissed: boolean
+  /** 右边的面板是不是已经开着。开着时**这一行入口不再渲染** —— 见下面注释。 */
+  insightOpen: boolean
 }) {
   return (
     <div className="mx-auto w-full max-w-[720px] px-10 py-12">
-      {/* 启示的入口：**一行**，不是横幅、不是红点。它不打断你，但一直在。 */}
-      {!dismissed && (
+      {/* 启示的入口：**一行**，不是横幅、不是红点。它不打断你，但一直在。
+          ⚠️ 面板开着时它消失：同一个东西不该在同一屏有两个说法。
+          代价是"多条观察时找不到第二条" —— 今天只有一条，记在计划 P1 的风险里。 */}
+      {!dismissed && !insightOpen && (
         <button
           type="button"
+          data-insight-entry="closed"
           onClick={onOpenInsight}
           className="group mb-11 flex w-full items-center gap-2.5 rounded-sm py-1 text-left"
         >
@@ -262,34 +311,36 @@ export function SpaceView({
         </button>
       )}
 
-      <h1 className="font-serif text-[28px] leading-tight" style={{ color: INK }}>
+      <h1 className="font-serif text-[27px] leading-tight" style={{ color: INK }}>
         {SPACE.name}
       </h1>
-      <p className="mt-2.5 text-[13px]" style={{ color: MUTED }}>
-        目标 · {SPACE.goal}
+      {/* ⚠️ 这里原来写「目标 · 两周内…」，和左栏第 2 行**一字不差**。
+          空间叫什么、图什么，是左栏的事；中栏该说的是**跨度** —— 那是只有这里才有的一句。 */}
+      <p className="font-mono-cjk mt-2.5 text-[12px]" style={{ color: MUTED }}>
+        {SPACE.since} → 2026-10-16
       </p>
 
       <section className="mt-12">
-        <div className="mb-3 flex items-baseline justify-between">
+        <div className="mb-3">
           <span className="text-[12px] tracking-[0.14em]" style={{ color: FAINT }}>
             最近
           </span>
-          <Micro>{SPACE.since} 开始的</Micro>
         </div>
         <Rule />
         <ul>
           {SPACE.recent.map((row) => (
             <li
               key={row.at + row.what}
-              className="flex items-baseline gap-4 py-3"
+              className="flex items-baseline gap-3 py-3"
               style={{ borderBottom: `1px solid ${HAIR}` }}
             >
               <span className="font-mono-cjk w-[52px] shrink-0 text-[12px]" style={{ color: FAINT }}>
                 {row.at}
               </span>
-              <span className="text-[13.5px]" style={{ color: INK }}>
-                {row.what}
-              </span>
+              {/* ⚠️ 这里**故意不传 `hinted`**。
+                  时间流只回答"发生了什么"：做对了。至于"靠没靠提示"，那是这条启示要说的事。
+                  两处都标上，右栏就变成左边那三行的复制；不标，右栏才真的多给一层信息。 */}
+              <RecordLabel what={row.what} />
             </li>
           ))}
         </ul>
@@ -315,7 +366,7 @@ export function SpaceView({
                   style={{ backgroundColor: row.active ? ACCENT : 'transparent' }}
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[14px]" style={{ color: INK }}>
+                  <span className="block text-[13px]" style={{ color: INK }}>
                     {row.title}
                   </span>
                   <span className="mt-1 block text-[12px]" style={{ color: FAINT }}>
@@ -336,9 +387,11 @@ export function SpaceView({
 export function FocusView({
   onOpenInsight,
   dismissed,
+  insightOpen,
 }: {
   onOpenInsight: () => void
   dismissed: boolean
+  insightOpen: boolean
 }) {
   const [answer, setAnswer] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -351,7 +404,7 @@ export function FocusView({
         <span>{MATERIAL.title}</span>
       </div>
 
-      <h1 className="mt-4 font-serif text-[26px] leading-tight" style={{ color: INK }}>
+      <h1 className="mt-4 font-serif text-[27px] leading-tight" style={{ color: INK }}>
         {MATERIAL.title}
       </h1>
 
@@ -364,7 +417,7 @@ export function FocusView({
             {/* 讲义里被划上的那一句 —— 在真实产品里，笔记与边注就长在这个位置。 */}
             {index === 1 && (
               <p
-                className="mt-5 border-l-2 pl-5 font-serif text-[17px] leading-[1.8]"
+                className="mt-5 border-l-2 pl-5 font-serif text-[19px] leading-[1.8]"
                 style={{ borderColor: ACCENT, color: INK }}
               >
                 {MATERIAL.pull}
@@ -376,14 +429,14 @@ export function FocusView({
 
       <section className="mt-10 rounded-md p-6" style={{ backgroundColor: SURFACE, border: `1px solid ${HAIR}` }}>
         <Micro>试一道</Micro>
-        <p className="mt-2 font-serif text-[17px] leading-relaxed" style={{ color: INK }}>
+        <p className="mt-2 font-serif text-[19px] leading-relaxed" style={{ color: INK }}>
           {MATERIAL.question}
         </p>
         <input
           value={answer}
           onChange={(event) => setAnswer(event.target.value)}
           placeholder="写下来，或者只写你打算怎么算"
-          className="mt-4 w-full border-0 border-b bg-transparent py-2 text-[14px] outline-none placeholder:text-[13px]"
+          className="mt-4 w-full border-0 border-b bg-transparent py-2 text-[13px] outline-none placeholder:text-[13px]"
           style={{ borderColor: HAIR, color: INK }}
         />
         <div className="mt-4 flex items-center gap-4">
@@ -391,8 +444,8 @@ export function FocusView({
             type="button"
             onClick={() => setSubmitted(true)}
             disabled={!answer.trim()}
-            className="rounded-full px-4 py-1.5 text-[12.5px] transition-opacity disabled:opacity-30"
-            style={{ backgroundColor: INK, color: '#FBF9F4' }}
+            className="rounded-full px-4 py-1.5 text-[12px] transition-opacity disabled:opacity-30"
+            style={{ backgroundColor: INK, color: 'var(--insight-paper)' }}
           >
             交给她看
           </button>
@@ -406,21 +459,23 @@ export function FocusView({
 
       {/* 启示在聚焦里的样子：**跟着这一页走的一条注**，不是压在正文上的浮条。
           ⚠️ 早先做过 `sticky bottom-0`，结果在矮屏上把"交给她看"按钮盖住了 ——
-          那正是这一页要避免的事：它不该因为存在而打断你。所以放在正文之后、贴近这道题。 */}
-      {!dismissed && (
+          那正是这一页要避免的事：它不该因为存在而打断你。所以放在正文之后、贴近这道题。
+          ⚠️ 面板开着时这条注也不渲染 —— 它和面板正文说的是同一句话，而面板就在旁边。 */}
+      {!dismissed && !insightOpen && (
         <div className="mt-9" style={{ borderTop: `1px solid ${HAIR}` }}>
           <div className="flex items-start gap-2.5 pt-4">
             <span className="mt-2">
               <InsightMark />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-[12.5px] leading-6" style={{ color: MUTED }}>
+              <p className="text-[12px] leading-6" style={{ color: MUTED }}>
                 这条观察和你正在做的题有关 —— 前三次做对都用了提示。
               </p>
               <button
                 type="button"
+                data-insight-entry="closed"
                 onClick={onOpenInsight}
-                className="mt-1.5 text-[12.5px] underline decoration-1 underline-offset-4 transition-opacity hover:opacity-60"
+                className="mt-1.5 text-[12px] underline decoration-1 underline-offset-4 transition-opacity hover:opacity-60"
                 style={{ color: ACCENT, textDecorationColor: HAIR }}
               >
                 看看这条观察
@@ -437,22 +492,23 @@ export function FocusView({
 
 export function TrajectoryView({
   onOpenInsight,
-  dismissed,
+  insightOpen,
 }: {
   onOpenInsight: () => void
-  dismissed: boolean
+  /** 面板开着时，被引用的那几行不再可点 —— 点了也只是把同一块内容再指一次。 */
+  insightOpen: boolean
 }) {
   return (
     <div className="mx-auto w-full max-w-[720px] px-10 py-12">
       <div className="flex items-baseline gap-3">
-        <h1 className="font-serif text-[26px] leading-tight" style={{ color: INK }}>
+        <h1 className="font-serif text-[27px] leading-tight" style={{ color: INK }}>
           轨迹
         </h1>
         <span className="font-mono-cjk text-[12px]" style={{ color: FAINT }}>
           2026-09-03 → 2026-10-16
         </span>
       </div>
-      <p className="mt-2.5 text-[12.5px]" style={{ color: MUTED }}>
+      <p className="mt-2.5 text-[12px]" style={{ color: MUTED }}>
         这里只列真的发生过的事。这条启示引的那几行，左边有一道赭色的线。
       </p>
 
@@ -482,8 +538,8 @@ export function TrajectoryView({
                   </span>
                 )}
               </span>
-              <span className="mt-1 block text-[13.5px] leading-6" style={{ color: INK }}>
-                {event.title}
+              <span className="mt-1 flex items-baseline gap-2">
+                <RecordLabel what={event.title} hinted={event.hinted} fill={false} />
               </span>
             </>
           )
@@ -497,20 +553,21 @@ export function TrajectoryView({
                   width: cited ? 7 : 5,
                   height: cited ? 7 : 5,
                   marginLeft: cited ? -1 : 0,
-                  backgroundColor: cited ? ACCENT : '#FFFFFF',
-                  border: `1px solid ${cited ? ACCENT : '#CFC8BA'}`,
+                  backgroundColor: cited ? ACCENT : 'var(--insight-paper)',
+                  border: `1px solid ${cited ? ACCENT : 'var(--insight-dot)'}`,
                 }}
               />
               <span
-                className="font-mono-cjk absolute top-0 -left-[86px] w-[52px] text-right text-[11.5px]"
+                className="font-mono-cjk absolute top-0 -left-[86px] w-[52px] text-right text-[11px]"
                 style={{ color: FAINT }}
               >
                 {event.at.slice(5)}
               </span>
 
-              {cited ? (
+              {cited && !insightOpen ? (
                 <button
                   type="button"
+                  data-insight-entry="closed"
                   onClick={onOpenInsight}
                   className="block w-full border-l-2 pl-3 text-left transition-colors hover:bg-black/[0.015]"
                   style={{ borderColor: ACCENT }}
@@ -518,7 +575,10 @@ export function TrajectoryView({
                   {body}
                 </button>
               ) : (
-                <div className="border-l-2 pl-3" style={{ borderColor: 'transparent' }}>
+                <div
+                  className="border-l-2 pl-3"
+                  style={{ borderColor: cited ? ACCENT : 'transparent' }}
+                >
                   {body}
                 </div>
               )}
@@ -526,26 +586,6 @@ export function TrajectoryView({
           )
         })}
       </ol>
-
-      <div className="mt-2 pl-0">
-        <Rule />
-        <div className="flex items-center gap-2.5 pt-4">
-          <InsightMark />
-          <span className="text-[12.5px]" style={{ color: MUTED }}>
-            9 月 26 日之后的三次，都带着提示。
-          </span>
-          {!dismissed && (
-            <button
-              type="button"
-              onClick={onOpenInsight}
-              className="text-[12.5px] underline decoration-1 underline-offset-4 transition-opacity hover:opacity-60"
-              style={{ color: MUTED, textDecorationColor: HAIR }}
-            >
-              看这条启示
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

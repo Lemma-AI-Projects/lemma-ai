@@ -62,6 +62,46 @@
   color-scheme: dark;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   启示（Insight）这一页的「纸与墨」。
+
+   为什么提成变量：这九个色值原来散在两个 tsx 文件里、以 inline style 的形式出现十几处。
+   要加暗色就得一处一处改，而漏掉一处就是**暗色下的一块亮斑**（这一页原本正是这样）。
+   提成变量之后，暗色只改这一块。
+
+   ⚠️ 这里**没有**跟全站的 HSL 命名对齐（`--background` 那一套），因为它们不是同一套语言：
+   全站是中性色，这一页是暖纸 + 赭。等哪天决定"暖纸推广到全站"时，再把这两套合并（计划 §6 待拍）。
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --insight-paper: #fbf9f4;
+  --insight-panel: #fdfcfa;
+  --insight-surface: #ffffff;
+  --insight-ink: #1b1a17;
+  --insight-muted: #6e6960;
+  --insight-faint: #989285;
+  --insight-leaf: #b3ac9e;
+  --insight-hair: #e7e2d7;
+  --insight-dot: #cfc8ba;
+  --insight-accent: #8a5a2b;
+  --insight-tint: #f5ede2;
+}
+
+.dark {
+  /* 暖色在暗底上不能原样翻过来 —— 直接用 #1B1A17 当背景会变成纯黑死板，
+     用 #EDEAE3 当字色会太刺。这一组是把它整体压暗、再稍微减一点饱和。 */
+  --insight-paper: #131211;
+  --insight-panel: #171614;
+  --insight-surface: #1c1b18;
+  --insight-ink: #ece8e0;
+  --insight-muted: #a9a294;
+  --insight-faint: #7d776c;
+  --insight-leaf: #615c53;
+  --insight-hair: #2c2a26;
+  --insight-dot: #4a453d;
+  --insight-accent: #c08a57;
+  --insight-tint: #2a2119;
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));

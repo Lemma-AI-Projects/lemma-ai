@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import {
@@ -12,7 +12,6 @@ import {
   TrajectoryView,
 } from '@/features/learn-space/insight/InsightViews'
 import {
-  INSIGHT,
   PREVIEW_NOTE,
   SPACE,
   type UserAction,
@@ -42,7 +41,8 @@ import {
  *
  * 任何状态都要能**用一条链接指出来** —— 否则评审时只能靠"点给我看"，截图也没法固定：
  * `?view=space|focus|trajectory` · `?panel=1`（把启示面板打开）· `?action=accepted|questioned|dismissed`
- * 例：`/preview/insight?view=trajectory&panel=1&action=questioned`
+ * · `?dark=1`（切到暗色 —— 截图要能拍出"这一页在暗底下是不是一块亮斑"）
+ * 例：`/preview/insight?view=trajectory&panel=1&action=questioned&dark=1`
  */
 export function InsightPreviewPage() {
   const [params] = useSearchParams()
@@ -58,6 +58,19 @@ export function InsightPreviewPage() {
 
   const dismissed = action === 'dismissed'
   const openInsight = () => setPanelOpen(true)
+
+  /**
+   * `?dark=1` —— 让暗色也能**用一条链接指出来**。
+   *
+   * 为什么需要：暗色是 `.dark` 类控制的（见 `index.css` 的 `@custom-variant`），
+   * 而 headless 截图没法点主题开关。没有这个参数，"暗色下是不是一块亮斑"就只能靠嘴说。
+   * ⚠️ 只属于评审页；离开时把类摘掉，别把状态漏给下一次渲染。
+   */
+  const dark = params.get('dark') === '1'
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    return () => document.documentElement.classList.remove('dark')
+  }, [dark])
   const views: { key: View; label: string }[] = [
     { key: 'space', label: '空间' },
     { key: 'focus', label: '聚焦' },
@@ -65,7 +78,7 @@ export function InsightPreviewPage() {
   ]
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#FBF9F4', color: INK }}>
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--insight-paper)', color: INK }}>
       {/* ── 左栏：这个空间本身。它不该抢戏，但要走得出去。 ── */}
       <aside
         className="hidden w-[236px] shrink-0 flex-col border-r sm:flex"
@@ -73,10 +86,10 @@ export function InsightPreviewPage() {
         aria-label="空间导航"
       >
         <div className="px-6 pt-7">
-          <p className="font-serif text-[16px] leading-snug" style={{ color: INK }}>
+          <p className="font-serif text-[15px] leading-snug" style={{ color: INK }}>
             {SPACE.name}
           </p>
-          <p className="mt-2 text-[11.5px] leading-5" style={{ color: MUTED }}>
+          <p className="mt-2 text-[11px] leading-5" style={{ color: MUTED }}>
             目标 · {SPACE.goal}
           </p>
         </div>
@@ -98,7 +111,7 @@ export function InsightPreviewPage() {
                   className="h-[13px] w-[2px] shrink-0 rounded-full"
                   style={{ backgroundColor: active ? INK : 'transparent' }}
                 />
-                <span className="text-[13.5px]">{item.label}</span>
+                <span className="text-[13px]">{item.label}</span>
               </button>
             )
           })}
@@ -120,28 +133,32 @@ export function InsightPreviewPage() {
                   还是看看吧
                 </button>
               </div>
-            ) : (
+            ) : panelOpen ? null : (
+              /* ⚠️ 面板开着时这里**不渲染**。
+                 它不是"另一个入口"，它是同一件事的第二个说法 —— 而右边已经把它说全了。
+                 三个视图各自再留一个入口，正是这一页冗余的源头。 */
               <button
                 type="button"
+                data-insight-entry="closed"
                 onClick={openInsight}
                 className="group block w-full text-left"
                 aria-expanded={panelOpen}
               >
                 <span className="flex items-center gap-2">
                   <InsightMark />
-                  <span className="text-[12.5px]" style={{ color: MUTED }}>
-                    有 1 条观察
+                  {/* ⚠️ 这里写「启示 · 1 条」，不写「有 1 条观察」。
+                      后者和正文顶上那行「有一条观察，关于「特征值」」是**同一件事的两种说法**。
+                      分工应该是：左栏是**导航**（报告状态：启示 · 1 条 / 启示 · 已收起），
+                      正文那行是**内容**（说这条观察是关于什么的）。撞词就把分工抹掉了。 */}
+                  <span className="text-[12px]" style={{ color: MUTED }}>
+                    启示 · 1 条
                   </span>
                 </span>
-                <span className="mt-1.5 block text-[13px] leading-5" style={{ color: INK }}>
-                  关于「{INSIGHT.about}」
-                </span>
-                <span className="mt-1 block font-mono-cjk text-[11px]" style={{ color: '#B3AC9E' }}>
-                  {INSIGHT.createdAt}
-                </span>
+                {/* ⚠️ 这里原来还有「关于「特征值」」和日期 —— 那两行和右栏抬头**逐字相同**。
+                    左栏是"这里有一条"，右栏才是"它是关于什么的"。点开就知道，不必先写在两处。 */}
               </button>
             )}
-            <p className="mt-5 text-[10.5px] tracking-[0.04em]" style={{ color: '#B3AC9E' }}>
+            <p className="mt-5 text-[11px] tracking-[0.04em]" style={{ color: 'var(--insight-leaf)' }}>
               {PREVIEW_NOTE}
             </p>
           </div>
@@ -150,18 +167,23 @@ export function InsightPreviewPage() {
 
       {/* ── 主区：三个视图轮流住在这里。 ── */}
       <main className="min-w-0 flex-1 overflow-y-auto">
-        {view === 'space' && <SpaceView onOpenInsight={openInsight} dismissed={dismissed} />}
-        {view === 'focus' && <FocusView onOpenInsight={openInsight} dismissed={dismissed} />}
+        {view === 'space' && (
+          <SpaceView onOpenInsight={openInsight} dismissed={dismissed} insightOpen={panelOpen} />
+        )}
+        {view === 'focus' && (
+          <FocusView onOpenInsight={openInsight} dismissed={dismissed} insightOpen={panelOpen} />
+        )}
         {view === 'trajectory' && (
-          <TrajectoryView onOpenInsight={openInsight} dismissed={dismissed} />
+          <TrajectoryView onOpenInsight={openInsight} insightOpen={panelOpen} />
         )}
       </main>
 
       {/* ── 右栏：同一条观察。**换视图时它不动** —— 这正是"一个东西"的证据。 ── */}
       {panelOpen && (
         <aside
+          data-insight-entry="open"
           className="w-[clamp(320px,34vw,430px)] shrink-0 overflow-hidden border-l"
-          style={{ borderColor: HAIR, backgroundColor: '#FDFCFA' }}
+          style={{ borderColor: HAIR, backgroundColor: 'var(--insight-panel)' }}
           aria-label="这条启示"
         >
           <InsightPanel action={action} onAction={setAction} onClose={() => setPanelOpen(false)} />

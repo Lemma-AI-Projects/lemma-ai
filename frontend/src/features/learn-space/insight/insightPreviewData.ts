@@ -35,9 +35,13 @@ export const SPACE = {
     { id: 'm3', title: '往年题 · 线性代数', meta: '导入的 PDF · 9 页' },
   ],
   recent: [
-    { at: '10-15', what: '做了一道求特征值的题，做对了' },
-    { at: '10-09', what: '做了一道求特征值的题，做对了' },
-    { at: '10-05', what: '做了一道求特征值的题，做对了' },
+    /* ⚠️ 措辞必须和 `INSIGHT.evidence[].what` **一字不差**。
+       早先这里写的是「做了一道求特征值的题，做对了」，而面板写「做对了「特征值」的一道题」——
+       同一批记录两种说法，读者会以为是六条不同的记录。冗余的定义就是这个，不是"话说多了"。
+       ⚠️ 这里**没有** `hinted`：时间流只回答"发生了什么"，"靠没靠提示"是启示要说的事。 */
+    { at: '10-15', what: '做对了「特征值」的一道题' },
+    { at: '10-09', what: '做对了「特征值」的一道题' },
+    { at: '10-05', what: '做对了「特征值」的一道题' },
   ],
 }
 
@@ -99,20 +103,26 @@ export const INSIGHT = {
       id: 't3',
       at: '2026-09-26',
       kind: '证据',
-      title: '做对一道题，全程没有看提示',
+      /* ⚠️ 和 `evidence[].what` **一字不差** —— 同一批记录在三个视图里只能用一句话。
+         早先这里写「做对一道题，全程没有看提示」，面板写「做对了「特征值」的一道题」，
+         读者会当成两条不同的记录。 */
+      title: '做对了「特征值」的一道题',
+      hinted: false,
       cited: true,
       anchor: true,
     },
     { id: 't4', at: '2026-10-02', kind: '对话', title: '聊了一次「特征值到底是什么」' },
-    { id: 't5', at: '2026-10-05', kind: '证据', title: '做对一道题，用了提示', cited: true },
-    { id: 't6', at: '2026-10-09', kind: '证据', title: '做对一道题，用了提示', cited: true },
-    { id: 't7', at: '2026-10-15', kind: '证据', title: '做对一道题，用了提示', cited: true },
+    { id: 't5', at: '2026-10-05', kind: '证据', title: '做对了「特征值」的一道题', hinted: true, cited: true },
+    { id: 't6', at: '2026-10-09', kind: '证据', title: '做对了「特征值」的一道题', hinted: true, cited: true },
+    { id: 't7', at: '2026-10-15', kind: '证据', title: '做对了「特征值」的一道题', hinted: true, cited: true },
     { id: 't8', at: '2026-10-16', kind: '决定', title: '系统决定：REVIEW（下一次做特征值的题）' },
   ] as {
     id: string
     at: string
     kind: string
     title: string
+    /** 这条是不是"用了提示"。**不是证据的就不该有值** —— 有值才显示标记。 */
+    hinted?: boolean
     cited?: boolean
     anchor?: boolean
   }[],
