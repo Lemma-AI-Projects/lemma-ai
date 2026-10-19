@@ -35,6 +35,7 @@ import { ConflictPanel } from './ConflictPanel'
 import { FocusRail } from './FocusRail'
 import { FocusRoamBar } from './FocusRoamBar'
 import { FocusTopBar, type FocusPanelMode } from './FocusTopBar'
+import { TitleField } from './TitleField'
 import { MalaChips } from './MalaChips'
 import { MaterialView } from './MaterialView'
 import type { MalaBundleChip } from './malaChipsOps'
@@ -42,7 +43,6 @@ import {
   appendBlock,
   blocksFromDraft,
   draftFromBlocks,
-  outlineOf,
   signatureOf,
   textOf,
   toggleKey,
@@ -511,7 +511,15 @@ function FocusDocument({
   const isPanelHidden = panelMode === 'hidden'
   // 左栏开着没有。它是 224px 固定宽，窗口一窄就只能靠操作系统去躲 —— 所以给
   // 顶栏一个开关，收起时整个不渲染（`FocusRail` 没有值得留住的本地状态）。
-  const [isRailOpen, setRailOpen] = useState(true)
+  /**
+   * 左栏默认**收起**（2026-10-18 改的）。
+   *
+   * 进来时这一屏应该全给内容 —— 材料、正文、对话。找材料是"要的时候才做的事"，
+   * 不是每次进门都要先看一眼的事。顶栏那个开关还在，一按就出来。
+   *
+   * ⚠️ 语言场景里这一条尤其明显：读一段对话、说一句话，不需要知道"我在第几节"。
+   */
+  const [isRailOpen, setRailOpen] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -752,7 +760,10 @@ function FocusDocument({
       ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   }, [])
 
-  const outline = useMemo(() => outlineOf(draft), [draft])
+  /* 左栏原来还有一段「大纲」（`outlineOf(draft)` 派生出来的标题树），2026-10-18 去掉了：
+     它答的是"我在这篇文档的第几节"，而左栏是对**整个空间**的导航。语言材料没有标题
+     层级，那一段永远是空的。`outlineOf` 这个纯函数和它的单测还在（通用能力，将来可能
+     被别处用），但这一页不再调用它。 */
 
   /**
    * 边注轨的内容：把笔记页的块摊成「锚在某一段上的几组」。
@@ -851,8 +862,6 @@ function FocusDocument({
         <div className="relative flex min-h-0 flex-1">
           {!isPanelFull && isRailOpen && (
             <FocusRail
-              outline={outline}
-              onJump={jumpToBlock}
               pages={materials}
               currentPageId={pageId ?? preview?.pageId}
               onSelectPage={(id) =>
@@ -900,7 +909,18 @@ function FocusDocument({
                     外层 `px-8`(64) 之后正文的宽度 ⇒ **正文的阅读宽度一格没变**。 */}
                 <div className={cn(hasRail && '@min-[56rem]:w-[38rem] @min-[56rem]:shrink-0')}>
                 <div className="flex items-baseline gap-2">
-                  <h1 className="truncate text-base font-medium">{title}</h1>
+                  {/* 标题现在能改（原来是只读的 `h1`）。走的是一条**单独**的接口
+                      —— `PUT /pages/{id}` 只动 title，不碰 blocks。
+                      ⚠️ 千万不要把它并进正文的保存（那条是整页删重插）。 */}
+                  <TitleField
+                    key={pageId ?? preview?.pageId ?? 'none'}
+                    value={title}
+                    disabled={!canEdit}
+                    onCommit={(next) => {
+                      const targetId = pageId ?? preview?.pageId
+                      if (targetId) handleRenamePage(targetId, next)
+                    }}
+                  />
                   <span
                     className={cn(
                       'ml-auto shrink-0 text-[11px]',

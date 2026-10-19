@@ -3,12 +3,8 @@ import { Ellipsis, Pencil, Trash2 } from 'lucide-react'
 
 import { ActionMenu, ActionMenuItem } from '@/components/ActionMenu'
 import { cn } from '@/lib/utils'
-import type { OutlineRow } from './blockOps'
 
 export interface FocusRailProps {
-  /** 这份资料的大纲 —— 从正文的标题派生（`outlineOf`，纯函数）。 */
-  outline: OutlineRow[]
-  onJump: (index: number) => void
   /** 空间里的资料（不含文件夹）—— 漫游用。 */
   pages: { id: string; title: string }[]
   currentPageId?: string
@@ -26,19 +22,20 @@ export interface FocusRailProps {
 }
 
 /**
- * 聚焦模式的左栏 —— 两段，回答两个不同的问题：
+ * 聚焦模式的左栏 —— **只有一段：空间里的资料**。
  *
- * - 上：**这份资料的大纲**（我在这份材料里的位置）
- * - 下：**空间里的资料**（我在整个空间里的位置）
+ * 它回答一个问题：**我在这个空间的哪份材料里，切到下一份。**
  *
- * 它们不是一回事，所以不合并成一个列表；漫游到底走哪一份，看的是下面那一段。
+ * ⚠️ 2026-10-18 去掉的「大纲」段（原来在上半截，从正文标题派生）。
+ * 理由不是它没用，是它答的是**另一个问题**（"我在这篇文档的第几节"），而这一栏
+ * 是对**整个空间**的导航。语言材料（一段对话、一段语音转写）根本没有标题层级，
+ * 那段永远是空的 —— 留着它等于让一栏里挂着两个不同职责。
+ * 而且**这一栏现在默认收起**（`FocusView` 的 `isRailOpen` 初值是 false）：
+ * 进来时屏幕应该全给内容，找材料是"要的时候才做的事"。
  *
- * 没有大纲时**不显示空壳**：一份 PDF、一份没有标题的资料，本来就没有大纲，
- * 画一个"大纲"标题下面是空的，只会让人以为是加载失败。
+ * 顺带：没有资料时**不显示空壳**，只说一句"还没有资料"。
  */
 export function FocusRail({
-  outline,
-  onJump,
   pages,
   currentPageId,
   onSelectPage,
@@ -64,31 +61,9 @@ export function FocusRail({
         className
       )}
     >
-      {outline.length > 0 && (
-        <section>
-          <h2 className="px-1 pb-1.5 text-[11px] font-medium tracking-wide text-zinc-400">
-            大纲
-          </h2>
-          <ul className="space-y-0.5">
-            {outline.map((row) => (
-              <li key={row.key}>
-                <button
-                  type="button"
-                  onClick={() => onJump(row.index)}
-                  style={{ paddingLeft: `${(row.level - 1) * 10 + 4}px` }}
-                  className="block w-full truncate rounded py-1 pr-1 text-left text-[13px] text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                >
-                  {row.text}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section>
         <h2 className="px-1 pb-1.5 text-[11px] font-medium tracking-wide text-zinc-400">
-          空间资料{isPagesLoading ? '' : ` · ${pages.length}`}
+          材料{isPagesLoading ? '' : ` · ${pages.length}`}
         </h2>
         {isPagesLoading ? (
           <div className="space-y-1.5 px-1">
@@ -101,7 +76,7 @@ export function FocusRail({
           </div>
         ) : pages.length === 0 ? (
           <p className="px-1 text-[12px] leading-5 text-zinc-400">
-            这个空间还没有资料
+            这个空间还没有放进材料
           </p>
         ) : (
           <ul className="space-y-0.5">
