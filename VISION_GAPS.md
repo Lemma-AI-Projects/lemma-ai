@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-20**（`practice-system` @ `59edcedc`）
+> **最后更新：2026-10-21**（`practice-system` @ `b3f13c0e`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -47,14 +47,25 @@
 ### A4 · 决策层只在被动触发
 - **问题**：系统不会在你进空间、或到时间的时候自己判断"接下来该做什么"。
 - **当初怎么说的**（§66 第四节）：「它只需要证明：Learn Space 开始具备"决定下一步"的能力」。
-- **今天的证据**：Coordinator 生产调用方只有 **2 处**（`knowledge.py:148` · `conversation_tool_service.py:646`）；`_execute`（`coordinator_service.py:410-421`）里只有 `NOTIFY` 自己动手，`INTRODUCE/REVIEW/CONTINUE` 一律 `return "handed_to_global_agent"`。
+- **今天的证据**（2026-10-21 复核）：Coordinator 生产调用方只有 **2 处**（`knowledge.py:148` · `conversation_tool_service.py:646`）；`_execute`（`services/coordinator_service.py:403-421`）里只有 `NOTIFY`（`:414`）自己动手，`INTRODUCE/REVIEW/CONTINUE` 一律 `return "handed_to_global_agent"`（`:421`）。
 - **完成判据**：进空间时（或到点）真的产出一条非 `NO_ACTION` 的决策，并且**那一条真的改变了接下来发生的事**。
 
 ### A5 · 系统说不出「这个做法不行，换一个」
 - **问题**：规则层判不出「做法**错了**」与「做法**没做完**」的差别 —— 后者的出口是 HOLD，前者**没有任何出口**。
 - **当初怎么说的**（三模式 §4.3：聚焦是"唯一能写"的一屏，也是各种学习方法流程呈现的地方）。
-- **今天的证据**（2026-10-15 复核）：`MethodSelection` 的五个值都定义好了（`NO_INTERVENTION / HOLD / END / START / SWITCH`），`SWITCH` 连"必须带理由"的校验都写了（`types.py:403-408`）—— 但 **`rules.py` 里 grep `SWITCH` 零命中**：规则层只产出 `NO_INTERVENTION / HOLD / END / START`，`SWITCH` 一次都不会发生。
+- **今天的证据**（2026-10-21 复核，原 10-15）：`MethodSelection` 的五个值都定义好了（`ai/coordinator/types.py:349` 起：
+  `NO_INTERVENTION / HOLD / END / START / SWITCH`），`SWITCH` 连"必须带理由"的校验都写了（`ai/coordinator/types.py:403-408`）
+  —— 但 `grep -rn "SWITCH" ai/coordinator/rules.py` **零命中**；`rules.py` 只产出四处
+  `NO_INTERVENTION`（`:296/301/306`）· `HOLD`（`:315`）· `END`（`:319`）· `START`（`:336`），`SWITCH` 一次都不会发生。
 - **完成判据**：用户说"换个方式"时，真的结束这一段、按它开新的一段。
+
+### A6 · 主动性只写进了提示词，一次行为观察都没有
+- **问题**：prompt 现在要求"提出一个具体的下一步"，但**没有一条真实回复被看过** —— 不知道它是否还在反问"你想学什么"。A4 说的是规则层（Coordinator），这条是模型层。
+- **当初怎么说的**（§66 第四节）：「它只需要证明：Learn Space 开始具备"决定下一步"的能力」。
+- **今天的证据**（2026-10-21）：`b3f13c0e` 给 `ai/prompts/templates/text_chat.system.txt` 加了 Initiative / Evidence boundaries / Acting on the environment 三段（`:19`/`:35`/`:43`）；
+  `tests/ai/test_prompts.py` 5 passed —— 只证模板渲染与三段没被删，**不证行为**。
+  `AGENT_PRINCIPLES_V0.md:156-175` 自己写了四条人工抽查，但全仓 grep「我们开始吧 / 你想学什么」只命中该文档的**描述**，**零条执行记录**。
+- **完成判据**：四条抽查里至少一条留下回复原文 —— 有 Goal + 有材料时说"我们开始吧"，它直接给出一个具体动作，而不是反问。
 
 ---
 
