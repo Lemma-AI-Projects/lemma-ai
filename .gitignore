@@ -1,17 +1,10 @@
 .DS_Store
 /.cursor/
-# docs/ 整体不入库（多为本地草稿）。子计划目录是例外：**它们是交给 Coding Agent
-# 执行的指令**，不入库等于团队里只有一个人有 —— 那与写文档的目的相反。
-/docs/*
-
-# 放行 1 · 子计划目录。**否定规则必须写在 /docs/* 之后才生效** —— 这一点被坑过一次。
-
-# 放行 2 · 三份团队会长期引用的文档：成就/能力视觉设计规范是上位规范；
-# Free Course 的 README 是那份研究的入口；WORK_SUMMARY 是跨四天的进度索引。
-
-!/docs/achievement-design-system.md
-!/docs/README-freecourse.md
-!/docs/WORK_SUMMARY_1006-1009.md
+# docs/ 从 2026-10-21 起**入库** —— 它是文档中心，不再是本机草稿区。
+# 原来的规则是 `/docs/*` + 三个具名放行，理由是"多为本地草稿"；那个理由已经不成立：
+# 根目录 22 份 md、docs/ 16 个文件、以及散在各处的设计文档需要同一套索引。
+# 改动前核过：docs/ 里 16 个文件全是 markdown + 1 个 html，没有二进制、没有生成物。
+# ⚠️ 别再往里放临时文件；临时文件放 `temp/`。
 /task-management/
 
 # 实施计划：本地工作稿。**不入库** —— 它们是给 Coding Agent 执行的指令，

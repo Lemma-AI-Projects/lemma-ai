@@ -106,7 +106,7 @@ const routes: RouteObject[] = [
   {
     // 启示（Insight）的评审入口：一条观察在**空间 / 聚焦 / 轨迹**三处的样子。
     // 免登录、假数据、不连后端（回应只活在页面 state 里）。
-    // 设计：ADAPTIVE_INSIGHT_V0.md（§5 明确"表示形态只记约束、不锁视觉"）。
+    // 设计：docs/design/adaptive-insight.md（§5 明确"表示形态只记约束、不锁视觉"）。
     path: '/preview/insight',
     element: <InsightPreviewPage />,
   },

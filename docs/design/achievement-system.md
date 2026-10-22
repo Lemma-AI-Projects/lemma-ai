@@ -33,7 +33,7 @@
 | 已有的东西 | 是什么 | 与本文的关系 |
 |---|---|---|
 | `docs/evidence/01-overview.md`、`02-contract.md` 等 | 证据层：证据怎么写入、状态怎么派生 | **上游**。本文只画"证据长什么样"，不重新定义证据 |
-| `LEARNER_STATE_V0.md` | 学习状态 V0 的实现与红线 | **上游**。本文受它的三条红线约束（§2.2） |
+| `architecture/learner-state.md` | 学习状态 V0 的实现与红线 | **上游**。本文受它的三条红线约束（§2.2） |
 | `frontend/design-qa.md` | 一次课程进度卡的像素级 QA 记录 | 无关。它是单次交付的验收记录，不是设计系统 |
 | `frontend/src/index.css` | 现有 token（Tailwind v4 + HSL 变量） | **宿主**。本文的颜色/字体必须映射到它，不另起一套（§4.5、§10） |
 

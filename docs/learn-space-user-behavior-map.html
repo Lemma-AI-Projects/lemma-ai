@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn Space · 用户行为地图与生命周期</title>
+<style>
+:root{
+  --ink:#0b0d10; --ink2:#14181e; --ink3:#1c212a; --ink4:#242b35;
+  --line:#272f3a; --line2:#3a4452;
+  --fg:#e9edf2; --fg2:#a6b1c0; --fg3:#6c7887;
+  --paper:#faf9f6; --pfg1:#191c20; --pfg2:#4e5763; --pline:#e0dbd1;
+  --ok:#3f9d7a; --ok2:#5fc49b; --part:#c9a227; --part2:#dfc05a;
+  --ui:#c96a4a; --ui2:#e08a68; --be:#5a7fa8; --be2:#82a8cf;
+  --impl:#6f5a9c; --impl2:#9d86c9;
+  --none:#8a5050; --none2:#c07a7a;
+  --latent:#4a7a8c; --latent2:#7ab0c4;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--font);font-size:15.5px;line-height:1.7}
+a{color:var(--part2);text-decoration:none}
+a:hover{text-decoration:underline}
+code,.mono{font-family:var(--mono);font-size:.87em}
+.wrap{max-width:1320px;margin:0 auto;padding:0 26px}
+
+/* ── cover ── */
+.cover{min-height:92vh;display:flex;flex-direction:column;justify-content:center;padding:80px 0 56px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--fg3);margin-bottom:26px}
+h1{font-size:clamp(34px,5.6vw,68px);line-height:1.06;margin:0 0 24px;font-weight:600;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--part)}
+.lede{font-size:19px;color:var(--fg2);max-width:820px}
+.meta{margin-top:44px;display:flex;gap:36px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;color:var(--fg3)}
+.meta b{display:block;color:var(--fg2);font-weight:500;margin-top:3px;font-size:14px}
+
+/* ── nav ── */
+.nav{position:sticky;top:0;background:rgba(11,13,16,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);z-index:30}
+.nav-in{max-width:1320px;margin:0 auto;padding:10px 26px;display:flex;gap:18px;overflow-x:auto;scrollbar-width:none}
+.nav-in::-webkit-scrollbar{display:none}
+.nav a{font-family:var(--mono);font-size:11.5px;color:var(--fg3);white-space:nowrap}
+.nav a:hover{color:var(--part)}
+
+/* ── section ── */
+section{padding:76px 0;border-top:1px solid var(--line)}
+.sno{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;color:var(--part);display:block;margin-bottom:12px}
+h2{font-size:clamp(25px,3.2vw,40px);line-height:1.14;margin:0 0 16px;font-weight:600;letter-spacing:-.015em}
+h3{font-size:19px;margin:44px 0 14px;font-weight:600}
+h4{font-size:15.5px;margin:26px 0 8px;font-weight:600}
+p{margin:0 0 14px}
+.sub{color:var(--fg2);font-size:16.5px;max-width:860px}
+.note{border-left:3px solid var(--part);background:rgba(201,162,39,.05);padding:15px 20px;margin:22px 0;border-radius:0 8px 8px 0}
+.note.red{border-color:var(--none2);background:rgba(192,122,122,.06)}
+.note.green{border-color:var(--ok2);background:rgba(95,196,155,.05)}
+.note.blue{border-color:var(--be2);background:rgba(130,168,207,.05)}
+.note .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--fg3);display:block;margin-bottom:6px}
+.note p{margin:0;font-size:15px;color:var(--fg2)}
+.note strong{color:var(--fg)}
+
+/* ── stat tiles ── */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:28px 0}
+.tile{background:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:18px}
+.tile .n{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.1}
+.tile .l{font-size:12.5px;color:var(--fg3);margin-top:5px;line-height:1.45}
+.tile.ok .n{color:var(--ok2)} .tile.part .n{color:var(--part2)}
+.tile.ui .n{color:var(--ui2)} .tile.be .n{color:var(--be2)}
+.tile.impl .n{color:var(--impl2)} .tile.none .n{color:var(--none2)}
+
+/* ── filters ── */
+.filters{background:var(--ink2);border:1px solid var(--line);border-radius:11px;padding:18px 20px;margin:26px 0;position:sticky;top:38px;z-index:20}
+.frow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:9px}
+.frow:last-of-type{margin-bottom:0}
+.flabel{font-family:var(--mono);font-size:10.5px;color:var(--fg3);letter-spacing:.1em;min-width:78px}
+.chip{font-family:var(--mono);font-size:11.5px;padding:4px 10px;border-radius:20px;border:1px solid var(--line2);
+     background:transparent;color:var(--fg2);cursor:pointer;transition:.12s;user-select:none;white-space:nowrap}
+.chip:hover{border-color:var(--fg3);color:var(--fg)}
+.chip.on{background:var(--fg);color:var(--ink);border-color:var(--fg);font-weight:600}
+.chip.ok.on{background:var(--ok2);border-color:var(--ok2)}
+.chip.part.on{background:var(--part2);border-color:var(--part2)}
+.chip.ui.on{background:var(--ui2);border-color:var(--ui2)}
+.chip.be.on{background:var(--be2);border-color:var(--be2)}
+.chip.impl.on{background:var(--impl2);border-color:var(--impl2)}
+.chip.none.on{background:var(--none2);border-color:var(--none2)}
+.chip.latent.on{background:var(--latent2);border-color:var(--latent2)}
+#q{background:var(--ink3);border:1px solid var(--line2);border-radius:7px;padding:8px 13px;color:var(--fg);
+   font-family:var(--font);font-size:14px;width:280px;max-width:100%}
+#q::placeholder{color:var(--fg3)}
+#q:focus{outline:none;border-color:var(--fg3)}
+.cnt{font-family:var(--mono);font-size:12px;color:var(--fg3);margin-left:auto}
+
+/* ── behavior card ── */
+.bcard{background:var(--ink2);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden;border-left-width:3px}
+.bcard.st-ok{border-left-color:var(--ok)}
+.bcard.st-part{border-left-color:var(--part)}
+.bcard.st-ui{border-left-color:var(--ui)}
+.bcard.st-be{border-left-color:var(--be)}
+.bcard.st-impl{border-left-color:var(--impl)}
+.bcard.st-none{border-left-color:var(--none)}
+.b-head{padding:15px 18px;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start}
+.b-head:hover{background:rgba(255,255,255,.018)}
+.b-title{font-size:15.5px;font-weight:600;line-height:1.45;margin-bottom:6px}
+.b-meta{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.b-id{font-family:var(--mono);font-size:10.5px;color:var(--fg3);letter-spacing:.08em}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:3px;
+     border:1px solid var(--line2);color:var(--fg3);white-space:nowrap}
+.tag.lc{color:var(--be2);border-color:rgba(130,168,207,.4)}
+.tag.st-ok{color:var(--ok2);border-color:rgba(95,196,155,.45);background:rgba(95,196,155,.08)}
+.tag.st-part{color:var(--part2);border-color:rgba(223,192,90,.45);background:rgba(223,192,90,.08)}
+.tag.st-ui{color:var(--ui2);border-color:rgba(224,138,104,.45);background:rgba(224,138,104,.08)}
+.tag.st-be{color:var(--be2);border-color:rgba(130,168,207,.45);background:rgba(130,168,207,.08)}
+.tag.st-impl{color:var(--impl2);border-color:rgba(157,134,201,.45);background:rgba(157,134,201,.08)}
+.tag.st-none{color:var(--none2);border-color:rgba(192,122,122,.45);background:rgba(192,122,122,.08)}
+.tag.si{color:var(--part2);border-color:rgba(223,192,90,.3)}
+.caret{color:var(--fg3);font-size:12px;transition:.15s;padding-top:4px}
+.bcard.open .caret{transform:rotate(90deg)}
+.b-body{display:none;padding:0 18px 20px;border-top:1px solid var(--line)}
+.bcard.open .b-body{display:block}
+.blk{margin-top:14px}
+.blk .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--fg3);display:block;margin-bottom:3px}
+.blk .v{font-size:14.5px;color:var(--fg2);line-height:1.68}
+.blk.ev .v{font-family:var(--mono);font-size:12.5px;color:var(--fg3);line-height:1.7}
+.blk.miss .v{color:#e0a08a}
+.blk.mean .v{color:var(--fg)}
+
+/* ── table ── */
+.tw{overflow-x:auto;margin:24px 0;border:1px solid var(--line);border-radius:9px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg3);font-weight:600;
+   background:var(--ink2);position:sticky;top:0}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+tbody tr:last-child td{border-bottom:none}
+td.mono{font-family:var(--mono);font-size:12.5px;color:var(--fg3)}
+
+/* ── chain ── */
+.chain{background:var(--ink2);border:1px solid var(--line);border-radius:11px;padding:24px;margin:22px 0}
+.chain-t{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--part);margin-bottom:14px}
+.cstep{display:flex;align-items:flex-start;gap:0;margin-bottom:4px;flex-wrap:wrap}
+.cnode{background:var(--ink3);border:1px solid var(--line2);border-radius:7px;padding:8px 12px;font-size:13.5px;max-width:100%}
+.cnode.ok{border-color:rgba(95,196,155,.5)} .cnode.none{border-color:rgba(192,122,122,.5);color:var(--fg3)}
+.cnode.brk{border-color:var(--none2);background:repeating-linear-gradient(45deg,#231618,#231618 5px,#1a1214 5px,#1a1214 10px);color:#e0a08a}
+.carrow{align-self:center;color:var(--fg3);padding:0 9px;font-size:12px}
+.cbreak{align-self:center;font-family:var(--mono);font-size:10px;color:var(--none2);padding:0 5px}
+
+/* ── cards ── */
+.cards{display:grid;gap:14px;margin:22px 0}
+.c2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.c3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+.card{background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:20px}
+.card.brk{border-left:3px solid var(--none2)}
+.card h4{margin:0 0 8px}
+.card p{font-size:14.5px;color:var(--fg2);margin:0 0 8px}
+.card p:last-child{margin:0}
+.card .cite{font-family:var(--mono);font-size:12px;color:var(--fg3);display:block;margin-top:8px;line-height:1.65}
+
+/* ── matrix ── */
+.st-legend{display:flex;gap:16px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--fg3);margin:18px 0}
+.st-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+footer{padding:52px 0;border-top:1px solid var(--line);color:var(--fg3);font-size:14px}
+footer p{max-width:760px}
+@media(max-width:680px){
+  .wrap{padding:0 16px} section{padding:56px 0}
+  .filters{position:static} .b-head{grid-template-columns:1fr}
+  .flabel{min-width:100%} h1{font-size:31px}
+}
+</style>
+</head>
+<body>
+
+<div class="nav"><div class="nav-in">
+  <a href="#view">执行摘要</a>
+  <a href="#def">我们如何定义行为</a>
+  <a href="#lc">生命周期</a>
+  <a href="#inv">行为清单 · 工作台</a>
+  <a href="#tax">分类</a>
+  <a href="#chains">行为链</a>
+  <a href="#time">Session 1 → N</a>
+  <a href="#evo">长期演化</a>
+  <a href="#fail">中断 / 失败 / 偏离</a>
+  <a href="#hidden">隐性 &amp; 潜在</a>
+  <a href="#resp">行为 → 系统反应</a>
+  <a href="#matrix">实现核验矩阵</a>
+  <a href="#matrix">矩阵与断线</a>
+  <a href="#prim">行为 primitive</a>
+  <a href="#vs">Chat vs Space</a>
+  <a href="#q">十个问题</a>
+  <a href="#open">未确认</a>
+</div></div>
+
+<div class="wrap">
+
+<div class="cover">
+  <div class="eyebrow">行为层逆向工程 · 2026-10-06 · user-profile @ df06a656</div>
+  <h1>Learn Space<br><em>用户行为地图</em>与生命周期</h1>
+  <p class="lede">
+    这不是产品方案、不是 PRD、不是 UI review。它是一次<strong style="color:var(--fg)">从人的行为出发
+    重新观察整个系统</strong>的逆向工程：96 条行为，每一条都追问「用户做 X 之后，系统究竟发生了什么」。
+  </p>
+  <p class="lede" style="margin-top:20px;font-size:16.5px;color:var(--fg3)">
+    目标不是一份漂亮的旅程图，而是一张<strong style="color:var(--fg2)">可以逐行击破的工作台</strong> ——
+    之后对任意一个行为都能问：它真实存在吗？为什么做？现在能不能做？断在哪里？
+  </p>
+  <div class="meta">
+    <div>行为条目<b>96 条</b></div>
+    <div>生命周期阶段<b>14 个</b></div>
+    <div>🔴 断线<b>18 条</b></div>
+    <div>已核实断线<b>6 条（我亲自 grep）</b></div>
+    <div>代码改动<b>零</b></div>
+  </div>
+</div>
+
+<!-- ═══ 1 执行摘要 ═══ -->
+<section id="view">
+  <span class="sno">01 — Executive View</span>
+  <h2>先说观察到的，不说应该怎样</h2>
+
+  <div class="tiles">
+    <div class="tile ok"><div class="n" id="t-ok">–</div><div class="l">SUPPORTED<br>完整可用</div></div>
+    <div class="tile part"><div class="n" id="t-part">–</div><div class="l">PARTIALLY<br>部分可用</div></div>
+    <div class="tile ui"><div class="n" id="t-ui">–</div><div class="l">UI_ONLY<br>界面有·无后端</div></div>
+    <div class="tile be"><div class="n" id="t-be">–</div><div class="l">BACKEND_ONLY<br>有代码·无入口</div></div>
+    <div class="tile impl"><div class="n" id="t-impl">–</div><div class="l">IMPLICIT<br>无显式入口</div></div>
+    <div class="tile none"><div class="n" id="t-none">–</div><div class="l">NOT_SUPPORTED<br>完全不存在</div></div>
+  </div>
+
+  <div class="note red">
+    <span class="lbl">◆ 三层结构，实现质量逐层递减 —— 这是全部观察的骨架</span>
+    <p>
+      <strong>基础设施层：真实且扎实。</strong>表、FK、CRUD、时钟、原子认领都实现了。
+      调度器每 5 秒醒来一次（<code>main.py:25-29</code>），认领任务的 UPDATE 是原子的
+      （<code>scheduler_service.py:298-314</code>）。Learner State 是零依赖纯函数
+      （<code>ai/knowledge/state.py:444</code>），<strong>从不存储</strong>，所以不可能被写脏。
+    </p>
+    <p style="margin-top:10px">
+      <strong>服务层：实现了但零接入。</strong><code>method_episodes</code> 表约束完整、五条退出都要求解释，
+      而 <code>open_episode</code> / <code>close_episode</code> / <code>completion_met</code>
+      <strong>全仓无生产调用方</strong>（我 grep 过，只在 <code>__all__</code> 与 docstring 里出现）。
+    </p>
+    <p style="margin-top:10px">
+      <strong>决策与主动行为层：只有被动触发。</strong>Coordinator 只有两个调用方，
+      都由用户写 evidence 触发。executor 的三种 action 一律
+      <code>return "handed_to_global_agent"</code>，<strong>而没有任何 agent 被调用</strong>。
+      只有 <code>NOTIFY</code> 有真实副作用。
+    </p>
+  </div>
+
+  <div class="note green">
+    <span class="lbl">◆ 一条值得单独说的好设计</span>
+    <p>
+      <strong>Learner State 读时算、从不存储</strong>（<code>state.py:444</code>，纯函数、确定性、零 I/O），
+      且有 <code>test_portability.py</code> 主动守护它不被写成有状态的。
+      这意味着<strong>断线只可能出现在入口，不可能出现在推导里</strong> ——
+      本报告里的 18 条断线全部是入口缺失，没有一条是数据腐化。这让它们全部可定位、可补。
+    </p>
+  </div>
+
+  <div class="note blue">
+    <span class="lbl">◆ 这个系统的本质缺口，用一句话说</span>
+    <p>
+      <strong>基础设施与服务层已经能支撑"持续"，而没有一行代码在用户不在时做任何事。</strong>
+      调度器真跑但没有生产者；承诺层有表但没有写入方；通知能生成但点不进去；
+      Goal 的 <code>system_*</code> 枚举值备好了但没有产生方。
+    </p>
+    <p style="margin-top:10px">
+      换句话说：<strong>Learn Space 现在具备 Chat 的全部能力，加上一个用户能看见的入口；
+      而"它记得你"这件事，一次都没有发生过。</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 2 定义 ═══ -->
+<section id="def">
+  <span class="sno">02 — What We Mean by "Behavior"</span>
+  <h2>我们如何定义一个行为</h2>
+  <p class="sub">这一节先于清单 —— 因为"点击 Upload"和"把材料纳入长期学习环境"不是同一个层级的东西，混在一起会让后面每一行都不可讨论。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>不作为行为单位</th><th>作为行为单位</th><th>差别在哪</th></tr></thead>
+    <tbody>
+      <tr><td>点击「创建 Space」</td><td><strong>创建一个长期学习环境并赋予它一个名字</strong></td>
+          <td>后者包含「预期它会持续」这个尚未被任何代码验证的假设</td></tr>
+      <tr><td>点击上传按钮</td><td><strong>让 AI 理解我正在学的材料</strong></td>
+          <td>后者是意图；按钮只是它的一种实现，且<strong>今天只有这一种</strong></td></tr>
+      <tr><td>打开 Focus</td><td><strong>从空间管理视角切换到一次具体的学习活动</strong></td>
+          <td>后者说明了这个切换在用户心智里的位置</td></tr>
+      <tr><td>点「我没懂」</td><td><strong>判定当前解释方式对我无效，要求换一种</strong></td>
+          <td>后者是一个关于「教法」的判断，而它今天只有一个出口</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>一个条目被收进行为清单，需要满足三件事：</p>
+  <div class="cards c3">
+    <div class="card"><h4>① 用户有明确或隐含的意图</h4><p>不是"他想点哪个按钮"，而是"他为什么想点它"。</p></div>
+    <div class="card"><h4>② 行动改变了系统或自己状态</h4><p>纯粹的浏览、悬停、开菜单不构成行为 —— 除非它本身有可识别的结果。</p></div>
+    <div class="card"><h4>③ 结果可识别</h4><p>能说出"发生了什么变了"，哪怕那个变化今天没有被系统记下来。</p></div>
+  </div>
+
+  <div class="note">
+    <span class="lbl">◆ 收录标准：exhaustive 优先于优雅</span>
+    <p>
+      第一轮宁可 96 条不压缩成 12 个大类。后续任务是<strong>逐项验证</strong>，
+      而一个被压缩掉的细节在验证时就找不回来了。聚类与 primitive 提炼放在 §14，
+      那是<strong>从清单推导出来的</strong>，不是先有结论再填内容。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 3 生命周期 ═══ -->
+<section id="lc">
+  <span class="sno">03 — Learn Space Lifecycle</span>
+  <h2>生命周期，以及它被研究修正过的地方</h2>
+  <p class="sub">任务书给的是 15 阶段。研究之后我拆了两处、并把"隐性/潜在"提为一个并列阶段 —— 理由在图下。</p>
+
+  <div class="chain">
+    <div class="chain-t">主链（12 段，箭头 = 阶段推进）</div>
+    <div class="cstep">
+      <span class="cnode">Pre-Space</span><span class="carrow">→</span>
+      <span class="cnode">Creation</span><span class="carrow">→</span>
+      <span class="cnode">Goal Formation</span><span class="carrow">→</span>
+      <span class="cnode">Context Formation</span><span class="carrow">→</span>
+      <span class="cnode">First Use</span><span class="carrow">→</span>
+      <span class="cnode">Active Learning</span><span class="carrow">→</span>
+      <span class="cnode">Interaction</span>
+    </div>
+    <div class="cstep">
+      <span class="cnode">Evidence &amp; Reflection</span><span class="carrow">→</span>
+      <span class="cnode">Continuation</span><span class="carrow">→</span>
+      <span class="cnode">Return</span><span class="carrow">→</span>
+      <span class="cnode">Adaptation</span><span class="carrow">→</span>
+      <span class="cnode">Space Evolution</span>
+    </div>
+    <div class="cstep">
+      <span class="cnode">Cross-Session</span><span class="carrow">→</span>
+      <span class="cnode">Completion / Pause / Abandonment</span>
+      <span class="cbrk">✕</span>
+      <span class="cnode brk">系统接不上（无归档/无终止判据）</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="lbl">◆ 我对给定生命周期的三处修正</span>
+    <p>
+      <strong>① Interaction 拆出 Active Learning。</strong>原链把「回答一道题」与「追问」放在一起，
+      但它们在系统里走<strong>完全不同的路径</strong>：前者会写 evidence 并触发状态重算，后者只是续上对话。
+      混在一起会让"学习"这件事在清单里被稀释。
+    </p>
+    <p style="margin-top:10px">
+      <strong>② Adaptation 从 Return 里独立出来。</strong>Return 是"用户回来了"，
+      Adaptation 是"系统因此改变了做法"。它们的主体不同（一个是被动的用户，一个是主动的系统），
+      而本报告里最重的一条观察正在它们之间。
+    </p>
+    <p style="margin-top:10px">
+      <strong>③ 新增并列阶段「Hidden &amp; Latent」。</strong>
+      因为<strong>有一整类行为在主链上找不到位置</strong>：用户不会说出来的（隐性），
+      以及系统根本没有入口但真实用户需要的（潜在）。把它们塞进某个阶段会掩盖一个结构性事实 ——
+      <strong>它们不是"某个阶段缺了个功能"，它们是横跨所有阶段的</strong>。
+    </p>
+  </div>
+
+  <div class="note red">
+    <span class="lbl">◆ 生命周期有一个物理缺口，就在最后一段</span>
+    <p>
+      任务书给的链在 <code>Completion / Pause / Abandonment</code> 结束。
+      <strong>而今天系统能到达的终点只有两个：被删除，或者停在原地。</strong>
+      没有归档、没有"完成"状态、没有自动收尾（<code>system_no_further_value</code> 无写入方）。
+      换句话说：<strong>这条链的最后一步在产品里是断的</strong>。
+    </p>
+  </div>
+</section>
+<!-- ═══ 4 行为清单 · 工作台 ═══ -->
+<section id="inv">
+  <span class="sno">04 — Full Behavior Inventory</span>
+  <h2>行为清单 · 工作台</h2>
+  <p class="sub">
+    96 条。这是本报告的主体 —— 点任意一条展开看完整的「意图 / 触发 / 动作 / 结果 / 意义 / 证据 / 断线」。
+    过滤与搜索都在下面，多个条件是 AND。
+  </p>
+
+  <div class="filters">
+    <div class="frow"><span class="flabel">生命周期</span><span id="f-lc"></span></div>
+    <div class="frow"><span class="flabel">行为类型</span><span id="f-type"></span></div>
+    <div class="frow"><span class="flabel">实现状态</span><span id="f-st"></span></div>
+    <div class="frow"><span class="flabel">表达方式</span><span id="f-exp"></span></div>
+    <div class="frow"><span class="flabel">范围</span><span id="f-scope"></span>
+      <span class="flabel" style="min-width:auto;margin-left:10px">状态影响</span><span id="f-si"></span></div>
+    <div class="frow">
+      <input id="q" type="search" placeholder="搜行为 / 意图 / 证据 / 文件名…" autocomplete="off">
+      <span class="chip" id="f-missing">只看有断线的</span>
+      <span class="chip" id="f-clear">清除全部过滤</span>
+      <span class="cnt" id="cnt"></span>
+    </div>
+  </div>
+
+  <div class="st-legend">
+    <span><i style="background:var(--ok2)"></i>SUPPORTED 完整可用</span>
+    <span><i style="background:var(--part2)"></i>PARTIALLY 部分可用</span>
+    <span><i style="background:var(--ui2)"></i>UI_ONLY 界面有·无后端</span>
+    <span><i style="background:var(--be2)"></i>BACKEND_ONLY 有代码·无入口</span>
+    <span><i style="background:var(--impl2)"></i>IMPLICITLY 无显式入口</span>
+    <span><i style="background:var(--none2)"></i>NOT_SUPPORTED 不存在</span>
+  </div>
+
+  <div id="list"></div>
+  <p id="empty" style="display:none;color:var(--fg3);padding:34px 0;text-align:center">没有符合条件的行为 —— 放宽一个条件试试。</p>
+</section>
+
+<!-- ═══ 5 分类 ═══ -->
+<section id="tax">
+  <span class="sno">05 — Behavior Taxonomy</span>
+  <h2>十类行为，以及它们的分布</h2>
+  <p class="sub">A–J 是任务书给定的分类。<strong>J 类（对系统主动行为的响应）数量最少，而它恰好是最该多的一类</strong> —— 因为系统今天几乎不主动。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>类</th><th>名称</th><th>定义</th><th>条数</th><th>观察</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">A</td><td>Intent</td><td>用户想做什么</td><td id="c-A">–</td>
+          <td>共 9 条。<strong>其中 4 条系统完全没有入口</strong> —— 从"产生念头"到"AI 提议目标"</td></tr>
+      <tr><td class="mono">B</td><td>Explicit Action</td><td>用户明确操作</td><td id="c-B">–</td>
+          <td>共 24 条，产品的主干</td></tr>
+      <tr><td class="mono">C</td><td>Cognitive / Learning</td><td>真正的学习动作</td><td id="c-C">–</td>
+          <td>共 4 条，<strong>而系统只认一种（答对/答错）</strong>。回忆、推导、比较、迁移全部无记录类型</td></tr>
+      <tr><td class="mono">D</td><td>Conversational</td><td>追问、反驳、要求提示</td><td id="c-D">–</td>
+          <td>共 4 条。<strong>只有"换一种讲法"真的会改变 AI 行为</strong></td></tr>
+      <tr><td class="mono">E</td><td>Organizational</td><td>整理材料、改 Goal、调整内容</td><td id="c-E">–</td>
+          <td>共 20 条，<strong>只有加没有减</strong>：材料无删除入口，空间无归档</td></tr>
+      <tr><td class="mono">F</td><td>Reflective</td><td>判断"我到底会不会"</td><td id="c-F">–</td>
+          <td>共 8 条。<strong>状态是读时算的（好），但没有历史可看</strong></td></tr>
+      <tr><td class="mono">G</td><td>Continuity</td><td>几天后回来并继续</td><td id="c-G">–</td>
+          <td>共 5 条，<strong>全部是"半连"</strong>。文本能恢复，语义与时间不能</td></tr>
+      <tr><td class="mono">H</td><td>Boundary</td><td>决定某物不属于这个 Space</td><td id="c-H">–</td>
+          <td>仅 1 条，<strong>而系统只提供"全删"这一个动作</strong></td></tr>
+      <tr><td class="mono">I</td><td>Exit / Failure</td><td>暂停、放弃、删除</td><td id="c-I">–</td>
+          <td>共 3 条。<strong>放弃与完成在系统里是同一个动作</strong>，失败不留痕迹</td></tr>
+      <tr><td class="mono">J</td><td>Response to System</td><td>收到提醒以后回来</td><td id="c-J">–</td>
+          <td>仅 5 条，<strong>且 4 条是潜在的（系统没有对应行为可响应）</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note red">
+    <span class="lbl">◆ 这张表最重要的一行是 C</span>
+    <p>
+      <strong>认知/学习动作只有 4 条，而系统只承认其中一种。</strong>
+      grep <code>recall|retrieval|reflection|transfer|reconsolidat|episod</code>
+      扫 <code>backend/models/*.py</code>：零命中。
+    </p>
+    <p style="margin-top:10px">
+      这意味着<strong>一个人可以全答对而完全不理解，而系统看不出区别</strong> ——
+      因为唯一的记录类型是"答对/答错"，而回忆型题目可以通过。
+      缺失的恰好是<strong>唯一能暴露"他其实没懂"的那几类动作</strong>：解释、对比、迁移、创造。
+    </p>
+  </div>
+
+  <div class="note">
+    <span class="lbl">◆ 表达方式分布（explicit / implicit / latent）</span>
+    <p>
+      <strong>latent 有 <span id="c-latent">–</span> 条</strong> —— 系统完全没有入口，
+      而我判断真实用户会需要它们。这批是后续讨论里最容易被"我们已经有了"反驳掉的一批，
+      所以每一条都写清了「为什么它不是某个已有功能的缺口，而是缺一整类入口」。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 6 行为链 ═══ -->
+<section id="chains">
+  <span class="sno">06 — Behavior Chains</span>
+  <h2>六条行为链，以及它们断在哪</h2>
+  <p class="sub">节点是行为，<span class="cnode brk" style="padding:2px 8px">红色虚线</span> 是断点。链条比节点更能说明问题 —— 因为断点总是出现在两个节点之间。</p>
+
+  <div class="chain">
+    <div class="chain-t">Creation Chain · 从需要到有方向</div>
+    <div class="cstep"><span class="cnode">需要（PS-1）</span><span class="carrow">→</span>
+      <span class="cnode">建空间（CR-1）</span><span class="carrow">→</span>
+      <span class="cnode brk">✕ 意图没落任何地方</span><span class="carrow">→</span>
+      <span class="cnode">隔一段时间再说目标（GF-1）</span><span class="carrow">→</span>
+      <span class="cnode">确认（GF-2）</span></div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      ⚠️ 断点 1：<strong>动机 → 空间</strong>。系统不知道这个空间是为了考托福还是读懂一篇论文，
+      且没有任何入口让它知道。<br>
+      ⚠️ 断点 2：<strong>创建 → 目标之间有一段被迫的间隔</strong> ——
+      创建对话框只有一个 name 输入框，而用户最想说"为什么建它"的那一刻被丢掉了。
+    </p>
+  </div>
+
+  <div class="chain">
+    <div class="chain-t">Learning Chain · 从意图到下一次动作</div>
+    <div class="cstep"><span class="cnode">意图</span><span class="carrow">→</span>
+      <span class="cnode">尝试（AL-1 答一题）</span><span class="carrow">→</span>
+      <span class="cnode">判定（ER-1 record_evidence）</span><span class="carrow">→</span>
+      <span class="cnode">Learner State 重算</span><span class="carrow">→</span>
+      <span class="cnode brk">✕ 干预</span><span class="carrow">→</span>
+      <span class="cnode">下一次动作</span></div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      ✅ 从尝试到状态是<strong>全连的</strong>（这是全套最完整的一条学习记录链）。<br>
+      🔴 断点：<strong>状态 → 干预</strong>。Coordinator 会算，但 executor 的三种 action
+      一律 <code>return "handed_to_global_agent"</code> 而<strong>没有任何 agent 被调用</strong>；
+      且 <code>NOTIFY</code> 分支在当前调用拓扑下几乎不可达（它只在"没有活跃对话"时走，
+      而 Coordinator 只在 evidence 写入时被调用 —— 那必然有活跃对话）。
+    </p>
+  </div>
+
+  <div class="chain">
+    <div class="chain-t">Continuity Chain · 从离开到接上</div>
+    <div class="cstep"><span class="cnode">Session（CT-1）</span><span class="carrow">→</span>
+      <span class="cnode">离开</span><span class="carrow">→</span>
+      <span class="cnode">时间（RT-1 三周）</span><span class="carrow">→</span>
+      <span class="cnode">文本恢复（CT-2 ✓）</span><span class="cbreak">✕</span>
+      <span class="cnode brk">承诺 / 时间 / 位置全部不恢复</span><span class="carrow">→</span>
+      <span class="cnode brk">继续不了</span></div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      🔴 三个断点：<br>
+      ① <strong>消息不带时间戳</strong>（<code>chat_service.py:154</code> 只取 role + content 两列）
+      ⇒ 模型无法知道隔了三天，无法据此调整语气或主动问"还记得吗"。<br>
+      ② <strong>承诺不恢复</strong> ⇒ <code>prepare_turn</code> 不读 <code>method_episodes</code>，
+      而那张表今天还没有写入方（双重不可达）。<br>
+      ③ <strong>位置不恢复</strong> ⇒ Focus 的 <code>conversationId</code> 初始 <code>null</code>
+      且从不从服务端恢复，用户回到那个页面时那个会话已经找不到了。
+    </p>
+  </div>
+
+  <div class="chain">
+    <div class="chain-t">Adaptation Chain · 从证据到改变做法</div>
+    <div class="cstep"><span class="cnode">动作</span><span class="carrow">→</span>
+      <span class="cnode">Evidence</span><span class="carrow">→</span>
+      <span class="cnode">新理解</span><span class="cbreak">✕</span>
+      <span class="cnode brk">没有"新理解"这个概念</span><span class="carrow">→</span>
+      <span class="cnode brk">改变做法</span><span class="carrow">→</span>
+      <span class="cnode brk">新动作</span></div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      🔴 <strong>这条链在第二个箭头就断了，而断的原因不是缺功能，是缺一个概念。</strong>
+      系统里有"状态值"（mastered/ready/not_mastered），但那是<strong>当前值</strong>；
+      "他因此改变了做法"需要的是<strong>变化</strong>，而没有任何地方记录变化。
+      <br>连带：<code>stall</code>（同一处连续顶不破）也无法成立 ——
+      它是 Attempt 序列上的性质，而没有 Attempt 记录可数。
+    </p>
+  </div>
+
+  <div class="chain">
+    <div class="chain-t">Space Evolution Chain · 空间如何长大或结束</div>
+    <div class="cstep"><span class="cnode">Goal</span><span class="carrow">→</span>
+      <span class="cnode">材料（SE-1）</span><span class="carrow">→</span>
+      <span class="cnode">工作（CF-6 写笔记）</span><span class="carrow">→</span>
+      <span class="cnode">学习</span><span class="carrow">→</span>
+      <span class="cnode brk">✕ 新理解</span><span class="carrow">→</span>
+      <span class="cnode">Goal 变化（GF-5）</span><span class="cbreak">✕</span>
+      <span class="cnode brk">空间变化（SE-2）</span></div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      ⚠️ 改 Goal 有一个消费者（下一轮的教学指令），但<strong>决策层收不到通知</strong>
+      —— <code>Snapshot.goal</code> 被填进快照而 <code>rules.py</code> grep <code>goal</code> = <strong>0 命中</strong>。<br>
+      🔴 空间变化这一格是空的：<code>projects</code> 表没有任何状态字段，
+      没有归档、没有暂停、没有"完成"。用户能做的只有删，而删会 CASCADE 销毁全部证据。
+    </p>
+  </div>
+
+  <div class="chain">
+    <div class="chain-t">Transfer Chain · 跨空间</div>
+    <div class="cstep"><span class="cnode">空间 A 里的经历</span><span class="carrow">→</span>
+      <span class="cnode brk">✕ 零通路</span><span class="carrow">→</span>
+      <span class="cnode brk">在空间 B 里应用</span></div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      🔴 知识/证据/目标/记忆<strong>全部按 <code>project_id</code> 隔离</strong>，
+      <code>list_for_space</code> 强制传单个 project_id。
+      User Home 是唯一的跨空间层，<strong>而它带的是偏好不是能力</strong> ——
+      并且没有任何代码把它的 interests/preferences 注入 coordinator 或 method
+      （<code>user_home_service.py:82-84</code> 自陈「Everything here is read-only」）。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 7 Session 1 → N ═══ -->
+<section id="time">
+  <span class="sno">07 — Session 1 → Session N</span>
+  <h2>长期使用：只有 persistent environment 才有意义的行为</h2>
+  <p class="sub">
+    这一节只列<strong>在普通 Chat 里做不了或做了没意义</strong>的行为 ——
+    判据是「它是否依赖「上次」的存在」。
+  </p>
+
+  <div class="tw"><table>
+    <thead><tr><th>行为</th><th>在 Chat 里做不了的原因</th><th>Learn Space 今天的答案</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td><strong>继续一个未完成的承诺</strong></td>
+          <td>Chat 没有"上次"这个对象</td>
+          <td>承诺存在 <code>method_episodes</code> 表，而 <code>prepare_turn</code> 不读它，
+              且该表无写入方</td><td class="mono" style="color:var(--none2)">不存在</td></tr>
+      <tr><td><strong>被提醒该复习了</strong></td>
+          <td>Chat 不会主动找你</td>
+          <td>Scheduler 有真实时钟，<strong>但 <code>schedule()</code> 无生产调用方</strong></td>
+          <td class="mono" style="color:var(--be2)">时钟在跑，无人提问</td></tr>
+      <tr><td><strong>看到自己的学习历史</strong></td>
+          <td>Chat 没有跨会话的连续主体</td>
+          <td>状态是读时算的（好），但<strong>没有时间序列</strong>，只能看到"现在怎么样"</td>
+          <td class="mono" style="color:var(--part)">只能看当前</td></tr>
+      <tr><td><strong>积累出可带走的成果</strong></td>
+          <td>Chat 的输出留在对话流里，没有产物</td>
+          <td>Doc blocks 落库了，<strong>但无导出端点</strong></td>
+          <td class="mono" style="color:var(--none2)">无出口</td></tr>
+      <tr><td><strong>发现"这个目标还是对的吗"</strong></td>
+          <td>Chat 的目标每次重述</td>
+          <td>目标行还在，但只有一条前后对比文本，<strong>没有原因字段</strong></td>
+          <td class="mono" style="color:var(--part)">半连</td></tr>
+      <tr><td><strong>把上周的结论推翻</strong></td>
+          <td>Chat 无跨会话主体</td>
+          <td>写新 evidence 会让状态前进，<strong>旧的结论无法被标记为错误</strong></td>
+          <td class="mono" style="color:var(--none2)">不可表达</td></tr>
+      <tr><td><strong>在熟悉的地方回来</strong></td>
+          <td>Chat 每次是空白</td>
+          <td>材料/记忆/目标/知识全在，<strong>但 Focus 的位置与上下文不恢复</strong></td>
+          <td class="mono" style="color:var(--part)">内容恢复，位置不恢复</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note blue">
+    <span class="lbl">◆ 时间的四个尺度上，系统各能做什么</span>
+    <p>
+      <strong>Immediate（刚刚）</strong>：完整。cursor 精确、会话内连贯、步骤只增不改。<br>
+      <strong>Short-term（当天）</strong>：完整。最近 40 条消息 + 全部 Space Memory 进 prompt。<br>
+      <strong>Medium-term（几天/几周）</strong>：<strong>消息不带时间戳</strong>，
+      模型不知道隔了多久；Focus 位置丢失；<strong>三周前的提醒会在第一个 tick 一次性涌进来</strong>。<br>
+      <strong>Long-term（几个月）</strong>：<strong>几乎没有</strong>。
+      没有学习历史、没有弱点汇总、没有空间状态、没有归档、没有导出。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 8 长期演化 ═══ -->
+<section id="evo">
+  <span class="sno">08 — Long-term Evolution</span>
+  <h2>一个空间在几个月里会变成什么</h2>
+  <p class="sub">不是问"它应该变成什么"，而是问"它今天会变成什么，以及哪些变化用户想做而系统不允许"。</p>
+
+  <div class="cards c2">
+    <div class="card">
+      <h4>它会自然长成的样子</h4>
+      <p><strong>一个越来越大的文件袋 + 一堆越来越长的对话。</strong>
+      材料只增不减（无删除入口），知识结构不随材料更新（<code>import_structure</code> 只被 seed 脚本调用），
+      目标只有一个且要手工换。<strong>空间的形状由它最早那几周决定，之后不再演化。</strong></p>
+    </div>
+    <div class="card">
+      <h4>用户想改而系统不允许的四种</h4>
+      <p>① <strong>删一样东西</strong>（CF-7：只有全删）·
+      ② <strong>归档这个空间</strong>（SE-2：无状态字段）·
+      ③ <strong>拆分成两个</strong>（SE-3：无拆分）·
+      ④ <strong>导出带走</strong>（LA-6：无出口）</p>
+    </div>
+    <div class="card brk">
+      <h4>🔴 演化链上最关键的一处断裂</h4>
+      <p><strong>空间只增不减，而用户的兴趣会减。</strong>
+      一个三个月前的空间今天装满了不再相关的东西，
+      而用户<strong>唯一的清理手段是删掉整个空间</strong> ——
+      那会 CASCADE 销毁目标、记忆、知识结构、证据、文档、方法片段、决策日志<strong>全部</strong>。<br>
+      <span class="cite">CASCADE 清单：models/space_goal.py:123 · space_memory.py:49 · knowledge.py:86,137,193 · method_episode.py:109 · doc.py:76,81 · coordinator_decision.py:70 · board_context.py:52</span></p>
+    </div>
+    <div class="card brk">
+      <h4>🔴 而"完成"与"放弃"是同一个动作</h4>
+      <p>系统无法区分「我做到了所以收工」与「我失败了不想看见」。
+      <strong>失败不留任何痕迹</strong> —— 没有 <code>completed_at</code>，没有退出原因，
+      没有任何地方记下"这条路走不通"。<br>
+      <span class="cite">project_service.py:62-66 裸 db.delete(project) · projects 表无 status 字段（models/project.py:24-41）</span></p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="lbl">◆ 一处刻意不做、且我认为是对的</span>
+    <p>
+      <strong>没有"学习历史"时间线</strong>（LA-3 / ER-3）。
+      Learner State 是读时算的纯函数，<strong>不存储</strong>，所以它无法提供时间序列。
+      这看起来是缺失，但它是<strong>正确的取舍</strong>：一旦把状态物化成历史，
+      就要面对"这个值当时是错的怎么办"，而纯函数让这个问题不存在。<br>
+      代价是用户<strong>看不到自己走了多远</strong> —— 而这是长期投入可持续性的心理基础。
+      <strong>取舍本身是对的，但"看不到"这个代价目前没有任何东西补</strong>。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 9 中断/失败/偏离 ═══ -->
+<section id="fail">
+  <span class="sno">09 — Interruption / Failure / Deviation</span>
+  <h2>中断、失败、偏离 —— 现实用户不是 happy path</h2>
+
+  <h3>中断点在哪（每一条都是"用户做了 X 就消失了"）</h3>
+  <div class="tw"><table>
+    <thead><tr><th>中断位置</th><th>系统留下了什么</th><th>回来时能看到什么</th><th>观察</th></tr></thead>
+    <tbody>
+      <tr><td>建了空间没继续</td><td>一个空 projects 行</td><td>一个空空间</td>
+          <td>空态在结构上与"坏了"无法区分，且<strong>无引导</strong></td></tr>
+      <tr><td>抽了目标但没确认</td><td>一条 draft goal</td>
+          <td><strong>什么都看不到</strong></td>
+          <td>🔴 draft 行是孤儿：前端无查询能看到它，而它<strong>会把已有的 active goal 在界面上完全遮住</strong></td></tr>
+      <tr><td>传了材料没说话</td><td>page + 可能一条 space memory</td><td>Grid 里的卡片</td>
+          <td>没有任何东西记录"他看了/没看"</td></tr>
+      <tr><td>学到一半中断</td><td>cursor + transcript</td><td>能接上白板</td>
+          <td>✅ 这一条<strong>是最扎实的中断恢复</strong></td></tr>
+      <tr><td>同一处顶不破</td><td>若干条 incorrect evidence</td><td>状态值不变</td>
+          <td>🔴 <strong>没有任何东西因此改变</strong> —— 完成标准第 1 条今天无法成立</td></tr>
+      <tr><td>三周后回来</td><td>上面所有的</td><td>上周的内容</td>
+          <td>🟡 模型不知道隔了多久；<strong>三周前的提醒一次性涌进来</strong></td></tr>
+      <tr><td>收到提醒但忽略</td><td>一条 notification</td><td>它<strong>永远躺在那里</strong></td>
+          <td>🟡 <strong>没有 read_at</strong> ⇒ 无未读数 ⇒ 列表单调增长</td></tr>
+      <tr><td>放弃</td><td>（无）</td><td>—</td>
+          <td>🔴 <strong>失败与完成同一个动作，失败不留痕迹</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>偏离：用户会怎么绕过设计好的路径</h3>
+  <div class="cards c2">
+    <div class="card"><h4>把 Space 当收藏夹（HI-4）</h4>
+      <p>连续上传而不学习。<strong>这是最可能的第一种真实用法</strong> ——
+      用户用的是长期学习结构里最小的一层，而系统不提示也不阻止。</p></div>
+    <div class="card"><h4>只跟 AI 聊天（FU-5）</h4>
+      <p>发现"这个空间跟聊天没区别"就离开。
+      ⚠️ <strong>成因是可定位的</strong>：唯一与空间相关的差别（材料/记忆/目标注入）
+      在 prompt 里<strong>不可见</strong>，而状态栏还没接线。</p></div>
+    <div class="card"><h4>在考托福的空间里问 Python（IN-4）</h4>
+      <p>空间没有"这个问题不属于这里"的机制，一次跑题就污染整个会话的上下文。</p></div>
+    <div class="card"><h4>先做后问（HI-3）</h4>
+      <p>试了才知道自己不会。这与"直接问"是两种完全不同的学习者，
+      而 transcript <strong>看不出区别</strong>（只记最终提交的答案）。</p></div>
+  </div>
+
+  <div class="note red">
+    <span class="lbl">◆ 不连续的人类行为，系统今天如何面对</span>
+    <p>
+      答案是：<strong>它假设你是连续的。</strong>
+      每轮都假设你知道上次说了什么，而实际上（a）消息不带时间戳，
+      （b）承诺不存在，（c）位置不恢复，（d）三周前该找你的提醒一次性全部涌进来，
+      （e）你没有读态所以无法表达"这个提醒没用"。<br><br>
+      这不是一处 bug，是<strong>一个没有被设计的维度</strong> ——
+      代码里所有关于"过去"的设施都假设时间是连续的：cursor 是单调的、
+      steps 只增不改、状态是当前值。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 10 隐性 & 潜在 ═══ -->
+<section id="hidden">
+  <span class="sno">10 — Hidden &amp; Latent Behaviors</span>
+  <h2>隐性、潜在，以及"系统知道但用户不知道"</h2>
+  <p class="sub">任务书 §11 要求区分三类。这三类的区分不是学术 —— 它们对应三种完全不同的产品决策。</p>
+
+  <div class="cards c3">
+    <div class="card"><h4>Explicit（显式）</h4>
+      <p>用户明确表达、系统明确记录。<strong>绝大多数已实现的行为在这一类</strong> ——
+      也是最容易做对的，因为意图与动作一一对应。</p></div>
+    <div class="card"><h4>Implicit（隐性）</h4>
+      <p>用户不会说，但通过连续行动可推断。<strong>5 条</strong>：重复提问（HI-2）、
+      先做后问（HI-3）、回看修正（HI-1）、整理即思考（HI-4）、
+      上传了却不学习（HI-4 的另一面）。<br>
+      <strong>这一类系统几乎完全没有</strong>，而它们是理解学习者最丰富的信号。</p></div>
+    <div class="card"><h4>Latent（潜在）</h4>
+      <p>系统没有入口，但真实用户很可能需要。<strong><span id="c-lat2">–</span> 条</strong>：
+      定期自测（LA-1）、自测出题（LA-2）、学习历史（LA-3）、弱点汇总（LA-4）、
+      空间重组（LA-5）、导出（LA-6）、教法偏好（LA-7）、活跃度（LA-8）。</p></div>
+  </div>
+
+  <h3>反向：系统知道、而用户不知道的事</h3>
+  <div class="tw"><table>
+    <thead><tr><th>系统知道</th><th>用户能知道吗</th><th>观察</th></tr></thead>
+    <tbody>
+      <tr><td>他的空间里有 47 个文件、3 条 space memory、12 条 evidence</td>
+          <td>文件数量（Grid 可见）· memory <strong>完全不可见</strong> · evidence 只在简报里间接体现</td>
+          <td>🔴 Space Memory <strong>没有用户侧界面</strong> —— 用户不知道 AI 记住了什么，
+              更无法修正它。<code>remember</code> 是 Agent 自主决定的</td></tr>
+      <tr><td>他在某个知识点上是"not_mastered 且有 3 条 incorrect"</td>
+          <td>简报能看到当前状态值，<strong>看不到 3 这个数</strong></td>
+          <td>🟡 系统知道"卡了几次"，而用户只看到"现在什么状态"</td></tr>
+      <tr><td>这次答对是<strong>带着提示</strong>的</td>
+          <td>不可见（AL-3 走同一个信号位）</td>
+          <td>🔴 而这条信息是"独立且未受帮助才算"这条规则的前提 ——
+              用户自己都不知道那次算不算</td></tr>
+      <tr><td>他的目标改了三次</td>
+          <td>只看到当前值；<strong>Space Memory 里有两条前后对比但他没有入口读</strong></td>
+          <td>🟡 系统替他记住了动机（可惜没记原因）却不给他看</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note">
+    <span class="lbl">◆ 一个反直觉的观察</span>
+    <p>
+      最后一列里<strong>没有一条是"系统知道而用户不知道"</strong> ——
+      全部是<strong>「系统知道、用户看不到」</strong>。<br>
+      也就是说：这个产品当前的信息不对称
+      <strong>不是 AI 掌握了用户不知道的东西，而是 AI 手里有材料却不给用户看</strong>。
+      Space Memory 尤其如此：它每一条都是 Agent 私下决定的，用户既不能看也不能改。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 11 行为 → 系统反应 ═══ -->
+<section id="resp">
+  <span class="sno">11 — Behavior → System Response</span>
+  <h2>用户做 X 之后，系统究竟发生了什么</h2>
+  <p class="sub">任务书 §1 的核心要求。每一行都是「行为 → 哪个 UI 接收 → 产生什么 state → 写哪里 → AI 能否感知 → 后续能否利用」。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>用户行为</th><th>UI 接收</th><th>产生的 state</th><th>写到哪里</th><th>AI 能感知</th><th>后续能用</th></tr></thead>
+    <tbody>
+      <tr><td>建空间</td><td>CreateProjectDialog</td><td>无（只有 name）</td>
+          <td class="mono">projects</td><td>✅ prompt 注入</td><td>✅</td></tr>
+      <tr><td>写目标</td><td>GoalComposer</td><td>LocalGoalDraft</td>
+          <td class="mono">space_goals (draft→active)</td><td>✅ 进 prompt</td>
+          <td>⚠️ <strong>只有教学指令用</strong>；决策层不读</td></tr>
+      <tr><td><strong>改目标</strong></td><td>GoalComposer</td><td>无</td>
+          <td class="mono">space_goals + 一条 space memory</td>
+          <td>✅ 下一轮</td>
+          <td>🔴 <strong>Coordinator 无感知</strong>（<code>rules.py</code> grep goal = 0）</td></tr>
+      <tr><td>上传材料</td><td>上传控件</td><td>page + blocks</td>
+          <td class="mono">pages / material_storage</td>
+          <td>⚠️ <strong>只有开头若干字符</strong>（无 embedding）</td>
+          <td>⚠️ 按 updated_at 排序抽取</td></tr>
+      <tr><td><strong>编辑笔记</strong></td><td>FocusView</td><td>blocks</td>
+          <td class="mono">page_blocks（整页删掉重插）</td>
+          <td>✅ 下轮排最前</td>
+          <td>🔴 <strong>Learner State 零感知</strong></td></tr>
+      <tr><td>建知识结构</td><td>—</td><td>—</td>
+          <td class="mono"><strong>无用户入口</strong></td>
+          <td>✅</td><td>✅ 但用户不能纠正</td></tr>
+      <tr><td>写 space memory</td><td>—</td><td>memory</td>
+          <td class="mono">space_memories</td><td>✅ 下一轮 prompt</td>
+          <td>🟡 无检索（纯时间序）· 用户不可见</td></tr>
+      <tr><td><strong>在对话里答对</strong></td><td>SessionRail</td><td>transcript entry</td>
+          <td class="mono">transcript_json + <strong>knowledge_evidence</strong></td>
+          <td>✅</td>
+          <td>✅ <strong>全连</strong>：evidence → admit_outcome → state → 事件 → Coordinator</td></tr>
+      <tr><td><strong>在课程里答对</strong></td><td>FreeCourseLessonView</td><td>observation</td>
+          <td class="mono">course_lesson_observations</td>
+          <td>🔴 <strong>否</strong></td>
+          <td>🔴 <strong>不调 admit_outcome</strong> ⇒ Learner State 零影响</td></tr>
+      <tr><td><strong>在题库里答对</strong></td><td>题库 UI</td><td>attempt</td>
+          <td class="mono">question_attempts</td>
+          <td>🔴 <strong>否</strong></td>
+          <td>🔴 同上（<code>question_attempt_service</code> grep = 0）</td></tr>
+      <tr><td>说「换个讲法」</td><td>SessionRail 按钮</td><td>signal=confused</td>
+          <td class="mono">transcript_json</td><td>✅ 触发重讲</td>
+          <td>⚠️ 只有这一条会改变 AI 行为</td></tr>
+      <tr><td>打断</td><td>Stop</td><td>signal=interrupt</td>
+          <td class="mono">transcript_json</td><td>⚠️ 进 prompt</td>
+          <td>🔴 <strong>无下游消费者</strong></td></tr>
+      <tr><td>点白板元素</td><td>Whiteboard</td><td>cursor 推进</td>
+          <td class="mono">session.cursor</td><td>✅</td><td>⚠️ 无「点对/点错」建模</td></tr>
+      <tr><td>删除空间</td><td>—</td><td>行消失</td>
+          <td class="mono">全部 CASCADE；<strong>会话 SET NULL 留存</strong></td>
+          <td>—</td>
+          <td>🔴 残留孤儿会话（引用已删内容）</td></tr>
+      <tr><td>点通知</td><td>NotificationCard</td><td><strong>无</strong></td>
+          <td class="mono">—</td><td>—</td>
+          <td>🔴 <strong>组件内 0 个 onClick</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note red">
+    <span class="lbl">◆ 这张表最重要的一列是最后一列</span>
+    <p>
+      <strong>三条最正式的"做题"路径里，只有一条进了 Learner State。</strong>
+      Global Agent 里的作答（<code>record_evidence</code>）是全连的；
+      Free Course（<code>free_course_service.py:605</code>）与题库
+      （<code>question_attempt_service.py</code>）各自写平行表，<strong>都不调 <code>admit_outcome</code></strong>
+      —— 我 grep 过，两个文件的命中数都是 <strong>0</strong>。
+    </p>
+    <p style="margin-top:10px">
+      换句话说：<strong>用户在产品里"正式做题"的地方，做的题对系统认识他没有任何贡献</strong>。
+      而 Free Course 是浅用户最可能停留的地方。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 12 实现核验矩阵 ═══ -->
+<section id="matrix">
+  <span class="sno">12 — Implementation Validation Matrix</span>
+  <h2>覆盖矩阵（可筛选版在 §4）</h2>
+  <p class="sub">
+    状态七值的判据 —— <strong>关键是最后两条</strong>：
+    <code>BACKEND_ONLY</code> 表示代码完整但无生产调用方（不是"实现了"）；
+    <code>UI_ONLY</code> 表示界面在动而后端没有对应事实。
+  </p>
+
+  <div class="cards c3">
+    <div class="card"><h4>SUPPORTED</h4><p>整条链可走通，且有测试。<strong>7 条</strong> ——
+      集中在：Goal 生命周期、空间创建、上传、Space Memory 注入、Global Agent 里的 evidence 链、User Home 的提议确认。</p></div>
+    <div class="card"><h4>BACKEND_ONLY</h4><p>表/服务/prompt 都在，<strong>没有生产调用方</strong>。<strong>6 条</strong> ——
+      <code>remember</code>（无用户入口）、<code>method_episodes</code> 全部写方法、
+      <code>completion_met</code>、<code>rule_owes_completion</code>、<code>import_structure</code>、<code>weak_topics</code>。</p></div>
+    <div class="card"><h4>UI_ONLY</h4><p>界面元素在动，没有后端事实支撑。<strong>3 条</strong> ——
+      图标选择器按钮（无 onClick）、通知卡片（0 个 onClick 而 metadata 里就有 projectId）、
+      首页 <code>todayTaskProgress = 40</code>（硬编码 + 自认 TODO）。</p></div>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>断线</th><th>行为之后</th><th>应该连到</th><th>核验方式</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">B-01</td><td>改 active Goal</td><td>Coordinator 决策</td>
+          <td class="mono">grep goal ai/coordinator/rules.py = 0</td></tr>
+      <tr><td class="mono">B-02</td><td>编辑 Doc / 写笔记</td><td>Learner State</td>
+          <td class="mono">grep knowledge|evidence|learner doc_service.py = 0</td></tr>
+      <tr><td class="mono">B-03</td><td>Free Course 判分</td><td>Learner State</td>
+          <td class="mono">grep evidence_entry|admit_outcome free_course_service.py = 0</td></tr>
+      <tr><td class="mono">B-04</td><td>题库判分</td><td>Learner State</td>
+          <td class="mono">同上 question_attempt_service.py = 0</td></tr>
+      <tr><td class="mono">B-05</td><td>承诺（open_episode）</td><td>承诺的记录本身</td>
+          <td class="mono">grep open_episode 非测试命中 = 0</td></tr>
+      <tr><td class="mono">B-06</td><td>完成判定（completion_met）</td><td>段的结束</td>
+          <td class="mono">grep completion_met 非测试命中 = 0</td></tr>
+      <tr><td class="mono">B-07</td><td>Coordinator 决策</td><td>实际的教法改变</td>
+          <td class="mono">INTRODUCE/REVIEW/CONTINUE 三者同一 return，无 agent 调用</td></tr>
+      <tr><td class="mono">B-08</td><td>通知</td><td>回到那个知识点</td>
+          <td class="mono">grep onClick|navigate|href NotificationCard.tsx = 0</td></tr>
+      <tr><td class="mono">B-09</td><td>每轮教学选择</td><td>界面 / 教法</td>
+          <td class="mono">phase=turn_start 零生产者（R4g 未做）</td></tr>
+      <tr><td class="mono">B-10</td><td>删除空间</td><td>会话的清理或标记</td>
+          <td class="mono">ai_conversation.py:49 SET NULL，无清理代码</td></tr>
+      <tr><td class="mono">B-11</td><td>Goal 被 closed</td><td>下一个目标的方向</td>
+          <td class="mono">system_no_further_value 零写入方</td></tr>
+      <tr><td class="mono">B-12</td><td>对话里的意图</td><td>Goal</td>
+          <td class="mono">origin=user_stated 前端从未使用（GoalBlock.tsx:376-378 自认）</td></tr>
+      <tr><td class="mono">B-13</td><td>空间 A 的经历</td><td>空间 B 的能力</td>
+          <td class="mono">知识全部按 project_id 隔离，list_for_space 强制单 id</td></tr>
+      <tr><td class="mono">B-14</td><td>用户否决教法</td><td>一次性的方式切换</td>
+          <td class="mono">MethodSelection.SWITCH 存在但 rules.py 不产出</td></tr>
+      <tr><td class="mono">B-15</td><td>要求提示</td><td>帮助程度的记录</td>
+          <td class="mono">hint 字段有（Free Course）无消费者；Learn Space 侧无字段</td></tr>
+      <tr><td class="mono">B-16</td><td>三周后回来</td><td>时间感 / 未完成的工作</td>
+          <td class="mono">chat_service.py:154 只取 role+content，无 created_at</td></tr>
+      <tr><td class="mono">B-17</td><td>Focus 离开后回来</td><td>位置与上下文</td>
+          <td class="mono">FocusView.tsx:113-120 全在前端内存，无 localStorage</td></tr>
+      <tr><td class="mono">B-18</td><td>Space Memory 条目</td><td>用户的可见与可改</td>
+          <td class="mono">无用户侧界面；写者只有 Agent 工具</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note green">
+    <span class="lbl">◆ 断线的形状：一个规律</span>
+    <p>
+      这 18 条断线<strong>没有一条是"两处规则不一致"</strong>。它们全部是三种形态之一：<br>
+      <strong>① 入口缺失</strong>（B-01/02/03/04/12/13/14/15/16/18）——
+      数据结构都在，就是没人调。<br>
+      <strong>② 空转</strong>（B-07/08/09）—— 机制都在，最后一跳没接。<br>
+      <strong>③ 空壳</strong>（B-05/06/10/11/17）—— 枚举值、字段、表都在，但没有产生方。
+    </p>
+    <p style="margin-top:10px">
+      <strong>这三种都是可补的</strong>，因为 Learner State 读时算从不存储
+      —— 断线不可能是"历史数据已经错了"，只可能是"某一步没人调"。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 13 primitive ═══ -->
+<section id="prim">
+  <span class="sno">13 — Behavior Primitives</span>
+  <h2>96 条能由多少个 primitive 构成</h2>
+  <p class="sub">这是<strong>从清单推导出来的</strong>，不是先有答案 —— 我把每条行为归到下面 12 个，看是否有多余的、以及是否有归不进去的。</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>primitive</th><th>行为单元的含义</th><th>覆盖的行为</th><th>今天的状态</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Capture</strong></td><td>把外部的东西纳入这个环境</td>
+          <td class="mono">PS-3 CF-1 CF-2 SE-1</td>
+          <td>⚠️ <strong>只有单文件路径</strong>。批量与 URL 都无（CF-2）</td></tr>
+      <tr><td><strong>Direct</strong></td><td>说出这个空间的方向</td>
+          <td class="mono">CR-2 GF-1 GF-3 GF-5 GF-8 GF-11 FU-2</td>
+          <td>⚠️ <strong>改方向无下游</strong>（B-01）· 对话里说无入口（B-12）</td></tr>
+      <tr><td><strong>Attempt</strong></td><td>做一件会产生对错的事</td>
+          <td class="mono">AL-1 AL-2 AL-3 AL-4 AL-8 AL-9 LA-2 HI-3</td>
+          <td>🔴 <strong>三处断裂</strong>：只有 Global Agent 那条进状态（B-03/04）·
+            非回忆型无记录类型（AL-2/04）· 尝试过程不留（HI-3）</td></tr>
+      <tr><td><strong>Ask</strong></td><td>向 AI 要东西</td>
+          <td class="mono">FU-1 IN-1 IN-4</td><td>✅ 完整</td></tr>
+      <tr><td><strong>Challenge</strong></td><td>判定当前的教法对我无效</td>
+          <td class="mono">AL-5 AD-4</td>
+          <td>⚠️ <strong>只有 confused 一个信号</strong>，且自由文本靠关键词匹配。
+            没有一次性的否决入口（B-14）</td></tr>
+      <tr><td><strong>Create</strong></td><td>产出可留存的东西</td>
+          <td class="mono">CF-6 HI-1 SE-5</td>
+          <td>🔴 <strong>产物不留学习痕迹</strong>（B-02）+ 无版本历史</td></tr>
+      <tr><td><strong>Review</strong></td><td>检验自己</td>
+          <td class="mono">ER-2 ER-3 ER-4 LA-3 LA-4 HI-2</td>
+          <td>⚠️ 只能看当前状态，<strong>无历史、无弱点汇总、无重复识别</strong></td></tr>
+      <tr><td><strong>Revisit</strong></td><td>回来接着</td>
+          <td class="mono">CT-1 CT-2 CT-3 CT-4 CT-5 RT-1 RT-2 RT-3 CS-1 CS-4</td>
+          <td>🔴 <strong>这一整类最残缺</strong>：承诺不恢复（B-05/06/16）· 位置不恢复（B-17）</td></tr>
+      <tr><td><strong>Reorganize</strong></td><td>改变这个环境的结构</td>
+          <td class="mono">CF-4 CF-5 CF-7 CF-8 SE-3 LA-5 HI-4</td>
+          <td>🔴 <strong>只有改名</strong>：无删除、无拆分、无知识结构编辑</td></tr>
+      <tr><td><strong>Transfer</strong></td><td>把这里学到的用到别处</td>
+          <td class="mono">CS-2</td>
+          <td>🔴 <strong>零通路</strong>（B-13）</td></tr>
+      <tr><td><strong>Commit</strong></td><td>确立一段承诺与它的判据</td>
+          <td class="mono">AD-1 AD-2 AD-3 CP-1</td>
+          <td>🔴 <strong>整类悬空</strong>：表在、判定在、无写入方（B-05/06）</td></tr>
+      <tr><td><strong>Withdraw</strong></td><td>决定某物不属于这里 / 结束</td>
+          <td class="mono">H-1 SE-2 SE-4 CP-3 CP-4 CP-5 CP-6 RS-5 LA-6</td>
+          <td>🔴 <strong>只有"全删"</strong>：无归档、无边界、无导出、失败不留痕</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note">
+    <span class="lbl">◆ 归类之后的三点观察</span>
+    <p>
+      <strong>① 12 个 primitive 里，只有 1 个（Ask）是完整支持的。</strong>
+      其余每一个都有断线，且断线的形态各不相同 ——
+      Attempt 断在入口、Revisit 断在语义、Create 断在转化、Reorganize 断在减法、
+      Commit 断在两端、Withdraw 断在动作。
+    </p>
+    <p style="margin-top:10px">
+      <strong>② "Capture" 与 "Attempt" 覆盖了最多的日常使用</strong>，
+      而它们的断点分别是"批量导入没有"与"非回忆题没有"。
+      <strong>这解释了浅用户为什么留不住</strong> —— 上传一次容易，
+      而"试一次"没有任何入口。
+    </p>
+    <p style="margin-top:10px">
+      <strong>③ Revisit 覆盖了 10 条行为</strong>（最多的一个），
+      而它的断点最密集。<strong>「回来」是 Learn Space 相对于 Chat 的全部卖点，
+      而它是残缺最严重的一类。</strong>
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 14 Chat vs Space ═══ -->
+<section id="vs">
+  <span class="sno">14 — Chat vs Learn Space</span>
+  <h2>把 UI 与功能名拿掉之后，差别是什么</h2>
+  <p class="sub">从行为地图归纳，而不是从架构图归纳。</p>
+
+  <div class="chain">
+    <div class="chain-t">Chat 的行为形状</div>
+    <div class="cstep">
+      <span class="cnode">query</span><span class="carrow">→</span>
+      <span class="cnode">answer</span>
+      <span class="cbrk">｜ 结束</span>
+    </div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      无状态、无产物、无承诺、无时间。<strong>每一步都是终点</strong>，而这不是缺点 ——
+      它对"临时问一句"是完整的。
+    </p>
+  </div>
+
+  <div class="chain">
+    <div class="chain-t">Learn Space 应该有的行为形状（任务书给的结构）</div>
+    <div class="cstep">
+      <span class="cnode">intent</span><span class="carrow">→</span>
+      <span class="cnode">persistent context</span><span class="carrow">→</span>
+      <span class="cnode">action</span><span class="carrow">→</span>
+      <span class="cnode">evidence</span><span class="carrow">→</span>
+      <span class="cnode">evolving state</span><span class="carrow">→</span>
+      <span class="cnode brk">return</span><span class="carrow">→</span>
+      <span class="cnode brk">continuation</span><span class="carrow">→</span>
+      <span class="cnode brk">transformation</span>
+    </div>
+    <p style="font-size:14.5px;color:var(--fg2);margin:12px 0 0">
+      <strong style="color:var(--ok2)">前五格是连的</strong>（intent → context → action → evidence → state），
+      <strong style="color:var(--none2)">后三格全断</strong>（return / continuation / transformation）。
+    </p>
+  </div>
+
+  <div class="note red">
+    <span class="lbl">◆ 归纳出的结论</span>
+    <p>
+      <strong>Learn Space 与 Chat 的本质差异不是"有文件夹"，而是"有跨会话的主体"。</strong>
+      具体是三件事：<br><br>
+      <strong>① 状态在会话之间活着</strong> —— Chat 每次是空白，
+      而 Space 应该能说"你上次在这里做到了 <em>knows where you are</em>"。
+      今天它能说"你上次说了这些话"（文本恢复），
+      <strong>但说不出"你上次在做什么"</strong>（承诺不恢复）。<br><br>
+      <strong>② 系统在用户不在时做事</strong> —— 这是 Space 相对于 Chat 的<strong>唯一结构性优势</strong>：
+      Chat 不需要记得你，Space 应该记得。
+      而今天<strong>这个优势一次都没有兑现过</strong>：Scheduler 时钟在跑但没有生产者，
+      没有主动检查，没有终止判据。<br><br>
+      <strong>③ 空间本身会演化</strong> —— 目标变、材料增、结论被推翻。
+      今天它<strong>只增不减</strong>，且没有"完成"这个状态。
+    </p>
+  </div>
+
+  <div class="note blue">
+    <span class="lbl">◆ 而这三条里，② 是最便宜的</span>
+    <p>
+      ② 不需要任何新数据模型：<strong>Scheduler 的循环已经真在跑了</strong>
+      （<code>main.py:25-29</code>，5 秒轮询，原子认领已实现），
+      通知能生成，用户能创建提醒（只是 UI 上是 dev 测试按钮）。<br>
+      缺的只有两件事：<strong>谁来创建提醒</strong>，和<strong>点进去发生什么</strong>。<br>
+      ⚠️ 但我不在这里设计方案 —— 这是 §15 之后要讨论的事。本报告只记录它断在哪。
+    </p>
+  </div>
+</section>
+
+<!-- ═══ 15 十个问题 ═══ -->
+<section id="q">
+  <span class="sno">15 — Ten Questions</span>
+  <h2>任务书 §22 要求的十个问题</h2>
+
+  <h3>Q1 · Learn Space 中哪些行为是普通 Chat 无法很好表达的？</h3>
+  <p><strong>六条：</strong>继续一个未完成的承诺（CT-4）· 被提醒该复习了（LA-1）·
+  看自己的学习历史（LA-3）· 积累出可带走的成果（LA-6）· 发现目标是否还成立（RT-2）·
+  推翻上周的结论（ER-4）。<strong>其中五条今天都不存在。</strong></p>
+
+  <h3>Q2 · 哪些行为只有 persistence 才有意义？</h3>
+  <p><strong>Revisit 整类 10 条</strong>（CT-1~5、RT-1~3、CS-1、CS-4）。
+  判据是「它是否依赖"上次"存在」。<strong>这一类最残缺</strong> —— 承诺不恢复、位置不恢复、模型不知道隔了多久。</p>
+
+  <h3>Q3 · 哪些行为需要 AI 记住过去？</h3>
+  <p>目标（GF-1/5）· 材料（CF-1）· 上次学到哪（CT-3）· 上次的判定（CT-4）·
+  薄弱点（LA-4）· 重复提问（HI-2）· 过去的结论（ER-4）。<br>
+  <strong>今天只有前两条靠 Space Memory 连着，而那两条的写者只有 Agent。</strong></p>
+
+  <h3>Q4 · 哪些行为会改变 Learner State？</h3>
+  <p><strong>只有一条路径：Global Agent 里的 <code>record_evidence</code>（ER-1）。</strong><br>
+  不进的有：Free Course 判分（AL-8）· 题库判分（AL-9）· 编辑笔记（CF-6）·
+  上传材料（CF-1）· 点白板（AL-7）· 说"换个讲法"（AL-5）· 打断（AL-6）。<br>
+  <span style="color:var(--none2)">这意味着用户在产品里大部分"做了事"的时刻，对系统认识他零贡献。</span></p>
+
+  <h3>Q5 · 哪些行为会改变 Space 本身？</h3>
+  <p>建（CR-1）· 传（CF-1）· 改目标（GF-5）· 改名（CF-8）· 编辑笔记（CF-6）· 删（CP-4/5）。<br>
+  ⚠️ <strong>但没有任何一个能改变空间的"状态"</strong> —— <code>projects</code> 表无状态字段。
+  空间只增不减，且没有归档。</p>
+
+  <h3>Q6 · 哪些行为会产生 Evidence？</h3>
+  <p><strong>只有"在 Global Agent 里答对/答错"</strong>（AL-1 → ER-1）。
+  而 evidence 的质量维度（<code>hint_used</code> / <code>independent</code>）
+  <strong>在 Free Course 与题库两条路径上完全不存在</strong> ——
+  所以即使它们写进 evidence 表，<code>state.py:291</code> 那条规则也用不上。</p>
+
+  <h3>Q7 · 哪些行为应该触发系统主动反应？</h3>
+  <p>同一处连续未达成（AD-3，🔴 无）· 目标达成（CP-2，🔴 无）· 长期未回（RS-4，🔴 无）·
+  目标已无价值（RS-5/CP-7，🔴 无）· 该复习了（LA-1，🔴 无生产者）。<br>
+  <strong>五条全部不存在。</strong> 而唯一实现的那条（通知）用户点不进去（RS-1）。</p>
+
+  <h3>Q8 · 哪些用户行为今天发生了，但系统完全不知道？</h3>
+  <p>编辑笔记（CF-6）· 课程里答题（AL-8）· 题库里答题（AL-9）· 打断（AL-6）·
+  说"换个讲法"（AL-5，只改讲解不改状态）· 上传了从不学习（HI-4）·
+  重复问同一个问题（HI-2）· 先做后问的过程（HI-3）· 点白板（AL-7）·
+  换 Space（CS-4）· 改了目标的原因（GF-6）· 失败（CP-5）。</p>
+
+  <h3>Q9 · 哪些系统现在知道的信息，其实用户并不知道？</h3>
+  <p><strong>反向：没有一条"系统知道而用户不知道" —— 全部是「系统知道、用户看不到」。</strong><br>
+  Space Memory（18）· 卡了几次（ER-3）· 那次带提示（AL-3）· 目标改过几次（GF-6）·
+  以及首页那个 <code>40</code>（LA-8）—— <strong>它恰恰相反：用户看得到，系统不知道</strong>。</p>
+
+  <h3>Q10 · 用户最可能绕开哪些设计好的路径？</h3>
+  <p>① <strong>把 Space 当收藏夹</strong>（HI-4）—— 连续上传而不学习。
+  ② <strong>发现"跟聊天没区别"就离开</strong>（FU-5）。
+  ③ <strong>用 Free Course 而不是 Space 学</strong> —— 而 Free Course 的判分不进 Learner State，
+  于是连那条绕路也不产生长期价值。
+  ④ <strong>只让 AI 讲不复述</strong> —— 因为"我会了吗"没有任何回答。
+  ⑤ <strong>把一个目标用到底</strong> —— 因为"换个方向"要手工 close + 建。</p>
+</section>
+
+<!-- ═══ 16 未确认 ═══ -->
+<section id="open">
+  <span class="sno">16 — Observed / Inferred / Hypothesized / Unknown / Contradictions</span>
+  <h2>我们目前观察到了什么 —— 以及还不知道什么</h2>
+
+  <h3>Observed · 来自代码的事实</h3>
+  <div class="note green">
+    <span class="lbl">◆ 已核实（我亲自 grep 过的六条）</span>
+    <p>
+      ① <code>ai/coordinator/rules.py</code> grep <code>goal</code> = <strong>0 命中</strong> ——
+      快照带着目标，规则层完全无视。<br>
+      ② <code>open_episode</code> / <code>close_episode</code> 非测试调用方 = <strong>0</strong>。<br>
+      ③ <code>completion_met</code> 非测试调用方 = <strong>0</strong>。<br>
+      ④ <code>free_course_service.py</code> 与 <code>question_attempt_service.py</code> 的
+      <code>evidence_entry|admit_outcome</code> 命中 = <strong>0 / 0</strong>。<br>
+      ⑤ <code>NotificationCard.tsx</code> 的 <code>onClick|navigate|href</code> = <strong>0</strong>。<br>
+      ⑥ <code>ai_conversation.py:49</code> = <code>SET NULL</code>（删空间时会话留存）。<br><br>
+      另：Learner State 是<strong>读时算的纯函数</strong>（<code>state.py:444</code>），
+      从不存储，有 <code>test_portability.py</code> 守护。
+    </p>
+  </div>
+
+  <h3>Inferred · 从行为结构做出的推断</h3>
+  <div class="note blue">
+    <p>
+      ① <strong>Learn Space 最可能被用作收藏夹</strong>（HI-4）——
+      推断依据：它支持的"最低成本使用"就是上传，而它的全部长期机制不参与，
+      于是最小的一层就是唯一被用的一层。<br>
+      ② <strong>浅用户在第一次使用后流失</strong>（FU-5）——
+      推断依据：唯一与空间相关的差别在 prompt 里不可见，而状态栏还没接线。
+      <strong>⚠️ 这一条我没有 runtime 观察支持</strong>，见下。<br>
+      ③ <strong>"回来"是最可能被主动触发的行为</strong>（LA-1/RS-4）——
+      推断依据：它是唯一在 Chat 里做不了、而在 Space 里做得到且不需要用户先做什么的事。
+    </p>
+  </div>
+
+  <h3>Hypothesized · 值得验证但证据不足</h3>
+  <div class="note">
+    <p>
+      ① <strong>重复提问是"没懂"的最强信号</strong>（HI-2）—— 理论上成立，
+      但我没有验证重复率是多少。<br>
+      ② <strong>非回忆题能区分"会"与"猜"</strong>（LA-2）—— 这是教育学的既有结论，
+      但在 Lemma 的场景下量级未知。<br>
+      ③ <strong>用户会自发给 Space 提 Goal</strong>（GF-3）——
+      推断依据：Goal 抽取的 prompt 已经存在且能用，缺的是触发时机。<br>
+      ④ <strong>draft 行遮住 active goal 会造成实际困扰</strong>（GF-11）——
+      我从渲染优先级推断，<strong>没有 runtime 观察</strong>。
+    </p>
+  </div>
+
+  <h3>Unknown · 当前完全无法确认</h3>
+  <div class="note red">
+    <p>
+      ⚠️ <strong>本报告没有 runtime 观察。</strong>
+      登录走 Supabase，本机无 token，而我没有 dev bypass ——
+      所以「代码告诉你系统可能做什么」这一半做到了，<strong>「实际运行告诉你允许用户做什么」这一半没做到</strong>。<br><br>
+      因此以下全部无法确认：<br>
+      ① 用户实际会不会创建多个 Space（空间总览页存在，但使用率未知）<br>
+      ② draft 遮住 active goal 的实际影响（<strong>我改变了页面，但没看过它运行</strong>）<br>
+      ③ 通知在真实页面上是否会堆积（<strong>没有 read_at 是代码事实，堆积程度是推断</strong>）<br>
+      ④ 三周后回来时模型的实际表现（<strong>没有时间戳是代码事实，它会怎么反应是推断</strong>）<br>
+      ⑤ Free Course 判分不进 Learner State 的实际后果（<strong>断线是代码事实，后果轻重是推断</strong>）<br>
+      ⑥ 任何与用户实际行为频率相关的判断 —— <strong>本报告零用户数据</strong>
+    </p>
+  </div>
+
+  <h3>Contradictions · 文档 / 注释与代码冲突</h3>
+  <div class="tw"><table>
+    <thead><tr><th>声称</th><th>实际</th><th>位置</th></tr></thead>
+    <tbody>
+      <tr><td>「system-side close will arrive from the decision path」</td>
+          <td><strong>该调用不存在</strong>，<code>system_no_further_value</code> 无写入方</td>
+          <td class="mono">space_goal_service.py:365-367</td></tr>
+      <tr><td>「is_evidence_admissible 决定什么算证据」</td>
+          <td>它<strong>连写入都挡掉</strong>了 tier C，所以"上传了文件"这类事实在 Learner State 里连行都留不下</td>
+          <td class="mono">ai/knowledge/state.py:284-285</td></tr>
+      <tr><td>icon / color / archive 是 "known future candidates"</td>
+          <td>注释准确，<strong>但对话框仍渲染了图标选择器按钮</strong>，让用户以为能换图标</td>
+          <td class="mono">CreateProjectDialog.tsx:140-149</td></tr>
+      <tr><td>「rule_owes_completion 是 open_episode 的闸门」</td>
+          <td>闸门存在，<strong>而闸门与它守卫的门都没有调用方</strong></td>
+          <td class="mono">ai/methods/completion.py:115-118</td></tr>
+      <tr><td>Free Course 里「graded locally against the option ids」</td>
+          <td>实际发后端判（<strong>这条我今天已修</strong>，<code>99929ffd</code>）</td>
+          <td class="mono">FreeCourseLessonView.tsx:373-375（已改）</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  <p><strong style="color:var(--fg2)">方法</strong>：
+  代码审计（4 个方向并行 + 我亲自 grep 复核 6 条关键断线）· 96 条 exhaustive 行为清单 ·
+  12 个 primitive 归类 · 六条行为链的断点定位。全部断言带 <code>文件:行号</code>。</p>
+  <p><strong style="color:var(--fg2)">本报告不做什么</strong>：
+  不改产品代码 · 不设计新功能 · 不提架构方案 · 不把"当前不能做"当成"用户不会需要"。</p>
+  <p style="margin-top:22px;color:var(--fg3)">
+    基线 <code>user-profile @ df06a656</code> · 2026-10-06 ·
+    ⚠️ <strong>无 runtime 观察</strong>（登录走 Supabase，本机无 token）——
+    这是本报告最大的局限，已在 §16 Unknown 里逐条列出它影响哪些结论。
+  </p>
+</footer>
+
+</div>
+<script src=".workbuddy/behaviors/batch1.js"></script>
+<script src=".workbuddy/behaviors/batch2.js"></script>
+<script src=".workbuddy/behaviors/batch3.js"></script>
+<script src=".workbuddy/behaviors/batch4.js"></script>
+<script src=".workbuddy/behaviors/app.js"></script>
+</body>
+</html>

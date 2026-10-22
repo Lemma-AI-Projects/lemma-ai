@@ -3,7 +3,7 @@
 > ⚠️ **这份文件曾丢失过一次。** 2026-10-05 我在 `connecting-page` 分支写完它之后，
 > 分支被切到 `user-profile`，文件随之消失（仓库两个分支都**没有** tracked README，
 > 所以它是一次未跟踪文件丢失，不是覆盖）。内容从记忆恢复，文件名改为不与
-> 任何产品 README 撞名的 `README-freecourse.md`。
+> 任何产品 README 撞名的 `research/free-course-overview.md`。
 
 **交付物**：`free-course-pipeline-brainstorm.html`（约 97 KB，12 节，浏览器直接打开）
 **代码基线**：`connecting-page @ d7a9299c`
