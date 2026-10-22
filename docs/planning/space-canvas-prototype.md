@@ -221,3 +221,17 @@ npx vite build
    （一个文件一次活动？一个文件多次活动？）没有答案。
 3. 三类元素的"转正路径"不同：file/note 大概率进真画布，interactive 要看它是不是
    该由 Agent 生成。
+
+### §8 问题 1 已拍板（2026-10-22）：**Path B**
+
+file 双击 → `/preview/focus-activity?from=canvas&file=<名>`（Proposal B 活动工作区），
+返回条在其顶栏上方。实现：画布页删同页简化视图（`openFile` 改 `navigate`），
+Proposal B 页读参数渲染返回条。
+
+**立场**：活动内容**不**换成文件正文 —— Proposal B 的主对象是活动，文件是上下文；
+身份保留靠返回条 + 文件名，不靠把讲义塞进工作区。
+
+验证：`.workbuddy/localdb/verify_path_b.mjs`（14 条，全过）——
+拖 interactive 离位 + note 真键盘改字 → 双击进 Proposal B（断言路由/返回条/文件身份/活动内容/可视化）
+→ 返回（断言 note 文本、元素数、interactive 位置、Insight 栏全部原样）。
+截图 `path-b-focus.png` / `path-b-back-to-canvas.png`。
