@@ -179,3 +179,45 @@ npx vite build
    但如果你想让两个原型连成一条流（画布 → Proposal B 活动页），Stage 3 就改走路由。
 2. **note 编辑**就地改字（我选这个，最像"便签"）还是点开小浮层？
 3. Insight 栏**默认开**（我选开 —— D1 说 persistent）还是默认收（画布最大化）？
+
+---
+
+## 9 · 执行记录（2026-10-22，五阶段全部完成）
+
+| 阶段 | 交付 | 验收 |
+|---|---|---|
+| 1 画布布局 | `PrototypeCanvas`（拖动/双击）+ 三类卡片 | ✓ |
+| 2 持续 Insight | 右栏 300px `InsightPanel`（复用）+ 收起窄条 | ✓ |
+| 3 画布 ↔ 聚焦 | file 双击 → 同页聚焦态 → 返回 | ✓ |
+| 4 类内交互 | note 就地编辑（真键盘）· interactive 滑杆 | ✓ |
+| 5 验证 | CDP **19 条断言全过** · tsc/eslint/338 测试/build | ✓ |
+
+提交：入口 `SpaceCanvasPreviewPage` + `features/space-canvas/`（canvasData / PrototypeCanvas / CanvasElementCard）+ 路由。
+
+### 两个过程发现（都写进了代码注释）
+
+1. **画布/聚焦用「并存渲染 + hidden 切换」，不是条件卸载。**
+   条件卸载会在切到聚焦时洗掉滑杆角度、note 编辑态 —— "返回后原样"就要一路提升状态。
+   hidden 切换让状态保留免费拿（sessionStorage 仍在，防刷新）。
+2. **note 编辑的验收要用 CDP 真键盘（`Input.insertText`）**。value-setter 和 execCommand
+   都会出现"DOM 值变了、input 事件发了、React state 没动"的假象 —— 用 console 探针
+   证明 onChange 实际触发、state 实际更新之后，才确认是**断言过期**（还在找
+   execCommand 时代的文本），不是产品 bug。三条证据链缺一环就会误报。
+
+### 已知限制
+
+- 画布态的持久化是 **sessionStorage**（prototype-only；转正时换真持久化并重审"画布态要不要落库"）。
+- 聚焦态是**本页简化视图**（对应文件正文），不是 Proposal B 的活动工作区 —— 两个原型的合并
+  是下一个交互设计问题。
+- Insight 面板的内容是 V0 fixture（复用，非 mock）。
+- 拖动逻辑与 `WorkspaceCanvas` 重复（~60 行）；**转正第一步 = 提取 `useCanvasDrag`**。
+- 无平移/框选，沿用现有 zoom。
+
+### 原型揭示的设计问题（不在此回答）
+
+1. Insight 栏在**聚焦态**也持续可见（本轮保留）—— 聚焦要不要有自己的 Insight 形态
+   （贴在内容边的注，如 `/preview/insight` 的 focus 视图）？
+2. file 双击进的是"对应文件"，但 Proposal B 的工作区是"活动"—— 文件和活动的关系
+   （一个文件一次活动？一个文件多次活动？）没有答案。
+3. 三类元素的"转正路径"不同：file/note 大概率进真画布，interactive 要看它是不是
+   该由 Agent 生成。
