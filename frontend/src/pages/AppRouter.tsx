@@ -23,6 +23,7 @@ import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { FocusPreviewPage } from '@/pages/FocusPreviewPage'
+import { FocusActivityPreviewPage } from '@/pages/FocusActivityPreviewPage'
 import { GoalPreviewPage } from '@/pages/GoalPreviewPage'
 import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
@@ -76,6 +77,13 @@ const routes: RouteObject[] = [
     // Agent），mock 数据、不登录即可查看。
     path: '/preview/focus',
     element: <FocusPreviewPage />,
+  },
+  {
+    // 交互模型评审入口：聚焦模式的 **Proposal B（活动为中心）**。
+    // 与上一条并列，不动真的 FocusView —— 试完不满意，删掉那个页面文件就是回滚。
+    // 计划：docs/planning/focus-activity-workspace-prototype.md
+    path: '/preview/focus-activity',
+    element: <FocusActivityPreviewPage />,
   },
   {
     // 布局评审入口：学习目标那一块（空态 / 回述 / 正在推 / 已暂停），
