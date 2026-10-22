@@ -24,6 +24,7 @@ import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
 import { FocusPreviewPage } from '@/pages/FocusPreviewPage'
 import { FocusActivityPreviewPage } from '@/pages/FocusActivityPreviewPage'
+import { SpaceCanvasPreviewPage } from '@/pages/SpaceCanvasPreviewPage'
 import { GoalPreviewPage } from '@/pages/GoalPreviewPage'
 import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
 import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
@@ -84,6 +85,13 @@ const routes: RouteObject[] = [
     // 计划：docs/planning/focus-activity-workspace-prototype.md
     path: '/preview/focus-activity',
     element: <FocusActivityPreviewPage />,
+  },
+  {
+    // 交互模型评审入口：**画布 ↔ 聚焦 + 持续启示 + 三类元素**。
+    // 与上面两条并列；三类元素的拖动/双击/编辑是这一条要验的东西。
+    // 计划：docs/planning/space-canvas-prototype.md
+    path: '/preview/space-canvas',
+    element: <SpaceCanvasPreviewPage />,
   },
   {
     // 布局评审入口：学习目标那一块（空态 / 回述 / 正在推 / 已暂停），
