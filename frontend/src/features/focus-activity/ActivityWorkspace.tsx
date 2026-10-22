@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 
 import { ACTIVITY, CHECK } from './activityData'
 import { EigenExplorer } from './EigenExplorer'
+import { AgentMoveCard } from './AgentMoveCard'
 
 /**
  * 活动工作区 —— 这一屏的主体。
@@ -23,6 +24,16 @@ import { EigenExplorer } from './EigenExplorer'
 export function ActivityWorkspace() {
   const [picked, setPicked] = useState<string | null>(null)
   const isRight = picked === CHECK.answerId
+
+  /* 「插入过」和「现在可见」分开：撤销只藏起卡片，插过的记录还在 ——
+     这样按钮能说清"撤销后可再插一次"，而不是装作什么都没发生过。 */
+  const [moveInserted, setMoveInserted] = useState(false)
+  const [moveVisible, setMoveVisible] = useState(false)
+
+  const dismissMove = () => {
+    setMoveVisible(false)
+    setMoveInserted(false) // 撤销 = 整个循环重置，按钮恢复可用。否则"可再插一次"是空话。
+  }
 
   return (
     <article className="mx-auto max-w-[46rem] px-8 py-10">
@@ -88,12 +99,26 @@ export function ActivityWorkspace() {
         ) : null}
       </section>
 
-      {/* Stage 3 的落点。虚线 + 阶段号 —— 不做一个"看起来很真"的假卡片。 */}
-      <div className="mt-10 rounded-lg border border-dashed border-zinc-200 px-4 py-6">
-        <p className="text-[11px] tracking-[0.08em] text-zinc-400">Stage 3</p>
-        <p className="mt-1 text-[13px] leading-6 text-zinc-500">
-          模拟 Agent 建议（可撤销）
-        </p>
+      {/* ── Stage 3：模拟 Agent Move ──────────────────────────────────
+          卡片插在内容列的末尾，**和解释、可视化并列** —— 这一句就是 D1 的落地：
+          Agent 的行动不只在聊天里说话，它能往工作区里放东西。
+          按钮在卡片下面：先看到插进来的东西，再看到"是什么让它进来的"。 */}
+      {moveInserted && moveVisible ? (
+        <AgentMoveCard onDismiss={dismissMove} />
+      ) : null}
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => {
+            setMoveInserted(true)
+            setMoveVisible(true)
+          }}
+          disabled={moveInserted}
+          className="rounded-md border border-zinc-300 px-3 py-2 text-[12px] text-zinc-600 transition-colors hover:border-zinc-400 hover:text-zinc-900 disabled:cursor-default disabled:border-zinc-200 disabled:text-zinc-400 disabled:hover:border-zinc-200"
+        >
+          {moveInserted ? '已插入 · 撤销后可再插一次' : '模拟 Agent 提议'}
+        </button>
       </div>
     </article>
   )
