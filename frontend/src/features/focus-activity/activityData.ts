@@ -64,3 +64,20 @@ export const CHAT_REPLIES = {
 
 /** 命中这几个词就走 eigen 那条回复。 */
 export const EIGEN_KEYWORDS = ['特征', 'eigen', 'λ', '方向'] as const
+
+/**
+ * 一道检查题。**答案放在数据里，判断放在组件里** —— 这样题面和判据不会分居两处。
+ *
+ * `answerId` 只用来在选对时淡淡标一下；选错**不纠正**。
+ * 理由：原型没有能力判断"他为什么选错"，给一句纠正就等于假装在教学；
+ * 而一个不纠正的选择题仍然能验交互（能选中、能改选、状态不丢）。
+ */
+export const CHECK = {
+  question: 'A = [[2, 1], [0, 1]] 有几个特征方向？',
+  options: [
+    { id: 'o1', text: '1 个' },
+    { id: 'o2', text: '2 个' },
+    { id: 'o3', text: '无数个' },
+  ],
+  answerId: 'o2',
+} as const

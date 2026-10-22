@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 import { ActivityHeader } from '@/features/focus-activity/ActivityHeader'
+import { ActivityWorkspace } from '@/features/focus-activity/ActivityWorkspace'
 import { ChatPanel, type ChatMessage } from '@/features/focus-activity/ChatPanel'
 import { ContextSidebar } from '@/features/focus-activity/ContextSidebar'
 import {
@@ -32,11 +33,8 @@ import {
  * 「当前学习活动」能不能当主界面对象。所以中栏占据剩下全部宽度，左右两栏都压灰、
  * 都能收；顶栏只有"现在在做什么"和两个开关，没有进度、没有掌握度。
  *
- * ## Stage 1 的边界（现在能看到的东西）
- *
- * 只有**版面骨架 + 对话能发能回**。中栏那段正文是静态的，可交互的可视化与模拟
- * Agent 插入分别在 Stage 2 / Stage 3 —— 中栏里那个虚线框就是留给它们的，标着阶段号，
- * 免得评审以为"功能没做"。
+ * 中栏的内容在 `ActivityWorkspace`：解释 + 可交互可视化 + 检查题。
+ * Stage 3 会在这列末尾插入模拟 Agent 建议 —— 那条"插入不打断"是下一阶段要验的核心。
  */
 export function FocusActivityPreviewPage() {
   /* 初始开合可以从 URL 指：`?sidebar=0` / `?chat=0`。
@@ -96,26 +94,7 @@ export function FocusActivityPreviewPage() {
         </div>
 
         <main className="min-w-0 flex-1 overflow-y-auto">
-          <article className="mx-auto max-w-[46rem] px-8 py-10">
-            <div className="space-y-4">
-              {ACTIVITY.intro.map((line, i) => (
-                <p
-                  key={i}
-                  className={cn(
-                    'text-[15px] leading-8 text-zinc-700',
-                    /* 第一句稍重：它是这一屏的"钩子"。 */
-                    i === 0 && 'font-medium text-zinc-900'
-                  )}
-                >
-                  {line}
-                </p>
-              ))}
-            </div>
-
-            <SlotPlaceholder stage="Stage 2" title="可交互的可视化 + 一道检查题" />
-
-            <SlotPlaceholder stage="Stage 3" title="模拟 Agent 建议（可撤销）" />
-          </article>
+          <ActivityWorkspace />
         </main>
 
         {/* 右：同上，收起时归零、保持挂载（草稿不丢）。 */}
@@ -130,21 +109,6 @@ export function FocusActivityPreviewPage() {
           <ChatPanel messages={messages} pending={pending} onSend={send} />
         </div>
       </div>
-    </div>
-  )
-}
-
-/**
- * 还没做的那一块 —— **明写着阶段号**。
- *
- * 不画一个"看起来像成品"的假组件：那样评审会去评它的样式，而它根本不工作。
- * 虚线 + 阶段号是这一屏最诚实的东西。
- */
-function SlotPlaceholder({ stage, title }: { stage: string; title: string }) {
-  return (
-    <div className="mt-8 rounded-lg border border-dashed border-zinc-200 px-4 py-6">
-      <p className="text-[11px] tracking-[0.08em] text-zinc-400">{stage}</p>
-      <p className="mt-1 text-[13px] leading-6 text-zinc-500">{title}</p>
     </div>
   )
 }
