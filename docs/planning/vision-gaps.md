@@ -2,15 +2,17 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-21**（`practice-system` @ `b3f13c0e`）
+> **最后更新：2026-10-22**（`practice-system` @ `f54c6f29`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
+⚠️ **这三份都不在 worktree 里**：`§` 只在**主检出根**；后两份只在**主检出**的 `.workbuddy/research/`（`.workbuddy/` 整块被 gitignore，worktree 里连这个目录都没有）。要核"原话"回主检出找。
+
 | 代号 | 文件 | 是什么 |
 |---|---|---|
-| **§** | `chatgpt-理解学习方法集.md`（仓库根，09-26，86 节） | 用户 ↔ ChatGPT 逐字对话。**§6** = Global Agent v1.0 功能列表；**§66** = MVP 地基清单 + 正式验收实验；**§82** = 长期重构地图 |
-| **推演** | `.workbuddy/research/learn-space-lifecycle-reference.md`（10-01） | 与 GPT 的一次 runtime 推演（TOEFL 冲刺 20 步）。**它是验收口径和界面文案原话的来源** |
-| **三模式** | `.workbuddy/research/learn-space-three-modes-brief.md`（09-30） | 给 ChatGPT 的背景说明：三种模式 + 七条不能破的原则 |
+| **§** | `chatgpt-理解学习方法集.md`（主检出根，09-26，86 节） | 用户 ↔ ChatGPT 逐字对话。**§6** = Global Agent v1.0 功能列表；**§66** = MVP 地基清单 + 正式验收实验；**§82** = 长期重构地图 |
+| **推演** | `.workbuddy/research/learn-space-lifecycle-reference.md`（主检出，10-01） | 与 GPT 的一次 runtime 推演（TOEFL 冲刺 20 步）。**它是验收口径和界面文案原话的来源** |
+| **三模式** | `.workbuddy/research/learn-space-three-modes-brief.md`（主检出，09-30） | 给 ChatGPT 的背景说明：三种模式 + 七条不能破的原则 |
 
 ## 怎么读这张表
 
@@ -64,7 +66,9 @@
 - **当初怎么说的**（§66 第四节）：「它只需要证明：Learn Space 开始具备"决定下一步"的能力」。
 - **今天的证据**（2026-10-21）：`b3f13c0e` 给 `ai/prompts/templates/text_chat.system.txt` 加了 Initiative / Evidence boundaries / Acting on the environment 三段（`:19`/`:35`/`:43`）；
   `tests/ai/test_prompts.py` 5 passed —— 只证模板渲染与三段没被删，**不证行为**。
-  `AGENT_PRINCIPLES_V0.md:156-175` 自己写了四条人工抽查，但全仓 grep「我们开始吧 / 你想学什么」只命中该文档的**描述**，**零条执行记录**。
+  `decisions/agent-principles.md:156-175` 自己写了四条人工抽查，但全仓 grep「我们开始吧 / 你想学什么」只命中该文档的**描述**，**零条执行记录**。
+  连"这段 prompt 真进了请求"都没验过 —— 研究纲领把它列为主轨第一件（`planning/research-cycle-01.md:109`），
+  而那份文件第一行就写着 `Proposal (not started)`。
 - **完成判据**：四条抽查里至少一条留下回复原文 —— 有 Goal + 有材料时说"我们开始吧"，它直接给出一个具体动作，而不是反问。
 
 ---
@@ -85,9 +89,12 @@
 ### B2 · 学习状态只知道"答对/答错"
 - **问题**：**一个人可以全答对而完全不理解，系统看不出区别。**
 - **当初怎么说的**（§16 附近，借鉴 ALEKS）：Knowledge State 由 assessment/evidence 推断；`Mastered / Not Mastered / Ready to Learn`。
-- **今天的证据**（2026-10-15 复核）：认知/学习动作只承认一种（答对/答错）。
-  `grep -rniE "recall|retrieval|reflection|transfer" backend --include="*.py"` 共 12 处命中，**全部**是
-  "网络检索 / 上传分块"（`no web retrieval`、`TransferConfig`）—— **没有一处**是认知动作。
+- **今天的证据**（2026-10-22 复核，原 10-15）：认知/学习动作只承认一种（答对/答错）——
+  证据表的判定值就三个：`VERDICTS = ("correct", "incorrect", "no_verdict")`（`models/knowledge.py:51`），
+  第三个是"没判"，**不是"讲过一遍"**。
+  `grep -rniE "recall|retrieval|reflection|transfer" backend --include="*.py" --exclude-dir=.venv --exclude-dir=tests`
+  共 **16** 处命中，**全部**是"网络检索 / 上传分块 / 记忆取最近 20 条"（`no web retrieval`、`TransferConfig`、
+  `V0 retrieval is "the most recent N, verbatim"`）—— **没有一处**是认知动作。
 - **完成判据**：至少有一种"不是答题"的证据能改变状态（例如"复述/解释"）。
 
 ### B3 · Inspector 有入口，但 ✓ / → / ○ 一次都没显示过
@@ -133,7 +140,10 @@
 ### C3 · 主动推送没提过的知识 —— 完全没有
 - **问题**：系统不会主动创造学习机会。
 - **当初怎么说的**（§54–58）：两个东西分开命名 —— **Review Reminder**（重新激活已学 Item）与 **Proactive Knowledge Push**（主动创造学习机会）；三个硬条件：当前状态允许学习 · Item 已 ready/due · 最近没刚推过类似的。
-- **今天的证据**：发送器（应用内通知 + 浏览器通知）在，但上游（哪些 Item 到点了）依赖 B1/B2 ⇒ 链路断在中间。
+- **今天的证据**（2026-10-22 复核）：发送器在（`services/notification_service.py`，203 行），但**上游一个都没有** ——
+  调度器只认一种任务：`TYPE_NOTIFICATION = "notification"`（`services/scheduler_service.py:63`）；
+  `grep -rniE "review_due|due_items|proactive|push_" backend --include="*.py" --exclude-dir=.venv --exclude-dir=tests`
+  ⇒ **0 命中**。⇒ "为什么是这一条"这个上游（B1/B2 的状态 → 哪些 Item 到点）**根本不存在**，不是断在中间。
 - **完成判据**：没人要求的情况下，系统推一条，且它能说出为什么是这一条。
 
 ### C4 · 空态只有一条路
@@ -186,7 +196,7 @@
 ### C7 · 启示（Insight）：评审页做好了，真空间里一条都没有
 - **问题**：`/preview/insight` 上那句「你做对了，但那次是靠提示做对的」看着能用 —— 但它是**假数据**，
   真空间里不会出现任何启示，用户也没有地方说「以后别提醒这类」。
-- **当初怎么说的**（`ADAPTIVE_INSIGHT_V0.md` §7「做」）：V1 只做一种启示（靠提示做对）；**只加一张** `space_insights` 表
+- **当初怎么说的**（`design/adaptive-insight.md` §7「做」）：V1 只做一种启示（靠提示做对）；**只加一张** `space_insights` 表
   存反馈；`insight_service` 走 S1 规则 → S2 门槛 → S3 一句话（唯一一次模型调用）；**没候选就一条都不生成**。
   §6.3：界面位置先不定，V1 只给免登录评审页。
 - **今天的证据**（2026-10-18）：
