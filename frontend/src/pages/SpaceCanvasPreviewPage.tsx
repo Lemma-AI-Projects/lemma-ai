@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
 
 import { InsightPanel } from '@/features/learn-space/insight/InsightViews'
 import type { UserAction } from '@/features/learn-space/insight/insightPreviewData'
-import { INITIAL_ELEMENTS, FILE_CONTENT, type CanvasElement } from '@/features/space-canvas/canvasData'
+import { INITIAL_ELEMENTS, type CanvasElement } from '@/features/space-canvas/canvasData'
 import { PrototypeCanvas } from '@/features/space-canvas/PrototypeCanvas'
 
 /**
@@ -44,7 +45,9 @@ export function SpaceCanvasPreviewPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [insightOpen, setInsightOpen] = useState(true)
   const [insightAction, setInsightAction] = useState<UserAction>(null)
-  const [focusFile, setFocusFile] = useState<string | null>(null)
+  /* Path B（用户 2026-10-22 拍板）：双击 file 直接进 **Proposal B 活动工作区**，
+     不再是本页的简化聚焦视图。画布状态靠 sessionStorage 跨路由保留。 */
+  const navigate = useNavigate()
 
   /* 画布态的唯一持久化。位置、note 文本都在 elements 里，一次写完。 */
   useEffect(() => {
@@ -59,24 +62,23 @@ export function SpaceCanvasPreviewPage() {
     setElements((prev) => prev.map((el) => (el.id === id ? { ...el, ...patch } : el)))
   }
 
-  const openFile = (element: CanvasElement) => setFocusFile(element.title)
+  const openFile = (element: CanvasElement) => {
+    navigate(
+      `/preview/focus-activity?from=canvas&file=${encodeURIComponent(element.title)}`
+    )
+  }
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-zinc-100 text-zinc-900">
-      {focusFile ? (
-        <FocusHeader file={focusFile} onBack={() => setFocusFile(null)} />
-      ) : (
-        <CanvasHeader
-          elementCount={elements.length}
-          insightOpen={insightOpen}
-          onToggleInsight={() => setInsightOpen((v) => !v)}
-        />
-      )}
+      <CanvasHeader
+        elementCount={elements.length}
+        insightOpen={insightOpen}
+        onToggleInsight={() => setInsightOpen((v) => !v)}
+      />
 
       <div className="flex min-h-0 flex-1">
-        {/* 画布与聚焦态**并存渲染、用 hidden 切换** —— 不是条件卸载。
-            否则切到聚焦再回来，滑杆角度、note 的编辑态全被卸载洗掉，
-            「返回后画布原样」就要靠一路 state 提升，成本远大于一个 hidden。 */}
-        <div className={cn('relative min-w-0 flex-1', focusFile && 'hidden')}>
+        {/* Path B 之后画布是本页唯一的主区；「返回后原样」由
+            sessionStorage（本页 useEffect 写入）+ Proposal B 页的返回跳转共同保证。 */}
+        <div className="relative min-w-0 flex-1">
           <PrototypeCanvas
             elements={elements}
             zoom={100}
@@ -86,11 +88,6 @@ export function SpaceCanvasPreviewPage() {
             onOpenFile={openFile}
           />
         </div>
-        {focusFile ? (
-          <div className="min-w-0 flex-1 overflow-y-auto">
-            <FocusPane file={focusFile} />
-          </div>
-        ) : null}
 
         {/* Insight 栏：开着是 300px 的面板，收起是一条 32px 窄条。
             两个态都保持挂载（onAction 的选择不丢）。 */}
@@ -160,45 +157,5 @@ function CanvasHeader({
         </button>
       </div>
     </header>
-  )
-}
-
-function FocusHeader({ file, onBack }: { file: string; onBack: () => void }) {
-  return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-zinc-200/70 bg-white px-5">
-      <button
-        type="button"
-        onClick={onBack}
-        className="rounded-md px-2 py-1.5 text-[12px] text-zinc-600 transition-colors hover:bg-zinc-100"
-      >
-        ← 返回画布
-      </button>
-      <span className="text-zinc-300">/</span>
-      <h1 className="text-[15px] font-medium text-zinc-900">{file}</h1>
-      <span className="ml-auto rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">
-        聚焦
-      </span>
-    </header>
-  )
-}
-
-/* ── 聚焦态的中栏（最简：对应文件的正文）────────────────────────────── */
-
-function FocusPane({ file }: { file: string }) {
-  const lines = FILE_CONTENT[file] ?? ['（这份文件还没有可显示的正文。）']
-  return (
-    <article className="mx-auto max-w-[44rem] px-8 py-10">
-      {lines.map((line, i) => (
-        <p
-          key={i}
-          className={cn('text-[15px] leading-8', i === 0 ? 'font-medium text-zinc-900' : 'mt-3 text-zinc-700')}
-        >
-          {line}
-        </p>
-      ))}
-      <p className="mt-8 text-[12px] text-zinc-400">
-        来源：画布中的「{file}」 · 返回后画布会保持原样（位置、便签、启示的开合）。
-      </p>
-    </article>
   )
 }

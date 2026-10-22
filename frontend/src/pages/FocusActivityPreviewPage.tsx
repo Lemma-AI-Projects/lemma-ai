@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
 
@@ -43,6 +43,12 @@ export function FocusActivityPreviewPage() {
   const [params] = useSearchParams()
   const [sidebarOpen, setSidebarOpen] = useState(params.get('sidebar') !== '0')
   const [chatOpen, setChatOpen] = useState(params.get('chat') !== '0')
+  /* Path B（2026-10-22 拍板）：从画布双击 file 进来时，顶栏上方多一条返回条。
+     ⚠️ 活动内容**不**换成文件正文 —— Proposal B 的立场是活动为主对象、文件是上下文，
+     身份保留靠这条返回条和文件名，不靠把讲义塞进工作区。 */
+  const fromCanvas = params.get('from') === 'canvas'
+  const canvasFile = params.get('file') ?? ''
+  const navigate = useNavigate()
   const [messages, setMessages] = useState<ChatMessage[]>(CHAT_SEED)
   const [pending, setPending] = useState(false)
   const timer = useRef<number | null>(null)
@@ -70,6 +76,23 @@ export function FocusActivityPreviewPage() {
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-white text-zinc-900">
+      {fromCanvas ? (
+        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-zinc-200/70 bg-zinc-50/70 px-5">
+          <button
+            type="button"
+            onClick={() => navigate('/preview/space-canvas')}
+            className="rounded-md px-2 py-1 text-[12px] text-zinc-600 transition-colors hover:bg-zinc-100"
+          >
+            ← 返回画布
+          </button>
+          {canvasFile ? (
+            <span className="text-[11px] text-zinc-400">
+              来自画布 · {canvasFile}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
       <ActivityHeader
         title={ACTIVITY.title}
         kind={ACTIVITY.kind}
