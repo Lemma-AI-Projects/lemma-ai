@@ -8,7 +8,7 @@
 | 你要找 | 去哪 |
 |---|---|
 | **已经定下来的决策** | [`decisions/`](decisions/) —— 每份都标 Accepted / Provisional / Open |
-| **正在研究的问题** | [`research/README-rnd-programme.md`](research/README-rnd-programme.md)（研究索引）· [`planning/research-cycle-01.md`](planning/research-cycle-01.md) |
+| **正在研究的问题** | [`research/README-rnd-programme.md`](research/README-rnd-programme.md)（研究索引）· [`planning/research-cycle-01.md`](planning/research-cycle-01.md)  · 原型计划见 [`planning/`](planning/)（space-canvas · focus-activity）|
 | **研究方法** | [`methodologies/rnd-methodology.md`](methodologies/rnd-methodology.md) |
 | **产品与交互设计** | [`design/`](design/) |
 | **系统契约与组件边界** | [`architecture/`](architecture/) · 证据层 [`evidence/`](evidence/index.md) · 语音层 [`voice/`](voice/index.md) |
@@ -32,7 +32,7 @@ docs/
 ├── architecture/        ← 系统契约与边界（5）
 │   ├── evidence/        ← 证据层（5，有自己的 index）
 │   └── voice/           ← 语音层（5，有自己的 index）
-├── planning/            ← 路线、研究周期、缺口（2）
+├── planning/            ← 路线、研究周期、原型计划、缺口（4）
 └── archive/             ← 历史材料（6，不删）
 ```
 
