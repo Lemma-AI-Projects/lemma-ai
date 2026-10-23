@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-22**（`practice-system` @ `f54c6f29`）
+> **最后更新：2026-10-23**（`practice-system` @ `357f2bcf`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -210,6 +210,26 @@
 - **完成判据**：真空间里出现一条启示，它引用的每条记录都能点回原处；点「以后别提醒这类」后
   `space_insights` 表**多一行**，且下一次同类候选被 S2 挡掉（不再生成）。
 
+### C8 · 画板：真画布只有「对话卡」一种，语义连接一条都没有
+- **问题**：空间的画板本该把资料、笔记、对话铺在一张画布上、画出它们的关系；今天真页面的画布上**只有对话卡片**，
+  没有一条连线，也不能在画布上圈一组东西投给 Mala。
+- **当初怎么说的**（三模式 §2「画板（Board / Global Board）」原话）：「把空间里**所有 context** 铺在一张可缩放、
+  可平移的画布上，并且把**语义连接**画出来……语义连接：文件 → 它覆盖的知识主题 → 主题之间的先修关系。
+  这一层不引入 embedding 或文件相似度，只用我们已有的知识结构。」「在画板上可以**选**：Mala 能点击或框选
+  画板上的任何元素或群，投送到右侧的 Global Agent。」
+- **今天的证据**（2026-10-23）：
+  - 真画布只有一种节点 —— `workspace/workspaceTypes.ts:1` 注释自认「**目前只有「对话」一种**，位置是画布态、不落库」；
+    `LearnSpaceWorkspacePage.tsx:42-56` 的 `nodes` 就是 `conversations.map(...)`（空空间给一张不可打开的占位卡）。
+  - **没有任何连线**：`grep -rniE "svg|polyline|path d=|line" frontend/src/features/learn-space/workspace/WorkspaceCanvas.tsx`
+    ⇒ **0 命中**（文件只做拖动 + zoom）。
+  - 三类元素（file / note / interactive）**只在免登录原型** `/preview/space-canvas`：`features/space-canvas/canvasData.ts`
+    是 mock，位置进 sessionStorage；同一目录 `grep -rniE "edge|line|connect|link|relation"` ⇒ 只有 `resize-none`
+    与一条 eslint 注释，**原型里也没有语义连接**。
+  - Mala 只在对话侧：`grep -rn "Mala" frontend/src/features/learn-space/workspace/` ⇒ 只命中
+    `ConversationPanel.tsx:103/112`（输入框上方的 chips），**画布本身**没有框选/投送。
+- **完成判据**：真空间的画板上同时摆着 资料 / 笔记 / 对话 三类，画面上能看见**至少一条**语义连接
+  （文件→主题→先修），并且框选一组元素能投送给 Mala。
+
 
 ---
 
@@ -233,14 +253,14 @@
 
 ### D3 · 建议不告诉你"为什么提这条"
 - **问题**：系统提一条建议，但**不记录依据**（只写了来源对话 id）。
-- **今天的证据**（2026-10-17 复核，原 10-10）：界面仍如实显示"系统未记录提出这条的依据"
+- **今天的证据**（2026-10-23 复核，原 10-10）：界面仍如实显示"系统未记录提出这条的依据"
   （`frontend/src/features/user-home/SuggestionsInbox.tsx:124`）—— 依据仍然没有被记下来。
 - **当初怎么说的**（§82）：User Home 要从"静态用户资料"升级成"支持稳定偏好、长期信息、**确认式记忆**"。
 - **完成判据**：每条建议都能说出一条依据，并且那条依据可回看。
 
 ### D4 · 语音没有用户级存储
-- **问题**：音色是全局单点，做不了"我的声音"（2026-10-17 复核，原 10-10）。
-- **今天的证据**：`backend/models/` 下没有任何 voice/speech 表；音色是配置里一个全局默认
+- **问题**：音色是全局单点，做不了"我的声音"（2026-10-23 复核，原 10-10）。
+- **今天的证据**：`ls backend/models | grep -i "voice\|speech"` ⇒ **无输出**（没有任何 voice/speech 表）；音色是配置里一个全局默认
   （`core/config.py:152` `speech_tts_voice: str = "alloy"`）⇒ 换不了、也不跟用户走。
 - **完成判据**：音色跟着用户走。
 
