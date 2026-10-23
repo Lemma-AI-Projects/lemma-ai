@@ -2,6 +2,8 @@ import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { FocusView } from '@/features/learn-space/focus/FocusView'
 import { AppLayout } from '@/layouts/AppLayout'
+import { PREVIEW_ROUTES } from './previewRegistry'
+import { PreviewIndexPage } from './PreviewIndexPage'
 import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
@@ -9,38 +11,22 @@ import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CourseDashboardPage } from '@/pages/CourseDashboardPage'
 import { CoursePointPage } from '@/pages/CoursePointPage'
 import { CourseQuizSandboxPage } from '@/pages/CourseQuizSandboxPage'
-import { FreeCourseBlueprintPreviewPage } from '@/pages/FreeCourseBlueprintPreviewPage'
-import { FreeCourseTuningPreviewPage } from '@/pages/FreeCourseTuningPreviewPage'
 import { FreeCourseBlueprintView } from '@/features/free-course/FreeCourseBlueprintView'
 import { FreeCourseDetailView } from '@/features/free-course/FreeCourseDetailView'
 import { FreeCourseLessonView } from '@/features/free-course/FreeCourseLessonView'
 import { TeachingSessionView } from '@/features/free-course/session/TeachingSessionView'
 import { UserHomePage } from '@/features/user-home/UserHomePage'
 import { CreditsPage } from '@/pages/CreditsPage'
-import { CreditsPreviewPage } from '@/pages/CreditsPreviewPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LearnSpacesPage } from '@/pages/LearnSpacesPage'
-import { FocusPreviewPage } from '@/pages/FocusPreviewPage'
-import { FocusActivityPreviewPage } from '@/pages/FocusActivityPreviewPage'
-import { SpaceCanvasPreviewPage } from '@/pages/SpaceCanvasPreviewPage'
-import { GoalPreviewPage } from '@/pages/GoalPreviewPage'
-import { LearnSpacesPreviewPage } from '@/pages/LearnSpacesPreviewPage'
-import { LearnSpaceGridPreviewPage } from '@/pages/LearnSpaceGridPreviewPage'
 import { LearnSpaceWorkspacePage } from '@/pages/LearnSpaceWorkspacePage'
-import { LearnSpaceWorkspacePreviewPage } from '@/pages/LearnSpaceWorkspacePreviewPage'
-import { InsightPreviewPage } from '@/pages/InsightPreviewPage'
-import { TrajectoryEventsPreviewPage } from '@/pages/TrajectoryEventsPreviewPage'
-import { TrajectoryPreviewPage } from '@/pages/TrajectoryPreviewPage'
 import { LoginPage } from '@/pages/LoginPage'
-import { OnboardingPreviewPage } from '@/pages/OnboardingPreviewPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 import { TrajectorySpacePage } from '@/pages/TrajectorySpacePage'
-import { SchedulePreviewPage } from '@/pages/SchedulePreviewPage'
-import { UserProfilePreviewPage } from '@/pages/UserProfilePreviewPage'
 
 const routes: RouteObject[] = [
   {
@@ -53,104 +39,15 @@ const routes: RouteObject[] = [
     element: <LoginPage />,
   },
   {
-    // 布局评审入口：公开、免登录，只渲染 mock 数据。
-    path: '/preview/learn-spaces',
-    element: <LearnSpacesPreviewPage />,
+    // /preview 索引：全部评审入口的目录。**清单是唯一来源**（./previewRegistry.tsx），
+    // 路由从这里 map 出来 —— 新增 preview 只改清单，路由和索引自动同步。
+    path: '/preview',
+    element: <PreviewIndexPage />,
   },
-  {
-    // 布局评审入口：学习空间工作台（全屏画布），mock 数据。
-    path: '/preview/learn-space',
-    element: <LearnSpaceWorkspacePreviewPage />,
-  },
-  {
-    // 布局评审入口：Credits 充值页，mock 数据、不登录即可查看。
-    path: '/preview/credits',
-    element: <CreditsPreviewPage />,
-  },
-  {
-    // 布局评审入口：学习空间的**网格模式**（分组 + 卡片 + 顶栏两个入口），
-    // mock 资料、不登录即可查看。
-    path: '/preview/learn-space-grid',
-    element: <LearnSpaceGridPreviewPage />,
-  },
-  {
-    // 布局评审入口：学习空间的**聚焦模式**（新顶栏 + 大纲 + 可编辑正文 + 右栏
-    // Agent），mock 数据、不登录即可查看。
-    path: '/preview/focus',
-    element: <FocusPreviewPage />,
-  },
-  {
-    // 交互模型评审入口：聚焦模式的 **Proposal B（活动为中心）**。
-    // 与上一条并列，不动真的 FocusView —— 试完不满意，删掉那个页面文件就是回滚。
-    // 计划：docs/planning/focus-activity-workspace-prototype.md
-    path: '/preview/focus-activity',
-    element: <FocusActivityPreviewPage />,
-  },
-  {
-    // 交互模型评审入口：**画布 ↔ 聚焦 + 持续启示 + 三类元素**。
-    // 与上面两条并列；三类元素的拖动/双击/编辑是这一条要验的东西。
-    // 计划：docs/planning/space-canvas-prototype.md
-    path: '/preview/space-canvas',
-    element: <SpaceCanvasPreviewPage />,
-  },
-  {
-    // 布局评审入口：学习目标那一块（空态 / 回述 / 正在推 / 已暂停），
-    // 四屏并排，mock 数据、不登录即可查看。
-    path: '/preview/goal',
-    element: <GoalPreviewPage />,
-  },
-  {
-    // Trajectory：Learn Space 的纵向时间层（空间状态 · 时间线 · 依据追溯）。
-    // 公开、免登录、mock 数据。
-    //
-    // 挂成独立路由而不并进 Learn Space 的导航，是有意的：未来的入口设计是
-    // Hover Shelter → submenu → Trajectory，而那条 submenu 还没有建。
-    // 挂成独立路由意味着它**已经能被任何 navigation entry 打开**，
-    // 将来 Shelter 只需要指向这条路径，不必先改现有导航结构。
-    path: '/preview/trajectory',
-    element: <TrajectoryPreviewPage />,
-  },
-  {
-    // 轨迹的**真数据版**（与上面那条不是一回事）：这一条渲染的是真实路由
-    // `/learn-spaces/:id/trajectory` 用的**同一段代码**（`TrajectoryTimeline`），
-    // 只是数据来自 fixture。免登录，所以能在本机看到它长什么样。
-    // ⚠️ 上面那条是旧原型（画布 + 四问 + 依据抽屉），讲"我走了多远"；
-    // 这一条讲"到底发生了什么"。两条并存是有意的。
-    path: '/preview/trajectory-events',
-    element: <TrajectoryEventsPreviewPage />,
-  },
-  {
-    // 启示（Insight）的评审入口：一条观察在**空间 / 聚焦 / 轨迹**三处的样子。
-    // 免登录、假数据、不连后端（回应只活在页面 state 里）。
-    // 设计：docs/design/adaptive-insight.md（§5 明确"表示形态只记约束、不锁视觉"）。
-    path: '/preview/insight',
-    element: <InsightPreviewPage />,
-  },
-  {
-    // 布局评审入口：日程页（Feed）里的通知，mock 数据、不登录即可查看。
-    path: '/preview/schedule',
-    element: <SchedulePreviewPage />,
-  },
-  {
-    // 布局评审入口：个人资料页（/me），mock 数据、不登录即可查看。
-    path: '/preview/user-profile',
-    element: <UserProfilePreviewPage />,
-  },
-  {
-    // 布局评审入口：onboarding 8 屏（认识你 → 校准 → 确认），
-    // mock 数据、不登录即可查看。出口接 /preview/user-profile。
-    path: '/preview/onboarding',
-    element: <OnboardingPreviewPage />,
-  },
-  {
-    // 免费课的两个静态预览（与 v2 同形：公开、不挂 AppLayout）。
-    path: '/preview/free-course-tuning',
-    element: <FreeCourseTuningPreviewPage />,
-  },
-  {
-    path: '/preview/free-course-blueprint/:id',
-    element: <FreeCourseBlueprintPreviewPage />,
-  },
+  ...PREVIEW_ROUTES.map((route) => ({
+    path: route.path,
+    element: route.element,
+  })),
   {
     element: <RequireAuth />,
     children: [
