@@ -8,6 +8,7 @@
 | 你要找 | 去哪 |
 |---|---|
 | **已经定下来的决策** | [`decisions/`](decisions/) —— 每份都标 Accepted / Provisional / Open |
+| **评审入口** | 打开 **`/preview`**（索引页，由 `pages/previewRegistry.tsx` 单一来源渲染）—— 16 条入口谁是谁、各自验什么，都在那一页 |
 | **正在研究的问题** | [`research/README-rnd-programme.md`](research/README-rnd-programme.md)（研究索引）· [`planning/research-cycle-01.md`](planning/research-cycle-01.md)  · 原型计划见 [`planning/`](planning/)（space-canvas · focus-activity）|
 | **研究方法** | [`methodologies/rnd-methodology.md`](methodologies/rnd-methodology.md) |
 | **产品与交互设计** | [`design/`](design/) |
