@@ -2,6 +2,7 @@ import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { FocusView } from '@/features/learn-space/focus/FocusView'
 import { AppLayout } from '@/layouts/AppLayout'
+import { PreviewShell } from './PreviewFab'
 import { PREVIEW_ROUTES } from './previewRegistry'
 import { PreviewIndexPage } from './PreviewIndexPage'
 import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
@@ -39,15 +40,23 @@ const routes: RouteObject[] = [
     element: <LoginPage />,
   },
   {
-    // /preview 索引：全部评审入口的目录。**清单是唯一来源**（./previewRegistry.tsx），
-    // 路由从这里 map 出来 —— 新增 preview 只改清单，路由和索引自动同步。
-    path: '/preview',
-    element: <PreviewIndexPage />,
+    // Pathless layout：给全部 /preview/* 页面挂上**快速跳转球**（PreviewFab）。
+    // 子路由保持绝对路径（/preview/...），UI 嵌套由这里的 <Outlet /> 提供 ——
+    // 新增 preview 页面自动带球，产品路由永远碰不到它。
+    element: <PreviewShell />,
+    children: [
+      {
+        // /preview 索引：全部评审入口的目录。**清单是唯一来源**（./previewRegistry.tsx），
+        // 路由从这里 map 出来 —— 新增 preview 只改清单，路由和索引自动同步。
+        path: '/preview',
+        element: <PreviewIndexPage />,
+      },
+      ...PREVIEW_ROUTES.map((route) => ({
+        path: route.path,
+        element: route.element,
+      })),
+    ],
   },
-  ...PREVIEW_ROUTES.map((route) => ({
-    path: route.path,
-    element: route.element,
-  })),
   {
     element: <RequireAuth />,
     children: [
