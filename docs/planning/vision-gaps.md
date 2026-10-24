@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-23**（`practice-system` @ `357f2bcf`）
+> **最后更新：2026-10-24**（`practice-system` @ `4c1ed5de`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -27,23 +27,34 @@
 ### A1 · 那个验收实验从没跑过
 - **问题**：整条链（学习 → 证据 → 状态 → 决策 → 提醒 → 用户回来）**一次都没有端到端跑通过**。
 - **当初怎么说的**（§66 十二节，原话）：「我甚至建议我们不要用"组件完成率"验收。直接做这个实验：**一个新用户创建 Learn Space，然后在里面连续学习 3 次**」—— 第一次产生证据并更新状态；第二次 Agent 知道发生过什么、知道用户掌握什么、Coordinator 判断下一步；第三次离开后 Scheduler 触发通知、用户回来继续。
-- **今天的证据**：没有这次实验的记录。这条是 A2–A5 的总出口。
+- **今天的证据**（2026-10-24 真库逐表 count）：`free_course_sessions` **7** 行、`knowledge_evidence` **11** 行、
+  `coordinator_decisions` **7** 行、`notifications` **7** 行（全是 09-24~09-27 的 reminder）。看着"有东西"，
+  但对不上那个实验：同一章（`090035a2…`）虽有 **5 条**会话散在 09-23/25/26 三天，其中 **4 条 `transcript_json` 为空、
+  `cursor=0`** —— 是打开过没学过的壳，不是三次学习。这条是 A2–A5 的总出口。
 - **完成判据**：**照着上面那三步真跑一遍**，每一步都留下数据库里的行（不是日志）。
 
 ### A2 · 证据回不到学习状态（两条判分主线绕过唯一入口）
 - **问题**：用户在自由课程/题库里答对答错，**不会**变成"系统知道他会了"。
 - **当初怎么说的**（§66 第六节）：「不要简单堆功能…**不要让 Learner State 自己凭空变化**。必须：`Experience → Evidence → State Update`」。
-- **今天的证据**：唯一入口 `evidence_entry` **有**真实调用方（`api/v1/knowledge.py:125`、Agent 的 `record_evidence` 工具 `conversation_tool_service.py:603`）；但**两条判分主线绕过它** —— 自由课程判分写 `CourseLessonObservation`（`free_course_service.py:604`），题库判分只落题库（`question_attempt_service.submit:94`）。
+- **今天的证据**（2026-10-24 复核）：唯一入口 `evidence_entry` **有**真实调用方（`api/v1/knowledge.py:125`、Agent 的 `record_evidence` 工具
+  `conversation_tool_service.py:603`）；但**两条判分主线仍绕过它** —— 自由课程判分只写 `CourseLessonObservation`
+  （`free_course_service.py:605-612`），题库判分只落题库（`question_attempt_service.submit:94`）。
+  新出现的第三条路 `services/practice/evidence.py:32` **走的是同一扇门**，真库也有 **7 行** `surface=practice` 的证据
+  （全是 2026-10-12）—— 但**唯一调用方是 `backend/scripts/smoke_practice_evidence.py`**，没有任何生产路由调用它
+  （`grep -rn "from services.practice" backend --include=*.py` ⇒ 只有该脚本与 `tests/test_practice_contracts.py`）。
 - **完成判据**：在自由课程里答一道题 → `knowledge_evidence` 表**多一行**。
 
 ### A3 · 一段学习没有开头，也没有结尾
 - **问题**：「这一轮学到什么程度算完」在代码里没有任何地方执行。
 - **当初怎么说的**（推演，三层时间结构）：一轮 / **一段（一个做法 = 一次交互，结束＝完成判据达成或继续无收益）** / 一个目标周期。
-- **今天的证据**（2026-10-20 复核，原 10-15）：`open_episode` / `close_episode` / `completion_met`
+- **今天的证据**（2026-10-24 复核，原 10-15）：`open_episode` / `close_episode` / `completion_met`
   仍然**没有生产调用方**。`grep -rnE "open_episode|close_episode|completion_met" --include="*.py" backend`
   ⇒ 除定义（`services/method_episode_service.py:118/166`、`ai/methods/completion.py:82`）、
   `__all__` 导出、docstring 之外，调用方**只有测试**（`tests/ai/coordinator/test_method_selection.py:587/611/723/749`、
   `tests/ai/methods/test_completion.py`）。
+  ⚠️ 真库 `method_episodes` 有 **3 行**，别误读成"有了"——三行是同一段文案（`换元后的上下限`、`连续做对两道`）、
+  分属三个不同 space/user、`opened_at` 是 10-05 与 10-10、**`closed_at` 全 NULL**，
+  写入者是探针 `.workbuddy/localdb/verify_method_episode.py:274`，不是任何产品路径。
 - **完成判据**：一次聚焦交互能被记成"一段"，并有一个真实调用方去开/关它。
 
 ### A4 · 决策层只在被动触发
