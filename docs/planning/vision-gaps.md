@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-24**（`practice-system` @ `4c1ed5de`）
+> **最后更新：2026-10-25**（`practice-system` @ `b8a26583`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -89,8 +89,8 @@
 ### B1 · 「记住」停在第三台阶：会自动积累，但没证明影响下一轮
 - **问题**：空间记得的只是"最近 20 条原文"（不排序、不检索），**也没有一次观察能证明**下一轮对话真的用上了上一轮的结论。
 - **当初怎么说的**（§34 附近）：五个台阶 —— 记住 → 想起来 → **自动积累 → 持续更新 → 影响行为**；「V0 验收 = 一对话重要的事情在另一对话能准确想起」。
-- **今天的证据**（2026-10-18 复核）：三条边界里**第一条、第三条仍成立** —— 挂在空间不挂对话；
-  `list_for_space` 按 `created_at desc` 取 `MEMORY_LIST_CAP`（=20，`ai/prompts/space_context.py:43`）条原文
+- **今天的证据**（2026-10-25 复核，原 10-18）：三条边界里**第一条、第三条仍成立** —— 挂在空间不挂对话；
+  `list_for_space`（`space_memory_service.py:91`）按 `created_at desc` 取 `MEMORY_LIST_CAP`（=20，`ai/prompts/space_context.py:43`，截断在 `:189`）条原文
   （`space_memory_service.py:117-118`），无排序无语义检索；服务头注释明写 no update / no delete / no merge / no expiry。
   **第二条已经不准**：不只是 Agent 显式记住的才进 —— 改目标、关目标会**自动**写一条
   （`space_goal_service.py:290`、`:380`），这些记忆每轮都进 prompt。⇒ 台阶 3（自动积累）有了，
@@ -111,8 +111,8 @@
 ### B3 · Inspector 有入口，但 ✓ / → / ○ 一次都没显示过
 - **问题**：用户看不到"系统现在认为我会什么、下一步该学什么" —— 界面写好了，但没人确认过它真能显示。
 - **当初怎么说的**（§20）：`learner_state_v0` 要交付 **Learner State Inspector**（✓ mastered / → outer fringe / ○ not ready）。
-- **今天的证据**（2026-10-18 复核，原话「全仓没有面向用户的入口」**已过期**）：入口就在简报面板里 ——
-  `LearningBriefPanel.tsx:112` 挂 `KnowledgeStructureBlock`（`:208-272`），这个块自己调 `GET /knowledge/structure`，
+- **今天的证据**（2026-10-25 复核，原 10-18；原话「全仓没有面向用户的入口」**已过期**）：入口就在简报面板里 ——
+  `LearningBriefPanel.tsx:115` 挂 `KnowledgeStructureBlock`（`:217` 起），这个块自己调 `GET /knowledge/structure`，
   每行行首按派生结果渲染 ✓ / → / ○，后面跟「N 条记录」；挂载点是真工作台 `LearnSpaceWorkspace.tsx:280`
   （`fd951795`，09-22）。⇒ **界面在代码里存在、也在真页面上**。
   ⚠️ 但**没人见过它长什么样**：登录后页面本机打不开（E3），预览页拿不到 brief（`brief !== undefined` 才渲染），
@@ -248,14 +248,14 @@
 
 ### D1 · 「保存撞车三选」永远不会弹
 - **问题**：编辑器那套冲突处理界面存在于代码里，但**触发不了**。
-- **今天的证据**（2026-10-19 复核）：`save_page_blocks`（`services/doc_service.py:198-229`）
+- **今天的证据**（2026-10-25 复核，原 10-19）：`save_page_blocks`（`services/doc_service.py:197-228`）
   只比对 `Page.updated_at` 再删块重插、`commit()`，**全程不 UPDATE `Page` 行** ⇒ 时间戳不动
   ⇒ 客户端拿过期版本也永远对得上。对照：`append_blocks` 在 `:302` 手工 `page.updated_at = func.now()`。
 - **完成判据**：两个窗口同时改一页，第二个真的收到冲突。
 
 ### D2 · 题库系统建成但从未启用
 - **问题**：题库整条链一次真实使用都没有 —— **做题记录两张表 0 行**。
-- **今天的证据**（2026-10-19 真库实测，`select count(*)` 逐表）：
+- **今天的证据**（2026-10-25 真库实测，`select count(*)` 逐表，数字与 10-19 完全一致）：
   `questions` **10** / `question_versions` **10**（全部 `provider=xkw_fixture`，同一秒 2026-09-26 12:46:19 写入，
   是夹具不是真题库）/ `question_sets` **0** / `question_set_items` **0** /
   `question_attempts` **0** / `question_set_attempts` **0**；`qbank_usage_logs` **4**（同样 `provider=fixture`）。
