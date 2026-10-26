@@ -323,6 +323,30 @@ Lexical 的 React 亲和是加分项但协同与 schema 生态略薄。
 | L3 Collaborative Action | 工作区内嵌入可操作内容（可视化/练习/反例卡） | 就地展开 | 中（持续） | 卡片可撤销 | **原型级**（AgentMoveCard + EigenExplorer） |
 | L4 Activity Reorientation | 建议改变当前活动，**需确认**（全屏浮层或中央卡片） | 全区 | 高 | 原活动状态完整保留 | **无**（需设计确认协议） |
 
+<figure>
+<svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft YaHei">
+  <g font-size="11">
+    <rect x="30" y="200" width="86" height="26" rx="13" fill="#EFEDE8"/><text x="73" y="218" text-anchor="middle" fill="#57534E">L1 Ambient</text>
+    <text x="130" y="218" fill="#1F2328">Insight 固定栏 · 不要求回应</text><text x="420" y="218" fill="#8A5A2B">✓ 已有（InsightPanel）</text>
+    <rect x="30" y="160" width="86" height="26" rx="13" fill="#F7EBD8"/><text x="73" y="178" fill="#854F0B">L2 Nudge</text>
+    <text x="130" y="178" fill="#1F2328">内容旁小提示 · 可忽略 · 10s 淡出</text><text x="420" y="178" fill="#B98A3C">原型可复用</text>
+    <rect x="30" y="120" width="86" height="26" rx="13" fill="#F7D8C4"/><text x="73" y="138" fill="#854F0B">L3 Action</text>
+    <text x="130" y="138" fill="#1F2328">工作区嵌入可操作内容（卡/可视化）</text><text x="420" y="138" fill="#B98A3C">原型（AgentMoveCard）</text>
+    <rect x="30" y="80" width="86" height="26" rx="13" fill="#E4B88C"/><text x="73" y="98" fill="#4A2E12">L4 Reorient</text>
+    <text x="130" y="98" fill="#1F2328">建议改变活动 · 必须确认 + 完整退出</text><text x="420" y="98" fill="#B03A2E">✗ 未设计</text>
+    <path d="M73 190 L73 96" stroke="#8A5A2B" stroke-width="1.4" marker-end="url(#up)"/>
+    <text x="46" y="150" fill="#854F0B" transform="rotate(-90 46 150)">注意力与控制权 ↑</text>
+    <text x="500" y="60" fill="#57534E">升档不自动发生：</text>
+    <text x="500" y="78" fill="#57534E">L2 被忽略 = 负信号，</text>
+    <text x="500" y="96" fill="#57534E">不构成升档理由（AIRIS）。</text>
+    <text x="500" y="126" fill="#57534E">任何级别都带来源标注</text>
+    <text x="500" y="144" fill="#57534E">（这条提示基于什么）。</text>
+  </g>
+  <defs><marker id="up" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M1 7L4 1L7 7" fill="none" stroke="#8A5A2B" stroke-width="1.4"/></marker></defs>
+</svg>
+<figcaption>图 1 · 渐进干预四级 → UI 机制映射。右列是仓库对应物：L1 已实现，L2/L3 有原型，L4 未设计。</figcaption>
+</figure>
+
 **映射规则**（不是状态机）：
 
 - 升档**不自动发生**：L2→L3 只能由**新的显式信号**（用户点击/长时间驻留某对象）触发，
@@ -358,6 +382,91 @@ Lexical 的 React 亲和是加分项但协同与 schema 生态略薄。
 
 ---
 
+## 5A · 三个完整交互场景（Task 6）
+
+> 本章是对 brief Task 6（"重点验收任务"）的补齐：三场景各按 10 要素展开，
+> 每个场景末尾给技术实现映射。场景是**推演产物**（[DH]），不是已发生的用户记录。
+
+### 场景 A · Laptop / Research（读论文、比较证据）
+
+| # | 要素 | 内容 |
+|---|---|---|
+| 1 | 初始环境 | 画布上有论文 A、论文 B（两份 `imported`）与一张比较笔记；学习目标："梳理两文对 X 的不同论证" |
+| 2 | 用户行为 | 精读 A §3.2，选中一句写边注；尚未打开 B |
+| 3 | 系统可观察 | A §3.2 的文本选择事件 + 边注写入 + 学习目标文本（**无**跨文件信号） |
+| 4 | 解释与不确定性 | [假设] 他在比较两文（因目标如此），但也可能只是精读 A——两者无法区分 |
+| 5 | Method 依据 | 无显式 Method；意图归类为 Compare/Relate → 只准备 **L1**，不打断 |
+| 6 | Learning Move | `reference`（关联提示）：指向 B 中论证结构相似的一段 |
+| 7 | UI 响应 | Insight 栏（L1）出现一条：「你标记的这段与 B §4.1 论证结构相似」，带源引用，不要求回应 |
+| 8 | 用户进一步交互 | 点引用 → 跳到 B 对应段 → 并排比较、各自写边注 |
+| 9 | Agent 调整 | 用户已在 B 上动手 → 不再升级，保持 L1 静默 |
+| 10 | 状态变化与保存 | 两条边注持久化（块层）；Insight 展示记录不进 Learner State |
+
+**技术映射**：`read_page`（块级锚）+ Insight 固定栏 + **材料间语义检索**（当前仓库没有——本场景暴露的真实缺口）。
+
+### 场景 B · Tablet / Mathematics（手写 + 模拟器）
+
+| # | 要素 | 内容 |
+|---|---|---|
+| 1 | 初始环境 | 平板；特征值讲义 + EigenExplorer（滑杆实验） |
+| 2 | 用户行为 | 拖滑杆 3 次、停在 30°；在手写区写下"为什么不转？"；未发任何消息 |
+| 3 | 系统可观察 | 滑杆事件 ×3 + **笔迹**（ink，OCR 前不可读）+ 零对话 |
+| 4 | 解释与不确定性 | 手写内容**不可靠**（不做 OCR 前提）→ Agent 只知道"实验区有书写行为"；为何写，[假设] |
+| 5 | Method 依据 | Socratic 活跃（用户此前选择）；行动原则 = 不给答案 |
+| 6 | Learning Move | L2 contextual nudge：`指向动作而非答案`——"把方向转到 0°，看 Av 的长度变成多少" |
+| 7 | UI 响应 | 滑杆上方小条（L2），10 秒后自动淡出，可忽略 |
+| 8 | 用户进一步交互 | 拖到 0° → 对齐高亮出现 → 手写区补了一笔 |
+| 9 | Agent 调整 | 用户继续手写 → **静默**（L1），不再提示（连续提示即噪音） |
+| 10 | 状态变化与保存 | 滑杆值=界面态；笔迹=ink 块（持久）；L2 出现/淡出记入观察流（不进判定） |
+
+**技术映射**：Pointer Events 按 `pointerType` 分流 + ink 块类型 + L2 组件 + **零 OCR 依赖**（笔迹先按原样保存）。
+
+### 场景 C · Agent Initiative Without Explicit Request（无显式请求）
+
+| # | 要素 | 内容 |
+|---|---|---|
+| 1 | 初始环境 | 用户读特征值讲义；**从未与 Agent 对话** |
+| 2 | 用户行为 | 20 分钟内三次回到同一节；滑杆方向转满一圈（0°→359°） |
+| 3 | 系统可观察 | 三次回看 §2（**前提：需要埋点**，当前零命中）+ 滑杆满一圈 + 两次对齐落在 0°/315° |
+| 4 | 解释与不确定性 | [假设] 转满一圈 + 两处对齐 = 可能在做系统性探索；也可能只是玩滑杆——**两个解释都活着** |
+| 5 | Method 依据 | 不足以换方法（D4：打断非默认）；保持当前方法 |
+| 6 | Learning Move | L3 一次性：插入**对比卡**——"你在 0° 和 315° 都对上了；两个方向的 \|Av\| 不同（2 vs 1）——这就是两个特征值" |
+| 7 | UI 响应 | 工作区末尾出现建议卡（AgentMoveCard 形态），徽章=「基于你的操作」+ 可展开依据（3 次回看 + 转满一圈——**观察溯源**，U 系列的"不假装"在这里兑现） |
+| 8 | 用户进一步交互 | 读卡 → 点「有用」→ 展开看 \|Av\| 对比 |
+| 9 | Agent 调整 | 无追问 → 收手回 L1；卡片保留可撤销 |
+| 10 | 状态变化与保存 | 卡片采纳/忽略 + 回看观察记录进观察流；**不形成认知结论** |
+
+**技术映射**：回看/滑杆埋点（**前置缺口**，VISION_GAPS C2）+ `propose` 原语 + 观察溯源徽章 + 卡片级撤销。
+
+### Path B 的时序（画布 ↔ 聚焦的往返协议）
+
+<figure>
+<svg viewBox="0 0 640 240" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft YaHei" font-size="11">
+  <rect x="20" y="20" width="120" height="30" rx="4" fill="#F0EDE6" stroke="#8A5A2B"/>
+  <text x="80" y="40" text-anchor="middle">画布页</text>
+  <rect x="260" y="20" width="120" height="30" rx="4" fill="#F0EDE6" stroke="#8A5A2B"/>
+  <text x="320" y="40" text-anchor="middle">Proposal B 页</text>
+  <rect x="500" y="20" width="120" height="30" rx="4" fill="#F0EDE6" stroke="#8A5A2B"/>
+  <text x="560" y="40" text-anchor="middle">sessionStorage</text>
+  <line x1="320" y1="50" x2="320" y2="230" stroke="#D6D3CD"/>
+  <line x1="560" y1="50" x2="560" y2="230" stroke="#D6D3CD"/>
+  <text x="80" y="70">双击 file</text>
+  <line x1="80" y1="78" x2="315" y2="78" stroke="#8A5A2B" marker-end="url(#a)"/>
+  <text x="330" y="100">?from=canvas&amp;file=特征值讲义</text>
+  <text x="330" y="116">（返回条 + 文件身份）</text>
+  <text x="335" y="140">用户点「← 返回画布」</text>
+  <line x1="318" y1="150" x2="90" y2="150" stroke="#8A5A2B" marker-end="url(#a)"/>
+  <text x="95" y="172">navigate 回 /preview/space-canvas</text>
+  <line x1="90" y1="180" x2="315" y2="180" stroke="#8A5A2B" stroke-dasharray="4 3"/>
+  <text x="95" y="176">重挂载 → loadElements()</text>
+  <line x1="430" y1="200" x2="558" y2="200" stroke="#5F5E5A" marker-end="url(#a)"/>
+  <text x="435" y="195">读取 elements</text>
+  <text x="95" y="222">✓ 位置 / note 文本 / insight 开合 = 原样（14 条断言已验）</text>
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1L7 4L1 7" fill="none" stroke="#8A5A2B" stroke-width="1.4"/></marker></defs>
+</svg>
+<figcaption>图 4 · Path B 往返：状态经 sessionStorage 跨路由保留（verify_path_b.mjs，14 条断言）</figcaption>
+</figure>
+
 ## 6 · 工作区内容表示（Task 4）
 
 ### 6.1 候选模型对比
@@ -370,7 +479,7 @@ Lexical 的 React 亲和是加分项但协同与 schema 生态略薄。
 | Composable Objects（自由画布万物） | 画布原型已验 | 文档内块的精细编辑没有着落 | 不采纳为唯一模型 |
 | **Hybrid（块层 + 活动组合层）** | 覆盖两类需求；与仓库两条既有线（BlockEditor + 活动原型）都能接 | 两层的对象关系需要设计 | **推荐** |
 
-**推荐模型**：文档内容以**块**存储（每块有稳定 id、类型、内容）；活动是**块的有序
+**推荐模型** [DH]：文档内容以**块**存储（每块有稳定 id、类型、内容）；活动是**块的有序
 组合 + 交互对象**（一个"学习活动"= 一个块序列，可含 Agent 插入的活动块）。
 Focus Mode 渲染的是**活动流**；一个活动可以就是"读这份文档"（全部是文档块），
 也可以是混合序列。这与 Proposal B 的"活动为主对象"兼容：**活动 = 块的组合**，
@@ -388,6 +497,31 @@ Agent 要指着一句话/一个公式说话。三层方案：
 
 **与现有保存的结构性冲突**：`save_page_blocks` 是**整页删重插**——块 id 在保存后
 不稳定，锚 2/3 会系统性失效。**这是本报告识别的最高优先级技术风险**（详见 §11 E1）。
+<figure>
+<svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft YaHei" font-size="11">
+  <rect x="20" y="40" width="170" height="90" rx="6" fill="#F7F6F2" stroke="#D6D3CD"/>
+  <text x="105" y="62" text-anchor="middle" fill="#57534E">文档（块序列）</text>
+  <rect x="40" y="74" width="130" height="16" fill="#fff" stroke="#D6D3CD"/><text x="48" y="86" fill="#57534E">block A</text>
+  <rect x="40" y="92" width="130" height="16" fill="#FDF3E3" stroke="#8A5A2B"/><text x="48" y="104" fill="#854F0B">block B ← 目标</text>
+  <rect x="40" y="110" width="130" height="14" fill="#fff" stroke="#D6D3CD"/><text x="48" y="121" fill="#9CA3AF">block C</text>
+  <rect x="260" y="52" width="180" height="72" rx="6" fill="#FDF3E3" stroke="#8A5A2B"/>
+  <text x="350" y="72" text-anchor="middle" fill="#854F0B">锚对象</text>
+  <text x="272" y="92" fill="#1F2328">① blockId（粗定位）</text>
+  <text x="272" y="108" fill="#1F2328">② position（块内偏移）</text>
+  <text x="272" y="124" fill="#1F2328">③ quote + occurrence（复核）</text>
+  <line x1="192" y1="98" x2="256" y2="90" stroke="#8A5A2B" marker-end="url(#b)"/>
+  <rect x="500" y="52" width="120" height="72" rx="6" fill="#F7F6F2" stroke="#D6D3CD"/>
+  <text x="560" y="74" text-anchor="middle" fill="#57534E">取用时校验</text>
+  <text x="510" y="94" fill="#1F2328">quote 匹配？</text>
+  <text x="510" y="110" fill="#1F2328">✓ 精确锚定</text>
+  <text x="510" y="126" fill="#854F0B">✗ 降级到块级</text>
+  <line x1="442" y1="88" x2="496" y2="88" stroke="#8A5A2B" marker-end="url(#b)"/>
+  <text x="240" y="160" fill="#57534E">整页删重插保存 ⇒ blockId 不稳定 ⇒ 三段锚系统性失效（最高优先级风险，见 E1）</text>
+  <defs><marker id="b" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M1 1L7 4L1 7" fill="none" stroke="#8A5A2B" stroke-width="1.4"/></marker></defs>
+</svg>
+<figcaption>图 3 · 三段式锚定：块级定位 → 块内偏移 → 引文复核；取用时不匹配则显式降级。</figcaption>
+</figure>
+
 行业参照：ProseMirror 的 Step 模型（每次编辑是一个可重放/可变换的 step）天然支持
 锚点随文档变换（position mapping）——这是"引入编辑器框架"的**决定性理由之一**，
 权重高于开发体验对比。
@@ -481,15 +615,62 @@ Path B 的验收（去 Proposal B 一趟回来画布原样）已经证明了这�
 | 技术风险 | 锚定在整页保存下最脆弱 | 长文档场景未验 | **两层的缝合是新风险** |
 | 最小可行实现 | 一个 Tiptap 文档 + AI 插件 | 现有原型 + 持久化 | 现有原型 + Tiptap 块实验（E1） |
 
+<figure>
+<svg viewBox="0 0 640 230" xmlns="http://www.w3.org/2000/svg" font-family="Microsoft YaHei" font-size="11">
+  <g>
+    <rect x="20" y="20" width="185" height="180" rx="8" fill="#F7F6F2" stroke="#D6D3CD"/>
+    <text x="112" y="44" text-anchor="middle" fill="#57534E" font-weight="bold">A · Document-Centric</text>
+    <text x="34" y="70" fill="#1F2328">核心：富文本文档树</text>
+    <text x="34" y="90" fill="#1F2328">锚定：文档内（脆弱）</text>
+    <text x="34" y="110" fill="#1F2328">Agent 内容：文档附件</text>
+    <text x="34" y="130" fill="#1F2328">Laptop ★★★ Tablet ★★</text>
+    <text x="34" y="152" fill="#B03A2E">风险：与活动为中心</text>
+    <text x="34" y="170" fill="#B03A2E">的既定方向相反</text>
+    <rect x="228" y="20" width="185" height="180" rx="8" fill="#F7F6F2" stroke="#D6D3CD"/>
+    <text x="320" y="44" text-anchor="middle" fill="#57534E" font-weight="bold">B · Activity-Centric</text>
+    <text x="242" y="70" fill="#1F2328">核心：活动/对象组合</text>
+    <text x="242" y="90" fill="#1F2328">锚定：对象即锚</text>
+    <text x="242" y="110" fill="#1F2328">Agent 内容：一等公民</text>
+    <text x="242" y="130" fill="#1F2328">Laptop ★★ Tablet ★★</text>
+    <text x="242" y="152" fill="#B03A2E">风险：长文阅读无答案</text>
+    <text x="242" y="170" fill="#B03A2E">（主场景之一）</text>
+    <rect x="436" y="14" width="185" height="192" rx="8" fill="#FDF3E3" stroke="#8A5A2B" stroke-width="1.6"/>
+    <text x="528" y="44" text-anchor="middle" fill="#854F0B" font-weight="bold">C · Hybrid（推荐）</text>
+    <text x="450" y="70" fill="#1F2328">块层（内容，Tiptap 实验）</text>
+    <text x="450" y="90" fill="#1F2328">+ 活动层（组合，已有）</text>
+    <text x="450" y="110" fill="#1F2328">锚定：块 id + mapping</text>
+    <text x="450" y="130" fill="#1F2328">Agent 内容：一等 + 可撤</text>
+    <text x="450" y="150" fill="#1F2328">Laptop ★★★ Tablet ★★</text>
+    <text x="450" y="172" fill="#854F0B">风险：两层缝合 + E1</text>
+    <text x="450" y="190" fill="#854F0B">（先实验再定）</text>
+  </g>
+</svg>
+<figcaption>图 2 · 三路径对比：星数来自 §8 表格；C 的额外风险（两层缝合）不因推荐而消失。</figcaption>
+</figure>
+
 **其他候选**（brief 允许提出）：**Path D — 现状增强**（不引编辑器框架，继续自研
 BlockEditor，只加埋点与干预 UI）。它的优势是零迁移成本，劣势是锚定/undo/协同的
 地基永远是自研的——列为对照项而非推荐。
 
 ---
 
+### 8A · 公式渲染（v1 评估补入的盲点）
+
+Lemma 的主场景是数学（特征向量原型全是要点），但此前内容模型对**公式**只字未提。
+三个必须先回答的问题：
+
+1. **渲染引擎**：KaTeX（快、同步渲染）vs MathJax v3（全、较慢）vs Tiptap 数学扩展
+   （`tiptap-mathematics` 等，成熟度参差）。[EJ] MVP 取 **KaTeX + 自定义原子块**：
+   公式在块层是**原子节点**（不可进入光标），渲染走 KaTeX——把"公式内编辑"完整排除出
+   MVP，换取锚定与性能的确定性。
+2. **公式内的锚定**：锚到"等号右边那一项"需要公式 AST，成本陡增。[DH] MVP 把公式
+   作为整体锚（blockId 级）；公式内锚定列为 E1 的扩展问题。
+3. **与手写的关系**：手写 ink 与公式块是两种对象，不做实时互转——互转（OCR 到 LaTeX）
+   是未来可选能力，不是 MVP 前提。
+
 ## 9 · 推荐技术路线（Task 8）
 
-### 9.1 推荐：**Path C（Hybrid），两步走**
+### 9.1 推荐：**Path C（Hybrid），两步走** [EJ]
 
 **第一步（已基本完成）**：Activity-Centric shell —— Proposal B / 画布原型已验证
 "活动为主对象、Agent 内容落工作区、跨视图状态连续"。
@@ -511,7 +692,7 @@ Activity-centric 决策方向相反；且锚定问题在纯文档模型下并不
 **为什么不选 D（现状增强）**：整页删重插保存与锚定的冲突是结构性的；自研 undo 与
 未来的协同成本会持续累积。D 可作为 E1 的对照组。
 
-### 9.2 最小 Agent–Workspace 交互边界（本轮最重要的架构产出）
+### 9.2 最小 Agent–Workspace 交互边界（本轮最重要的架构产出）[DH]
 
 **Agent 与工作区之间只需要四个操作原语**（不需要 DSL/Runtime）：
 
@@ -593,7 +774,7 @@ Agent 把 move 翻译成 2–4 号原语的调用，工作区负责呈现与保�
 | **R1 Technical Validation** | E1（锚定）+ E2（冲突撤销）+ E4（消歧 PoC） | 本报告获批 | E1 ≥90% 锚恢复；E2 撤销语义成立；E4 错误率 <10% | 编辑器选型（Tiptap vs ProseMirror vs D 现状增强） |
 | **R2 Interaction Prototype** | 把 Path B 原型的块内容迁入选型编辑器；L2 提示 + L3 建议卡的**真实数据**版 | R1 通过 | Proposal B 全部既有验收在新内容层复现 | 是否开始 MVP |
 | **R3 Minimum Viable Focus Mode** | 文档块 + note + 一次 Agent 建议流（锚定 → 建议卡 → 采纳/拒绝）+ 返回画布 | R2 通过 | 现有原型验收项 + 数据真持久化 | MVP 是否接 Canvas |
-| **R4 Agent Integration** | Method moves 声明进 prompt（Method 计划 Stage 2）+ propose 原语接入工具层；L4 确认协议 | R3 通过 | Agent 的每个工作区动作可溯源于 move；L4 有确认与完整退出 | SWITCH/闭环的形态 |
+| **R4 Agent Integration** | Method moves 声明进 prompt（Method 计划 Stage 2）+ propose 原语接入工具层；L4 确认协议。**⚠️ 进入条件追加（v1 评估）：C2 埋点（读到哪/在做什么）已上线** —— 没有信号源，主动干预全是伪触发 | R3 通过 **且** C2 埋点可用 | Agent 的每个工作区动作可溯源于 move；L4 有确认与完整退出 | SWITCH/闭环的形态 |
 | **R5 Cross-device** | Pointer Events 分流 + ink 块类型 + 触屏五意图验收 | R3 通过（与 R4 并行可） | 纯触屏五意图可用；笔消歧按 E4 结论 | Tablet 进 MVP 或延后 |
 
 **依赖主线**：E1 → 编辑器选型 → R2 → R3 → (R4 ∥ R5)。Method moves（决策日志 P1）
@@ -615,7 +796,11 @@ Agent 把 move 翻译成 2–4 号原语的调用，工作区负责呈现与保�
 
 ---
 
-## 13 · 参考文献（编号，全部经检索核实）
+## 13 · 参考文献（编号，经检索核实）
+
+> **来源等级标注（v1 评估补）**：#1–#8 为学术来源（其中 #5、#6 为 arXiv **预印本，未经同行评议**）；
+> #9–#13 为官方产品/项目文档；#14 为**行业实践类（厂商博客与顾问文章，非学术）**——
+> 其模式描述可信，但"有效性"无实证背书；#16 为仓库内部事实。
 
 1. Kirsh, D., & Maglio, P. (1994). On distinguishing epistemic from pragmatic action.
    *Cognitive Science*, 18(4), 513–549.
