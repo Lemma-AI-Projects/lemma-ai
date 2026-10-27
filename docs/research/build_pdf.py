@@ -1,6 +1,6 @@
 """Focus Mode 调研报告 PDF 构建脚本（可复用管线）。
 
-用法：python build_pdf.py
+用法：python build_pdf.py [v1|v2|<md路径>]
 流程：docs/research/focus-mode-technical-report.md
   → markdown → HTML 模板（A4 / 每页左上 logo / 中文字体 / 表格样式）
   → chrome --headless --print-to-pdf → 同目录同名 PDF。
@@ -11,8 +11,15 @@
 import markdown, pathlib, subprocess, sys
 
 ROOT = pathlib.Path(__file__).parent
-MD = ROOT / "focus-mode-technical-report.md"
-PDF = ROOT / "Lemma AI Focus Mode 交互机制与技术实现路线调研报告.pdf"
+arg = sys.argv[1] if len(sys.argv) > 1 else "v1"
+if arg == "v1":
+    MD = ROOT / "focus-mode-technical-report.md"
+elif arg == "v2":
+    MD = ROOT / "focus-mode-technical-report-v2.md"
+else:
+    MD = pathlib.Path(arg)
+PDF = MD.with_name("Lemma AI Focus Mode 交互机制与技术实现路线调研报告" +
+    (" V2" if "v2" in MD.stem else "") + ".pdf")
 LOGO = "file:///C:/Users/chkev/Desktop/software/lemma%20logo.png"
 CHROME = "C:/Program Files/Google/Chrome/Application/chrome.exe"
 TMP = r"D:/github projects/lemma-ai/.workbuddy/tmp/focus-mode-report.html"
