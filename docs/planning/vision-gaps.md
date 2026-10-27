@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-25**（`practice-system` @ `b8a26583`）
+> **最后更新：2026-10-27**（`practice-system` @ `9210c9d2`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -177,7 +177,10 @@
 - **当初怎么说的**（推演）：那份 TOEFL 20 步推演本身就是一条**时间轴**，而清单顶部写明它是
   「**验收口径和界面文案原话的来源**」。§82 的长期地图里也有独立的 **TIME** 层，并指出真正的核心是那个环
   `Evidence → Learner State ↔ Knowledge Structure → Coordinator → Method → Experience → Evidence` —— 轨迹就是这个环的可视化。
-- **今天的证据**（2026-10-17 第四次复核）：
+- **今天的证据**（2026-10-27 复核「真路由换了没」，其余为 2026-10-17 第四次复核）：
+  - 2026-10-27 重跑：`sed -n '1,20p' frontend/src/pages/TrajectorySpacePage.tsx` ⇒ 第 4 行仍
+    `import { TrajectoryTimeline }`；`grep -rn "TrajectoryCanvas" frontend/src --include=*.tsx --include=*.ts`
+    ⇒ 宿主只有 `pages/TrajectoryEventsPreviewPage.tsx:3/42`。真路由仍是列表。
   - **后端 `cc7ef40`**：`services/trajectory_service.py` + `api/v1/trajectory.py` + `schemas/trajectory.py`，
     挂进 `api/v1/router.py`（`GET /projects/{id}/trajectory`，纯读、不调模型）。**有真跑的输出**：
     探针 `.workbuddy/localdb/verify_trajectory.py` 对真库跑通九类事件、排除无锚点的块、标出近似时间与
@@ -210,7 +213,7 @@
 - **当初怎么说的**（`design/adaptive-insight.md` §7「做」）：V1 只做一种启示（靠提示做对）；**只加一张** `space_insights` 表
   存反馈；`insight_service` 走 S1 规则 → S2 门槛 → S3 一句话（唯一一次模型调用）；**没候选就一条都不生成**。
   §6.3：界面位置先不定，V1 只给免登录评审页。
-- **今天的证据**（2026-10-18）：
+- **今天的证据**（2026-10-27 复核，原 2026-10-18；两条 grep 重跑仍是 0 命中）：
   - 评审页在：`AppRouter.tsx:110` 只有 `/preview/insight` 一条路由；页面自己写明「数据全是假的」
     （`InsightPreviewPage.tsx:37`）；接受/否决只活在组件 state，刷新就没。UI 收口 `9a1ac768`
     （24 条 CDP 断言、暗色截图 `?dark=1`、三个视图重复度 RESTATE 各 1）。
