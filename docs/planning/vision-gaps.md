@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-27**（`practice-system` @ `9210c9d2`）
+> **最后更新：2026-10-28**（`practice-system` @ `18e13406`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -51,7 +51,7 @@
   仍然**没有生产调用方**。`grep -rnE "open_episode|close_episode|completion_met" --include="*.py" backend`
   ⇒ 除定义（`services/method_episode_service.py:118/166`、`ai/methods/completion.py:82`）、
   `__all__` 导出、docstring 之外，调用方**只有测试**（`tests/ai/coordinator/test_method_selection.py:587/611/723/749`、
-  `tests/ai/methods/test_completion.py`）。
+  `tests/ai/methods/test_completion.py`）。（2026-10-28 重跑同一命令，结果不变。）
   ⚠️ 真库 `method_episodes` 有 **3 行**，别误读成"有了"——三行是同一段文案（`换元后的上下限`、`连续做对两道`）、
   分属三个不同 space/user、`opened_at` 是 10-05 与 10-10、**`closed_at` 全 NULL**，
   写入者是探针 `.workbuddy/localdb/verify_method_episode.py:274`，不是任何产品路径。
@@ -143,7 +143,7 @@
 ### C2 · 「回到上次读的地方」——没有
 - **问题**：离开再进来，回到开头。
 - **当初怎么说的**（推演里"离开 → 回来"是完整闭环的一步）。
-- **今天的证据**（2026-10-20 复核）：计划的 F4 批次，本轮明确不做。
+- **今天的证据**（2026-10-20 复核，2026-10-28 重跑仍 0 命中）：计划的 F4 批次，本轮明确不做。
   `grep -rniE "last_read|reading_position|lastRead|resume_position|scroll_position" backend frontend/src`
   ⇒ **0 命中**：前后端都没有任何"读到哪"的存储。
 - **完成判据**：离开再回来，停在之前那一段。⚠️ 红线：**阅读位置 ≠ 掌握**，它不许进学习状态。
@@ -243,6 +243,28 @@
     `ConversationPanel.tsx:103/112`（输入框上方的 chips），**画布本身**没有框选/投送。
 - **完成判据**：真空间的画板上同时摆着 资料 / 笔记 / 对话 三类，画面上能看见**至少一条**语义连接
   （文件→主题→先修），并且框选一组元素能投送给 Mala。
+
+### C9 · 建议卡：拒绝一次，下次它还会提
+- **问题**：Agent 提的每条建议都活不过这一次渲染 —— **被撤销/忽略这件事不被记住**，刷新或下一轮就重新出现；
+  「这条建议被采纳过还是被否决过」在库里没有任何一行。V2 报告把这条列为它推翻的两条 V1 结论之一，
+  但仓库今天仍是 V1 的样子。
+- **当初怎么说的**（`docs/research/focus-mode-technical-report-v2.md` §4.3 原话）：
+  「V1 的 AgentMoveCard 完成了一次演示后就没有然后了：它不知道自己被看过、被展开过、被采纳过；
+  用户不能移动它、引用它、在上面写字；Agent 不知道它是否还在」。
+  §4.2 要求 Move 有生命周期 `prepared→presented→engaged/dismissed/adopted/superseded/expired`，
+  并提出第五原语 `track(move)`；修订记录把「拒绝记录必须跨会话持久」标为**推翻 V1**。
+- **今天的证据**（2026-10-28）：
+  - 前端 `AgentMoveCard.tsx:30-31` 只有 `useState(false)` 存展开态；`ActivityWorkspace.tsx:30-36`
+    `dismissMove = () => { setMoveVisible(false); setMoveInserted(false) }` —— **撤销 = 把组件 state 清成初始值**，
+    无任何写库/写本地存储。
+  - 后端**没有存放建议命运的表**：`grep -rn "__tablename__" backend/models/*.py | grep -iE "move|suggest|hint|interven"`
+    ⇒ **0 命中**；`grep -rniE "agent_moves|move_lifecycle|move_status" backend --include=*.py --exclude-dir=.venv`
+    ⇒ **0 命中**；`grep -rn "track(move)" . --include=*.py --include=*.ts --include=*.tsx --exclude-dir=node_modules`
+    ⇒ **0 命中**（第五原语 `track` 只以文字形式出现在报告里，代码层一次都没有）。
+  - 挂载点仍只在免登录原型：`grep -rn "ActivityWorkspace" frontend/src --include=*.tsx` ⇒ 唯一宿主是
+    `pages/FocusActivityPreviewPage.tsx:7/120`（`/preview/focus-activity`），真路由没有。
+- **完成判据**：否决一条建议 → 某张表**多一行**（`dismissed` + 时间 + 理由）；同源建议在下一次打开时不再出现，
+  且用户能看到「它为什么不再提这个」。
 
 
 ---
