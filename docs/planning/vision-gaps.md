@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-28**（`practice-system` @ `18e13406`）
+> **最后更新：2026-10-29**（`practice-system` @ `0a583bca`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -60,13 +60,13 @@
 ### A4 · 决策层只在被动触发
 - **问题**：系统不会在你进空间、或到时间的时候自己判断"接下来该做什么"。
 - **当初怎么说的**（§66 第四节）：「它只需要证明：Learn Space 开始具备"决定下一步"的能力」。
-- **今天的证据**（2026-10-21 复核）：Coordinator 生产调用方只有 **2 处**（`knowledge.py:148` · `conversation_tool_service.py:646`）；`_execute`（`services/coordinator_service.py:403-421`）里只有 `NOTIFY`（`:414`）自己动手，`INTRODUCE/REVIEW/CONTINUE` 一律 `return "handed_to_global_agent"`（`:421`）。
+- **今天的证据**（2026-10-29 重跑，原 2026-10-21）：Coordinator 生产调用方只有 **2 处**（`knowledge.py:148` · `conversation_tool_service.py:646`）；`_execute`（`services/coordinator_service.py:403-421`）里只有 `NOTIFY`（`:414`）自己动手，`INTRODUCE/REVIEW/CONTINUE` 一律 `return "handed_to_global_agent"`（`:421`）。
 - **完成判据**：进空间时（或到点）真的产出一条非 `NO_ACTION` 的决策，并且**那一条真的改变了接下来发生的事**。
 
 ### A5 · 系统说不出「这个做法不行，换一个」
 - **问题**：规则层判不出「做法**错了**」与「做法**没做完**」的差别 —— 后者的出口是 HOLD，前者**没有任何出口**。
 - **当初怎么说的**（三模式 §4.3：聚焦是"唯一能写"的一屏，也是各种学习方法流程呈现的地方）。
-- **今天的证据**（2026-10-21 复核，原 10-15）：`MethodSelection` 的五个值都定义好了（`ai/coordinator/types.py:349` 起：
+- **今天的证据**（2026-10-29 重跑，原 2026-10-21）：`MethodSelection` 的五个值都定义好了（`ai/coordinator/types.py:349` 起：
   `NO_INTERVENTION / HOLD / END / START / SWITCH`），`SWITCH` 连"必须带理由"的校验都写了（`ai/coordinator/types.py:403-408`）
   —— 但 `grep -rn "SWITCH" ai/coordinator/rules.py` **零命中**；`rules.py` 只产出四处
   `NO_INTERVENTION`（`:296/301/306`）· `HOLD`（`:315`）· `END`（`:319`）· `START`（`:336`），`SWITCH` 一次都不会发生。
@@ -122,8 +122,8 @@
 ### B4 · 结构性前提没有被真正消费
 - **问题**："掌握了 A ⇒ B 是合理的下一步"这条链在决定下一步时**没有被真的用上**（有一处回落还在按位置取）。
 - **当初怎么说的**（§66 第五节）：「Knowledge Structure 是 Learner State 的空间…作用不是展示漂亮知识图谱，而是回答：**如果用户掌握 A，那么 B 是否成为一个合理的下一步？**」
-- **今天的证据**（2026-10-05 核到；2026-10-19 复核仍在）：`select_focus` 的 `outer_fringe[0]` 回落
-  **仍然在**（`ai/methods/types.py:487-488`）—— `grep -rn "select_focus" backend` ⇒ 两个 method
+- **今天的证据**（2026-10-05 核到；2026-10-29 重跑仍成立）：`select_focus` 的 `outer_fringe[0]` 回落
+  **仍然在**（`ai/methods/types.py:488`）—— `grep -rn "select_focus" backend` ⇒ 两个 method
   （`socratic/method.py:105`、`direct_explanation/method.py:91`）各调一次、各算各的目标，与 Coordinator 的
   `NEXT_STEP` 目标重复。docstring 自称由 `test_the_focus_fallback_is_a_dated_duplication` 钉住，
   **那个名字的测试已经不在**（现名 `tests/services/test_methods.py:410 test_focus_falls_back_to_the_outer_fringe`）
