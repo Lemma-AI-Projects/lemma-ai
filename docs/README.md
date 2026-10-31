@@ -12,6 +12,7 @@
 | **技术调研报告 V1（保留）** | [`research/focus-mode-technical-report.md`](research/focus-mode-technical-report.md)（同名 PDF 同目录）——被 V2 批判性修订，保留可追溯 |
 | **评审入口** | 打开 **`/preview`**（索引页，由 `pages/previewRegistry.tsx` 单一来源渲染）—— 16 条入口谁是谁、各自验什么，都在那一页 |
 | **正在研究的问题** | [`research/README-rnd-programme.md`](research/README-rnd-programme.md)（研究索引）· [`planning/research-cycle-01.md`](planning/research-cycle-01.md)  · 原型与重构计划见 [`planning/`](planning/)（space-canvas · focus-activity · method-system-refactor-v0）|
+| **公司形态研究（第一速度）** | [`research/first-velocity/`](research/first-velocity/README.md) —— 7 份。问"产品之外的价值算不算护城河"；**赶时间只读 07**。全部是条件句，不是战略 |
 | **研究方法** | [`methodologies/rnd-methodology.md`](methodologies/rnd-methodology.md) |
 | **产品与交互设计** | [`design/`](design/) |
 | **系统契约与组件边界** | [`architecture/`](architecture/) · 证据层 [`evidence/`](evidence/index.md) · 语音层 [`voice/`](voice/index.md) |
@@ -29,7 +30,7 @@ docs/
 ├── README.md            ← 你在这里
 ├── index.md             ← 阅读约定（先读它再读任何设计文档）
 ├── decisions/           ← 决策记录（2）
-├── research/            ← 研究、调研、现状报告（6）
+├── research/            ← 研究、调研、现状报告（6）+ first-velocity/（7，公司形态）
 ├── methodologies/       ← 可复用的研究方法（1）
 ├── design/              ← 产品与交互设计（6）
 ├── architecture/        ← 系统契约与边界（5）
