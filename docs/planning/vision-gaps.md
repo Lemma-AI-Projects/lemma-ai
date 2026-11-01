@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-10-31**（`practice-system` @ `7ec60d07`）
+> **最后更新：2026-11-01**（`practice-system` @ `d215f927`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -36,7 +36,7 @@
 ### A2 · 证据回不到学习状态（两条判分主线绕过唯一入口）
 - **问题**：用户在自由课程/题库里答对答错，**不会**变成"系统知道他会了"。
 - **当初怎么说的**（§66 第六节）：「不要简单堆功能…**不要让 Learner State 自己凭空变化**。必须：`Experience → Evidence → State Update`」。
-- **今天的证据**（2026-10-24 复核）：唯一入口 `evidence_entry` **有**真实调用方（`api/v1/knowledge.py:125`、Agent 的 `record_evidence` 工具
+- **今天的证据**（2026-11-01 重跑，原 10-24）：唯一入口 `evidence_entry` **有**真实调用方（`api/v1/knowledge.py:125`、Agent 的 `record_evidence` 工具
   `conversation_tool_service.py:603`）；但**两条判分主线仍绕过它** —— 自由课程判分只写 `CourseLessonObservation`
   （`free_course_service.py:605-612`），题库判分只落题库（`question_attempt_service.submit:94`）。
   新出现的第三条路 `services/practice/evidence.py:32` **走的是同一扇门**，真库也有 **7 行** `surface=practice` 的证据
@@ -47,7 +47,7 @@
 ### A3 · 一段学习没有开头，也没有结尾
 - **问题**：「这一轮学到什么程度算完」在代码里没有任何地方执行。
 - **当初怎么说的**（推演，三层时间结构）：一轮 / **一段（一个做法 = 一次交互，结束＝完成判据达成或继续无收益）** / 一个目标周期。
-- **今天的证据**（2026-10-24 复核，原 10-15）：`open_episode` / `close_episode` / `completion_met`
+- **今天的证据**（2026-11-01 重跑，原 10-15）：`open_episode` / `close_episode` / `completion_met`
   仍然**没有生产调用方**。`grep -rnE "open_episode|close_episode|completion_met" --include="*.py" backend`
   ⇒ 除定义（`services/method_episode_service.py:118/166`、`ai/methods/completion.py:82`）、
   `__all__` 导出、docstring 之外，调用方**只有测试**（`tests/ai/coordinator/test_method_selection.py:587/611/723/749`、
@@ -100,7 +100,7 @@
 ### B2 · 学习状态只知道"答对/答错"
 - **问题**：**一个人可以全答对而完全不理解，系统看不出区别。**
 - **当初怎么说的**（§16 附近，借鉴 ALEKS）：Knowledge State 由 assessment/evidence 推断；`Mastered / Not Mastered / Ready to Learn`。
-- **今天的证据**（2026-10-22 复核，原 10-15）：认知/学习动作只承认一种（答对/答错）——
+- **今天的证据**（2026-11-01 重跑，原 10-15）：认知/学习动作只承认一种（答对/答错）——
   证据表的判定值就三个：`VERDICTS = ("correct", "incorrect", "no_verdict")`（`models/knowledge.py:51`），
   第三个是"没判"，**不是"讲过一遍"**。
   `grep -rniE "recall|retrieval|reflection|transfer" backend --include="*.py" --exclude-dir=.venv --exclude-dir=tests`
