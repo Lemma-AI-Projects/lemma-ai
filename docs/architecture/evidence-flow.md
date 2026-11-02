@@ -335,6 +335,7 @@ What happened → What changed → Why we think so → What this changes
 
 交互形态（可拖动 / 缩放 / hover）见 `design/trajectory.md`；
 ⚠️ **那一份是 UI 计划，本文是语义边界** —— 两者不要混读。
+输入来源（哪些信息能进轨迹、从哪来）见 `architecture/trajectory-inputs.md` —— 那份只回答"来源"，不改本文的上游定义。
 
 ---
 

@@ -248,5 +248,6 @@ BoardCanvas 正好是那个尺寸的宿主（它现在是 `/sandbox/board` 的�
 **它不拥有学习语义数据库** —— 那属于
 `architecture/evidence-flow.md` §10：Trajectory 是既有语义来源在时间轴上的**投影**，
 而不是第二套 Evidence System。
+输入来源分类（六类、三组、五条区分）见 `architecture/trajectory-inputs.md`。
 ⚠️ 那份文档同时记录了数据前提：State Change / Goal Change / Method / Milestone
 四项缺失或弱 ⇒ 它今天只能是 mock。

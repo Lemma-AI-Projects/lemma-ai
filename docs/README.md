@@ -33,7 +33,7 @@ docs/
 ├── research/            ← 研究、调研、现状报告（6）+ first-velocity/（7，公司形态）
 ├── methodologies/       ← 可复用的研究方法（1）
 ├── design/              ← 产品与交互设计（6）
-├── architecture/        ← 系统契约与边界（5）
+├── architecture/        ← 系统契约与边界（6）
 │   ├── evidence/        ← 证据层（5，有自己的 index）
 │   └── voice/           ← 语音层（5，有自己的 index）
 ├── planning/            ← 路线、研究周期、原型计划、缺口（4）
