@@ -2,7 +2,7 @@
 
 > 这份表只记一件事：**当初在跟 ChatGPT 的设计对话里说好要做、但今天还没做到的东西。**
 > 它是**活的** —— 每完成一条就把那一行改掉，并写下证据；发现新缺口就往下加。
-> **最后更新：2026-11-01**（`practice-system` @ `d215f927`）
+> **最后更新：2026-11-02**（`practice-system` @ `af849854`）
 
 ## 来源（三个文件，都在这份表里反复引用）
 
@@ -231,9 +231,9 @@
   可平移的画布上，并且把**语义连接**画出来……语义连接：文件 → 它覆盖的知识主题 → 主题之间的先修关系。
   这一层不引入 embedding 或文件相似度，只用我们已有的知识结构。」「在画板上可以**选**：Mala 能点击或框选
   画板上的任何元素或群，投送到右侧的 Global Agent。」
-- **今天的证据**（2026-10-23）：
+- **今天的证据**（2026-11-02 重核，原 2026-10-23）：
   - 真画布只有一种节点 —— `workspace/workspaceTypes.ts:1` 注释自认「**目前只有「对话」一种**，位置是画布态、不落库」；
-    `LearnSpaceWorkspacePage.tsx:42-56` 的 `nodes` 就是 `conversations.map(...)`（空空间给一张不可打开的占位卡）。
+    `LearnSpaceWorkspacePage.tsx:49` 的 `nodes` 就是 `conversations.map(...)`（空空间给一张不可打开的占位卡）。
   - **没有任何连线**：`grep -rniE "svg|polyline|path d=|line" frontend/src/features/learn-space/workspace/WorkspaceCanvas.tsx`
     ⇒ **0 命中**（文件只做拖动 + zoom）。
   - 三类元素（file / note / interactive）**只在免登录原型** `/preview/space-canvas`：`features/space-canvas/canvasData.ts`
@@ -299,8 +299,9 @@
 
 ### D4 · 语音没有用户级存储
 - **问题**：音色是全局单点，做不了"我的声音"（2026-10-23 复核，原 10-10）。
-- **今天的证据**：`ls backend/models | grep -i "voice\|speech"` ⇒ **无输出**（没有任何 voice/speech 表）；音色是配置里一个全局默认
-  （`core/config.py:152` `speech_tts_voice: str = "alloy"`）⇒ 换不了、也不跟用户走。
+- **今天的证据**（2026-11-02 重核，原 10-23；三条证据全未变）：`ls backend/models | grep -iE "voice|speech"`
+  ⇒ **无输出**（没有任何 voice/speech 表；`grep -rniE "class .*(Voice|Speech).*\(Base\)" backend/models` 也是 **0 命中**）；
+  音色是配置里一个全局默认（`core/config.py:152` `speech_tts_voice: str = "alloy"`）⇒ 换不了、也不跟用户走。
 - **完成判据**：音色跟着用户走。
 
 ---
