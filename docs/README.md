@@ -15,6 +15,7 @@
 | **公司形态研究（第一速度）** | [`research/first-velocity/`](research/first-velocity/README.md) —— 7 份。问"产品之外的价值算不算护城河"；**赶时间只读 07**。全部是条件句，不是战略 |
 | **研究方法** | [`methodologies/rnd-methodology.md`](methodologies/rnd-methodology.md) |
 | **产品与交互设计** | [`design/`](design/) |
+| **User Trajectory（产品 / 交互 / 语义）** | 定位与四视角 [`design/user-trajectory-positioning.md`](design/user-trajectory-positioning.md) · Discovery 交互探索（未选方案）[`research/user-trajectory-discovery-exploration.md`](research/user-trajectory-discovery-exploration.md) · 决策与**冲突登记** [`decisions/user-trajectory-experience.md`](decisions/user-trajectory-experience.md) · Timeline 布局计划（旧，仍有效）[`design/trajectory.md`](design/trajectory.md) · 语义分类与合成数据 [`research/user-trajectory-lab/`](research/user-trajectory-lab/) |
 | **系统契约与组件边界** | [`architecture/`](architecture/) · 证据层 [`evidence/`](evidence/index.md) · 语音层 [`voice/`](voice/index.md) |
 | **历史与被取代的东西** | [`archive/`](archive/) —— 保留理由，不删 |
 
@@ -29,10 +30,11 @@
 docs/
 ├── README.md            ← 你在这里
 ├── index.md             ← 阅读约定（先读它再读任何设计文档）
-├── decisions/           ← 决策记录（2）
+├── decisions/           ← 决策记录（3）
 ├── research/            ← 研究、调研、现状报告（6）+ first-velocity/（7，公司形态）
+│   └── user-trajectory-lab/  ← User Trajectory 的合成数据集与语义分类（数据 7 份 + taxonomy/ 5 份）
 ├── methodologies/       ← 可复用的研究方法（1）
-├── design/              ← 产品与交互设计（6）
+├── design/              ← 产品与交互设计（7）
 ├── architecture/        ← 系统契约与边界（6）
 │   ├── evidence/        ← 证据层（5，有自己的 index）
 │   └── voice/           ← 语音层（5，有自己的 index）

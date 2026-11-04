@@ -1,0 +1,2591 @@
+{
+  "_meta": {
+    "name": "Lemma User Trajectory · synthetic longitudinal dataset",
+    "version": "0.1",
+    "created": "2026-11-02",
+    "today": "2026-11-01",
+    "range": { "from": "2026-01-05", "to": "2026-11-01", "days": 301 },
+    "purpose": "Manually populated source of truth for low-fidelity User Trajectory UI exploration. Not a production schema, not a proposal for one.",
+    "warning": "Chen Zhiyuan is fictional. No real person's data is used. Real book/paper titles appear only as cited public works.",
+    "conventions": [
+      { "key": "ids", "value": "mat-* materials | lx-* learning experiences | act-* activities | prj-* projects | out-* outputs | int-* interests | goal-* goals | ms-* milestones | ev-* evidence | ins-* insights | ext-* external records | per-* periods | cor-* corrections" },
+      { "key": "confidence", "value": "qualitative only: high | moderate | low | unknown. No numeric scores anywhere; a percentage appears only where the user measured something themselves (grasp success rate)." },
+      { "key": "provenance.input_source", "value": "A direct user input | B learning activity | C learning evidence | D creative output | E system observation | F external source. Taxonomy from docs/architecture/trajectory-inputs.md" },
+      { "key": "provenance.asserted_by", "value": "user | system | external_platform | agent. Answers 'who said this', which is not the same as which surface it arrived on." },
+      { "key": "provenance.epistemic", "value": "stated (the user said it) | observed (the system saw it happen) | inferred (the system concluded it) | imported (came from outside)" },
+      { "key": "provenance.visible_today", "value": "true if trajectory_service.py can read a row for it today; false means the entity exists in the person's life but not in the product." },
+      { "key": "links", "value": "All relations are explicit id arrays in both directions where it matters. An entity may appear in several dimensions at once; nothing is forced into one owner." },
+      { "key": "activity_fields", "value": "activities carry source (A|B|C|D|F) + learned (yes|no|partial|unknown) + visible, instead of a full provenance block; they are one-off events, not objects. visible=true only when the event left text inside the product (note / reflecting / discussion / problem)." }
+    ],
+    "counts": {
+      "materials": 29,
+      "learning_experiences": 6,
+      "loose_clusters": 2,
+      "activities": 104,
+      "projects": 7,
+      "outputs": 12,
+      "interests": 10,
+      "goals": 11,
+      "milestones": 9,
+      "evidence": 18,
+      "insights": 11,
+      "external_records": 6,
+      "periods": 6,
+      "corrections": 4,
+      "activities_visible": 27
+    }
+  },
+  "person": {
+    "id": "person-01",
+    "name": "陈知远",
+    "name_pinyin": "Chen Zhiyuan",
+    "fictional": true,
+    "born": "2002-03",
+    "age_at_today": 24,
+    "location": "长沙（2026-06-15 起）；此前在武汉读书",
+    "education": [
+      { "institution": "某 985 高校（虚构化处理）", "degree": "本科 · 自动化", "from": "2022-09", "to": "2026-06-13" }
+    ],
+    "current_situation": "毕业待业，住家里，准备 2027 年申请，同时在犹豫是否直接工作",
+    "bio": "自动化本科，做过机械臂抓取。大四上开始自己折腾神经渲染，然后被'表征'这个词带进认知科学，再被带进意识研究。做过的东西比读过的书少，但他自己不这么认为。",
+    "declared_interests": ["神经渲染与三维重建", "认知科学", "意识研究", "科学哲学"],
+    "declared_learning_preferences": [
+      { "text": "我得先有一个具体的问题卡在那儿，我才学得进去。给我一门课从头讲到尾，我两周就跑了。", "said_at": "2026-03-02", "ref": "act-029" },
+      { "text": "我看视频课会睡着。不是内容不好，是我没办法在上面动手。", "said_at": "2026-03-02", "ref": "act-029" },
+      { "text": "读英文论文可以，写英文不行。", "said_at": "2026-09-05", "ref": "act-084" }
+    ],
+    "self_description_conflicts": [
+      { "claim": "要有具体问题才学得进去", "observed": "2026-01 至 2026-02 主要时间在读论文与看讲座，写代码时间不足三分之一", "note": "自我描述不准，不是撒谎；档案保留两个版本" }
+    ],
+    "context": {
+      "family": "父母均为中学教师；不反对 gap，但每月问一次进度",
+      "money": "有约 8 个月生活费的积蓄，够撑到 2027 年春；这是他能拖到 11 月未定的实际原因",
+      "language": {
+        "zh": "母语",
+        "en_reading": "可读论文",
+        "en_writing": "吃力",
+        "en_speaking": "弱"
+      }
+    }
+  },
+  "periods": [
+    { "id": "per-01", "label": "补基础，追新论文", "from": "2026-01-05", "to": "2026-02-13", "density": "high", "summary": "线代 + 神经渲染同时起步。十九天里 24 条记录，是全程最密的一段之一。", "key_objects": ["mat-12", "mat-13", "mat-24", "prj-01", "lx-06"], "activity_count": 26 },
+    { "id": "per-02", "label": "春节", "from": "2026-02-14", "to": "2026-02-25", "density": "none", "summary": "回家。零记录。", "key_objects": [], "activity_count": 0 },
+    { "id": "per-03", "label": "两条线并行", "from": "2026-02-26", "to": "2026-05-26", "density": "high", "summary": "毕设与 recon-lab 同时推进；三月出现'表征'这个连接点；四月塌了一段。", "key_objects": ["prj-01", "prj-02", "lx-01", "lx-04", "ins-01"], "activity_count": 43 },
+    { "id": "per-04", "label": "收尾，然后是真空", "from": "2026-05-27", "to": "2026-07-19", "density": "collapsed", "summary": "答辩、离校、35 天零记录（6-15 至 7-19）。系统在这段无法区分'没在学'与'在别处学'。", "key_objects": ["prj-02", "ms-05", "out-12"], "activity_count": 5 },
+    { "id": "per-05", "label": "低强度，无结构", "from": "2026-07-20", "to": "2026-08-31", "density": "low", "summary": "只读不记。GEB 到 38% 停下。系统对这段的解释力最弱。", "key_objects": ["mat-01", "lx-03"], "activity_count": 7 },
+    { "id": "per-06", "label": "转向写作", "from": "2026-09-01", "to": "2026-11-01", "density": "medium", "summary": "关掉两个目标，进入因果推断，开始长文，做出第一个'说做完就做完'的小工具。", "key_objects": ["prj-06", "prj-07", "mat-05", "ins-07"], "activity_count": 23 }
+  ],
+  "materials": [
+    {
+      "id": "mat-01",
+      "title": "哥德尔、艾舍尔、巴赫：集异璧之大成",
+      "title_original": "Gödel, Escher, Bach: An Eternal Golden Braid",
+      "type": "book",
+      "author": "Douglas Hofstadter",
+      "subject": "认知科学 / 逻辑 / 数学基础",
+      "started": "2026-07-20",
+      "last_interaction": "2026-08-20",
+      "status": "in_progress_stalled",
+      "progress": { "value": "第 11 章 / 20 章", "approx_pct_of_book": 38, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": ["lx-03"],
+        "projects": ["prj-05"],
+        "activities": ["act-075", "act-076", "act-077", "act-080"],
+        "evidence": [],
+        "interests": ["int-02", "int-06"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial",
+        "note": "只在两页笔记里留了引用，没有阅读进度记录；进度是用户自己在 8 月 20 日说的"
+      }
+    },
+    {
+      "id": "mat-02",
+      "title": "The Rust Programming Language",
+      "type": "book",
+      "author": "Steve Klabnik, Carol Nichols",
+      "subject": "系统编程",
+      "started": "2026-02-03",
+      "last_interaction": "2026-04-15",
+      "status": "abandoned",
+      "progress": { "value": "第 1–11 章", "approx_pct_of_book": 55, "measured_by": "chapter_count" },
+      "links": {
+        "experiences": ["lx-02"],
+        "projects": ["prj-03"],
+        "activities": ["act-017", "act-027"],
+        "evidence": ["ev-11"],
+        "interests": ["int-07"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "读的是纸质书 + 官网在线版混着看；Lemma 里没有这本书的对象"
+      }
+    },
+    {
+      "id": "mat-03",
+      "title": "Mind as Machine: A History of Cognitive Science",
+      "type": "book",
+      "author": "Margaret Boden",
+      "subject": "认知科学史",
+      "started": "2026-03-06",
+      "last_interaction": "2026-03-19",
+      "status": "reference_only",
+      "progress": { "value": "导论 + 第 3 章", "approx_pct_of_book": 12, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": ["lx-01"],
+        "projects": [],
+        "activities": ["act-031", "act-054"],
+        "evidence": [],
+        "interests": ["int-02", "int-10"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-04",
+      "title": "Pattern Recognition and Machine Learning",
+      "type": "book",
+      "author": "Christopher Bishop",
+      "subject": "机器学习",
+      "started": "2026-03-11",
+      "last_interaction": "2026-03-11",
+      "status": "abandoned",
+      "progress": { "value": "第 1 章看了 20 页", "approx_pct_of_book": 3, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": [],
+        "projects": [],
+        "activities": ["act-034"],
+        "evidence": [],
+        "interests": ["int-06"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "开了就停。开它的理由是'觉得应该补数学'，不是有具体问题"
+      }
+    },
+    {
+      "id": "mat-05",
+      "title": "为什么：关于因果关系的新科学",
+      "title_original": "The Book of Why",
+      "type": "book",
+      "author": "Judea Pearl, Dana Mackenzie",
+      "subject": "因果推断",
+      "started": "2026-08-12",
+      "last_interaction": "2026-09-08",
+      "status": "completed",
+      "progress": { "value": "通读", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": [],
+        "projects": ["prj-06"],
+        "activities": ["act-078", "act-085", "act-088"],
+        "evidence": ["ev-12", "ev-13"],
+        "interests": ["int-04"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "八月开、九月读完，中间隔了三周没碰"
+      }
+    },
+    {
+      "id": "mat-06",
+      "title": "意识的解释",
+      "title_original": "Consciousness Explained",
+      "type": "book",
+      "author": "Daniel Dennett",
+      "subject": "心灵哲学",
+      "started": "2026-05-05",
+      "last_interaction": "2026-05-24",
+      "status": "completed",
+      "progress": { "value": "通读", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": ["lx-04"],
+        "projects": ["prj-05"],
+        "activities": ["act-060", "act-068"],
+        "evidence": ["ev-08"],
+        "interests": ["int-03", "int-02"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-07",
+      "title": "The Conscious Mind",
+      "type": "book",
+      "author": "David Chalmers",
+      "subject": "心灵哲学",
+      "started": "2026-04-09",
+      "last_interaction": "2026-05-30",
+      "status": "in_progress_stalled",
+      "progress": { "value": "第 1–4 章", "approx_pct_of_book": 40, "measured_by": "chapter_count" },
+      "links": {
+        "experiences": ["lx-04"],
+        "projects": ["prj-05"],
+        "activities": ["act-050"],
+        "evidence": ["ev-08"],
+        "interests": ["int-03"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-08",
+      "title": "现实+：虚拟世界与哲学问题",
+      "title_original": "Reality+",
+      "type": "book",
+      "author": "David Chalmers",
+      "subject": "心灵哲学 / 形而上学",
+      "started": "2026-08-18",
+      "last_interaction": "2026-08-26",
+      "status": "completed",
+      "progress": { "value": "通读，无笔记", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": [],
+        "projects": [],
+        "activities": ["act-079"],
+        "evidence": [],
+        "interests": ["int-03", "int-10"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "读完但零产出。'读完'与'学到'在这里彻底分离"
+      }
+    },
+    {
+      "id": "mat-09",
+      "title": "数学：确定性的丧失",
+      "title_original": "Mathematics: The Loss of Certainty",
+      "type": "book",
+      "author": "Morris Kline",
+      "subject": "数学史 / 数学基础",
+      "started": "2026-01-11",
+      "last_interaction": "2026-01-19",
+      "status": "abandoned",
+      "progress": { "value": "约三分之一", "approx_pct_of_book": 30, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": [],
+        "projects": [],
+        "activities": ["act-003", "act-009"],
+        "evidence": [],
+        "interests": ["int-06"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "寒假前买的。开了九天，之后再没打开"
+      }
+    },
+    {
+      "id": "mat-10",
+      "title": "线性代数应该这样学",
+      "title_original": "Linear Algebra Done Right",
+      "type": "book",
+      "author": "Sheldon Axler",
+      "subject": "数学",
+      "started": "2026-01-05",
+      "last_interaction": "2026-03-21",
+      "status": "in_progress_stalled",
+      "progress": { "value": "第 1–5 章 / 9 章", "approx_pct_of_book": 55, "measured_by": "chapter_count" },
+      "links": {
+        "experiences": ["lx-06"],
+        "projects": ["prj-01", "prj-04"],
+        "activities": ["act-001", "act-007", "act-010", "act-040"],
+        "evidence": ["ev-01", "ev-02"],
+        "interests": ["int-06"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial",
+        "note": "3 月 21 日为了纠正 1 月那次错误重做了第 5 章，之后就断了"
+      }
+    },
+    {
+      "id": "mat-11",
+      "title": "深度学习（花书）",
+      "title_original": "Deep Learning",
+      "type": "book",
+      "author": "Ian Goodfellow, Yoshua Bengio, Aaron Courville",
+      "subject": "机器学习",
+      "started": "2026-01-22",
+      "last_interaction": "2026-09-16",
+      "status": "reference_only",
+      "progress": { "value": "只查第 6、8 章", "approx_pct_of_book": 15, "measured_by": "usage_pattern" },
+      "links": {
+        "experiences": ["lx-05"],
+        "projects": ["prj-01", "prj-07"],
+        "activities": ["act-011", "act-102"],
+        "evidence": [],
+        "interests": ["int-01"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "工具书，从来没打算读完"
+      }
+    },
+    {
+      "id": "mat-12",
+      "title": "NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis",
+      "type": "paper",
+      "author": "Ben Mildenhall et al.",
+      "venue": "ECCV 2020",
+      "subject": "神经渲染",
+      "started": "2026-01-09",
+      "last_interaction": "2026-01-26",
+      "status": "completed",
+      "progress": { "value": "精读，做了 4 页手写推导", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": ["lx-05"],
+        "projects": ["prj-01"],
+        "activities": ["act-004", "act-005", "act-012"],
+        "evidence": ["ev-03", "ev-05"],
+        "interests": ["int-01", "int-02"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "论文是 PDF，Lemma 里只有围绕它的笔记页"
+      }
+    },
+    {
+      "id": "mat-13",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+      "type": "paper",
+      "author": "Bernhard Kerbl et al.",
+      "venue": "SIGGRAPH 2023",
+      "subject": "神经渲染",
+      "started": "2026-01-28",
+      "last_interaction": "2026-02-10",
+      "status": "completed",
+      "progress": { "value": "精读 + 复现", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": ["lx-05"],
+        "projects": ["prj-01"],
+        "activities": ["act-014", "act-019"],
+        "evidence": ["ev-06"],
+        "interests": ["int-01"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-14",
+      "title": "Structure-from-Motion Revisited (COLMAP)",
+      "type": "paper",
+      "author": "Johannes Schönberger, Jan-Michael Frahm",
+      "venue": "CVPR 2016",
+      "subject": "三维重建",
+      "started": "2026-01-14",
+      "last_interaction": "2026-01-18",
+      "status": "skimmed",
+      "progress": { "value": "略读，主要靠文档", "approx_pct_of_book": 40, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": ["lx-05"],
+        "projects": ["prj-01"],
+        "activities": ["act-008"],
+        "evidence": [],
+        "interests": ["int-01"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-15",
+      "title": "Attention Is All You Need",
+      "type": "paper",
+      "author": "Vaswani et al.",
+      "venue": "NeurIPS 2017",
+      "subject": "机器学习",
+      "started": "2026-02-12",
+      "last_interaction": "2026-02-14",
+      "status": "skimmed",
+      "progress": { "value": "泛读一遍，没推公式", "approx_pct_of_book": 60, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": [],
+        "projects": [],
+        "activities": ["act-023", "act-024"],
+        "evidence": [],
+        "interests": ["int-02"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "为了看懂'表征'这个词才读的，动机不纯但有效"
+      }
+    },
+    {
+      "id": "mat-16",
+      "title": "What Is It Like to Be a Bat?",
+      "type": "paper",
+      "author": "Thomas Nagel",
+      "venue": "The Philosophical Review, 1974",
+      "subject": "心灵哲学",
+      "started": "2026-03-27",
+      "last_interaction": "2026-04-02",
+      "status": "completed",
+      "progress": { "value": "读了两遍", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": ["lx-04"],
+        "projects": ["prj-05", "prj-06"],
+        "activities": ["act-042", "act-044", "act-059"],
+        "evidence": ["ev-08"],
+        "interests": ["int-03"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-17",
+      "title": "Facing Up to the Problem of Consciousness",
+      "type": "paper",
+      "author": "David Chalmers",
+      "venue": "Journal of Consciousness Studies, 1995",
+      "subject": "心灵哲学",
+      "started": "2026-04-09",
+      "last_interaction": "2026-04-14",
+      "status": "completed",
+      "progress": { "value": "精读", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": ["lx-04"],
+        "projects": ["prj-05", "prj-06"],
+        "activities": ["act-049", "act-051", "act-059"],
+        "evidence": ["ev-08"],
+        "interests": ["int-03"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-18",
+      "title": "Are We Explaining Consciousness Yet?",
+      "type": "paper",
+      "author": "Daniel Dennett",
+      "venue": "Cognition, 2001",
+      "subject": "心灵哲学",
+      "started": "2026-05-20",
+      "last_interaction": "2026-05-22",
+      "status": "partial",
+      "progress": { "value": "读了一半，卡在第 4 节", "approx_pct_of_book": 50, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": ["lx-04"],
+        "projects": [],
+        "activities": ["act-066"],
+        "evidence": [],
+        "interests": ["int-03"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-19",
+      "title": "The Consciousness Prior",
+      "type": "paper",
+      "author": "Yoshua Bengio",
+      "venue": "arXiv 2017",
+      "subject": "机器学习 / 认知科学（跨域）",
+      "started": "2026-03-17",
+      "last_interaction": "2026-09-25",
+      "status": "completed",
+      "progress": { "value": "读了两次，第二次做了笔记", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": ["lx-01", "lx-04"],
+        "projects": ["prj-05", "prj-06"],
+        "activities": ["act-037", "act-038", "act-091"],
+        "evidence": ["ev-15"],
+        "interests": ["int-02", "int-03"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "这篇是两条线真正交叉的地方：第一篇在两边都能引的论文"
+      }
+    },
+    {
+      "id": "mat-20",
+      "title": "A Path Towards Autonomous Machine Learning",
+      "type": "paper",
+      "author": "Yann LeCun",
+      "venue": "arXiv 2018 (position paper)",
+      "subject": "机器学习",
+      "started": "2026-10-18",
+      "last_interaction": "2026-10-20",
+      "status": "partial",
+      "progress": { "value": "前 40%", "approx_pct_of_book": 40, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": [],
+        "projects": ["prj-06"],
+        "activities": ["act-099"],
+        "evidence": [],
+        "interests": ["int-02", "int-05"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-21",
+      "title": "Do Large Language Models Understand Us?",
+      "type": "article",
+      "author": "Blaise Agüera y Arcas",
+      "venue": "Daedalus, 2022",
+      "subject": "AI 与心智",
+      "started": "2026-10-15",
+      "last_interaction": "2026-10-17",
+      "status": "completed",
+      "progress": { "value": "读完，写了两段批注", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": [],
+        "projects": ["prj-06"],
+        "activities": ["act-098"],
+        "evidence": [],
+        "interests": ["int-05", "int-03"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-22",
+      "title": "The Bitter Lesson",
+      "type": "article",
+      "author": "Rich Sutton",
+      "venue": "个人博客, 2019",
+      "subject": "AI",
+      "started": "2026-02-13",
+      "last_interaction": "2026-02-13",
+      "status": "completed",
+      "progress": { "value": "读完", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": [],
+        "projects": [],
+        "activities": ["act-025", "act-026"],
+        "evidence": [],
+        "interests": ["int-01"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "回家前一晚在手机上读完的。整篇 800 字，读完只留了一句笔记"
+      }
+    },
+    {
+      "id": "mat-23",
+      "title": "MIT 9.13 The Human Brain（课程录播）",
+      "type": "video_series",
+      "author": "Nancy Kanwisher",
+      "subject": "认知神经科学",
+      "started": "2026-03-05",
+      "last_interaction": "2026-04-06",
+      "status": "paused",
+      "progress": { "value": "24 讲中看了 9 讲", "approx_pct_of_book": 38, "measured_by": "episode_count" },
+      "links": {
+        "experiences": ["lx-01"],
+        "projects": [],
+        "activities": ["act-030", "act-045", "act-047"],
+        "evidence": [],
+        "interests": ["int-03", "int-02"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "在 B 站看搬运版，没有播放进度记录"
+      }
+    },
+    {
+      "id": "mat-24",
+      "title": "线性代数的本质（视频系列）",
+      "type": "video_series",
+      "author": "3Blue1Brown (Grant Sanderson)",
+      "subject": "数学",
+      "started": "2026-01-05",
+      "last_interaction": "2026-01-13",
+      "status": "completed",
+      "progress": { "value": "16 集看完", "approx_pct_of_book": 100, "measured_by": "episode_count" },
+      "links": {
+        "experiences": ["lx-06"],
+        "projects": ["prj-01"],
+        "activities": ["act-002"],
+        "evidence": [],
+        "interests": ["int-06"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-25",
+      "title": "李宏毅 · 生成式 AI 导论",
+      "type": "video_series",
+      "author": "Hung-yi Lee",
+      "subject": "机器学习",
+      "started": "2026-03-14",
+      "last_interaction": "2026-03-20",
+      "status": "abandoned",
+      "progress": { "value": "14 讲中看了 4 讲", "approx_pct_of_book": 29, "measured_by": "episode_count" },
+      "links": {
+        "experiences": [],
+        "projects": [],
+        "activities": ["act-036", "act-039"],
+        "evidence": [],
+        "interests": []
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "三倍速看的。看完什么都没留下，他自己也不记得看过"
+      }
+    },
+    {
+      "id": "mat-26",
+      "title": "COLMAP 官方文档",
+      "type": "documentation",
+      "author": "COLMAP project",
+      "subject": "三维重建",
+      "started": "2026-01-14",
+      "last_interaction": "2026-02-06",
+      "status": "reference_only",
+      "progress": { "value": "反复查", "approx_pct_of_book": null, "measured_by": "usage_pattern" },
+      "links": {
+        "experiences": ["lx-05"],
+        "projects": ["prj-01"],
+        "activities": ["act-006", "act-008"],
+        "evidence": [],
+        "interests": ["int-01"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-27",
+      "title": "gaussian-splatting 仓库 issue 区（#214 等）",
+      "type": "documentation",
+      "author": "社区（多人）",
+      "subject": "神经渲染",
+      "started": "2026-02-07",
+      "last_interaction": "2026-02-08",
+      "status": "reference_only",
+      "progress": { "value": null, "approx_pct_of_book": null, "measured_by": "usage_pattern" },
+      "links": {
+        "experiences": ["lx-05"],
+        "projects": ["prj-01"],
+        "activities": ["act-020"],
+        "evidence": ["ev-06"],
+        "interests": ["int-01"]
+      },
+      "provenance": {
+        "input_source": "F",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false,
+        "note": "关键：ev-06 那次'自己定位到问题'，其实参考了 issue #214。独立性打折"
+      }
+    },
+    {
+      "id": "mat-28",
+      "title": "Causal Inference in Statistics: An Overview",
+      "type": "paper",
+      "author": "Judea Pearl",
+      "venue": "Statistics Surveys, 2009",
+      "subject": "因果推断",
+      "started": "2026-09-10",
+      "last_interaction": "2026-09-14",
+      "status": "partial",
+      "progress": { "value": "读了一半，backdoor 那节反复看", "approx_pct_of_book": 50, "measured_by": "user_estimate" },
+      "links": {
+        "experiences": [],
+        "projects": ["prj-06"],
+        "activities": ["act-086", "act-094"],
+        "evidence": ["ev-13"],
+        "interests": ["int-04"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "mat-29",
+      "title": "The Art of Causal Revolution（图灵奖讲座录像）",
+      "type": "video_lecture",
+      "author": "Judea Pearl",
+      "subject": "因果推断",
+      "started": "2026-09-12",
+      "last_interaction": "2026-09-12",
+      "status": "completed",
+      "progress": { "value": "看完一遍", "approx_pct_of_book": 100, "measured_by": "user_self_report" },
+      "links": {
+        "experiences": [],
+        "projects": ["prj-06"],
+        "activities": ["act-087"],
+        "evidence": [],
+        "interests": ["int-04"]
+      },
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "note": "看完第一次觉得'阶梯'这个说法有用，但没写下来；一周后做 ev-13 时用的正是这个三层结构"
+      }
+    }
+  ],
+  "learning_experiences": [
+    {
+      "id": "lx-02",
+      "title": "学 Rust",
+      "origin_type": "goal_based",
+      "origin_note": "起源于 goal-02：想在三月前用 Rust 写一个能用的命令行工具",
+      "objective": "能独立写一个带参数解析和文件遍历的 CLI，理解所有权为什么这样设计",
+      "started": "2026-02-03",
+      "ended": "2026-04-20",
+      "status": "abandoned",
+      "materials": ["mat-02"],
+      "projects": ["prj-03"],
+      "activities": ["act-017", "act-018", "act-027", "act-028", "act-041", "act-053", "act-055"],
+      "milestones": [],
+      "evidence": ["ev-11", "ev-16"],
+      "insights": ["ins-06"],
+      "major_activities": ["读书 ch1–11", "rustlings 做到 76/94", "写 rename-tool 的 dry-run 分支"],
+      "why_it_stopped": "四月初连续两周没有推进；真实原因是毕设进入攻坚，Rust 排不上。他在 4-20 写下的理由是'我其实不需要它'",
+      "reopened": null,
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "capture_gap": "Lemma 没有'课程'对象；这段只存在于用户自己的清单里"
+      }
+    },
+    {
+      "id": "lx-06",
+      "title": "线性代数，从几何直觉补起",
+      "origin_type": "goal_based",
+      "origin_note": "起源于 goal-04（复现神经渲染）需要的数学，不是独立志向",
+      "objective": "看懂 NeRF 里的坐标系变换与协方差传播，不再靠抄公式",
+      "started": "2026-01-05",
+      "ended": "2026-03-21",
+      "status": "partially_completed",
+      "materials": ["mat-10", "mat-24"],
+      "projects": ["prj-01", "prj-04"],
+      "activities": ["act-001", "act-002", "act-007", "act-010", "act-040"],
+      "milestones": ["ms-02"],
+      "evidence": ["ev-01", "ev-02"],
+      "insights": [],
+      "major_activities": ["看完 3B1B 16 集", "Axler 走到第 5 章", "两次小测", "3 月重做第 5 章"],
+      "why_it_stopped": "第 5 章之后是内积空间与算子，与当前项目无关；他没有把它当学科，只当工具",
+      "reopened": "2026-03-21 因 1 月那次错误回来重做了一次，随后再次停",
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial"
+      }
+    },
+    {
+      "id": "lx-01",
+      "title": "认知科学导论",
+      "origin_type": "subject_based",
+      "origin_note": "起源于 act-027 之后：他想知道'表征'在认知科学里到底指什么，于是从一门导论课进去",
+      "objective": "建立一个能用的认知科学地图：主要流派、核心争论、'表征'的几种含义",
+      "started": "2026-03-05",
+      "ended": null,
+      "status": "paused",
+      "materials": ["mat-23", "mat-03", "mat-19"],
+      "projects": [],
+      "activities": ["act-030", "act-031", "act-037", "act-038", "act-047"],
+      "milestones": [],
+      "evidence": ["ev-15"],
+      "insights": ["ins-01", "ins-02"],
+      "major_activities": ["9.13 看了 9 讲", "Boden 导论 + 第 3 章", "一篇《同一个词，两件事》笔记"],
+      "why_it_stopped": "四月初停。他自己的说法：'在听，没有东西可以拿去用'",
+      "reopened": null,
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "capture_gap": "外部录播课，Lemma 里零对象"
+      }
+    },
+    {
+      "id": "lx-04",
+      "title": "理解人的意识",
+      "origin_type": "inquiry_based",
+      "origin_note": "不是一个课程，是一个问题。起点是 act-035 读 Nagel 之后'我好像没法把这个问题推给别人'",
+      "objective": "（从未正式写下过）弄清楚'主观体验'这件事能不能被第三人称的描述吃掉",
+      "started": "2026-03-27",
+      "ended": null,
+      "status": "absorbed_into_output",
+      "materials": ["mat-16", "mat-17", "mat-18", "mat-07", "mat-06", "mat-19"],
+      "projects": ["prj-05", "prj-06"],
+      "activities": ["act-042", "act-046", "act-049", "act-051", "act-059", "act-060", "act-066"],
+      "milestones": [],
+      "evidence": ["ev-08"],
+      "insights": ["ins-08"],
+      "major_activities": ["读 6 份一手文献", "和两个朋友各争一次", "写了 11 条笔记", "5-02 用自己的话复述了困难问题"],
+      "why_it_stopped": "没有停。它在 9 月变成了 prj-06 那篇长文 —— 这是全库唯一一个'没有结束日期'的学习经历",
+      "reopened": null,
+      "provenance": {
+        "input_source": "A",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "visible_today": false,
+        "capture_gap": "问题驱动型学习没有容器；今天只能靠零散笔记反推"
+      }
+    },
+    {
+      "id": "lx-05",
+      "title": "搭一个 3D 重建系统",
+      "origin_type": "project_based",
+      "origin_note": "起源于 mat-12 之后'我想自己搭一遍，不想只用别人的 repo'",
+      "objective": "从 COLMAP 到神经渲染跑通一条自己的管线，能对任意一段手机视频出可看的结果",
+      "started": "2026-01-05",
+      "ended": "2026-05-26",
+      "status": "archived",
+      "materials": ["mat-12", "mat-13", "mat-14", "mat-26", "mat-27", "mat-11"],
+      "projects": ["prj-01"],
+      "activities": ["act-004", "act-005", "act-011", "act-013", "act-014", "act-015", "act-016", "act-019", "act-020", "act-021", "act-061", "act-062", "act-063", "act-067", "act-069"],
+      "milestones": ["ms-01", "ms-03"],
+      "evidence": ["ev-03", "ev-04", "ev-05", "ev-06"],
+      "insights": ["ins-09"],
+      "major_activities": ["三次训练失败", "自推体渲染离散化", "复现 3DGS", "v0.2 多视角", "v0.3 冻结"],
+      "why_it_stopped": "毕设吃掉全部时间，加上'多视角一致性'卡了两周。README 写的是'暂停，不是放弃'，实际再没动过",
+      "reopened": "2026-10 以 prj-07 的形式部分复活（只做可视化，不做重建）",
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial",
+        "capture_gap": "GitHub 上有 87 次提交，Lemma 只看到几页笔记"
+      }
+    },
+    {
+      "id": "lx-03",
+      "title": "把 GEB 读完",
+      "origin_type": "material_based",
+      "origin_note": "起源于 7-20 在书架上重新看到这本书。没有任何目标，只是想读",
+      "objective": "读完。就这么简单，没有别的目的",
+      "started": "2026-07-20",
+      "ended": null,
+      "status": "in_progress_stalled",
+      "materials": ["mat-01"],
+      "projects": ["prj-05"],
+      "activities": ["act-075", "act-076", "act-077", "act-080"],
+      "milestones": ["ms-06"],
+      "evidence": [],
+      "insights": [],
+      "major_activities": ["一天二十页", "8-05 读完第一部", "8-20 停在第 11 章"],
+      "why_it_stopped": "第 11 章开始讲命题演算与形式系统，比前面难一档；他在 9 月把时间给了因果推断",
+      "reopened": null,
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    }
+  ],
+  "loose_clusters": [
+    { "id": "cluster-01", "label": "因果推断（零散阅读，不属于任何课程）", "from": "2026-08-12", "to": "2026-10-05", "activities": ["act-078", "act-085", "act-086", "act-087", "act-088", "act-089", "act-093", "act-094"], "materials": ["mat-05", "mat-28", "mat-29"], "note": "8 条活动、3 份材料，前后近两个月，但从未被组织成一段学习经历。用户自己也说'我就是顺着往下看'。任何强制归类的 UI 会在这里失败，因为这里真的没有容器。", "became": "2026-09-22 并入 prj-06（长文里有一节用到 backdoor）" },
+    { "id": "cluster-02", "label": "7–8 月的无结构阅读", "from": "2026-07-20", "to": "2026-08-31", "activities": ["act-075", "act-076", "act-077", "act-078", "act-079", "act-080", "act-081"], "materials": ["mat-01", "mat-05", "mat-08"], "note": "有活动、有材料、有产出（读完两本），但没有目标、没有项目、没有证据。这是'读了但什么都没留下'的最干净样本。", "became": null }
+  ],
+  "activities": [
+    { "id": "act-001", "ts": "2026-01-05T21:10", "type": "reading", "desc": "开始读 Axler 第 1 章，只看了向量空间的定义", "objects": ["mat-10"], "source": "B", "evidence": [], "learned": "unknown", "note": "无产出", "visible": false },
+    { "id": "act-002", "ts": "2026-01-05T23:40", "type": "watching", "desc": "3B1B 线代本质 1–4 集，二倍速", "objects": ["mat-24", "lx-06"], "source": "B", "evidence": [], "learned": "unknown", "note": "看完就关，没记笔记", "visible": false },
+    { "id": "act-003", "ts": "2026-01-08T20:20", "type": "reading", "desc": "数学：确定性的丧失，看前言与第一章", "objects": ["mat-09"], "source": "B", "evidence": [], "learned": "unknown", "note": "寒假前买的，图个放松", "visible": false },
+    { "id": "act-004", "ts": "2026-01-09T22:00", "type": "reading", "desc": "第一次精读 NeRF，边读边查体渲染", "objects": ["mat-12", "lx-05"], "source": "B", "evidence": [], "learned": "partial", "note": "读到第 4 节时放弃当天继续", "visible": false },
+    { "id": "act-005", "ts": "2026-01-10T00:30", "type": "note", "desc": "画了一张 NeRF 管线草图，把 loss 写在中间", "objects": ["mat-12"], "source": "B", "evidence": [], "learned": "unknown", "note": "这张图后来被用在 5 月的组内分享里", "visible": true },
+    { "id": "act-006", "ts": "2026-01-14T15:00", "type": "coding", "desc": "写 COLMAP 数据准备脚本，卡在相机内参格式", "objects": ["prj-01", "mat-26"], "source": "B", "evidence": [], "learned": "unknown", "note": "花了整个下午，最后是抄的官方示例", "visible": false },
+    { "id": "act-007", "ts": "2026-01-16T19:00", "type": "problem", "desc": "线代小测：特征值与特征向量（5 题）", "objects": ["mat-10"], "source": "C", "evidence": ["ev-01"], "learned": "yes", "note": "全对。但都是计算题，没有一道问'为什么会这样'", "visible": true },
+    { "id": "act-008", "ts": "2026-01-18T21:30", "type": "reading", "desc": "COLMAP 文档，读相机模型那一节", "objects": ["mat-26", "mat-14"], "source": "B", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-009", "ts": "2026-01-19T23:10", "type": "reading", "desc": "Kline 读到第三章，停了", "objects": ["mat-09"], "source": "B", "evidence": [], "learned": "no", "note": "之后再没打开过", "visible": false },
+    { "id": "act-010", "ts": "2026-01-20T20:00", "type": "problem", "desc": "线代小测：相似与合同（4 题，错 3 题）", "objects": ["mat-10"], "source": "C", "evidence": ["ev-02"], "learned": "no", "note": "把'相似'当成'形状一样'", "visible": true },
+    { "id": "act-011", "ts": "2026-01-22T02:15", "type": "experiment", "desc": "第一次训练，输出全黑，loss 卡在 0.6", "objects": ["prj-01"], "source": "B", "evidence": [], "learned": "no", "note": "怀疑是坐标系问题，但不确定", "visible": false },
+    { "id": "act-012", "ts": "2026-01-24T23:00", "type": "reflecting", "desc": "没查资料，自己在纸上把体渲染的离散化推了一遍", "objects": ["mat-12"], "source": "C", "evidence": ["ev-03"], "learned": "yes", "note": "推完才去论文里对，发现少了排序近似这一层", "visible": true },
+    { "id": "act-013", "ts": "2026-01-26T18:40", "type": "coding", "desc": "找到坐标变换的一个转置错误，图像正常了", "objects": ["prj-01"], "source": "B", "evidence": [], "learned": "yes", "note": "只改了一行", "visible": false },
+    { "id": "act-014", "ts": "2026-01-28T21:00", "type": "reading", "desc": "读 3D Gaussian Splatting，重点看光栅化那节", "objects": ["mat-13", "lx-05"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-015", "ts": "2026-01-30T01:50", "type": "experiment", "desc": "跑到 30k iter，出了第一张能看的图", "objects": ["prj-01", "ms-01"], "source": "C", "evidence": ["ev-04"], "learned": "yes", "note": "截图发给室友，说'成了'", "visible": false },
+    { "id": "act-016", "ts": "2026-01-31T14:00", "type": "creating", "desc": "写第一篇实验报告，8 页，含失败记录", "objects": ["out-02", "prj-01"], "source": "D", "evidence": [], "learned": "unknown", "note": "报告里把三次失败都写进去了", "visible": false },
+    { "id": "act-017", "ts": "2026-02-03T10:00", "type": "reading", "desc": "Rust 书 1–3 章，边读边敲示例", "objects": ["mat-02", "lx-02"], "source": "B", "evidence": [], "learned": "yes", "note": "第一天状态很好", "visible": false },
+    { "id": "act-018", "ts": "2026-02-05T22:30", "type": "coding", "desc": "rustlings 前 20 题，一次过", "objects": ["lx-02", "prj-03"], "source": "B", "evidence": [], "learned": "yes", "note": "", "visible": false },
+    { "id": "act-019", "ts": "2026-02-07T23:20", "type": "coding", "desc": "复现 3DGS，loss 不降反升", "objects": ["prj-01", "mat-13"], "source": "B", "evidence": [], "learned": "no", "note": "", "visible": false },
+    { "id": "act-020", "ts": "2026-02-08T13:00", "type": "research", "desc": "翻 issue 区，看到 #214 提到尺度初始化", "objects": ["mat-27", "prj-01"], "source": "F", "evidence": [], "learned": "partial", "note": "关键：这一步不是他自己想到的", "visible": false },
+    { "id": "act-021", "ts": "2026-02-08T23:50", "type": "problem", "desc": "改初始化与学习率，训练收敛", "objects": ["prj-01", "ms-03"], "source": "C", "evidence": ["ev-06"], "learned": "yes", "note": "他后来回忆成'我自己定位的'", "visible": true },
+    { "id": "act-022", "ts": "2026-02-10T16:00", "type": "discussion", "desc": "在群里问 COLMAP 内参为什么对不上，两个人回了", "objects": [], "source": "B", "evidence": [], "learned": "partial", "note": "没解决，但知道了别人也遇到过", "visible": true },
+    { "id": "act-023", "ts": "2026-02-12T21:00", "type": "reading", "desc": "泛读 Attention Is All You Need", "objects": ["mat-15"], "source": "B", "evidence": [], "learned": "partial", "note": "公式全跳过", "visible": false },
+    { "id": "act-024", "ts": "2026-02-13T00:20", "type": "note", "desc": "笔记：Transformer 里的'表示'和我想的是一回事吗", "objects": ["mat-15"], "source": "B", "evidence": [], "learned": "unknown", "note": "这篇笔记是后来 ins-01 的种子", "visible": true },
+    { "id": "act-025", "ts": "2026-02-13T21:20", "type": "reading", "desc": "手机上读完 The Bitter Lesson", "objects": ["mat-22"], "source": "B", "evidence": [], "learned": "partial", "note": "回家前一晚", "visible": false },
+    { "id": "act-026", "ts": "2026-02-13T21:50", "type": "note", "desc": "一句话笔记：这篇让我不舒服", "objects": ["mat-22"], "source": "B", "evidence": [], "learned": "unknown", "note": "只有一句话，没展开", "visible": true },
+    { "id": "act-027", "ts": "2026-02-26T19:40", "type": "reading", "desc": "回校第一晚，Rust 第 4 章所有权，读了两遍", "objects": ["mat-02", "lx-02"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-028", "ts": "2026-02-26T22:10", "type": "problem", "desc": "rustlings 所有权 3 道同类题连续错", "objects": ["lx-02"], "source": "C", "evidence": ["ev-11"], "learned": "no", "note": "每次都是借用检查器报错才改", "visible": true },
+    { "id": "act-029", "ts": "2026-03-02T22:00", "type": "reflecting", "desc": "写下两句话：要有具体问题才学得进去；看视频会睡着", "objects": [], "source": "A", "evidence": [], "learned": "unknown", "note": "这两句进了 person.declared_learning_preferences", "visible": true },
+    { "id": "act-030", "ts": "2026-03-05T20:00", "type": "watching", "desc": "MIT 9.13 第 1–2 讲，做了一页笔记", "objects": ["mat-23", "lx-01"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-031", "ts": "2026-03-06T21:30", "type": "reading", "desc": "Boden 导论 + 第 3 章，讲表征的两种传统", "objects": ["mat-03", "lx-01"], "source": "B", "evidence": [], "learned": "yes", "note": "第一次看到'表征'被当成一个学术问题", "visible": false },
+    { "id": "act-032", "ts": "2026-03-08T23:30", "type": "creating", "desc": "写笔记《同一个词，两件事》，1200 字", "objects": ["ins-01"], "source": "A", "evidence": [], "learned": "yes", "note": "全库最重要的一条自我认识", "visible": false },
+    { "id": "act-033", "ts": "2026-03-10T15:00", "type": "coding", "desc": "毕设相机标定，棋盘格 20 张", "objects": ["prj-02"], "source": "B", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-034", "ts": "2026-03-11T21:00", "type": "reading", "desc": "Bishop 第 1 章看了 20 页，停了", "objects": ["mat-04"], "source": "B", "evidence": [], "learned": "no", "note": "开它的理由是'觉得应该补数学'", "visible": false },
+    { "id": "act-035", "ts": "2026-03-12T19:00", "type": "discussion", "desc": "和师兄聊毕设方案，被建议放弃纯视觉", "objects": ["prj-02"], "source": "B", "evidence": [], "learned": "yes", "note": "当时没听进去，两周后才接受", "visible": true },
+    { "id": "act-036", "ts": "2026-03-14T22:00", "type": "watching", "desc": "李宏毅生成式 AI 第 1–2 讲，三倍速", "objects": ["mat-25"], "source": "B", "evidence": [], "learned": "no", "note": "", "visible": false },
+    { "id": "act-037", "ts": "2026-03-17T20:30", "type": "reading", "desc": "读 Bengio 的 Consciousness Prior", "objects": ["mat-19", "lx-01"], "source": "B", "evidence": [], "learned": "yes", "note": "第一次看到有人把'意识'和'表征学习'写在同一篇里", "visible": false },
+    { "id": "act-038", "ts": "2026-03-19T23:00", "type": "note", "desc": "笔记：先验与表征不是一回事，但 Bengio 把它们放一起", "objects": ["mat-19"], "source": "C", "evidence": ["ev-15"], "learned": "unknown", "note": "判断停在'待确认'，没有结论", "visible": true },
+    { "id": "act-039", "ts": "2026-03-20T21:00", "type": "watching", "desc": "李宏毅第 3–4 讲，看完什么也没留下", "objects": ["mat-25"], "source": "B", "evidence": [], "learned": "no", "note": "他自己在 4 月都不记得看过", "visible": false },
+    { "id": "act-040", "ts": "2026-03-21T14:00", "type": "problem", "desc": "回头重做 Axler 第 5 章，把相似与合同的分野弄清了", "objects": ["mat-10", "ev-02"], "source": "C", "evidence": ["ev-02"], "learned": "yes", "note": "相隔两个月，是同一错误的第二次测试", "visible": true },
+    { "id": "act-041", "ts": "2026-03-24T22:00", "type": "coding", "desc": "rustlings 做到 60/94", "objects": ["lx-02", "prj-03"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-042", "ts": "2026-03-27T20:00", "type": "reading", "desc": "读 Nagel《成为一只蝙蝠是什么感觉》", "objects": ["mat-16", "lx-04"], "source": "B", "evidence": [], "learned": "yes", "note": "读完坐在那儿没动", "visible": false },
+    { "id": "act-043", "ts": "2026-03-29T16:00", "type": "watching", "desc": "在某平台报了一门神经科学课，看了第 1 讲", "objects": ["ext-05"], "source": "F", "evidence": [], "learned": "no", "note": "报了名，只看了 1 讲，之后再没登录", "visible": false },
+    { "id": "act-044", "ts": "2026-03-30T23:20", "type": "creating", "desc": "写 300 字回应 Nagel：我能描述蝙蝠的神经，但描述不了它", "objects": ["mat-16"], "source": "D", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-045", "ts": "2026-04-02T20:00", "type": "watching", "desc": "9.13 第 5–6 讲，讲视觉皮层", "objects": ["mat-23"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-046", "ts": "2026-04-04T22:30", "type": "discussion", "desc": "和朋友吵了两个小时：现在的模型有没有主观体验", "objects": ["lx-04"], "source": "B", "evidence": [], "learned": "unknown", "note": "谁也没说服谁。他把这段争论记下来了", "visible": true },
+    { "id": "act-047", "ts": "2026-04-06T21:00", "type": "watching", "desc": "9.13 第 7–9 讲，这是最后一集", "objects": ["mat-23", "lx-01"], "source": "B", "evidence": [], "learned": "partial", "note": "之后这门课就停了", "visible": false },
+    { "id": "act-048", "ts": "2026-04-07T17:00", "type": "coding", "desc": "毕设视觉 pipeline 第一次端到端跑通，但只在桌面上稳", "objects": ["prj-02"], "source": "B", "evidence": [], "learned": "yes", "note": "", "visible": false },
+    { "id": "act-049", "ts": "2026-04-09T20:00", "type": "reading", "desc": "读 Chalmers《直面意识问题》", "objects": ["mat-17", "lx-04"], "source": "B", "evidence": [], "learned": "yes", "note": "", "visible": false },
+    { "id": "act-050", "ts": "2026-04-11T21:30", "type": "reading", "desc": "The Conscious Mind 第 1–2 章", "objects": ["mat-07"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-051", "ts": "2026-04-12T23:00", "type": "note", "desc": "笔记：困难问题可以拆成三层——为什么有体验、为什么是这个体验、为什么有统一性", "objects": ["mat-17"], "source": "B", "evidence": [], "learned": "yes", "note": "ins-02 的证据之一", "visible": true },
+    { "id": "act-052", "ts": "2026-04-13T20:00", "type": "discussion", "desc": "在 Lemma 里就'什么是 qualia'问了四轮，答'我不知道'", "objects": [], "source": "C", "evidence": ["ev-14"], "learned": "no", "note": "无 item 可挂，判为不可评分", "visible": true },
+    { "id": "act-053", "ts": "2026-04-15T22:00", "type": "coding", "desc": "rustlings 到 76/94，之后停", "objects": ["lx-02", "prj-03"], "source": "B", "evidence": [], "learned": "partial", "note": "剩下的 18 题全是要写生命周期标注的", "visible": false },
+    { "id": "act-054", "ts": "2026-04-18T15:00", "type": "research", "desc": "搜'表征'在认知科学里的定义，找到四个互相打架的说法", "objects": ["mat-03"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-055", "ts": "2026-04-20T22:40", "type": "reflecting", "desc": "承认 Rust 那个目标失败了，写'我其实不需要它'", "objects": ["goal-02", "lx-02"], "source": "A", "evidence": [], "learned": "unknown", "note": "归因可疑：真实原因是毕设占了全部时间", "visible": true },
+    { "id": "act-056", "ts": "2026-04-23T21:00", "type": "creating", "desc": "给学弟学妹写线性代数讲义第 1 篇：为什么要有基", "objects": ["out-06", "prj-04"], "source": "D", "evidence": [], "learned": "yes", "note": "", "visible": false },
+    { "id": "act-057", "ts": "2026-04-26T20:00", "type": "creating", "desc": "讲义第 2、3 篇：相似的意义、特征值到底在说什么", "objects": ["out-06", "prj-04"], "source": "D", "evidence": [], "learned": "yes", "note": "写完心情很好，是四月唯一的好时刻", "visible": false },
+    { "id": "act-058", "ts": "2026-04-28T23:30", "type": "reflecting", "desc": "写：'我一直在收集资料，没在做东西'", "objects": ["ins-03"], "source": "A", "evidence": [], "learned": "unknown", "note": "同一天系统撤回了 ins-10", "visible": true },
+    { "id": "act-059", "ts": "2026-05-02T21:00", "type": "creating", "desc": "不看原文，用自己的话复述困难问题与容易问题的区别", "objects": ["mat-17", "mat-16"], "source": "C", "evidence": ["ev-08"], "learned": "yes", "note": "写了两页，逻辑是完整的", "visible": false },
+    { "id": "act-060", "ts": "2026-05-05T20:00", "type": "reading", "desc": "Dennett《意识的解释》前一半", "objects": ["mat-06", "lx-04"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-061", "ts": "2026-05-08T22:00", "type": "coding", "desc": "recon-lab v0.2，加了多视角输入", "objects": ["prj-01"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-062", "ts": "2026-05-09T01:30", "type": "experiment", "desc": "多视角一致性失败，换个角度就崩", "objects": ["prj-01"], "source": "B", "evidence": [], "learned": "no", "note": "这是它死掉的地方", "visible": false },
+    { "id": "act-063", "ts": "2026-05-12T14:00", "type": "creating", "desc": "写第二篇实验报告，把一致性失败写清楚了", "objects": ["out-02", "prj-01"], "source": "D", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-064", "ts": "2026-05-15T10:00", "type": "discussion", "desc": "毕设中期答辩，被问成本与重复精度", "objects": ["prj-02", "ms-04"], "source": "B", "evidence": [], "learned": "unknown", "note": "过了", "visible": true },
+    { "id": "act-065", "ts": "2026-05-18T19:00", "type": "creating", "desc": "组内分享 20 分钟：从 NeRF 到 3DGS，做了 14 页 slides", "objects": ["out-11"], "source": "D", "evidence": [], "learned": "yes", "note": "第一次把学到的东西讲给别人听", "visible": false },
+    { "id": "act-066", "ts": "2026-05-20T21:00", "type": "reading", "desc": "Dennett 回应 Chalmers 的那篇，读一半", "objects": ["mat-18"], "source": "B", "evidence": [], "learned": "partial", "note": "第 4 节看不懂", "visible": false },
+    { "id": "act-067", "ts": "2026-05-22T23:00", "type": "coding", "desc": "recon-lab v0.3，最后一次改动", "objects": ["prj-01"], "source": "B", "evidence": [], "learned": "no", "note": "没有解决任何核心问题，只是整理代码", "visible": false },
+    { "id": "act-068", "ts": "2026-05-24T20:00", "type": "reading", "desc": "把《意识的解释》读完", "objects": ["mat-06"], "source": "B", "evidence": [], "learned": "partial", "note": "读完了，但说不清 Dennett 到底主张什么", "visible": false },
+    { "id": "act-069", "ts": "2026-05-26T18:00", "type": "reflecting", "desc": "给 recon-lab 写 README，注明'暂停，不是放弃'", "objects": ["prj-01"], "source": "A", "evidence": [], "learned": "unknown", "note": "6-22 系统据此判为 stalled，后被用户纠正", "visible": true },
+    { "id": "act-070", "ts": "2026-05-28T16:00", "type": "coding", "desc": "毕设抓取成功率 62%，加了红外补光", "objects": ["prj-02"], "source": "B", "evidence": [], "learned": "yes", "note": "", "visible": false },
+    { "id": "act-071", "ts": "2026-06-03T15:00", "type": "coding", "desc": "调参到 78%，重复精度 ±2mm", "objects": ["prj-02"], "source": "B", "evidence": [], "learned": "yes", "note": "这个数字后来被写进论文和简历", "visible": false },
+    { "id": "act-072", "ts": "2026-06-08T21:00", "type": "creating", "desc": "毕设论文初稿，38 页", "objects": ["out-04", "prj-02"], "source": "D", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-073", "ts": "2026-06-11T09:00", "type": "discussion", "desc": "答辩。三个老师问的全是工程问题", "objects": ["prj-02", "ms-05"], "source": "C", "evidence": ["ev-09"], "learned": "unknown", "note": "没人问他那个真正想回答的问题", "visible": true },
+    { "id": "act-074", "ts": "2026-06-14T23:00", "type": "creating", "desc": "给某位老师写邮件，问能不能去组里做 RA。写完没发", "objects": ["out-12"], "source": "D", "evidence": [], "learned": "unknown", "note": "草稿一直在草稿箱", "visible": false },
+    { "id": "act-075", "ts": "2026-07-20T20:00", "type": "reading", "desc": "从书架上拿起 GEB，读了前两章", "objects": ["mat-01", "lx-03"], "source": "B", "evidence": [], "learned": "partial", "note": "没有任何目标", "visible": false },
+    { "id": "act-076", "ts": "2026-07-26T21:30", "type": "reading", "desc": "GEB 第 6 章，关于形式系统与意义", "objects": ["mat-01"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-077", "ts": "2026-08-05T22:00", "type": "reading", "desc": "读完 GEB 第一部，在扉页写了日期", "objects": ["mat-01", "ms-06"], "source": "B", "evidence": [], "learned": "yes", "note": "这是他 7–8 月唯一的成就感", "visible": false },
+    { "id": "act-078", "ts": "2026-08-12T20:00", "type": "reading", "desc": "翻开《为什么》，读了前三章", "objects": ["mat-05"], "source": "B", "evidence": [], "learned": "partial", "note": "后面隔了三周才继续", "visible": false },
+    { "id": "act-079", "ts": "2026-08-18T21:00", "type": "reading", "desc": "读《现实+》，一周读完", "objects": ["mat-08"], "source": "B", "evidence": [], "learned": "partial", "note": "读完，零笔记", "visible": false },
+    { "id": "act-080", "ts": "2026-08-20T22:00", "type": "reading", "desc": "GEB 第 11 章，卡在命题演算，停了", "objects": ["mat-01", "lx-03"], "source": "B", "evidence": [], "learned": "no", "note": "到今天还是 38%", "visible": false },
+    { "id": "act-081", "ts": "2026-08-28T23:50", "type": "reflecting", "desc": "写下：'这半年我什么都没做成'", "objects": ["ins-11"], "source": "A", "evidence": [], "learned": "unknown", "note": "与同期记录冲突（ms-05、out-02、out-06）", "visible": true },
+    { "id": "act-082", "ts": "2026-09-01T10:00", "type": "reflecting", "desc": "决定重启。把台面清空，重新列清单", "objects": ["per-06"], "source": "A", "evidence": [], "learned": "unknown", "note": "", "visible": true },
+    { "id": "act-083", "ts": "2026-09-02T22:00", "type": "reflecting", "desc": "正式放弃'Rust 工程师'这个身份想象", "objects": ["ins-06", "int-07"], "source": "A", "evidence": [], "learned": "unknown", "note": "同时撤掉 goal-02", "visible": true },
+    { "id": "act-084", "ts": "2026-09-05T15:00", "type": "creating", "desc": "列 2027 申请方向清单，写了 6 个方向又划掉 4 个", "objects": ["goal-10"], "source": "A", "evidence": [], "learned": "unknown", "note": "剩下 cog sci 与 HCI", "visible": false },
+    { "id": "act-085", "ts": "2026-09-08T21:00", "type": "reading", "desc": "把《为什么》读完", "objects": ["mat-05"], "source": "B", "evidence": [], "learned": "partial", "note": "读完但做不出题", "visible": false },
+    { "id": "act-086", "ts": "2026-09-10T20:00", "type": "reading", "desc": "Pearl 那篇综述，backdoor 一节反复看", "objects": ["mat-28"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-087", "ts": "2026-09-12T21:00", "type": "watching", "desc": "看 Pearl 的图灵奖讲座录像", "objects": ["mat-29"], "source": "B", "evidence": [], "learned": "partial", "note": "看完第一次觉得'阶梯'这个说法有用", "visible": false },
+    { "id": "act-088", "ts": "2026-09-15T23:00", "type": "note", "desc": "因果笔记：把一个相关性结论写成了因果结论", "objects": ["mat-05"], "source": "C", "evidence": ["ev-12"], "learned": "no", "note": "10-02 自己回头重写", "visible": true },
+    { "id": "act-089", "ts": "2026-09-18T22:00", "type": "coding", "desc": "写了个 do-calculus 的小例子，玩具数据", "objects": ["prj-06"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-090", "ts": "2026-09-22T20:00", "type": "creating", "desc": "开始写《表征的两种用法》", "objects": ["prj-06", "out-09"], "source": "D", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-091", "ts": "2026-09-25T21:00", "type": "reading", "desc": "第二次读 Consciousness Prior，这次做笔记", "objects": ["mat-19"], "source": "B", "evidence": [], "learned": "yes", "note": "第二次读出来的东西和第一次不一样", "visible": false },
+    { "id": "act-092", "ts": "2026-09-28T23:30", "type": "creating", "desc": "长文第一版，3500 字，比自定日期晚三天", "objects": ["out-09", "prj-06", "ms-09"], "source": "C", "evidence": ["ev-10"], "learned": "yes", "note": "朋友指出第二处把两种用法又混了", "visible": false },
+    { "id": "act-093", "ts": "2026-10-02T22:00", "type": "creating", "desc": "重写 9-15 那份因果笔记，把结论降级成相关", "objects": ["ev-12"], "source": "C", "evidence": ["ev-12"], "learned": "yes", "note": "自己发现的，没人提醒", "visible": false },
+    { "id": "act-094", "ts": "2026-10-05T20:00", "type": "problem", "desc": "用 backdoor 判据分析一个推荐系统的偏差案例", "objects": ["mat-28"], "source": "C", "evidence": ["ev-13"], "learned": "yes", "note": "新情境，自己找的案例", "visible": true },
+    { "id": "act-095", "ts": "2026-10-08T21:00", "type": "coding", "desc": "开始写 repr-view，目标是把特征向量的变化画出来", "objects": ["prj-07"], "source": "B", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-096", "ts": "2026-10-10T23:00", "type": "coding", "desc": "repr-view 第一版可视化能跑了，很丑", "objects": ["prj-07"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-097", "ts": "2026-10-12T15:00", "type": "coding", "desc": "给一个开源项目提了文档翻译 PR，被合了", "objects": ["out-07", "ms-07"], "source": "D", "evidence": [], "learned": "unknown", "note": "只是翻译，不涉及代码", "visible": false },
+    { "id": "act-098", "ts": "2026-10-15T21:00", "type": "reading", "desc": "读 Agüera y Arcas《大模型理解我们吗》", "objects": ["mat-21"], "source": "B", "evidence": [], "learned": "partial", "note": "写了两段批注，都在反对", "visible": false },
+    { "id": "act-099", "ts": "2026-10-18T20:00", "type": "reading", "desc": "读 LeCun 的 position paper 前 40%", "objects": ["mat-20"], "source": "B", "evidence": [], "learned": "partial", "note": "", "visible": false },
+    { "id": "act-100", "ts": "2026-10-22T22:00", "type": "creating", "desc": "给长文加了一节大纲：语言与思维", "objects": ["prj-06", "int-05"], "source": "D", "evidence": [], "learned": "unknown", "note": "新兴趣就是从这一节长出来的", "visible": false },
+    { "id": "act-101", "ts": "2026-10-25T23:00", "type": "reflecting", "desc": "写：'我写的这篇其实是在给表征找一个我自己的定义，不是在综述'", "objects": ["ins-08"], "source": "A", "evidence": [], "learned": "unknown", "note": "", "visible": true },
+    { "id": "act-102", "ts": "2026-10-29T18:00", "type": "coding", "desc": "repr-view v1 完成，412 行，写了说明文档", "objects": ["prj-07", "out-10", "ms-08"], "source": "C", "evidence": ["ev-17"], "learned": "yes", "note": "十个月里第一个'说做完就做完'的东西", "visible": false },
+    { "id": "act-103", "ts": "2026-10-31T22:00", "type": "creating", "desc": "长文第 3 节写了 800 字，又删掉", "objects": ["prj-06", "out-09"], "source": "D", "evidence": [], "learned": "unknown", "note": "", "visible": false },
+    { "id": "act-104", "ts": "2026-11-01T20:00", "type": "creating", "desc": "重写第 3 节开头，决定不引 Bengio 了", "objects": ["prj-06", "out-09"], "source": "D", "evidence": [], "learned": "unknown", "note": "今天", "visible": false }
+  ],
+  "projects": [
+    {
+      "id": "prj-01",
+      "title": "recon-lab · 3D 重建实验台",
+      "description": "从 COLMAP 到神经渲染的一条自建管线。目标是对任意一段手机视频出可看的结果。私人项目，不打算发。",
+      "created": "2026-01-05",
+      "status": "archived",
+      "archived_at": "2026-05-26",
+      "interests": ["int-01", "int-02"],
+      "materials": ["mat-12", "mat-13", "mat-14", "mat-26", "mat-27", "mat-11"],
+      "experiences": ["lx-05"],
+      "activities": ["act-006", "act-011", "act-013", "act-015", "act-016", "act-019", "act-020", "act-021", "act-061", "act-062", "act-063", "act-067", "act-069"],
+      "outputs": ["out-01", "out-02", "out-03", "out-11"],
+      "evidence": ["ev-03", "ev-04", "ev-05", "ev-06"],
+      "development_history": [
+        { "date": "2026-01-05", "event": "建仓，跑通 COLMAP 示例数据" },
+        { "date": "2026-01-22", "event": "第一次训练全黑" },
+        { "date": "2026-01-26", "event": "修正坐标转置，出图" },
+        { "date": "2026-01-30", "event": "NeRF 30k iter 出可看结果（v0.1）" },
+        { "date": "2026-02-08", "event": "接入 3DGS，训练收敛" },
+        { "date": "2026-05-08", "event": "v0.2 支持多视角输入" },
+        { "date": "2026-05-09", "event": "多视角一致性失败，无解" },
+        { "date": "2026-05-22", "event": "v0.3 只做代码整理，未修问题" },
+        { "date": "2026-05-26", "event": "README 注明暂停，归档" }
+      ],
+      "current_status_note": "10 月的 prj-07 只继承了它的可视化想法，没有继承代码",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "capture_gap": "GitHub 有 87 次提交（ext-01），Lemma 里只有几页笔记；提交与笔记无法对齐"
+      }
+    },
+    {
+      "id": "prj-02",
+      "title": "毕业设计 · 桌面机械臂抓取",
+      "description": "六自由度桌面臂 + 单目相机的抓取系统。原计划纯视觉方案，因光照不稳改为视觉 + 红外辅助。",
+      "created": "2026-01-05",
+      "status": "completed",
+      "completed_at": "2026-06-11",
+      "interests": ["int-08"],
+      "materials": [],
+      "experiences": [],
+      "activities": ["act-033", "act-035", "act-048", "act-070", "act-064", "act-071", "act-072", "act-073"],
+      "outputs": ["out-04", "out-11"],
+      "evidence": ["ev-09"],
+      "development_history": [
+        { "date": "2026-01-05", "event": "开题，确定纯视觉方案" },
+        { "date": "2026-03-10", "event": "相机标定完成" },
+        { "date": "2026-03-12", "event": "师兄建议放弃纯视觉，当时未采纳" },
+        { "date": "2026-04-07", "event": "pipeline 端到端跑通，只在桌面稳" },
+        { "date": "2026-05-15", "event": "中期通过" },
+        { "date": "2026-05-28", "event": "成功率 62%，加红外补光" },
+        { "date": "2026-06-03", "event": "78%，±2mm" },
+        { "date": "2026-06-11", "event": "答辩通过" }
+      ],
+      "current_status_note": "完成后没再动。代码留在实验室机器上，个人仓没有备份",
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial"
+      }
+    },
+    {
+      "id": "prj-03",
+      "title": "rename-tool · Rust CLI",
+      "description": "一个批量重命名工具的练习作。只做到 dry-run 分支能打印计划，实际执行没写。",
+      "created": "2026-02-05",
+      "status": "abandoned",
+      "ended": "2026-03-19",
+      "interests": ["int-07"],
+      "materials": ["mat-02"],
+      "experiences": ["lx-02"],
+      "activities": ["act-018", "act-041", "act-053"],
+      "outputs": ["out-05"],
+      "evidence": ["ev-16"],
+      "development_history": [
+        { "date": "2026-02-05", "event": "建仓，实现参数解析" },
+        { "date": "2026-02-20", "event": "dry-run 能打印计划" },
+        { "date": "2026-03-19", "event": "最后一次提交，之后停" }
+      ],
+      "current_status_note": "23 次提交（ext-02）。README 只写了一行",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "prj-04",
+      "title": "给学弟学妹的线代讲义",
+      "description": "五篇短文，讲'为什么要有基''相似到底在说什么'。发在群里，不是正式出版。",
+      "created": "2026-04-23",
+      "status": "completed",
+      "completed_at": "2026-04-30",
+      "interests": ["int-06", "int-09"],
+      "materials": ["mat-10", "mat-24"],
+      "experiences": ["lx-06"],
+      "activities": ["act-056", "act-057"],
+      "outputs": ["out-06"],
+      "evidence": [],
+      "development_history": [
+        { "date": "2026-04-23", "event": "第 1 篇：为什么要有基" },
+        { "date": "2026-04-26", "event": "第 2、3 篇" },
+        { "date": "2026-04-30", "event": "第 4、5 篇，发群" }
+      ],
+      "current_status_note": "有人说'第 3 篇看懂了'，他截图存下来了",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "prj-05",
+      "title": "《意识读本》笔记库",
+      "description": "一个长期维护的笔记库，收所有关于意识与表征的摘录和自己的想法。63 条，不对外。",
+      "created": "2026-04-02",
+      "status": "ongoing",
+      "interests": ["int-02", "int-03", "int-10"],
+      "materials": ["mat-16", "mat-17", "mat-06", "mat-07", "mat-19", "mat-01"],
+      "experiences": ["lx-04", "lx-03"],
+      "activities": ["act-044", "act-051", "act-059", "act-066", "act-091"],
+      "outputs": ["out-08"],
+      "evidence": [],
+      "development_history": [
+        { "date": "2026-04-02", "event": "建库，第一批 9 条" },
+        { "date": "2026-05-02", "event": "到 30 条" },
+        { "date": "2026-09-26", "event": "到 63 条" }
+      ],
+      "current_status_note": "没有停，但强度从每周 8 条掉到每月 2 条",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial"
+      }
+    },
+    {
+      "id": "prj-06",
+      "title": "《表征的两种用法》",
+      "description": "一篇想写 6000 字的长文，试图区分'机器学习里的表征'和'认知科学里的表征'，并说清他自己用哪一个。",
+      "created": "2026-09-22",
+      "status": "ongoing",
+      "interests": ["int-02", "int-03", "int-05"],
+      "materials": ["mat-19", "mat-21", "mat-20", "mat-28", "mat-16", "mat-17"],
+      "experiences": ["lx-04"],
+      "activities": ["act-089", "act-090", "act-092", "act-100", "act-101", "act-103", "act-104"],
+      "outputs": ["out-09"],
+      "evidence": ["ev-10", "ev-13"],
+      "development_history": [
+        { "date": "2026-09-22", "event": "动笔，先写第二节" },
+        { "date": "2026-09-28", "event": "v1 3500 字，晚三天" },
+        { "date": "2026-10-15", "event": "错过自定截止日，推到 10-31" },
+        { "date": "2026-10-25", "event": "意识到自己是在造定义，不是做综述" },
+        { "date": "2026-10-31", "event": "第 3 节写了 800 字又删掉" },
+        { "date": "2026-11-01", "event": "重写开头，决定不引 Bengio" }
+      ],
+      "current_status_note": "第二次推迟，新的自定日期是 11-30，与申请截止同一天",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial"
+      }
+    },
+    {
+      "id": "prj-07",
+      "title": "repr-view · 表征变化可视化",
+      "description": "412 行的 Python 小工具，把训练过程中特征向量的方向变化画成一张图。不追求通用，只对他的数据有用。",
+      "created": "2026-10-08",
+      "status": "completed_v1",
+      "completed_at": "2026-10-29",
+      "interests": ["int-02", "int-09"],
+      "materials": ["mat-11"],
+      "experiences": [],
+      "activities": ["act-095", "act-096", "act-102"],
+      "outputs": ["out-10"],
+      "evidence": ["ev-17"],
+      "development_history": [
+        { "date": "2026-10-08", "event": "起意：想把'表征在变'这件事画出来" },
+        { "date": "2026-10-10", "event": "第一版，很丑" },
+        { "date": "2026-10-20", "event": "调采样密度，图能看了" },
+        { "date": "2026-10-29", "event": "v1 定版，写说明" }
+      ],
+      "current_status_note": "41 次提交（ext-03）。作者说'可能再没人会用'",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "id": "out-01",
+      "title": "recon-lab 仓库",
+      "type": "code_repository",
+      "created": "2026-01-05",
+      "status": "archived",
+      "project": "prj-01",
+      "url_exists": true,
+      "note": "私有仓。87 次提交，最后一次 2026-05-22",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-02",
+      "title": "实验报告 1 与 2",
+      "type": "report",
+      "created": "2026-01-31",
+      "updated": "2026-05-12",
+      "status": "completed",
+      "project": "prj-01",
+      "note": "共 21 页。第二篇写清了多视角一致性为什么失败",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial"
+      }
+    },
+    {
+      "id": "out-03",
+      "title": "《我为什么放弃 NeRF 复现》",
+      "type": "blog_draft",
+      "created": "2026-05-24",
+      "status": "unpublished_draft",
+      "project": "prj-01",
+      "note": "1800 字，从没发出去。这是他写得最诚实的一篇",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-04",
+      "title": "毕业设计论文",
+      "type": "thesis",
+      "created": "2026-06-08",
+      "status": "completed",
+      "project": "prj-02",
+      "note": "38 页。查重 6.2%",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-05",
+      "title": "rename-tool 仓库",
+      "type": "code_repository",
+      "created": "2026-02-05",
+      "status": "abandoned",
+      "project": "prj-03",
+      "note": "23 次提交，只有 dry-run",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-06",
+      "title": "线代讲义 5 篇",
+      "type": "notes",
+      "created": "2026-04-23",
+      "status": "completed",
+      "project": "prj-04",
+      "note": "共约 7000 字，发在一个 40 人的群里",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-07",
+      "title": "开源文档翻译 PR",
+      "type": "pull_request",
+      "created": "2026-10-12",
+      "status": "merged",
+      "project": null,
+      "note": "只翻了一页文档，被合了。他没告诉任何人",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-08",
+      "title": "《意识读本》笔记库",
+      "type": "knowledge_base",
+      "created": "2026-04-02",
+      "updated": "2026-10-20",
+      "status": "ongoing",
+      "project": "prj-05",
+      "note": "63 条。这是他真正的'知识结构'，但没有任何结构",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": "partial"
+      }
+    },
+    {
+      "id": "out-09",
+      "title": "《表征的两种用法》草稿",
+      "type": "essay_draft",
+      "created": "2026-09-28",
+      "updated": "2026-11-01",
+      "status": "in_progress",
+      "project": "prj-06",
+      "note": "v1 3500 字 → 目前 4100 字，第 3 节反复重写",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-10",
+      "title": "repr-view v1",
+      "type": "software_tool",
+      "created": "2026-10-29",
+      "status": "released_v1",
+      "project": "prj-07",
+      "note": "412 行 + 一页说明。没有发布，放在私有仓",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-11",
+      "title": "组内分享 slides（14 页）",
+      "type": "presentation",
+      "created": "2026-05-18",
+      "status": "delivered",
+      "project": "prj-01",
+      "note": "从 NeRF 到 3DGS。有人会后问他要了 slides",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "out-12",
+      "title": "给某位老师的邮件（未发送）",
+      "type": "message_draft",
+      "created": "2026-06-14",
+      "status": "never_sent",
+      "project": null,
+      "note": "问能不能去组里做 RA。写了 600 字，删了又写，最后关掉了",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "capture_gap": "这份东西只存在于他自己知道的地方；任何轨迹系统都不会有它"
+      }
+    }
+  ],
+  "interests": [
+    {
+      "id": "int-01",
+      "name": "神经渲染与三维重建",
+      "first_observed": "2026-01-09",
+      "origin": "explicit",
+      "origin_note": "自己说'想把 NeRF 那条线走一遍'",
+      "development": [
+        { "date": "2026-01-09", "state": "强，日均 4 小时" },
+        { "date": "2026-02-08", "state": "强，复现成功" },
+        { "date": "2026-05-26", "state": "冻结，README 写'暂停'" },
+        { "date": "2026-10-08", "state": "只留下可视化那一点（prj-07）" }
+      ],
+      "current_relevance": "weak",
+      "confidence": "high",
+      "confirmed_by_user": true,
+      "links": {
+        "materials": ["mat-12", "mat-13", "mat-14", "mat-26", "mat-27", "mat-11"],
+        "projects": ["prj-01"],
+        "experiences": ["lx-05"],
+        "activities": ["act-004", "act-014", "act-019"],
+        "evidence": ["ev-03", "ev-04", "ev-06"],
+        "insights": []
+      },
+      "note": "用户从没说过'我不做这个了'，只是停了。系统判弱，用户未确认"
+    },
+    {
+      "id": "int-02",
+      "name": "表征（representation）——它在这两个领域指的是同一件事吗",
+      "first_observed": "2026-02-13",
+      "origin": "inferred_then_confirmed",
+      "origin_note": "系统在 2026-02-13 的笔记里第一次看到这个词被反复用；用户 2026-03-08 自己写成了明确的问题",
+      "development": [
+        { "date": "2026-02-13", "state": "系统推断：开始反复使用'表示/表征'" },
+        { "date": "2026-03-08", "state": "用户确认为核心问题（ins-01）" },
+        { "date": "2026-04-18", "state": "发现四种互相打架的定义，更困惑" },
+        { "date": "2026-09-22", "state": "变成一篇长文的主题（prj-06）" },
+        { "date": "2026-10-25", "state": "用户承认自己是在造定义（ins-08）" }
+      ],
+      "current_relevance": "core",
+      "confidence": "high",
+      "confirmed_by_user": true,
+      "links": {
+        "materials": ["mat-15", "mat-19", "mat-16", "mat-17", "mat-03", "mat-21"],
+        "projects": ["prj-06", "prj-05", "prj-01"],
+        "experiences": ["lx-01", "lx-04"],
+        "activities": ["act-024", "act-031", "act-032", "act-054", "act-091"],
+        "evidence": ["ev-03", "ev-08", "ev-10"],
+        "insights": ["ins-01", "ins-02", "ins-08"]
+      },
+      "note": "全库唯一一条从'系统推断'升级为'用户确认'的兴趣"
+    },
+    {
+      "id": "int-03",
+      "name": "意识研究",
+      "first_observed": "2026-03-27",
+      "origin": "explicit",
+      "origin_note": "读完 Nagel 后在笔记里写'这个问题我没法推给别人'",
+      "development": [
+        { "date": "2026-03-27", "state": "强" },
+        { "date": "2026-05-24", "state": "读完了 Dennett，但说不清他主张什么" },
+        { "date": "2026-08-18", "state": "以闲书形式回来（Reality+）" },
+        { "date": "2026-10-15", "state": "进入长文的背景章节" }
+      ],
+      "current_relevance": "active",
+      "confidence": "high",
+      "confirmed_by_user": true,
+      "links": {
+        "materials": ["mat-16", "mat-17", "mat-18", "mat-06", "mat-07", "mat-08"],
+        "projects": ["prj-05", "prj-06"],
+        "experiences": ["lx-04"],
+        "activities": ["act-042", "act-046", "act-049", "act-052", "act-068"],
+        "evidence": ["ev-08", "ev-14"],
+        "insights": ["ins-08"]
+      }
+    },
+    {
+      "id": "int-04",
+      "name": "因果推断",
+      "first_observed": "2026-08-12",
+      "origin": "inferred",
+      "origin_note": "系统在 8-12 到 10-05 之间看到 8 条相关活动，用户从未声明过这个兴趣",
+      "development": [
+        { "date": "2026-08-12", "state": "随手翻书" },
+        { "date": "2026-09-08", "state": "读完《为什么》" },
+        { "date": "2026-09-18", "state": "写了第一个玩具例子" },
+        { "date": "2026-10-05", "state": "在新案例上用上了（ev-13）" }
+      ],
+      "current_relevance": "emerging",
+      "confidence": "moderate",
+      "confirmed_by_user": false,
+      "links": {
+        "materials": ["mat-05", "mat-28", "mat-29"],
+        "projects": ["prj-06"],
+        "experiences": [],
+        "activities": ["act-078", "act-085", "act-086", "act-087", "act-089", "act-094"],
+        "evidence": ["ev-12", "ev-13"],
+        "insights": ["ins-07"]
+      },
+      "note": "⚠️ 系统推断，用户未确认。他可能会说'我只是为了写文章才看的'"
+    },
+    {
+      "id": "int-05",
+      "name": "语言与思维",
+      "first_observed": "2026-10-22",
+      "origin": "inferred",
+      "origin_note": "突然出现的大纲一节 + 连续两篇相关阅读。太新，系统自己也不确定",
+      "development": [
+        { "date": "2026-10-22", "state": "出现在长文大纲里" },
+        { "date": "2026-10-31", "state": "没有继续" }
+      ],
+      "current_relevance": "speculative",
+      "confidence": "low",
+      "confirmed_by_user": false,
+      "links": {
+        "materials": ["mat-21", "mat-20"],
+        "projects": ["prj-06"],
+        "experiences": [],
+        "activities": ["act-098", "act-099", "act-100"],
+        "evidence": [],
+        "insights": ["ins-07"]
+      },
+      "note": "⚠️ 只有 9 天的证据，可能是一次性的。系统标 low 是对的"
+    },
+    {
+      "id": "int-06",
+      "name": "数学基础与形式化",
+      "first_observed": "2026-01-05",
+      "origin": "implicit",
+      "origin_note": "从'补线代'这个动作推断，用户从未说过对数学本身感兴趣",
+      "development": [
+        { "date": "2026-01-05", "state": "为项目补课" },
+        { "date": "2026-01-19", "state": "Kline 停了" },
+        { "date": "2026-03-21", "state": "最后一次碰 Axler" }
+      ],
+      "current_relevance": "dormant",
+      "confidence": "low",
+      "confirmed_by_user": false,
+      "links": {
+        "materials": ["mat-09", "mat-10", "mat-24", "mat-04"],
+        "projects": ["prj-04"],
+        "experiences": ["lx-06"],
+        "activities": ["act-001", "act-003", "act-009", "act-034", "act-040"],
+        "evidence": ["ev-01", "ev-02"],
+        "insights": []
+      },
+      "note": "⚠️ 系统曾把它当兴趣，实际是工具需求。这是个假阳性样本"
+    },
+    {
+      "id": "int-07",
+      "name": "系统编程（Rust 方向）",
+      "first_observed": "2026-02-03",
+      "origin": "explicit",
+      "origin_note": "用户明确说想学 Rust 写 CLI",
+      "development": [
+        { "date": "2026-02-03", "state": "高" },
+        { "date": "2026-03-24", "state": "rustlings 60/94" },
+        { "date": "2026-04-15", "state": "停在 76/94" },
+        { "date": "2026-09-02", "state": "用户正式放弃（ins-06）" }
+      ],
+      "current_relevance": "retired",
+      "confidence": "high",
+      "confirmed_by_user": true,
+      "links": {
+        "materials": ["mat-02"],
+        "projects": ["prj-03"],
+        "experiences": ["lx-02"],
+        "activities": ["act-017", "act-018", "act-027", "act-028", "act-041", "act-053", "act-083"],
+        "evidence": ["ev-11", "ev-16"],
+        "insights": ["ins-06", "ins-10"]
+      },
+      "note": "唯一一条'明确开始 → 明确结束'的兴趣"
+    },
+    {
+      "id": "int-08",
+      "name": "机器人 / 具身智能",
+      "first_observed": "2026-01-05",
+      "origin": "explicit",
+      "origin_note": "毕设选了机械臂。但这是他 2024 年就有的方向，属于背景而非新兴趣",
+      "development": [
+        { "date": "2026-01-05", "state": "被动（毕设要求）" },
+        { "date": "2026-06-11", "state": "结束后没有再碰" },
+        { "date": "2026-08-28", "state": "在反思里被否定：'软硬都懂'这个定位放弃了" }
+      ],
+      "current_relevance": "dormant",
+      "confidence": "moderate",
+      "confirmed_by_user": false,
+      "links": {
+        "materials": [],
+        "projects": ["prj-02"],
+        "experiences": [],
+        "activities": ["act-033", "act-048", "act-070", "act-071"],
+        "evidence": ["ev-09"],
+        "insights": ["ins-11"]
+      },
+      "note": "⚠️ 一个 199 天的兴趣里，只有 5 条活动，且全是被要求的。系统容易把它判强"
+    },
+    {
+      "id": "int-09",
+      "name": "开源工具与工程审美",
+      "first_observed": "2026-02-08",
+      "origin": "inferred",
+      "origin_note": "从'整理代码''写说明文档''读 issue 区'这类行为推断",
+      "development": [
+        { "date": "2026-02-08", "state": "第一次读 issue 区" },
+        { "date": "2026-05-22", "state": "v0.3 只做代码整理" },
+        { "date": "2026-10-12", "state": "提了一个文档 PR" },
+        { "date": "2026-10-29", "state": "repr-view 写了说明文档" }
+      ],
+      "current_relevance": "steady_low",
+      "confidence": "low",
+      "confirmed_by_user": false,
+      "links": {
+        "materials": ["mat-27"],
+        "projects": ["prj-07", "prj-01", "prj-04"],
+        "experiences": [],
+        "activities": ["act-020", "act-067", "act-096", "act-097", "act-102"],
+        "evidence": ["ev-17"],
+        "insights": ["ins-07"]
+      },
+      "note": "⚠️ 一条'一直存在但从不被谈论'的兴趣。它的证据全是动作，没有一句话"
+    },
+    {
+      "id": "int-10",
+      "name": "科学哲学 / 形而上学",
+      "first_observed": "2026-03-06",
+      "origin": "implicit",
+      "origin_note": "Boden 的历史叙述里他划了很多线。本科时读过一点，从没提过",
+      "development": [
+        { "date": "2026-03-06", "state": "被 Boden 唤起" },
+        { "date": "2026-08-18", "state": "Reality+ 里又出现" },
+        { "date": "2026-10-15", "state": "在长文里成了一个隐含框架" }
+      ],
+      "current_relevance": "background",
+      "confidence": "low",
+      "confirmed_by_user": false,
+      "links": {
+        "materials": ["mat-03", "mat-08", "mat-16"],
+        "projects": ["prj-05", "prj-06"],
+        "experiences": ["lx-04"],
+        "activities": ["act-031", "act-079", "act-098"],
+        "evidence": [],
+        "insights": []
+      },
+      "note": "⚠️ 低置信。可能只是'读哲学书'这个行为，不是方向"
+    }
+  ],
+  "goals": [
+    {
+      "id": "goal-01",
+      "statement": "进入一个真正能做'智能'研究的地方（读博或进实验室）",
+      "type": "long_term",
+      "stated_at": "2025-11-20",
+      "horizon": "2027–2028",
+      "status": "reformulated",
+      "reformulated_at": "2026-09-05",
+      "successor": "goal-10",
+      "links": {
+        "projects": ["prj-01", "prj-06"],
+        "experiences": ["lx-05"],
+        "milestones": [],
+        "activities": ["act-074", "act-084"]
+      },
+      "note": "原话很虚。9 月被拆成'选一个方向'这个具体问题",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-02",
+      "statement": "三月前用 Rust 写一个能用的命令行工具",
+      "type": "short_term",
+      "stated_at": "2026-02-03",
+      "deadline": "2026-03-31",
+      "status": "abandoned",
+      "abandoned_at": "2026-04-20",
+      "links": {
+        "projects": ["prj-03"],
+        "experiences": ["lx-02"],
+        "milestones": [],
+        "activities": ["act-018", "act-041", "act-053", "act-055"]
+      },
+      "note": "截止日过了 20 天才承认。放弃理由与真实原因不一致（见 act-055）",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-03",
+      "statement": "毕设按期完成并答辩通过",
+      "type": "short_term",
+      "stated_at": "2026-01-05",
+      "deadline": "2026-06-15",
+      "status": "completed",
+      "completed_at": "2026-06-11",
+      "links": {
+        "projects": ["prj-02"],
+        "experiences": [],
+        "milestones": ["ms-04", "ms-05"],
+        "activities": ["act-033", "act-064", "act-073"]
+      },
+      "note": "唯一一个按计划完成的目标",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-04",
+      "statement": "复现一个 NeRF 类方法，出自己拍的数据",
+      "type": "short_term",
+      "stated_at": "2026-01-09",
+      "deadline": "2026-02-15",
+      "status": "completed",
+      "completed_at": "2026-01-30",
+      "links": {
+        "projects": ["prj-01"],
+        "experiences": ["lx-05"],
+        "milestones": ["ms-01", "ms-03"],
+        "activities": ["act-015", "act-021"]
+      },
+      "note": "提前半个月完成，这是后面所有自信的来源",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-05",
+      "statement": "把 recon-lab 的多视角一致性做出来，投一篇 workshop",
+      "type": "short_term",
+      "stated_at": "2026-03-20",
+      "deadline": "2026-08-31",
+      "status": "abandoned",
+      "abandoned_at": "2026-09-01",
+      "links": {
+        "projects": ["prj-01"],
+        "experiences": ["lx-05"],
+        "milestones": [],
+        "activities": ["act-062", "act-082"]
+      },
+      "note": "5 月就没进展了，但拖到 9 月才正式关掉。中间四个月它一直挂在清单上",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-06",
+      "statement": "把 GEB 读完",
+      "type": "short_term",
+      "stated_at": "2026-07-20",
+      "deadline": "2026-12-31",
+      "status": "active_at_risk",
+      "links": {
+        "projects": ["prj-05"],
+        "experiences": ["lx-03"],
+        "milestones": ["ms-06"],
+        "activities": ["act-075", "act-077", "act-080"]
+      },
+      "note": "8-20 之后零推进。剩 60 天，还差 9 章",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-07",
+      "statement": "写完《表征的两种用法》，6000 字",
+      "type": "short_term",
+      "stated_at": "2026-09-22",
+      "deadline": "2026-10-15",
+      "status": "active",
+      "deadline_slipped": ["2026-10-15", "2026-10-31", "2026-11-30"],
+      "links": {
+        "projects": ["prj-06"],
+        "experiences": ["lx-04"],
+        "milestones": ["ms-09"],
+        "activities": ["act-090", "act-092", "act-103", "act-104"]
+      },
+      "note": "推迟两次。第三次的和申请截止日撞了",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-08",
+      "statement": "每周读一篇论文",
+      "type": "habit",
+      "stated_at": "2026-01-09",
+      "deadline": null,
+      "status": "failed_then_replaced",
+      "failed_at": "2026-05-01",
+      "replaced_by": "每月两篇，不追踪",
+      "links": {
+        "projects": [],
+        "experiences": [],
+        "milestones": [],
+        "activities": ["act-004", "act-014", "act-023"]
+      },
+      "note": "1–2 月真的做到了（6 篇），3 月掉到 2 篇，4 月 0 篇。他没承认失败，只是不再提",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-09",
+      "statement": "把 9.13 这套课看完（24 讲）",
+      "type": "short_term",
+      "stated_at": "2026-03-05",
+      "deadline": "2026-04-30",
+      "status": "stalled",
+      "links": {
+        "projects": [],
+        "experiences": ["lx-01"],
+        "milestones": [],
+        "activities": ["act-030", "act-045", "act-047"]
+      },
+      "note": "9/24 讲。截止日过了七个月没动，目标也没关",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-10",
+      "statement": "十月前决定 2027 年申请哪个方向（cog sci / HCI / 机器人）",
+      "type": "short_term",
+      "stated_at": "2026-09-05",
+      "deadline": "2026-11-30",
+      "status": "active_undecided",
+      "links": {
+        "projects": ["prj-06"],
+        "experiences": [],
+        "milestones": [],
+        "activities": ["act-084"]
+      },
+      "note": "6 个方向划掉 4 个，剩 cog sci 与 HCI。11-01 仍未定。这是当前唯一真正紧迫的事",
+      "provenance": { "input_source": "A", "asserted_by": "user", "epistemic": "stated" }
+    },
+    {
+      "id": "goal-11",
+      "statement": "成为'软硬都懂'的机器人工程师",
+      "type": "long_term",
+      "stated_at": "2024-09",
+      "deadline": null,
+      "status": "abandoned",
+      "abandoned_at": "2026-08-28",
+      "links": {
+        "projects": ["prj-02"],
+        "experiences": [],
+        "milestones": [],
+        "activities": ["act-081"]
+      },
+      "note": "两年前的目标，从来只有一个项目支撑。放弃时没有专门记录，只出现在 8-28 那段反思里",
+      "provenance": {
+        "input_source": "A",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "note_extra": "形成时间来自用户回忆，无系统记录"
+      }
+    }
+  ],
+  "milestones": [
+    { "id": "ms-01", "title": "第一次出可看的重建结果", "date": "2026-01-30", "project": "prj-01", "evidence": ["ev-04"], "planned_date": "2026-02-15", "status": "completed_early" },
+    { "id": "ms-02", "title": "线代复习做到第 5 章", "date": "2026-02-05", "project": null, "evidence": ["ev-01"], "planned_date": "2026-02-10", "status": "completed", "note": "回头看是仪式性的：后 4 章从来没做，也没有需要用到" },
+    { "id": "ms-03", "title": "3DGS 复现收敛", "date": "2026-02-08", "project": "prj-01", "evidence": ["ev-06"], "planned_date": null, "status": "completed" },
+    { "id": "ms-04", "title": "毕设中期通过", "date": "2026-05-15", "project": "prj-02", "evidence": [], "planned_date": "2026-05-15", "status": "completed" },
+    { "id": "ms-05", "title": "毕设答辩通过", "date": "2026-06-11", "project": "prj-02", "evidence": ["ev-09"], "planned_date": "2026-06-15", "status": "completed_early" },
+    { "id": "ms-06", "title": "GEB 第一部读完", "date": "2026-08-05", "project": null, "evidence": [], "planned_date": null, "status": "completed", "note": "没有计划日期，因为一开始就没有计划" },
+    { "id": "ms-07", "title": "第一个 merged PR", "date": "2026-10-12", "project": null, "evidence": [], "planned_date": null, "status": "completed" },
+    { "id": "ms-08", "title": "repr-view v1 定版", "date": "2026-10-29", "project": "prj-07", "evidence": ["ev-17"], "planned_date": "2026-10-20", "status": "completed_late" },
+    { "id": "ms-09", "title": "长文第一版 3500 字", "date": "2026-09-28", "project": "prj-06", "evidence": ["ev-10"], "planned_date": "2026-09-25", "status": "completed_late" }
+  ],
+  "evidence": [
+    {
+      "id": "ev-01",
+      "ts": "2026-01-16T19:40",
+      "kind": "correctness",
+      "observed": "5 道特征值与特征向量的计算题全对",
+      "activity": "act-007",
+      "objects": ["mat-10", "lx-06"],
+      "verdict": "supported",
+      "supports": "能在标准题上执行特征值计算",
+      "does_not_support": "不理解特征值为什么与不变子空间有关；题目没问",
+      "confidence": "high",
+      "confidence_basis": "题量与判分明确",
+      "limitations": "纯计算，选择题，一次",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": true
+      }
+    },
+    {
+      "id": "ev-02",
+      "ts": "2026-01-20T20:30",
+      "kind": "correctness",
+      "observed": "4 道'相似 vs 合同'的题错 3 道，把'相似'理解成'形状一样'",
+      "activity": "act-010",
+      "objects": ["mat-10", "lx-06"],
+      "verdict": "unsupported",
+      "supports": "相似变换的判据尚未建立",
+      "does_not_support": "不能说'线代不行'——只涉及一个概念",
+      "confidence": "high",
+      "confidence_basis": "同一错误的三种变体",
+      "limitations": "单次；两个月后重测（见 revision）",
+      "revision": {
+        "at": "2026-03-21",
+        "activity": "act-040",
+        "result": "supported",
+        "note": "3 月重做第 5 章，同类题全对。这是全库唯一一条有前后对照的证据"
+      },
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": true
+      }
+    },
+    {
+      "id": "ev-03",
+      "ts": "2026-01-24T23:40",
+      "kind": "independent_reasoning",
+      "observed": "未查资料，独立把体渲染的离散化求和式推出来，包括透射率的连乘形式",
+      "activity": "act-012",
+      "objects": ["mat-12", "prj-01"],
+      "verdict": "supported",
+      "supports": "能把连续积分转成可实现的离散形式；愿意先自己想",
+      "does_not_support": "漏了按深度排序这一近似，说明对'为什么求和顺序重要'还没意识",
+      "confidence": "moderate",
+      "confidence_basis": "过程可追溯（草稿纸拍照留存），但结果与论文对照",
+      "limitations": "论文里已有答案，独立性与'首次提出'不是一回事",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false,
+        "capture_gap": "草稿纸在手机相册里，系统拿不到"
+      }
+    },
+    {
+      "id": "ev-04",
+      "ts": "2026-01-30T02:10",
+      "kind": "project_based",
+      "observed": "30k iter 后出可辨认的场景重建，PSNR 未知（没测）",
+      "activity": "act-015",
+      "objects": ["prj-01", "ms-01"],
+      "verdict": "partially_supported",
+      "supports": "能把一条不熟的管线跑通",
+      "does_not_support": "不支持'理解了 NeRF'；他没有验证结果是否合理，只看'像不像'",
+      "confidence": "low",
+      "confidence_basis": "无量化指标，无对照基线",
+      "limitations": "代码大部分来自官方仓，改动量约 40 行",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-05",
+      "ts": "2026-02-05T22:00",
+      "kind": "explanation",
+      "observed": "被问'为什么要 alpha 合成'，答对了不透明度与透射率的关系，但没提深度排序",
+      "activity": "act-016",
+      "objects": ["mat-12"],
+      "verdict": "partially_supported",
+      "supports": "理解了合成公式本身",
+      "does_not_support": "没意识到这条公式成立的前提是沿射线有序",
+      "confidence": "moderate",
+      "confidence_basis": "他的回答被记在实验报告里",
+      "limitations": "口头回答，没有追问",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-06",
+      "ts": "2026-02-08T23:55",
+      "kind": "problem_solving",
+      "observed": "定位到 loss 不降的原因是高斯尺度初始化过大，改初始化与学习率后收敛",
+      "activity": "act-021",
+      "objects": ["prj-01", "ms-03", "mat-27"],
+      "verdict": "supported",
+      "supports": "能在失败中定位参数层面的原因",
+      "does_not_support": "不完全是独立推理——他先读了 issue #214（act-020）才知道看初始化",
+      "confidence": "moderate",
+      "confidence_basis": "过程有痕迹（提交记录显示改了 3 处）",
+      "limitations": "⚠️ 他后来对别人描述成'我自己定位的'。这条证据的独立性被记录本身修正了",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": false,
+        "capture_gap": "如果只看 Lemma，看不到 issue #214 这一步，独立性会被高估"
+      }
+    },
+    {
+      "id": "ev-07",
+      "ts": "2026-02-24T21:00",
+      "kind": "correctness",
+      "observed": "贝叶斯公式应用题，第一次错（把先验当成后验）",
+      "activity": "act-027",
+      "objects": ["mat-10"],
+      "verdict": "unsupported",
+      "supports": "先验/后验的区分不稳",
+      "does_not_support": "不能推广到所有概率题",
+      "confidence": "moderate",
+      "confidence_basis": "单题",
+      "limitations": "没有后续重测，所以今天仍停在'未解决'",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": true
+      }
+    },
+    {
+      "id": "ev-08",
+      "ts": "2026-05-02T21:30",
+      "kind": "explanation",
+      "observed": "不看原文，用两页纸复述困难问题与容易问题的区别，并给出自己的反驳（'如果功能主义对，那我也可以说蝙蝠的体验是它的功能状态'）",
+      "activity": "act-059",
+      "objects": ["mat-16", "mat-17", "lx-04"],
+      "verdict": "supported",
+      "supports": "理解了这个区分，并且能在其上做推理",
+      "does_not_support": "不支持'读懂了 Chalmers 的论证链'——他跳过了第 4 章的模态论证",
+      "confidence": "moderate",
+      "confidence_basis": "两页手写稿；有原创反驳",
+      "limitations": "没有第三方评判；'理解'与'复述得漂亮'难分",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-09",
+      "ts": "2026-06-11T10:30",
+      "kind": "project_based",
+      "observed": "答辩通过。三个老师问的全是工程问题（成功率、重复精度、成本）",
+      "activity": "act-073",
+      "objects": ["prj-02", "ms-05"],
+      "verdict": "supported",
+      "supports": "能独立完成一个工程系统并通过同行评审",
+      "does_not_support": "⚠️ 完全没有触及'视觉表征'的理论理解。把这件事当'他懂表征了'是误读",
+      "confidence": "high",
+      "confidence_basis": "有答辩记录与成绩",
+      "limitations": "评审只看工程。这个证据在今天很容易被高估",
+      "provenance": {
+        "input_source": "B",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-10",
+      "ts": "2026-09-28T23:40",
+      "kind": "explanation",
+      "observed": "长文里把'表征'分成'作为内部状态的表征'与'作为可操作对象的表征'两种用法，并给了三个例子",
+      "activity": "act-092",
+      "objects": ["out-09", "prj-06"],
+      "verdict": "partially_supported",
+      "supports": "能自己造一个有用的区分，并用例子撑住",
+      "does_not_support": "第二处用法又混了；朋友指出后他自己也承认",
+      "confidence": "moderate",
+      "confidence_basis": "文本可读，例子可查",
+      "limitations": "区分是他自己造的，没有跟文献里的既有区分对齐——这既可能是原创，也可能是没读够",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-11",
+      "ts": "2026-02-26T22:30",
+      "kind": "error_pattern",
+      "observed": "所有权与借用三道同类题连续错，每次都是编译器报错后才改",
+      "activity": "act-028",
+      "objects": ["lx-02", "mat-02"],
+      "verdict": "unsupported",
+      "supports": "借用检查的心智模型尚未建立",
+      "does_not_support": "不能说'学不会系统编程'——只到第 11 章",
+      "confidence": "moderate",
+      "confidence_basis": "三次同类失败",
+      "limitations": "之后没有重测；3 月以后他没再碰生命周期",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-12",
+      "ts": "2026-09-15T23:20",
+      "kind": "correctness",
+      "observed": "因果笔记里把一个相关性结论直接写成因果结论（'X 导致 Y'）",
+      "activity": "act-088",
+      "objects": ["mat-05"],
+      "verdict": "unsupported",
+      "supports": "读完了书，但没建立'相关性不等于因果'的操作习惯",
+      "does_not_support": "不支持'他不懂因果推断'——他三天前刚看完讲座",
+      "confidence": "moderate",
+      "confidence_basis": "文本错误明确",
+      "limitations": "笔记里的口误与理解不足难区分",
+      "revision": {
+        "at": "2026-10-02",
+        "activity": "act-093",
+        "result": "corrected_by_self",
+        "note": "无人提醒，自己回头改的。这是他给自己留下的最好的一个信号"
+      },
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-13",
+      "ts": "2026-10-05T20:30",
+      "kind": "transfer",
+      "observed": "自己找了一个推荐系统的偏差案例，用 backdoor 判据找出该控制哪些变量",
+      "activity": "act-094",
+      "objects": ["mat-28", "prj-06"],
+      "verdict": "supported",
+      "supports": "能把方法迁移到没读过的新情境",
+      "does_not_support": "案例是他挑的，可能挑了个简单的",
+      "confidence": "moderate",
+      "confidence_basis": "推导步骤完整，可复核",
+      "limitations": "玩具数据，无真实后果",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-14",
+      "ts": "2026-04-13T20:20",
+      "kind": "conversation",
+      "observed": "四轮问答后答'我不知道'，没有可挂载的知识点",
+      "activity": "act-052",
+      "objects": ["lx-04"],
+      "verdict": "ungradable",
+      "supports": "无",
+      "does_not_support": "无。不可评分不等于不会",
+      "confidence": "unknown",
+      "confidence_basis": "—",
+      "limitations": "⚠️ 样本：这类记录在轨迹里既不该显示为进步，也不该显示为退步。它应该显示为'这次没测出来'",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "agent",
+        "epistemic": "observed",
+        "visible_today": true
+      }
+    },
+    {
+      "id": "ev-15",
+      "ts": "2026-03-19T23:10",
+      "kind": "judgement_pending",
+      "observed": "笔记里提出'先验与表征不是一回事，但 Bengio 把它们放一起'，没有结论",
+      "activity": "act-038",
+      "objects": ["mat-19"],
+      "verdict": "pending",
+      "supports": "待定",
+      "does_not_support": "待定",
+      "confidence": "unknown",
+      "confidence_basis": "—",
+      "limitations": "九个月后重读同一篇（act-091）也没回到这个问题。它会一直挂在 pending",
+      "provenance": {
+        "input_source": "C",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": true
+      }
+    },
+    {
+      "id": "ev-16",
+      "ts": "2026-03-19T16:00",
+      "kind": "project_based",
+      "observed": "rename-tool 只完成 dry-run 分支，实际文件操作未实现",
+      "activity": "act-053",
+      "objects": ["prj-03", "out-05"],
+      "verdict": "partially_supported",
+      "supports": "能写参数解析与文件遍历",
+      "does_not_support": "⚠️ 不能作为'掌握了所有权'的证据——他没写过会触发借用冲突的代码",
+      "confidence": "low",
+      "confidence_basis": "代码可读，但覆盖面窄",
+      "limitations": "产物存在 ≠ 能力成立（artifact ≠ capability）",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-17",
+      "ts": "2026-10-29T18:30",
+      "kind": "project_based",
+      "observed": "repr-view v1：412 行，把 30 个 token 的特征向量方向变化画成一张图；写了说明文档",
+      "activity": "act-102",
+      "objects": ["prj-07", "out-10"],
+      "verdict": "supported",
+      "supports": "能把一个抽象概念转成可看的实现；这次是完整交付",
+      "does_not_support": "不支持'理解了表征'——工具画的是向量，不是表征本身",
+      "confidence": "moderate",
+      "confidence_basis": "代码 + 说明 + 自测",
+      "limitations": "只对他的数据有效，没有测试，没有用户",
+      "provenance": {
+        "input_source": "D",
+        "asserted_by": "user",
+        "epistemic": "observed",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ev-18",
+      "ts": "2026-10-31T21:00",
+      "kind": "self_report",
+      "observed": "用户说：'我现在能读懂 NeRF 那类论文了，基本不用查'",
+      "activity": null,
+      "objects": ["mat-12", "mat-13"],
+      "verdict": "not_evidence",
+      "supports": "这是他对自己的一句陈述（A 类），不是能力证据",
+      "does_not_support": "⚠️ 不能据此改状态。要证明它，需要一篇他没读过的同类论文的独立理解测试，全库没有",
+      "confidence": "unknown",
+      "confidence_basis": "—",
+      "limitations": "样本：这条记录存在的意义就是演示'用户声明 ≠ 证据'。UI 里它应该长得和 ev-03 完全不一样",
+      "provenance": {
+        "input_source": "A",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "visible_today": true
+      }
+    }
+  ],
+  "insights": [
+    {
+      "id": "ins-01",
+      "content": "'表征'这个词，我在做 3D 的时候指的是网络的中间输出，在读认知科学的时候指的是心智里的东西。这两个不是一回事，但我一直在当成一回事用。",
+      "origin": "user",
+      "ts": "2026-03-08T23:40",
+      "related_evidence": [],
+      "related_activities": ["act-024", "act-031"],
+      "related_objects": ["mat-03", "mat-12", "mat-15", "int-02"],
+      "confidence": null,
+      "user_status": "authored_by_user",
+      "note": "全库最重要的一条。它是后面 prj-06 那篇长文的种子，也是 int-02 从'系统推断'变成'用户确认'的那一刻",
+      "provenance": {
+        "input_source": "A",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ins-02",
+      "content": "你在 3 个月里的 7 次讨论中反复回到同一个问题：智能是不是必须先有某种内部表征。跨机器学习和认知科学两边。",
+      "origin": "system",
+      "ts": "2026-04-12T03:00",
+      "related_evidence": ["ev-03", "ev-08"],
+      "related_activities": ["act-024", "act-031", "act-032", "act-038", "act-051"],
+      "related_objects": ["mat-12", "mat-19", "mat-03", "int-02"],
+      "confidence": "moderate",
+      "confidence_basis": "5 条记录跨 3 个月，且有用户自己写下的同名笔记",
+      "what_would_falsify": "如果他接下来三个月不再提这个词",
+      "user_status": "unreviewed",
+      "note": "系统生成的。措辞里'7 次'其实是 5 条记录——这个数字写错了，保留它是为了演示系统观察也可能不准"
+    },
+    {
+      "id": "ins-03",
+      "content": "我一直在收集资料，没在做东西。这个月我读了三篇论文、看了六集课，写出来的只有三百字。",
+      "origin": "user",
+      "ts": "2026-04-28T23:40",
+      "related_evidence": [],
+      "related_activities": ["act-054", "act-058"],
+      "related_objects": ["per-03"],
+      "confidence": null,
+      "user_status": "authored_by_user",
+      "note": "紧接着的行为是去写讲义——他确实转向了产出，但转向的是最低成本的那种",
+      "provenance": {
+        "input_source": "A",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ins-04",
+      "content": "系统观察到：你的课程型学习完成率明显低于项目型投入。认知科学导论 9/24 停，李宏毅 4/14 停，Rust 停在第 11 章；而两个项目都推进到了可交付状态。",
+      "origin": "system",
+      "ts": "2026-05-20T03:00",
+      "related_evidence": ["ev-16", "ev-04"],
+      "related_activities": ["act-030", "act-039", "act-053", "act-062"],
+      "related_objects": ["lx-01", "lx-02", "lx-05", "mat-25"],
+      "confidence": "moderate",
+      "confidence_basis": "三门课 vs 两个项目的完成情况",
+      "what_would_falsify": "如果他之后完整上完一门课",
+      "user_status": "rejected",
+      "user_response_at": "2026-05-24T22:10",
+      "user_response": "不是我不上完课，是那段时间在赶毕设。你把时间轴摊开看就知道了。",
+      "note": "⚠️ 用户的反驳是对的。系统把'时间冲突'当成了'偏好'。这条保留下来，作为一次被正确否决的推断"
+    },
+    {
+      "id": "ins-05",
+      "content": "过去 6 周你的活动显著减少（从每周 ~8 条到每周 ~1 条）。我无法判断这是因为你没有在学习，还是因为你在别的地方学习。",
+      "origin": "system",
+      "ts": "2026-08-30T03:00",
+      "related_evidence": [],
+      "related_activities": ["act-075", "act-077", "act-080", "act-081"],
+      "related_objects": ["per-04", "per-05"],
+      "confidence": "low",
+      "confidence_basis": "只有活动量，没有反证",
+      "what_would_falsify": "如果他在别处有大量活动（本库无法验证）",
+      "user_status": "unreviewed",
+      "note": "⭐ 这是最重要的一条系统观察：它明确说出了自己不知道什么。任何把它渲染成'学习下滑'的 UI 都是在编造"
+    },
+    {
+      "id": "ins-06",
+      "content": "我不是想成为 Rust 工程师。我是想成为'能写系统代码的人'，这两个不一样，而且第二个我不需要。",
+      "origin": "user",
+      "ts": "2026-09-02T22:00",
+      "related_evidence": ["ev-11", "ev-16"],
+      "related_activities": ["act-055", "act-083"],
+      "related_objects": ["int-07", "goal-02", "lx-02"],
+      "confidence": null,
+      "user_status": "authored_by_user",
+      "note": "四月的挫败在这里被重新解释了一遍。同一段经历，两种说法",
+      "provenance": {
+        "input_source": "A",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ins-07",
+      "content": "9 月以后，你的阅读量与写作量之比从大约 12:1 变成了 3:1。你开始花时间改写自己写的东西，而不只是读新的。",
+      "origin": "system",
+      "ts": "2026-10-18T03:00",
+      "related_evidence": ["ev-10", "ev-17"],
+      "related_activities": ["act-092", "act-093", "act-100", "act-103", "act-104"],
+      "related_objects": ["prj-06", "prj-07"],
+      "confidence": "moderate",
+      "confidence_basis": "活动类型分布的变化，跨 6 周",
+      "what_would_falsify": "如果他 11 月又回到只读不写",
+      "user_status": "unreviewed",
+      "note": "系统唯一一条正面观察。但它说的'改写'只有两处，样本很薄"
+    },
+    {
+      "id": "ins-08",
+      "content": "我写的这篇其实不是在综述，我是在给'表征'找一个我自己的定义。所以我每次都写不下去——因为我在造东西，不是在总结。",
+      "origin": "user",
+      "ts": "2026-10-25T23:20",
+      "related_evidence": ["ev-10"],
+      "related_activities": ["act-091", "act-101"],
+      "related_objects": ["prj-06", "out-09", "int-02"],
+      "confidence": null,
+      "user_status": "authored_by_user",
+      "note": "这条之后他的写作方式变了：10-31 那 800 字是重写的，不是续写的",
+      "provenance": {
+        "input_source": "A",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ins-09",
+      "content": "recon-lab 最后 32 天没有提交，判断为已停止。",
+      "origin": "system",
+      "ts": "2026-06-22T03:00",
+      "related_evidence": [],
+      "related_activities": ["act-067", "act-069"],
+      "related_objects": ["prj-01", "per-04"],
+      "confidence": "moderate",
+      "confidence_basis": "提交时间戳",
+      "what_would_falsify": "如果之后有提交",
+      "user_status": "corrected",
+      "user_response_at": "2026-06-24T21:00",
+      "user_response": "我没停，我是在等毕设结束。README 里写的是暂停。",
+      "note": "⭐ 系统判断与用户更正都被保留。三个月后事实是：用户说的对，他确实没再动——但他当时的意图确实是暂停而非放弃。两种记录都必须留着"
+    },
+    {
+      "id": "ins-10",
+      "content": "你在系统编程上有持续兴趣：2 月至今 8 次相关活动，集中在 Rust 与命令行工具。",
+      "origin": "system",
+      "ts": "2026-02-15T03:00",
+      "related_evidence": ["ev-11"],
+      "related_activities": ["act-017", "act-018"],
+      "related_objects": ["int-07", "lx-02", "prj-03"],
+      "confidence": "moderate",
+      "confidence_basis": "8 次活动，但全部在 12 天内",
+      "what_would_falsify": "如果 4 月后没有任何相关活动",
+      "user_status": "retired",
+      "retired_at": "2026-04-28T23:50",
+      "retirement_reason": "触发条件成立（4 月后零活动）。系统在用户写下 ins-03 的同一天自动撤回",
+      "note": "⚠️ 这是一条过期推断。任何界面都必须能显示'这条已经不再成立'，而不是让它继续挂着"
+    },
+    {
+      "id": "ins-11",
+      "content": "这半年我什么都没做成。",
+      "origin": "user",
+      "ts": "2026-08-28T23:50",
+      "related_evidence": ["ev-09", "ev-16"],
+      "related_activities": ["act-081"],
+      "related_objects": ["ms-05", "out-02", "out-06"],
+      "confidence": null,
+      "user_status": "authored_by_user",
+      "conflicts_with": ["ms-05", "out-02", "out-06", "ms-03"],
+      "note": "⭐ 用户自评与记录直接冲突。系统不该纠正他，也不该附和他。两个版本都摆在时间轴上，让冲突可见"
+    }
+  ],
+  "external_records": [
+    {
+      "id": "ext-01",
+      "source": "github",
+      "target": "recon-lab",
+      "kind": "commit_history",
+      "range": { "from": "2026-01-14", "to": "2026-05-22" },
+      "total_commits": 87,
+      "observed_pattern": "1 月 41 次，2 月 19 次，3 月 9 次，4 月 6 次，5 月 12 次（最后 32 天为 0）",
+      "what_it_supports": "项目存在与活跃时段",
+      "what_it_does_not_support": "每次提交学到什么；提交与 Lemma 笔记无法对齐",
+      "authorized": true,
+      "synced_at": "2026-06-22",
+      "provenance": {
+        "input_source": "F",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ext-02",
+      "source": "github",
+      "target": "rename-tool",
+      "kind": "commit_history",
+      "range": { "from": "2026-02-05", "to": "2026-03-19" },
+      "total_commits": 23,
+      "observed_pattern": "2 月 19 次，3 月 4 次",
+      "what_it_supports": "一个短命项目",
+      "what_it_does_not_support": "Rust 掌握程度——23 次提交全在 dry-run 分支",
+      "authorized": true,
+      "synced_at": "2026-06-22",
+      "provenance": {
+        "input_source": "F",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ext-03",
+      "source": "github",
+      "target": "repr-view",
+      "kind": "commit_history",
+      "range": { "from": "2026-10-08", "to": "2026-10-29" },
+      "total_commits": 41,
+      "observed_pattern": "21 天 41 次，是该用户所有项目里单位时间提交最密的",
+      "what_it_supports": "短周期高强度交付",
+      "what_it_does_not_support": "与 1 月相比的'能力提升'——项目复杂度不同",
+      "authorized": true,
+      "synced_at": "2026-11-01",
+      "provenance": {
+        "input_source": "F",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ext-04",
+      "source": "github",
+      "target": "docs PR",
+      "kind": "pull_request",
+      "range": { "from": "2026-10-12", "to": "2026-10-12" },
+      "total_commits": 1,
+      "observed_pattern": "一页文档的中文翻译，当天合并",
+      "what_it_supports": "愿意做小而完整的事",
+      "what_it_does_not_support": "⚠️ 不涉及代码。不能当'开源贡献'来撑简历",
+      "authorized": true,
+      "synced_at": "2026-11-01",
+      "provenance": {
+        "input_source": "F",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false
+      }
+    },
+    {
+      "id": "ext-05",
+      "source": "mooc_platform",
+      "target": "神经科学导论（外部）",
+      "kind": "enrollment",
+      "range": { "from": "2026-03-29", "to": "2026-03-29" },
+      "total_commits": null,
+      "observed_pattern": "报名，看了 1 讲（约 22 分钟），之后零登录",
+      "what_it_supports": "3 月底那次'想系统地学'的冲动",
+      "what_it_does_not_support": "任何学习发生",
+      "authorized": false,
+      "synced_at": null,
+      "provenance": {
+        "input_source": "F",
+        "asserted_by": "external_platform",
+        "epistemic": "imported",
+        "visible_today": false,
+        "capture_gap": "⭐ 没有授权条目。系统对这条一无所知——但它恰好是他'报课然后不看'这个模式的唯一直接证据"
+      }
+    },
+    {
+      "id": "ext-06",
+      "source": "calendar",
+      "target": "2027 申请截止",
+      "kind": "deadline",
+      "range": { "from": "2026-11-30", "to": "2026-12-15" },
+      "total_commits": null,
+      "observed_pattern": "两个日期：11-30 与 12-15，不同学校",
+      "what_it_supports": "外部时间压力真实存在",
+      "what_it_does_not_support": "他会不会申请",
+      "authorized": false,
+      "synced_at": null,
+      "provenance": {
+        "input_source": "F",
+        "asserted_by": "user",
+        "epistemic": "stated",
+        "visible_today": false,
+        "capture_gap": "日期是用户口述的，没有日历授权"
+      }
+    }
+  ],
+  "corrections": [
+    { "id": "cor-01", "at": "2026-06-24T21:00", "target": "ins-09", "kind": "user_disputes_system", "before": "recon-lab 判断为已停止", "after": "改为'暂停（用户说明）'，并保留原始判断", "triggered_by": "用户反馈", "kept_both_versions": true, "note": "三个月后事实证明项目确实死了。但当时的意图记录仍然有效" },
+    { "id": "cor-02", "at": "2026-03-21T14:30", "target": "ev-02", "kind": "retest", "before": "相似变换判据未建立（unsupported）", "after": "重测通过（supported），保留原始错误记录", "triggered_by": "用户主动重做第 5 章", "kept_both_versions": true, "note": "错误不被删除，而是被后来的记录覆盖成'曾经错过、后来对了'" },
+    { "id": "cor-03", "at": "2026-10-02T22:10", "target": "ev-12", "kind": "self_correction", "before": "笔记里的因果结论", "after": "改写为相关性，并补了一段说明", "triggered_by": "自己回看", "kept_both_versions": true, "note": "这是全库质量最高的一条信号：无人提醒的自我修正" },
+    { "id": "cor-04", "at": "2026-04-28T23:50", "target": "ins-10", "kind": "retirement", "before": "系统编程上有持续兴趣", "after": "标记为已撤回，不再参与任何推断", "triggered_by": "触发条件成立（4 月后零活动）", "kept_both_versions": true, "note": "撤回不等于删除。它必须能出现在'系统曾经这么以为'的视图里" }
+  ]
+}

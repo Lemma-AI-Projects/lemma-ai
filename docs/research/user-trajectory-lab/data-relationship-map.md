@@ -23,6 +23,10 @@ flowchart TB
         I["interest ×10<br/>explicit / inferred"]
     end
 
+    subgraph axis["视角层 · 这一段在干什么"]
+        FOC["focus ×7<br/>有起止，可被吸收"]
+    end
+
     subgraph frame["框架层 · 怎么学"]
         LX["learning_experience ×6<br/>subject/goal/material/inquiry/project"]
         LC["loose_cluster ×2<br/>没有容器的活动组"]
@@ -33,19 +37,19 @@ flowchart TB
     end
 
     subgraph doing["发生层 · 做了什么"]
-        A["activity ×104"]
+        A["activity ×135"]
         PR["project ×7"]
         O["output ×12"]
     end
 
     subgraph judge["判断层 · 凭什么"]
-        E["evidence ×18"]
+        E["evidence ×25"]
         MS["milestone ×9"]
     end
 
     subgraph say["解释层 · 怎么理解"]
-        IN["insight ×11<br/>user / system"]
-        C["correction ×4"]
+        IN["insight ×13<br/>user / system"]
+        C["correction ×6"]
     end
 
     subgraph outside["在外面"]
@@ -64,6 +68,10 @@ flowchart TB
     LX --> LC
     LC --> A
 
+    FOC -.->|"多对多，也可为零"| A
+    FOC -.->|"不等同于"| I
+    FOC -.->|"可跨"| PR
+
     A -->|"属于"| LX
     A -->|"属于"| PR
     A -->|"引用"| M
@@ -79,12 +87,40 @@ flowchart TB
     C -.->|"改写"| E
     C -.->|"改写"| IN
 
+    EVR["evidence_relation ×11<br/>supports/weakens/contradicts/qualifies/inconclusive"]
+    E --- EVR
+    EVR --- IN
+
     X -.->|"部分对应，无法对齐"| A
     X -.->|"部分对应"| PR
     PE -.->|"只切时间，不拥有对象"| A
 ```
 
 实线 = 数据里真有 id 引用。虚线 = 概念上有关系，但没有稳定的一对一映射。
+
+⚠️ 第二轮新加的两样东西都**不是**新层级：`focus` 是横切活动的视角（一条活动可挂 0、1 或多条），
+`evidence_relation` 是证据与解释之间的连边（一条证据可支撑一个解释、同时削弱另一个）。
+
+---
+
+## 3.5 · Focus 是斜着切的一刀，不是上面一层
+
+```
+        foc-01 神经渲染 ──────────────┐
+foc-02 表征 ──────────────────────┐   │
+        foc-07 毕设 ─────────────────────┴───┐
+                                           │
+1月   2月   3月   4月   5月   6月   7月 ... 11月
+   └── foc-04 数学 ──┘
+                 └── foc-03 意识 ──┘        └─ foc-05 因果 ─┘
+```
+
+| 如果按层级做 | 会错在哪 |
+|---|---|
+| Focus ⊃ Activity（每个活动只属于一个线索） | 5 条活动是两条；39 条一条都没有 |
+| Focus = Interest 的子类 | `foc-04` 没有对应兴趣；`foc-06` 关了 135 天后 `int-07` 才撤 |
+| Focus 是 Project 的别名 | `foc-07` 有项目，`foc-05` 没有（它还挂着 8 条不属于任何课程的活动） |
+| 关闭的 Focus 不再收活动 | `act-131`（06-07）、`act-135`（10-24）都在 `foc-01` 关门之后 |
 
 ---
 

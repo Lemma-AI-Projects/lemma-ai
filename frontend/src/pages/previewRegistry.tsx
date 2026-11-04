@@ -16,6 +16,7 @@ import { SpaceCanvasPreviewPage } from './SpaceCanvasPreviewPage'
 import { TrajectoryEventsPreviewPage } from './TrajectoryEventsPreviewPage'
 import { TrajectoryPreviewPage } from './TrajectoryPreviewPage'
 import { UserProfilePreviewPage } from './UserProfilePreviewPage'
+import { UserTrajectoryPreviewPage } from './UserTrajectoryPreviewPage'
 
 /**
  * Preview 路由的**唯一清单**。
@@ -141,6 +142,13 @@ export const PREVIEW_ROUTES: PreviewRoute[] = [
     label: '轨迹 · 真数据时间线',
     group: '设计与研究评审',
     note: '与真路由同一段代码（TrajectoryTimeline），fixture 数据，讲"到底发生了什么"。',
+  },
+  {
+    path: '/preview/user-trajectory',
+    element: <UserTrajectoryPreviewPage />,
+    label: '轨迹 · 发现式原型（四视角）',
+    group: '设计与研究评审',
+    note: '一个信息空间四个视角：概览 / 时间轴 / 探索 / 理解。合成数据来自 user-trajectory-lab；演示首页发现、父子事件、四态解释、正反证据、临时集合与对比。',
   },
   {
     path: '/preview/free-course-tuning',
