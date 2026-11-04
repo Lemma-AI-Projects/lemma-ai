@@ -169,13 +169,12 @@ export interface Discovery {
   perspective: 'timeline' | 'explore' | 'insights'
 }
 
-/** 临时探索结构里的一条。可丢弃、可保存、可「提出」。 */
+/** 临时探索结构里的一条。它只活在这一次探索里，不动底下任何记录。 */
 export interface CollectionItem {
   key: string
   refId: string
-  refType: 'object' | 'event' | 'parent' | 'evidence' | 'insight'
-  addedAt: string
+  refType: 'object' | 'event' | 'parent' | 'evidence' | 'insight' | 'candidate'
   note: string
-  /** ephemeral 只活在这一次探索里；saved 是用户显式留下的 */
-  state: 'ephemeral' | 'saved'
+  /** 用户已经把它提成一条假设（○）。提了也不等于事实。 */
+  promoted: boolean
 }

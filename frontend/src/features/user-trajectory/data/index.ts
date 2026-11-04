@@ -19,8 +19,10 @@ export const OBJECT_BY_ID = new Map<string, DevObject>(OBJECTS.map((o) => [o.id,
 export const EVENT_BY_ID = new Map<string, DevEvent>(EVENTS.map((e) => [e.id, e]))
 export const EVIDENCE_BY_ID = new Map<string, EvidenceRec>(EVIDENCE.map((e) => [e.id, e]))
 export const INTERPRETATION_BY_ID = new Map<string, InterpretationRec>(INTERPRETATIONS.map((i) => [i.id, i]))
+export const CANDIDATE_BY_ID = new Map<string, Candidate>(CANDIDATES.map((c) => [c.id, c]))
 
-export type RefType = 'object' | 'event' | 'parent' | 'evidence' | 'insight'
+/** 候选也走同一套选中模型 —— 少一套交互，就少一处不一致。 */
+export type RefType = 'object' | 'event' | 'parent' | 'evidence' | 'insight' | 'candidate'
 
 export interface Ref {
   id: string
@@ -41,6 +43,8 @@ export function refOf(id: string): Ref | null {
   if (v) return { id, type: 'evidence', label: v.observed, sub: v.date }
   const i = INTERPRETATION_BY_ID.get(id)
   if (i) return { id, type: 'insight', label: i.statement, sub: i.date }
+  const c = CANDIDATE_BY_ID.get(id)
+  if (c) return { id, type: 'candidate', label: c.statement, sub: CANDIDATE_STATE_LABEL[c.state] }
   return null
 }
 
@@ -123,6 +127,64 @@ export const CANDIDATE_STATE_LABEL: Record<Candidate['state'], string> = {
   emerging: '浮出来',
   resolved: '已了结',
 }
+
+/**
+ * 线索的短名。数据里的 `title` 是一整句话（它是给人读的定义），
+ * 用在筛选条和地形条上会撑破一行，所以这里单给一套 6–10 字的标签。
+ * 只影响显示，不动数据。
+ */
+export const FOCUS_SHORT: Record<string, string> = {
+  'foc-01': '神经渲染',
+  'foc-02': '「表征」这个词',
+  'foc-03': '意识文献',
+  'foc-04': '补数学',
+  'foc-05': '因果推断',
+  'foc-06': '学 Rust',
+  'foc-07': '毕设',
+}
+
+export const focusShort = (id: string, fallback = '') => FOCUS_SHORT[id] ?? fallback
+
+/**
+ * 生命周期状态的中文。数据里存的是机器值（`in_progress_stalled`），
+ * 直接把机器值摆到界面上是这一页最容易漏的一处低级错误。
+ */
+export const STATUS_LABEL: Record<string, string> = {
+  completed: '已完成',
+  closed: '已关门',
+  in_progress: '进行中',
+  in_progress_stalled: '进行中但停了',
+  ongoing: '还在进行',
+  active: '进行中',
+  abandoned: '放弃',
+  absorbed: '并进另一条线',
+  absorbed_into_output: '并进产出',
+  archived: '归档',
+  never_sent: '没发出去',
+  retired: '已退役',
+  weak: '变弱了',
+  core: '核心',
+  partial: '只有一部分',
+  rejected: '你否掉的',
+  unreviewed: '没看过',
+  authored_by_user: '他自己写的',
+}
+
+export const statusLabel = (s: string) => STATUS_LABEL[s] ?? s
+
+const CONFIDENCE_LABEL: Record<string, string> = {
+  high: '高',
+  moderate: '中',
+  low: '低',
+  unknown: '不知道',
+}
+
+export const confidenceLabel = (c: string | null | undefined) => (c ? (CONFIDENCE_LABEL[c] ?? c) : '')
+
+/** 「谁记录的」。agent = 系统判的，user = 他自己写的。 */
+const BY_LABEL: Record<string, string> = { agent: '系统', user: '他自己', external_platform: '外部平台' }
+
+export const byLabel = (b: string) => BY_LABEL[b] ?? b
 
 export const md = (date: string) => date.slice(5).replace('-', '/')
 export const ymd = (date: string) => date

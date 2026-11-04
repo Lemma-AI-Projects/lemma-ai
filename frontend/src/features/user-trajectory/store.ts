@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
-import { CANDIDATES, INTERPRETATIONS, OBJECT_BY_ID, refOf, type RefType } from './data'
-import type { Candidate, CollectionItem, Discovery, InterpretationRec, ObjectKind } from './types'
+import { CANDIDATES, INTERPRETATIONS, OBJECT_BY_ID, refOf } from './data'
+import type { RefType } from './data'
+import type { Candidate, CollectionItem, Discovery, InterpretationRec } from './types'
 
 export type Perspective = 'overview' | 'timeline' | 'explore' | 'insights'
 
@@ -19,13 +20,26 @@ export interface PathStep {
 export type Response = 'confirmed' | 'corrected' | 'rejected'
 
 /**
- * 原型的全部状态。**只有一份**，四个视角共用 —— 这是「一个信息空间」的最小证据。
+ * 全页唯一一份状态。
  *
- * 两处刻意**不共享**的状态，用来证明「共享上下文 ≠ 同步所有 UI 状态」：
- * - `kindFilter`：Explore 的对象类型过滤，切到 Timeline 不生效；
- * - `focusFilter`：Timeline 的线索过滤，切到 Explore 不生效。
+ * 这一轮砍掉了三样东西，它们原来各占一个浮层：
+ * - 右键菜单（内容和右栏完全重复，还挡住内容）→ 右键改为「选中」，动作归右栏；
+ * - 集合抽屉（和右栏抢同一侧）→ 收进一个按需打开的暂存面板；
+ * - 对比弹窗 → 变成主区域里的一种视图，用返回退出，不再压住页面。
+ *
+ * 保留的两处**刻意不共享**：Explore 的搜索词、Timeline 的线索过滤。
+ * 它们过滤的是「怎么摆」，不是「有什么」，跨视角带过去只会让人困惑。
  */
-export function useTrajectoryStore(init: { perspective?: Perspective; selected?: Sel } = {}) {
+export function useTrajectoryStore(
+  init: {
+    perspective?: Perspective
+    selected?: Sel
+    sheet?: boolean
+    comparing?: boolean
+    saved?: string[]
+    note?: string
+  } = {},
+) {
   const [perspective, setPerspective] = useState<Perspective>(init.perspective ?? 'overview')
   const [selected, setSelected] = useState<Sel | null>(init.selected ?? null)
   const [path, setPath] = useState<PathStep[]>(() => {
@@ -33,55 +47,70 @@ export function useTrajectoryStore(init: { perspective?: Perspective; selected?:
     const r = refOf(init.selected.id)
     return r ? [{ id: init.selected.id, type: init.selected.type, label: r.label }] : []
   })
-  const [collection, setCollection] = useState<CollectionItem[]>([])
-  const [compare, setCompare] = useState<string[]>([])
+  const [collection, setCollection] = useState<CollectionItem[]>(() =>
+    (init.saved ?? []).flatMap((id) => {
+      const r = refOf(id)
+      return r ? [{ key: `${r.type}:${id}`, refId: id, refType: r.type, note: '', promoted: false }] : []
+    }),
+  )
+  const [sheet, setSheet] = useState(init.sheet ?? false)
+  const [comparing, setComparing] = useState(init.comparing ?? false)
   const [responses, setResponses] = useState<Record<string, Response>>({})
   const [corrections, setCorrections] = useState<Record<string, string>>({})
   const [candidates, setCandidates] = useState<Candidate[]>(CANDIDATES)
   const [promoted, setPromoted] = useState<InterpretationRec[]>([])
-  const [expanded, setExpanded] = useState<string[]>(['pe-03'])
+  const [expanded, setExpanded] = useState<string[]>([])
   const [split, setSplit] = useState<string[]>([])
   const [focusFilter, setFocusFilter] = useState<string | null>(null)
-  const [kindFilter, setKindFilter] = useState<ObjectKind | 'all'>('all')
-  const [menu, setMenu] = useState<{ x: number; y: number; id: string; type: RefType } | null>(null)
-  const [drawer, setDrawer] = useState(false)
-  const [compareOpen, setCompareOpen] = useState(false)
+  const [flash, setFlash] = useState<string | null>(init.note ?? null)
 
-  const pushPath = (next: PathStep) =>
-    setPath((prev) => {
-      if (prev[prev.length - 1]?.id === next.id) return prev
-      return [...prev, next].slice(-6)
-    })
+  /** 动作后的即时回执。1.6 秒自己消失，不用 toast 库，也不弹窗。 */
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function say(text: string) {
+    setFlash(text)
+    if (flashTimer.current) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlash(null), 1600)
+  }
 
-  function select(id: string, type?: RefType, opts: { push?: boolean } = {}) {
+  function select(id: string, type?: RefType) {
     const ref = refOf(id)
     if (!ref) return
     const t = type ?? ref.type
     setSelected({ id, type: t })
-    if (opts.push !== false) pushPath({ id, type: t, label: ref.label })
+    setPath((prev) => {
+      if (prev[prev.length - 1]?.id === id) return prev
+      return [...prev, { id, type: t, label: ref.label }].slice(-8)
+    })
   }
 
-  function goTo(step: PathStep) {
-    setSelected({ id: step.id, type: step.type })
+  function closeDetail() {
+    setSelected(null)
+  }
+
+  /** 沿连接走一步。路径只记走过的，不记可见的。 */
+  function back() {
     setPath((prev) => {
-      const idx = prev.findIndex((s) => s.id === step.id)
-      return idx >= 0 ? prev.slice(0, idx + 1) : prev
+      if (prev.length < 2) {
+        setSelected(null)
+        return []
+      }
+      const rest = prev.slice(0, -1)
+      const last = rest[rest.length - 1]
+      setSelected({ id: last.id, type: last.type })
+      return rest
     })
   }
 
   function switchPerspective(next: Perspective) {
     setPerspective(next)
-    setMenu(null)
+    setComparing(false)
   }
 
   function openDiscovery(d: Discovery) {
-    switchPerspective(d.perspective)
+    setComparing(false)
+    setPerspective(d.perspective)
     const first = d.refIds[0]
     if (first) select(first)
-  }
-
-  function openMenu(e: { clientX: number; clientY: number }, id: string, type: RefType) {
-    setMenu({ x: e.clientX, y: e.clientY, id, type })
   }
 
   function toggleParent(id: string) {
@@ -90,52 +119,39 @@ export function useTrajectoryStore(init: { perspective?: Perspective; selected?:
 
   function splitParent(id: string) {
     setSplit((prev) => (prev.includes(id) ? prev : [...prev, id]))
-    setSelected({ id, type: 'parent' })
+    say('拆开了。它原来是系统按时间并的。')
   }
 
-  function saveToCollection(id: string, type: RefType) {
-    const key = `${type}:${id}`
-    if (collection.some((c) => c.key === key)) {
-      setDrawer(true)
+  function inCollection(id: string) {
+    return collection.some((c) => c.refId === id)
+  }
+
+  function save(id: string, type: RefType) {
+    if (inCollection(id)) {
+      setCollection((prev) => prev.filter((c) => c.refId !== id))
+      say('已从暂存移走')
       return
     }
-    const ref = refOf(id)
-    setCollection((prev) => [
-      ...prev,
-      {
-        key,
-        refId: id,
-        refType: type,
-        addedAt: '今天',
-        note: '',
-        state: 'ephemeral',
-      },
-    ])
-    setDrawer(true)
-    if (ref) pushPath({ id, type, label: ref.label })
+    setCollection((prev) => [...prev, { key: `${type}:${id}`, refId: id, refType: type, note: '', promoted: false }])
+    say('已放进暂存')
   }
 
-  function removeFromCollection(key: string) {
-    setCollection((prev) => prev.filter((c) => c.key !== key))
+  function removeFromCollection(id: string) {
+    setCollection((prev) => prev.filter((c) => c.refId !== id))
   }
 
-  function keepItem(key: string) {
-    setCollection((prev) => prev.map((c) => (c.key === key ? { ...c, state: 'saved' } : c)))
+  function setItemNote(id: string, note: string) {
+    setCollection((prev) => prev.map((c) => (c.refId === id ? { ...c, note } : c)))
   }
 
-  function setItemNote(key: string, note: string) {
-    setCollection((prev) => prev.map((c) => (c.key === key ? { ...c, note, state: 'saved' } : c)))
-  }
-
-  /** 「提出为理解」：变成一条**假设**，不是事实。作者是他，状态是「未验证」。 */
-  function promoteItem(key: string) {
-    const item = collection.find((c) => c.key === key)
+  /** 「提出为理解」：变成一条**假设**，作者是他，状态未验证。不改任何原始记录。 */
+  function promoteItem(id: string) {
+    const item = collection.find((c) => c.refId === id)
     if (!item) return
     const ref = refOf(item.refId)
-    const id = `promoted-${promoted.length + 1}`
     setPromoted((prev) => [
       {
-        id,
+        id: `promoted-${prev.length + 1}`,
         epistemic: 'hypothesis',
         assertedBy: 'user',
         date: '2026-11-04',
@@ -157,15 +173,8 @@ export function useTrajectoryStore(init: { perspective?: Perspective; selected?:
       },
       ...prev,
     ])
-    setCollection((prev) => prev.map((c) => (c.key === key ? { ...c, state: 'saved' } : c)))
-  }
-
-  function toggleCompare(id: string) {
-    setCompare((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id)
-      if (prev.length >= 3) return [...prev.slice(1), id]
-      return [...prev, id]
-    })
+    setCollection((prev) => prev.map((c) => (c.refId === id ? { ...c, promoted: true } : c)))
+    say('已变成一条假设（○），不是你确认的事实')
   }
 
   function respond(insightId: string, kind: Response, text?: string) {
@@ -177,44 +186,54 @@ export function useTrajectoryStore(init: { perspective?: Perspective; selected?:
     setCandidates((prev) =>
       prev.map((c) =>
         c.id === id
-          ? { ...c, state: 'resolved', resolution: { kind, at: '2026-11-04', note: kind === 'ignored' ? '你忽略了它' : kind === 'corrected' ? '你改了它的说法' : '你确认了它' } }
+          ? {
+              ...c,
+              state: 'resolved' as const,
+              resolution: {
+                kind,
+                at: '2026-11-04',
+                note: kind === 'ignored' ? '你忽略了它' : kind === 'corrected' ? '你改了它的说法' : '你确认了它',
+              },
+            }
           : c,
       ),
     )
-    if (kind === 'confirmed' || kind === 'corrected') {
-      const c = candidates.find((x) => x.id === id)
-      if (!c) return
-      setPromoted((prev) => [
-        {
-          id: `cand-ins-${id}`,
-          epistemic: 'confirmed',
-          assertedBy: 'user',
-          date: '2026-11-04',
-          statement: c.statement,
-          confidence: null,
-          status: kind === 'confirmed' ? 'confirmed' : 'corrected',
-          supports: c.signalIds.filter((s) => s.startsWith('ev-')),
-          contradicts: [],
-          qualifies: [],
-          weakens: [],
-          objectIds: c.objectIds,
-          eventIds: [],
-          basis: '你从一条候选里确认的',
-          note: '它原来是系统攒出来的候选；现在是你认可的说法。依据仍然是那几条记录。',
-          effectiveFrom: '2026-11-04',
-          effectiveTo: null,
-          reinterpretedAt: null,
-          reinterpretation: '',
-        },
-        ...prev,
-      ])
+    if (kind === 'ignored') {
+      say('忽略了。它不会再出现在你的解释里。')
+      return
     }
+    const c = candidates.find((x) => x.id === id)
+    if (!c) return
+    setPromoted((prev) => [
+      {
+        id: `cand-ins-${id}`,
+        epistemic: 'confirmed',
+        assertedBy: 'user',
+        date: '2026-11-04',
+        statement: c.statement,
+        confidence: null,
+        status: kind === 'confirmed' ? 'confirmed' : 'corrected',
+        supports: c.signalIds.filter((s) => s.startsWith('ev-')),
+        contradicts: [],
+        qualifies: [],
+        weakens: [],
+        objectIds: c.objectIds,
+        eventIds: [],
+        basis: '你从一条候选里确认的',
+        note: '它原来是系统攒出来的候选；现在是你认可的说法。依据仍然是那几条记录。',
+        effectiveFrom: '2026-11-04',
+        effectiveTo: null,
+        reinterpretedAt: null,
+        reinterpretation: '',
+      },
+      ...prev,
+    ])
+    say('已记成你的说法，依据没变')
   }
 
   /** 把用户回应叠到解释上，但**不改原始记录**：原句仍在 note 里。 */
   const insights = useMemo<InterpretationRec[]>(() => {
-    const all = [...promoted, ...INTERPRETATIONS]
-    return all.map((i) => {
+    return [...promoted, ...INTERPRETATIONS].map((i) => {
       const r = responses[i.id]
       if (!r) return i
       if (r === 'corrected') {
@@ -224,31 +243,29 @@ export function useTrajectoryStore(init: { perspective?: Perspective; selected?:
     })
   }, [promoted, responses, corrections])
 
-  const selectedObjectId = selected?.type === 'object' ? selected.id : null
-  const selectedLabel = selected ? (refOf(selected.id)?.label ?? selected.id) : ''
+  const savedObjects = collection.filter((c) => c.refType === 'object').map((c) => c.refId)
 
   return {
     perspective,
     switchPerspective,
     selected,
-    selectedLabel,
-    selectedObjectId,
     select,
+    closeDetail,
     path,
-    goTo,
-    clearPath: () => setPath([]),
+    back,
     collection,
-    drawer,
-    setDrawer,
-    saveToCollection,
+    savedObjects,
+    inCollection,
+    save,
     removeFromCollection,
-    keepItem,
     setItemNote,
     promoteItem,
-    compare,
-    toggleCompare,
-    compareOpen,
-    setCompareOpen,
+    sheet,
+    setSheet,
+    comparing,
+    setComparing,
+    flash,
+    say,
     insights,
     responses,
     respond,
@@ -260,11 +277,6 @@ export function useTrajectoryStore(init: { perspective?: Perspective; selected?:
     splitParent,
     focusFilter,
     setFocusFilter,
-    kindFilter,
-    setKindFilter,
-    menu,
-    openMenu,
-    closeMenu: () => setMenu(null),
     openDiscovery,
     objects: OBJECT_BY_ID,
   }

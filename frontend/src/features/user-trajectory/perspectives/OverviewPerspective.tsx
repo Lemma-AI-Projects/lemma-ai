@@ -1,16 +1,14 @@
-import { DISCOVERIES, EVENTS, OBJECTS, md, refOf } from '../data'
-import { Chip, EpistemicMark, Section, SelectRow } from '../parts'
+import { DISCOVERIES, OBJECTS, focusShort, refOf } from '../data'
+import { PAGE } from '../kit'
+import { EpistemicMark, Label, RefLink, Rule, TextAction } from '../parts'
 import type { Store } from '../store'
 import type { Discovery } from '../types'
 
-const MONTHS = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11']
-
-/** 日期 → 0..100 的横向位置。只用于首页那条极简的「发展地形」。 */
+/** 日期 → 0..100 的横向位置。只用于那条极简的地形。 */
 function pct(date: string) {
-  const m = MONTHS.indexOf(date.slice(0, 7))
-  const d = Number(date.slice(8, 10))
-  const idx = m < 0 ? 0 : m
-  return Math.min(100, ((idx + (d - 1) / 30) / (MONTHS.length - 1)) * 100)
+  const [y, m, d] = date.split('-').map(Number)
+  const months = (y - 2026) * 12 + (m - 1)
+  return Math.min(100, ((months + (d - 1) / 30) / 10) * 100)
 }
 
 const KIND_WORD: Record<Discovery['kind'], string> = {
@@ -19,115 +17,130 @@ const KIND_WORD: Record<Discovery['kind'], string> = {
   possibility: '一种可能',
 }
 
+/**
+ * 概览 = 发现面。
+ *
+ * 这一轮砍掉的三块：发展地形从首屏降到页尾（它是背景，不是发现）；
+ * 「最近发生」整块删掉（那是时间轴的活，抄一遍只会让首页变成仪表盘）；
+ * 页脚那段解释删掉（它是在跟评审说话，不是跟用户）。
+ *
+ * 剩下：两条发现 → 第三条收成一行 → 一张地形。没有卡片，没有统计，没有进度。
+ */
 export function OverviewPerspective({ s }: { s: Store }) {
+  const [lead, second, third] = DISCOVERIES
   const focuses = OBJECTS.filter((o) => o.kind === 'focus')
-  // 每天最多取一条：同一天里四条 repr-view 的记录，铺出来只是重复，不是「最近发生」
-  const recent = [...new Set([...EVENTS].sort((a, b) => b.date.localeCompare(a.date)).map((e) => e.date))]
-    .slice(0, 5)
-    .map((d) => EVENTS.find((e) => e.date === d)!)
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="mx-auto w-full max-w-[880px] px-6 py-6">
-      <Section label="发展地形" hint="七条线索，横轴是这一年">
-        <div className="space-y-1">
-          {focuses.map((f) => {
-            const left = f.from ? pct(f.from) : 0
-            const right = f.to ? pct(f.to) : 100
-            const active = s.selected?.id === f.id
-            return (
+      <div className={PAGE}>
+        <div className="flex items-baseline justify-between">
+          <Label>发现</Label>
+          <span className="text-[10px] tabular-nums text-muted-foreground/60">2026.01 — 11</span>
+        </div>
+
+        <div className="mt-3">
+          <DiscoveryBlock s={s} d={lead} />
+          <Rule className="my-6" />
+          <DiscoveryBlock s={s} d={second} />
+          {third ? (
+            <>
+              <Rule className="my-5" />
               <button
-                key={f.id}
                 type="button"
-                onClick={() => {
-                  s.select(f.id)
-                  s.switchPerspective('timeline')
-                }}
-                className="group grid w-full grid-cols-[136px_1fr] items-center gap-2 py-1 text-left"
+                onClick={() => s.openDiscovery(third)}
+                className="group flex w-full items-baseline gap-2.5 py-0.5 text-left"
               >
-                <span className={`truncate text-[11px] ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{f.title}</span>
-                <span className="relative h-3 border-l border-border/70">
-                  <span
-                    className={`absolute top-1/2 h-[3px] -translate-y-1/2 ${active ? 'bg-foreground' : 'bg-foreground/25 group-hover:bg-foreground/50'}`}
-                    style={{ left: `${left}%`, width: `${Math.max(1.5, right - left)}%` }}
-                  />
+                <span className="shrink-0 text-[10px] text-muted-foreground/70">{KIND_WORD[third.kind]}</span>
+                <EpistemicMark value={third.epistemic} className="shrink-0" />
+                <span className="min-w-0 flex-1 truncate text-[12px] text-muted-foreground group-hover:text-foreground">
+                  {third.title}
                 </span>
+                <span className="shrink-0 text-[11px] text-muted-foreground/50 group-hover:text-foreground">→</span>
               </button>
-            )
-          })}
+            </>
+          ) : null}
         </div>
-        <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-          线的长短是时间，不是投入。{MONTHS[0].replace('-', '/')} — {MONTHS[MONTHS.length - 1].replace('-', '/')}
-        </p>
-      </Section>
 
-      <Section label="值得看一眼" hint="三条，不是信息流" className="mt-6">
-        <div className="space-y-5">
-          {DISCOVERIES.map((d) => (
-            <article key={d.id} className="border-l border-border pl-3">
-              <div className="flex items-baseline gap-2">
-                <span className="text-[11px] tracking-wide text-muted-foreground">{KIND_WORD[d.kind]}</span>
-                <EpistemicMark value={d.epistemic} />
-              </div>
-              <h3 className="mt-1 font-serif text-[16px] leading-6 text-foreground">{d.title}</h3>
-              <p className="mt-1 text-[12px] leading-5 text-muted-foreground">{d.why}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-1">
-                {d.refIds.map((id) => {
-                  const r = refOf(id)
-                  if (!r) return null
-                  return (
-                    <Chip key={id} onClick={() => s.select(id)} title={r.label}>
-                      {r.label.length > 16 ? r.label.slice(0, 15) + '…' : r.label}
-                    </Chip>
-                  )
-                })}
+        <div className="mt-14">
+          <div className="flex items-baseline justify-between">
+            <Label>这一年</Label>
+            <span className="text-[10px] text-muted-foreground/60">线的长度是时间，不是投入</span>
+          </div>
+          <div className="mt-2.5">
+            {focuses.map((f) => {
+              const left = f.from ? pct(f.from) : 0
+              const right = f.to ? pct(f.to) : 100
+              const active = s.focusFilter === f.id
+              return (
                 <button
+                  key={f.id}
                   type="button"
-                  onClick={() => s.openDiscovery(d)}
-                  className="ml-1 text-[11px] text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground"
+                  onClick={() => {
+                    s.setFocusFilter(active ? null : f.id)
+                    s.switchPerspective('timeline')
+                  }}
+                  className="group grid w-full grid-cols-[96px_1fr] items-center gap-3 py-[3px] text-left"
                 >
-                  打开 →
+                  <span
+                    className={`truncate text-[11px] ${active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}
+                  >
+                    {focusShort(f.id, f.title)}
+                  </span>
+                  <span className="relative h-[11px]">
+                    <span className="absolute inset-x-0 top-1/2 h-px bg-border/60" />
+                    <span
+                      className={`absolute top-1/2 h-[2px] -translate-y-1/2 ${
+                        active ? 'bg-foreground' : 'bg-foreground/30 group-hover:bg-foreground/60'
+                      }`}
+                      style={{ left: `${left}%`, width: `${Math.max(1.2, right - left)}%` }}
+                    />
+                  </span>
                 </button>
-              </div>
-            </article>
-          ))}
+              )
+            })}
+          </div>
         </div>
-      </Section>
 
-      <Section
-        label="最近发生"
-        hint="只给五条，完整的在时间轴"
-        className="mt-6"
-        right={
-          <button
-            type="button"
-            onClick={() => s.switchPerspective('timeline')}
-            className="text-[11px] text-muted-foreground hover:text-foreground"
-          >
-            进时间轴 →
-          </button>
-        }
-      >
-        <div className="divide-y divide-border/60">
-          {recent.map((e) => (
-            <SelectRow key={e.id} selected={s.selected?.id === e.id} onClick={() => s.select(e.id)}>
-              <div className="flex items-baseline gap-3">
-                <span className="w-10 shrink-0 text-[11px] tabular-nums text-muted-foreground">{md(e.date)}</span>
-                <span className="min-w-0 flex-1 truncate text-[12px] text-foreground/90">{e.title}</span>
-                {e.evidenceIds.length > 0 ? (
-                  <span className="shrink-0 text-[10px] text-muted-foreground">依据 {e.evidenceIds.length}</span>
-                ) : null}
-              </div>
-            </SelectRow>
-          ))}
+        <div className="mt-14 flex items-baseline justify-between">
+          <span className="text-[11px] text-muted-foreground/70">不评分，也不计连续天数。</span>
+          <TextAction muted onClick={() => s.switchPerspective('timeline')}>
+            自己走 →
+          </TextAction>
         </div>
-      </Section>
-
-      <p className="mt-8 border-t border-border pt-3 text-[11px] leading-5 text-muted-foreground">
-        这一页没有完成率、没有连续天数、没有分数。它不是用来核对你做了多少的 ——
-        上面三块是「你可能没注意到的东西」；找不到就说找不到。
-      </p>
       </div>
     </div>
+  )
+}
+
+function DiscoveryBlock({ s, d }: { s: Store; d: Discovery }) {
+  // 只把「对象」摊开写成名字。证据和解释的 label 是一整句话，做成 chip 只会变成一串省略号。
+  const objRefs = d.refIds.filter((id) => refOf(id)?.type === 'object')
+  const rest = d.refIds.length - objRefs.length
+
+  return (
+    <article>
+      <div className="flex items-baseline gap-2.5">
+        <span className="text-[10px] text-muted-foreground/80">{KIND_WORD[d.kind]}</span>
+        <EpistemicMark value={d.epistemic} />
+      </div>
+      <h2 className="mt-2 font-serif text-[20px] leading-[1.5] tracking-[-0.01em] text-foreground">{d.title}</h2>
+      <p className="mt-2.5 max-w-[42em] text-[12px] leading-[1.8] text-muted-foreground">{d.why}</p>
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        {objRefs.map((id, i) => (
+          <span key={id} className="flex items-baseline gap-3">
+            {i > 0 ? <span className="text-[10px] text-muted-foreground/30">·</span> : null}
+            <RefLink s={s} id={id} className="text-[11px] text-muted-foreground" />
+          </span>
+        ))}
+        {rest > 0 ? (
+          <span className="text-[10px] tabular-nums text-muted-foreground/60">
+            {objRefs.length > 0 ? `+${rest} 条记录` : `依据 ${rest} 条记录`}
+          </span>
+        ) : null}
+        <TextAction className="ml-auto" onClick={() => s.openDiscovery(d)}>
+          走下去 →
+        </TextAction>
+      </div>
+    </article>
   )
 }

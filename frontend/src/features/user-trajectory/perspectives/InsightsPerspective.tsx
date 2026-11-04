@@ -1,201 +1,141 @@
 import { useState } from 'react'
 
-import { CANDIDATE_STATE_LABEL, EVIDENCE_BY_ID, refOf } from '../data'
-import { Chip, Empty, EpistemicMark, Section, SelectRow } from '../parts'
+import { CANDIDATE_STATE_LABEL } from '../data'
+import { EpistemicMark, Label, Quiet, Row } from '../parts'
 import type { Store } from '../store'
 
-type Filter = 'all' | 'unreviewed' | 'confirmed' | 'rejected' | 'candidates'
+type Filter = 'all' | 'unreviewed' | 'candidates'
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all', label: '全部' },
-  { key: 'unreviewed', label: '你没看过' },
-  { key: 'confirmed', label: '你认可过' },
-  { key: 'rejected', label: '你否掉的' },
-  { key: 'candidates', label: '候选' },
-]
-
+/**
+ * 理解 = 浮现出来的模式。
+ *
+ * 这一轮砍掉：左侧五个筛选（改成三个，其余靠列表本身区分）、
+ * 默认展开的候选卡片（候选不是待办，不该在列表里就能审批）、
+ * 顶部那块字数很多的四态说明（四态记号现在只出现在它真正影响判断的地方）。
+ *
+ * 候选和解释排在同一条流里，但它们长得不一样：解释给四态，候选给状态。
+ * 点一条候选才看得到它的信号和三个动作 —— 没点开的时候它不要求你做任何事。
+ */
 export function InsightsPerspective({ s }: { s: Store }) {
   const [filter, setFilter] = useState<Filter>('all')
-  const [editing, setEditing] = useState<string | null>(null)
-  const [draft, setDraft] = useState('')
 
   const all = s.insights
-  const rows = all.filter((i) => {
-    if (filter === 'unreviewed') return i.status === 'unreviewed'
-    if (filter === 'confirmed') return i.epistemic === 'confirmed' || i.status === 'confirmed'
-    if (filter === 'rejected') return i.status === 'rejected'
-    return true
-  })
+  const unreviewed = all.filter((i) => i.status === 'unreviewed')
+  const rows = filter === 'unreviewed' ? unreviewed : all
+  const showCandidates = filter !== 'unreviewed'
+  const pending = unreviewed.length
 
-  const pending = all.filter((i) => i.status === 'unreviewed').length
-  const countOf = (f: Filter) => {
-    if (f === 'candidates') return s.candidates.length
-    if (f === 'all') return all.length
-    if (f === 'unreviewed') return pending
-    if (f === 'confirmed') return all.filter((i) => i.epistemic === 'confirmed' || i.status === 'confirmed').length
-    return all.filter((i) => i.status === 'rejected').length
-  }
+  const tabs: { key: Filter; label: string; n: number }[] = [
+    { key: 'all', label: '全部', n: all.length },
+    { key: 'unreviewed', label: '你没看过', n: pending },
+    { key: 'candidates', label: '候选', n: s.candidates.length },
+  ]
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <aside className="w-[188px] shrink-0 border-r border-border px-3 py-4">
-        <div className="mb-2 text-[11px] tracking-[0.14em] text-muted-foreground uppercase">看法</div>
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            type="button"
-            onClick={() => setFilter(f.key)}
-            className={`flex w-full items-baseline justify-between border-l-2 py-1 pl-2 text-left text-[12px] ${
-              filter === f.key ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span>{f.label}</span>
-            <span className="text-[10px] tabular-nums text-muted-foreground/70">
-              {countOf(f.key)}
-            </span>
-          </button>
-        ))}
-        <p className="mt-4 border-t border-border pt-3 text-[10px] leading-4 text-muted-foreground">
-          解释不是结论。<b className="font-medium text-foreground/80">◐</b> 是系统推断，
-          <b className="font-medium text-foreground/80">○</b> 是还没验证的假设，
-          <b className="font-medium text-foreground/80">◆</b> 是他自己的话。
-        </p>
-      </aside>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 pt-4">
+        <div className="mx-auto flex max-w-[720px] items-baseline gap-5 border-b border-border px-8 pb-2 pl-[42px]">
+          {tabs.map((t) => {
+            const active = filter === t.key
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setFilter(t.key)}
+                className={
+                  active
+                    ? 'flex items-baseline gap-1.5 text-[11px] text-foreground'
+                    : 'flex items-baseline gap-1.5 text-[11px] text-muted-foreground hover:text-foreground'
+                }
+              >
+                <span className={active ? 'underline decoration-foreground underline-offset-[5px]' : ''}>{t.label}</span>
+                <span className="text-[10px] tabular-nums text-muted-foreground/60">{t.n}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-      <div className="min-w-0 flex-1 overflow-y-auto px-6 py-5">
-        {filter !== 'candidates' ? (
-          <Section label="解释" hint={`${pending} 条你还没看过`}>
-            {rows.length === 0 ? <Empty>这一类里没有东西。</Empty> : null}
-            <div className="divide-y divide-border/60">
-              {rows.map((i) => (
-                <SelectRow
-                  key={i.id}
-                  selected={s.selected?.id === i.id}
-                  onClick={() => s.select(i.id)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    s.openMenu(e, i.id, 'insight')
-                  }}
-                >
-                  <div className="flex items-baseline gap-2">
-                    <EpistemicMark value={i.epistemic} />
-                    <span className="w-9 shrink-0 text-[10px] tabular-nums text-muted-foreground">{i.date.slice(5)}</span>
-                    <span className={`min-w-0 flex-1 text-[12px] leading-5 ${i.status === 'rejected' ? 'text-muted-foreground line-through' : 'text-foreground/90'}`}>
-                      <span className="line-clamp-2">{i.statement}</span>
-                    </span>
-                    {i.status === 'rejected' ? <Chip className="shrink-0">你否掉的</Chip> : null}
-                    {i.status === 'corrected' ? <Chip className="shrink-0">你改过</Chip> : null}
-                  </div>
-                  <div className="mt-0.5 flex gap-3 pl-[52px] text-[10px] text-muted-foreground">
-                    {i.supports.length > 0 ? <span>支撑 {i.supports.length}</span> : null}
-                    {i.weakens.length > 0 ? <span>削弱 {i.weakens.length}</span> : null}
-                    {i.contradicts.length > 0 ? <span className="text-foreground/70">反驳 {i.contradicts.length}</span> : null}
-                    {i.qualifies.length > 0 ? <span>限定 {i.qualifies.length}</span> : null}
-                    {i.supports.length + i.weakens.length + i.contradicts.length + i.qualifies.length === 0 ? (
-                      <span>没有任何证据</span>
-                    ) : null}
-                  </div>
-                </SelectRow>
-              ))}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-[720px] px-8 pt-2 pb-24">
+          {rows.length === 0 ? <Quiet className="py-8">这一类里没有东西。</Quiet> : null}
+          {rows.map((i, idx) => {
+            const rejected = i.status === 'rejected'
+            const tally = [
+              i.contradicts.length > 0 ? { k: '反驳', n: i.contradicts.length, strong: true } : null,
+              i.supports.length > 0 ? { k: '支撑', n: i.supports.length, strong: false } : null,
+              i.weakens.length > 0 ? { k: '削弱', n: i.weakens.length, strong: false } : null,
+              i.qualifies.length > 0 ? { k: '限定', n: i.qualifies.length, strong: false } : null,
+            ].filter((x): x is { k: string; n: number; strong: boolean } => Boolean(x))
+            return (
+              <div key={i.id} className={idx > 0 ? 'border-t border-border/60' : ''}>
+              <Row
+                selected={s.selected?.id === i.id}
+                onClick={() => s.select(i.id)}
+                className="py-2.5"
+              >
+                <div className="flex items-start gap-3">
+                  <EpistemicMark value={i.epistemic} className="w-[62px] shrink-0 pt-[3px]" />
+                  <span className={`min-w-0 flex-1 text-[12px] leading-[1.65] ${rejected ? 'text-muted-foreground' : 'text-foreground/90'}`}>
+                    <span className="line-clamp-2">{i.statement}</span>
+                  </span>
+                  <span className="shrink-0 pt-[2px] text-[10px] tabular-nums text-muted-foreground/60">{i.date.slice(5)}</span>
+                </div>
+                <div className="mt-1 flex items-baseline gap-3 pl-[74px] text-[10px]">
+                  {tally.length === 0 ? (
+                    <span className="text-muted-foreground/60">没有证据</span>
+                  ) : (
+                    tally.map((t) => (
+                      <span key={t.k} className={t.strong ? 'text-foreground/80' : 'text-muted-foreground'}>
+                        {t.k} {t.n}
+                      </span>
+                    ))
+                  )}
+                  {i.status === 'corrected' ? <span className="text-muted-foreground/70">你改过</span> : null}
+                  {rejected ? <span className="text-muted-foreground/70">你否掉的</span> : null}
+                </div>
+              </Row>
+              </div>
+            )
+          })}
+
+          {showCandidates ? (
+            <div className="mt-10">
+              <div className="flex items-baseline justify-between">
+                <Label>候选</Label>
+                <span className="text-[10px] text-muted-foreground/60">系统在攒的，不是待办</span>
+              </div>
+              <div className="mt-1">
+                {s.candidates.map((c, idx) => {
+                  const resolved = c.state === 'resolved'
+                  return (
+                    <div key={c.id} className={idx > 0 ? 'border-t border-border/60' : ''}>
+                    <Row
+                      selected={s.selected?.id === c.id}
+                      onClick={() => s.select(c.id, 'candidate')}
+                      className="py-2.5"
+                      dim={resolved}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="w-[62px] shrink-0 pt-[3px] text-[10px] text-muted-foreground">
+                          {CANDIDATE_STATE_LABEL[c.state]}
+                        </span>
+                        <span className={`min-w-0 flex-1 text-[12px] leading-[1.65] ${resolved ? 'text-muted-foreground' : 'text-foreground/90'}`}>
+                          <span className="line-clamp-2">{c.statement}</span>
+                        </span>
+                        <span className="shrink-0 pt-[2px] text-[10px] tabular-nums text-muted-foreground/60">{c.firstSeen.slice(5)}</span>
+                      </div>
+                      <div className="mt-1 pl-[74px] text-[10px] text-muted-foreground/70">
+                        {resolved && c.resolution ? c.resolution.note : `${c.signalIds.length} 条记录`}
+                      </div>
+                    </Row>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </Section>
-        ) : null}
-
-        <Section
-          label="候选"
-          hint="系统在后台攒的东西，不是待办"
-          className={filter === 'candidates' ? '' : 'mt-6'}
-        >
-          <div className="space-y-4">
-            {s.candidates.map((c) => (
-              <article key={c.id} className="border-l border-border pl-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[10px] tracking-wide text-muted-foreground">{CANDIDATE_STATE_LABEL[c.state]}</span>
-                  <span className="text-[10px] text-muted-foreground/60">始于 {c.firstSeen.slice(5)}</span>
-                </div>
-                <p className="mt-0.5 text-[12px] leading-5 text-foreground/90">{c.statement}</p>
-                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{c.signalNote}</p>
-
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {c.signalIds.map((sid) => {
-                    const ev = EVIDENCE_BY_ID.get(sid)
-                    const ref = refOf(sid)
-                    if (!ref) return null
-                    return (
-                      <Chip key={sid} onClick={() => s.select(sid)} title={ev ? `证据 · ${ev.observed}` : ref.label}>
-                        {ev ? '证据 ' + ev.date.slice(5) : ref.label.length > 14 ? ref.label.slice(0, 13) + '…' : ref.label}
-                      </Chip>
-                    )
-                  })}
-                </div>
-
-                {c.state === 'accumulating' ? (
-                  <p className="mt-2 text-[11px] leading-4 text-muted-foreground">{c.why}</p>
-                ) : null}
-
-                {c.state === 'emerging' ? (
-                  <div className="mt-2">
-                    <p className="text-[11px] leading-4 text-muted-foreground">{c.why}</p>
-                    {editing === c.id ? (
-                      <div className="mt-2">
-                        <textarea
-                          value={draft}
-                          onChange={(e) => setDraft(e.target.value)}
-                          rows={2}
-                          className="w-full border border-border bg-background px-2 py-1 text-[12px] outline-none focus:border-foreground/40"
-                          placeholder="按你的说法改写它"
-                        />
-                        <div className="mt-1 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              s.resolveCandidate(c.id, 'corrected')
-                              setEditing(null)
-                            }}
-                            className="border border-foreground/30 px-2 py-0.5 text-[11px] hover:bg-muted"
-                          >
-                            用我的说法
-                          </button>
-                          <button type="button" onClick={() => setEditing(null)} className="text-[11px] text-muted-foreground hover:text-foreground">
-                            算了
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-1.5 flex flex-wrap gap-2 text-[11px]">
-                        <button type="button" onClick={() => s.resolveCandidate(c.id, 'confirmed')} className="text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground">
-                          说得对
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditing(c.id)
-                            setDraft(c.statement)
-                          }}
-                          className="text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground"
-                        >
-                          改说法
-                        </button>
-                        <button type="button" onClick={() => s.resolveCandidate(c.id, 'ignored')} className="text-muted-foreground underline decoration-border underline-offset-2 hover:text-foreground">
-                          不是我
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : null}
-
-                {c.state === 'resolved' && c.resolution ? (
-                  <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-                    {c.resolution.at.slice(5)} · {c.resolution.note}。{c.why}
-                  </p>
-                ) : null}
-              </article>
-            ))}
-          </div>
-          <p className="mt-4 border-t border-border pt-3 text-[10px] leading-4 text-muted-foreground">
-            沉默不算确认。攒着的东西不会因为没人管就变成兴趣或能力；到期就关掉，不等你点头。
-          </p>
-        </Section>
+          ) : null}
+        </div>
       </div>
     </div>
   )
