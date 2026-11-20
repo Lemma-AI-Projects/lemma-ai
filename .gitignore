@@ -3,3 +3,8 @@
 /docs/
 /task-management/
 /temp/
+
+# Local research and generated artifacts
+/outputs/
+/research/
+/work

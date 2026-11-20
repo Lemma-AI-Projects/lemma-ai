@@ -2,6 +2,7 @@ import {
   useCallback,
   useLayoutEffect,
   useRef,
+  useState,
 } from 'react'
 import {
   GraduationCap,
@@ -68,6 +69,7 @@ export function CourseSourceSegmentedControl({
   onValueChange: (value: HomeComposerMode) => void
   value: HomeComposerMode
 }) {
+  const [openTooltip, setOpenTooltip] = useState<HomeComposerMode | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<Record<HomeComposerMode, HTMLButtonElement | null>>({
     'free-course': null,
@@ -126,6 +128,7 @@ export function CourseSourceSegmentedControl({
             nextValue === 'video-course' ||
             nextValue === 'chat'
           ) {
+            setOpenTooltip(null)
             onValueChange(nextValue)
           }
         }}
@@ -149,7 +152,19 @@ export function CourseSourceSegmentedControl({
           const { Icon } = option
 
           return (
-            <Tooltip key={option.value} open={isActive ? false : undefined}>
+            <Tooltip
+              key={option.value}
+              open={!isActive && openTooltip === option.value}
+              onOpenChange={(open) => {
+                if (open && !isActive) {
+                  setOpenTooltip(option.value)
+                } else if (!open) {
+                  setOpenTooltip((current) =>
+                    current === option.value ? null : current
+                  )
+                }
+              }}
+            >
               <TooltipTrigger asChild>
                 <ToggleGroupItem
                   ref={(item) => {

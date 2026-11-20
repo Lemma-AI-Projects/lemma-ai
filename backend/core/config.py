@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _DEFAULT_AI_ROUTES_JSON = (
     '{"text_chat": ['
     '{"platform": "aihubmix", "adapter": "openai_compatible",'
-    ' "model": "gemini-2.5-flash", "priority": 0, "timeout_s": 30},'
+    ' "model": "gemini-3.1-flash-lite", "priority": 0, "timeout_s": 30},'
     ' {"platform": "openrouter", "adapter": "openrouter",'
     ' "model": "google/gemini-2.5-flash", "priority": 1, "timeout_s": 30}'
     '], "course_plan_intro": ['
