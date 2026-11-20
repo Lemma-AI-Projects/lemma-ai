@@ -120,6 +120,12 @@ export function AppLayout() {
             icon={FlaskConical}
             label="Sandbox(调试)"
             to="/sandbox"
+            end
+          />
+          <SidebarItem
+            icon={FlaskConical}
+            label="Chat Sandbox(调试)"
+            to="/sandbox/chat"
           />
           <SidebarItem
             icon={FlaskConical}

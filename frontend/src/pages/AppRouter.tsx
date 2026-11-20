@@ -2,6 +2,7 @@ import { type RouteObject, useRoutes } from 'react-router-dom'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { AppLayout } from '@/layouts/AppLayout'
 import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
+import { ChatSandboxPage } from '@/pages/ChatSandboxPage'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
@@ -76,6 +77,10 @@ const routes: RouteObject[] = [
             // [sandbox] 临时调试路由，开发完成后可连同沙盒页面整体移除。
             path: 'sandbox',
             element: <ConversationSandboxPage />,
+          },
+          {
+            path: 'sandbox/chat',
+            element: <ChatSandboxPage />,
           },
           {
             path: 'sandbox/quiz',

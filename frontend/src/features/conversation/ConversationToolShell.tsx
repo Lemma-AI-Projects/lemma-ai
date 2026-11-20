@@ -27,6 +27,8 @@ import type {
 // is owned by the course domain (coursePlanner/courseApi).
 export type { QuestionnaireAnswers }
 
+export type ConversationToolSize = 'default' | 'full'
+
 // 工具卡片底部按钮尺寸：h-[33px] 控制 33px 高度，px-[12.5px] 控制横向内边距。
 const actionButtonClassName =
   'h-[33px] rounded-full px-[12.5px] text-[14px] font-normal'
@@ -251,6 +253,7 @@ function OutlineTree({
 export function ConversationToolShell({
   title,
   stage,
+  size = 'default',
   questions = [],
   answers = {},
   modules = [],
@@ -266,6 +269,7 @@ export function ConversationToolShell({
 }: {
   title: string
   stage: ConversationToolStage
+  size?: ConversationToolSize
   questions?: ConversationToolQuestion[]
   answers?: QuestionnaireAnswers
   modules?: ConversationToolModule[]
@@ -283,6 +287,7 @@ export function ConversationToolShell({
   onCancel?: () => void
   onEnterCourse?: () => void
 }) {
+  const isFull = size === 'full'
   const selectedAnswers = getSelectedAnswers(questions, answers)
   const canSubmitAnswers =
     selectedAnswers.length > 0 && Boolean(onSubmitAnswers) && !isSubmittingAnswers
@@ -290,8 +295,12 @@ export function ConversationToolShell({
   return (
     <div
       data-slot="conversation-tool-shell"
+      data-size={size}
       translate="no"
-      className="flex w-full max-w-[36rem] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent px-5 py-5"
+      className={cn(
+        'flex w-full flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-transparent',
+        isFull ? 'px-6 py-6 sm:px-10 sm:py-8' : 'max-w-[36rem] px-5 py-5'
+      )}
     >
       {stage === 'questionnaire' ? (
         <div
@@ -311,7 +320,12 @@ export function ConversationToolShell({
           {errorMessage ? (
             <p className="mt-3 text-sm text-destructive">{errorMessage}</p>
           ) : null}
-          <div className="-mx-1 -mb-1 mt-auto flex justify-end pt-4">
+          <div
+            className={cn(
+              'mt-auto flex justify-end pt-4',
+              !isFull && '-mx-1 -mb-1'
+            )}
+          >
             <Button
               type="button"
               disabled={!canSubmitAnswers}
