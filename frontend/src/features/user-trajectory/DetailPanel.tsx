@@ -4,43 +4,42 @@ import type { ReactNode } from 'react'
 import {
   CANDIDATE_STATE_LABEL,
   EVIDENCE_BY_ID,
-  EVENT_BY_ID,
   EVIDENCE_KIND_LABEL,
   EPISTEMIC,
+  EVENT_BY_ID,
   EVENT_KIND_LABEL,
   INTERPRETATION_BY_ID,
   OBJECT_BY_ID,
   OBJECT_KIND_LABEL,
   PARENT_BY_ID,
   VERDICT_LABEL,
+  byLabel,
   childrenOf,
+  confidenceLabel,
   connectionsFor,
   eventsForObject,
   insightsForObject,
   md,
   refOf,
   statusLabel,
-  byLabel,
-  confidenceLabel,
 } from './data'
 import { truncate } from './kit'
-import { EpistemicMark, Label, Quiet, RefLink, TextAction } from './parts'
+import { EpiMark, IconBack, IconChevron, IconClose } from './marks'
+import { Label, Quiet, RefLink, TextAction } from './parts'
 import type { Store } from './store'
 
 /**
- * 右栏。四种东西（对象 / 事件 / 证据 / 解释）共用同一副骨架：
+ * 右栏。六种东西共用同一副骨架：
  *
- *   类型标签 ·············· 暂存 · 关闭
+ *   类型 ················ 暂存 · 关闭
  *   标题（衬线，一句话）
  *   一行元信息
- *   ─────────────
- *   最有用的那一件东西（默认展开）
- *   其余（折叠，按需展开）
- *   ─────────────
+ *   最有用的那一块（默认展开）
+ *   其余（折叠）
  *   一个主动作
  *
- * 只有「什么算最有用的那一件」随类型变。这是全页唯一一处细节面板 ——
- * 不再有抽屉、弹窗、右键菜单跟它抢位置。
+ * 只有「什么算最有用的那一块」随类型变。全页只有这一处细节面板 ——
+ * 没有抽屉、弹窗、右键菜单跟它抢位置。
  */
 export function DetailPanel({ s }: { s: Store }) {
   const sel = s.selected
@@ -66,23 +65,23 @@ export function DetailPanel({ s }: { s: Store }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-2">
+      <div className="flex shrink-0 items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 px-5 py-3">
         {s.path.length > 1 ? (
           <button
             type="button"
             onClick={s.back}
             aria-label="回到上一步"
-            className="-ml-0.5 px-1 text-[13px] leading-none text-muted-foreground hover:text-foreground"
+            className="text-zinc-400 dark:text-zinc-500 transition-colors hover:text-zinc-950 dark:hover:text-zinc-50"
           >
-            ←
+            <IconBack />
           </button>
         ) : null}
-        <span className="text-[10px] tracking-[0.08em] text-muted-foreground">{typeLabel}</span>
-        <div className="ml-auto flex items-center gap-3">
+        <span className="text-[9.5px] tracking-[0.16em] text-zinc-400 dark:text-zinc-500">{typeLabel}</span>
+        <div className="ml-auto flex items-center gap-4">
           <button
             type="button"
             onClick={() => s.save(sel.id, sel.type)}
-            className={saved ? 'text-[10px] text-foreground' : 'text-[10px] text-muted-foreground hover:text-foreground'}
+            className={`text-[10px] transition-colors ${saved ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-950 dark:hover:text-zinc-50'}`}
           >
             {saved ? '已暂存' : '暂存'}
           </button>
@@ -90,14 +89,14 @@ export function DetailPanel({ s }: { s: Store }) {
             type="button"
             onClick={s.closeDetail}
             aria-label="关闭"
-            className="text-[13px] leading-none text-muted-foreground hover:text-foreground"
+            className="text-zinc-400 dark:text-zinc-500 transition-colors hover:text-zinc-950 dark:hover:text-zinc-50"
           >
-            ×
+            <IconClose />
           </button>
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3.5 pb-8">
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-10">
         {sel.type === 'object' ? <ObjectBody s={s} id={sel.id} /> : null}
         {sel.type === 'event' ? <EventBody s={s} id={sel.id} /> : null}
         {sel.type === 'parent' ? <ParentBody s={s} id={sel.id} /> : null}
@@ -115,19 +114,19 @@ export function DetailPanel({ s }: { s: Store }) {
 function Head({ title, sub, meta }: { title: string; sub?: string; meta?: string }) {
   return (
     <div>
-      <h2 className="font-serif text-[15px] leading-[1.5] text-foreground">{title}</h2>
-      {sub ? <p className="mt-1 text-[12px] leading-[1.6] text-muted-foreground">{sub}</p> : null}
-      {meta ? <p className="mt-1.5 text-[10px] tabular-nums text-muted-foreground/80">{meta}</p> : null}
+      <h2 className="font-serif text-[17px] leading-[1.45] tracking-[-0.005em] text-zinc-950 dark:text-zinc-50">{title}</h2>
+      {sub ? <p className="mt-2 text-[12px] leading-[1.75] text-zinc-500 dark:text-zinc-400">{sub}</p> : null}
+      {meta ? <p className="mt-2.5 text-[10px] tabular-nums text-zinc-400 dark:text-zinc-500">{meta}</p> : null}
     </div>
   )
 }
 
 function Block({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
-    <div className="mt-4">
-      <div className="mb-1 flex items-baseline gap-2">
-        <Label>{label}</Label>
-        {hint ? <span className="text-[10px] text-muted-foreground/60">{hint}</span> : null}
+    <div className="mt-6">
+      <div className="mb-2 flex items-baseline justify-between">
+        <Label plain>{label}</Label>
+        {hint ? <span className="text-[9.5px] tabular-nums text-zinc-400 dark:text-zinc-500/80">{hint}</span> : null}
       </div>
       {children}
     </div>
@@ -150,14 +149,14 @@ function MiniRow({
     <button
       type="button"
       onClick={onClick}
-      className="-mx-1 block w-full px-1 py-1 text-left hover:bg-muted/40"
+      className="-mx-2 block w-full px-2 py-1.5 text-left transition-colors hover:bg-zinc-900/[0.035] dark:bg-zinc-100/[0.035]"
     >
-      <span className="flex items-start gap-2">
-        {date ? <span className="w-[34px] shrink-0 pt-[2px] text-[10px] tabular-nums text-muted-foreground">{date}</span> : null}
-        <span className="min-w-0 flex-1 text-[12px] leading-[1.55] text-foreground/85">
+      <span className="flex items-start gap-2.5">
+        {date ? <span className="w-[32px] shrink-0 pt-px text-[9.5px] tabular-nums text-zinc-400 dark:text-zinc-500">{date}</span> : null}
+        <span className="min-w-0 flex-1 text-[12px] leading-[1.65] text-zinc-900/85 dark:text-zinc-100/85">
           <span className="line-clamp-2">{children}</span>
         </span>
-        {suffix ? <span className="shrink-0 pt-[2px] text-[10px] text-muted-foreground/70">{suffix}</span> : null}
+        {suffix ? <span className="shrink-0 pt-px text-[9.5px] text-zinc-400 dark:text-zinc-500/70">{suffix}</span> : null}
       </span>
     </button>
   )
@@ -178,17 +177,14 @@ function ObjectBody({ s, id }: { s: Store; id: string }) {
       <Head title={o.title} sub={o.sub} meta={`${range} · ${statusLabel(o.status)}`} />
 
       {conns.length > 0 ? (
-        <div className="mt-3 flex items-baseline justify-between">
-          <span className="text-[11px] text-muted-foreground">连到 {conns.length} 处</span>
-          <TextAction
-            muted
-            onClick={() => {
-              s.switchPerspective('explore')
-            }}
-          >
-            在探索里看 →
-          </TextAction>
-        </div>
+        <button
+          type="button"
+          onClick={() => s.switchPerspective('explore')}
+          className="mt-4 flex w-full items-center justify-between border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-left transition-colors hover:border-zinc-400/60 dark:hover:border-zinc-600 hover:bg-zinc-900/[0.02] dark:hover:bg-zinc-100/[0.02]"
+        >
+          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">连到 {conns.length} 处</span>
+          <span className="text-[10px] text-zinc-900 dark:text-zinc-100">在探索里看 →</span>
+        </button>
       ) : null}
 
       <Block label="出现在" hint={`${evs.length} 件`}>
@@ -199,7 +195,7 @@ function ObjectBody({ s, id }: { s: Store; id: string }) {
           </MiniRow>
         ))}
         {evs.length > 3 ? (
-          <TextAction muted onClick={() => setAll((v) => !v)} className="mt-1">
+          <TextAction muted onClick={() => setAll((v) => !v)} className="mt-2">
             {all ? '只看最近三件' : `再看 ${evs.length - 3} 件`}
           </TextAction>
         ) : null}
@@ -209,7 +205,9 @@ function ObjectBody({ s, id }: { s: Store; id: string }) {
         <Block label="关于它的解释">
           {ins.slice(0, 3).map((i) => (
             <MiniRow key={i.id} onClick={() => s.select(i.id)}>
-              <EpistemicMark value={i.epistemic} compact className="mr-1" />
+              <span className="mr-1.5 inline-flex translate-y-[1px]">
+                <EpiMark value={i.epistemic} size={11} />
+              </span>
               {i.statement}
             </MiniRow>
           ))}
@@ -224,23 +222,23 @@ function EventBody({ s, id }: { s: Store; id: string }) {
   if (!e) return null
   return (
     <div>
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-[9.5px] tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
         {EVENT_KIND_LABEL[e.kind]} · <span className="tabular-nums">{e.date} {e.time}</span>
       </p>
-      <h2 className="mt-1 text-[13px] leading-[1.6] text-foreground">{e.title}</h2>
-      {e.detail ? <p className="mt-1.5 text-[12px] leading-[1.65] text-muted-foreground">{e.detail}</p> : null}
+      <h2 className="mt-2 text-[13.5px] leading-[1.6] text-zinc-950 dark:text-zinc-50">{e.title}</h2>
+      {e.detail ? <p className="mt-2 text-[12px] leading-[1.8] text-zinc-500 dark:text-zinc-400">{e.detail}</p> : null}
 
       {e.objectIds.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
           {e.objectIds.map((o) => (
-            <RefLink key={o} s={s} id={o} className="text-[11px] text-muted-foreground" />
+            <RefLink key={o} s={s} id={o} className="text-[11px] text-zinc-500 dark:text-zinc-400" />
           ))}
         </div>
       ) : null}
 
       <Block label="它产出了什么">
         {e.evidenceIds.length === 0 ? (
-          <p className="text-[11px] leading-[1.6] text-muted-foreground">什么都没产出。</p>
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500">什么都没产出。</p>
         ) : (
           e.evidenceIds.map((eid) => {
             const ev = EVIDENCE_BY_ID.get(eid)
@@ -255,9 +253,9 @@ function EventBody({ s, id }: { s: Store; id: string }) {
       </Block>
 
       {e.parentId ? (
-        <div className="mt-4">
+        <div className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-3">
           <TextAction muted onClick={() => s.select(e.parentId as string, 'parent')}>
-            属于「{truncate(refOf(e.parentId)?.label ?? '', 18)}」
+            属于「{truncate(refOf(e.parentId)?.label ?? '', 16)}」
           </TextAction>
         </div>
       ) : null}
@@ -273,26 +271,24 @@ function EvidenceBody({ s, id }: { s: Store; id: string }) {
   )
   return (
     <div>
-      <p className="text-[13px] leading-[1.65] text-foreground">{ev.observed}</p>
-      <p className="mt-1.5 text-[10px] text-muted-foreground">
+      <p className="text-[13px] leading-[1.75] text-zinc-950 dark:text-zinc-50">{ev.observed}</p>
+      <p className="mt-2 text-[9.5px] tracking-[0.04em] text-zinc-400 dark:text-zinc-500">
         {md(ev.date)} · {EVIDENCE_KIND_LABEL[ev.kind]} · {VERDICT_LABEL[ev.verdict] ?? ev.verdict} · {byLabel(ev.by)}
       </p>
 
       <Block label="它支持">
-        <p className="text-[12px] leading-[1.6] text-foreground/85">{ev.supports}</p>
+        <p className="text-[12px] leading-[1.75] text-zinc-900/85 dark:text-zinc-100/85">{ev.supports}</p>
       </Block>
       <Block label="它不能证明">
-        <p className="text-[12px] leading-[1.6] text-foreground/85">{ev.notSupport}</p>
+        <p className="text-[12px] leading-[1.75] text-zinc-900/85 dark:text-zinc-100/85">{ev.notSupport}</p>
       </Block>
       <Block label="局限">
-        <p className="text-[11px] leading-[1.6] text-muted-foreground">{ev.limitation}</p>
+        <p className="text-[11px] leading-[1.7] text-zinc-400 dark:text-zinc-500">{ev.limitation}</p>
       </Block>
 
       <Block label="用在哪">
         {usedIn.length === 0 ? (
-          <p className="text-[11px] leading-[1.6] text-muted-foreground">
-            没有任何解释用上它。它可以一直挂着。
-          </p>
+          <p className="text-[11px] leading-[1.7] text-zinc-400 dark:text-zinc-500">没有任何解释用上它。它可以一直挂着。</p>
         ) : (
           usedIn.map((i) => (
             <MiniRow key={i.id} onClick={() => s.select(i.id)}>
@@ -303,7 +299,7 @@ function EvidenceBody({ s, id }: { s: Store; id: string }) {
       </Block>
 
       {ev.activityId ? (
-        <div className="mt-5">
+        <div className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-3">
           <TextAction onClick={() => s.select(ev.activityId as string)}>回到产生它的那次活动</TextAction>
         </div>
       ) : null}
@@ -323,7 +319,7 @@ function ParentBody({ s, id }: { s: Store; id: string }) {
         sub={p.why}
         meta={`${p.from} → ${p.to} · ${p.origin === 'system' ? '系统并出来的' : '他自己划的'}`}
       />
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-4">
         <TextAction onClick={() => s.toggleParent(id)}>{open ? '在时间轴上收起' : '在时间轴上展开'}</TextAction>
         {p.origin === 'system' ? <TextAction muted onClick={() => s.splitParent(id)}>拆开这一段</TextAction> : null}
       </div>
@@ -368,23 +364,26 @@ function InsightBody({
 
   return (
     <div>
-      <div className="flex items-baseline gap-2">
-        <EpistemicMark value={i.epistemic} />
-        <span className="text-[10px] tabular-nums text-muted-foreground">{i.date}</span>
-        {i.confidence ? <span className="text-[10px] text-muted-foreground/70">置信 {confidenceLabel(i.confidence)}</span> : null}
+      <div className="flex items-center gap-2.5">
+        <EpiMark value={i.epistemic} className="text-zinc-500 dark:text-zinc-400" />
+        <span className="text-[9.5px] tracking-[0.06em] text-zinc-400 dark:text-zinc-500">{e.label}</span>
+        <span className="text-[9.5px] tabular-nums text-zinc-400 dark:text-zinc-500/70">{i.date}</span>
+        {i.confidence ? (
+          <span className="text-[9.5px] text-zinc-400 dark:text-zinc-500/70">置信 {confidenceLabel(i.confidence)}</span>
+        ) : null}
       </div>
-      <p className="mt-1.5 font-serif text-[14px] leading-[1.7] text-foreground">{i.statement}</p>
-      <p className="mt-1 text-[10px] leading-[1.6] text-muted-foreground/80">{e.hint}</p>
+      <p className="mt-3 font-serif text-[15px] leading-[1.75] text-zinc-950 dark:text-zinc-50">{i.statement}</p>
+      <p className="mt-2 text-[10px] leading-[1.7] text-zinc-400 dark:text-zinc-500/90">{e.hint}</p>
 
       {i.basis ? (
         <Block label="依据">
-          <p className="text-[11px] leading-[1.6] text-muted-foreground">{i.basis}</p>
+          <p className="text-[11px] leading-[1.7] text-zinc-400 dark:text-zinc-500">{i.basis}</p>
         </Block>
       ) : null}
 
       <Block label="证据" hint={total === 0 ? '一条也没有' : `${total} 条`}>
         {total === 0 ? (
-          <p className="text-[11px] leading-[1.6] text-muted-foreground">
+          <p className="text-[11px] leading-[1.75] text-zinc-400 dark:text-zinc-500">
             没有任何证据挂着。这条属于「他说的」，不属于「系统看到的」。
           </p>
         ) : (
@@ -392,20 +391,20 @@ function InsightBody({
             if (g.ids.length === 0) return null
             const open = openGroups.includes(g.key)
             return (
-              <div key={g.key} className="mt-1">
+              <div key={g.key} className="border-t border-zinc-200/80 dark:border-zinc-800/80 first:border-t-0">
                 <button
                   type="button"
                   onClick={() => toggle(g.key)}
-                  className="flex w-full items-baseline gap-2 py-0.5 text-left"
+                  className="flex w-full items-center gap-2 py-2 text-left"
                 >
-                  <span className={g.strong ? 'text-[11px] text-foreground' : 'text-[11px] text-muted-foreground'}>
-                    {g.title}
+                  <span className={g.strong ? 'text-[11px] text-zinc-950 dark:text-zinc-50' : 'text-[11px] text-zinc-500 dark:text-zinc-400'}>{g.title}</span>
+                  <span className="text-[9.5px] tabular-nums text-zinc-400 dark:text-zinc-500/80">{g.ids.length}</span>
+                  <span className="ml-auto text-zinc-400 dark:text-zinc-500/60">
+                    <IconChevron open={open} size={8} />
                   </span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground/70">{g.ids.length}</span>
-                  <span className="text-[10px] text-muted-foreground/50">{open ? '−' : '+'}</span>
                 </button>
                 {open ? (
-                  <div className="mt-0.5 border-l border-border/80 pl-2.5">
+                  <div className="mb-1 border-l border-zinc-200 dark:border-zinc-800 pl-3">
                     {g.ids.map((eid) => {
                       const ev = EVIDENCE_BY_ID.get(eid)
                       if (!ev) return null
@@ -424,23 +423,23 @@ function InsightBody({
       </Block>
 
       {i.reinterpretedAt ? (
-        <div className="mt-4 border-l-2 border-foreground/25 pl-2.5">
-          <div className="text-[10px] text-muted-foreground">{i.reinterpretedAt} 被收窄过</div>
-          <p className="mt-0.5 text-[11px] leading-[1.6] text-foreground/80">{i.reinterpretation}</p>
-          <p className="mt-1 text-[10px] leading-[1.5] text-muted-foreground/70">
+        <div className="mt-6 border-l-2 border-amber-400/70 bg-amber-50/60 py-2 pl-3 dark:border-amber-500/40 dark:bg-amber-950/30">
+          <div className="text-[9.5px] tracking-[0.06em] text-amber-700 dark:text-amber-400">{i.reinterpretedAt} 被收窄过</div>
+          <p className="mt-1 text-[11px] leading-[1.7] text-zinc-900/80 dark:text-zinc-100/80">{i.reinterpretation}</p>
+          <p className="mt-1.5 text-[9.5px] leading-[1.6] text-zinc-400 dark:text-zinc-500">
             旧版本没被删掉。它仍然属于 {i.reinterpretedAt} 之前。
           </p>
         </div>
       ) : null}
 
-      <div className="mt-4 border-t border-border/70 pt-2.5">
+      <div className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-4">
         {s.responses[i.id] ? (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
             你的回应：
             {s.responses[i.id] === 'confirmed' ? '说得对' : s.responses[i.id] === 'corrected' ? '你改过它的说法' : '不是你'}
           </p>
         ) : (
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-4">
             <TextAction onClick={() => s.respond(i.id, 'confirmed')}>说得对</TextAction>
             <TextAction
               onClick={() => {
@@ -457,14 +456,14 @@ function InsightBody({
         )}
 
         {correcting ? (
-          <div className="mt-2">
+          <div className="mt-3">
             <textarea
               value={draft}
               onChange={(ev) => setDraft(ev.target.value)}
               rows={3}
-              className="w-full border border-border bg-background px-2 py-1.5 text-[12px] leading-[1.6] outline-none focus:border-foreground/40"
+              className="w-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-2 text-[12px] leading-[1.7] text-zinc-950 dark:text-zinc-50 outline-none transition-colors focus:border-zinc-900 dark:focus:border-zinc-100"
             />
-            <div className="mt-1.5 flex items-center gap-3">
+            <div className="mt-2 flex items-center gap-4">
               <TextAction
                 onClick={() => {
                   s.respond(i.id, 'corrected', draft)
@@ -477,12 +476,12 @@ function InsightBody({
                 算了
               </TextAction>
             </div>
-            <p className="mt-1 text-[10px] leading-[1.5] text-muted-foreground/70">改完仍然是「你的说法」，不是事实。</p>
+            <p className="mt-1.5 text-[9.5px] text-zinc-400 dark:text-zinc-500/80">改完仍然是「你的说法」，不是事实。</p>
           </div>
         ) : null}
       </div>
 
-      <p className="mt-3 text-[10px] leading-[1.5] text-muted-foreground/70">
+      <p className="mt-4 text-[9.5px] leading-[1.6] text-zinc-400 dark:text-zinc-500/80">
         谁说的：{i.assertedBy === 'user' ? '他自己' : '系统'} · 生效：
         {i.effectiveTo ? `${i.effectiveFrom} → ${i.effectiveTo}` : `${i.effectiveFrom} 起`}
       </p>
@@ -497,20 +496,21 @@ function CandidateBody({ s, id }: { s: Store; id: string }) {
   if (!c) return null
   return (
     <div>
-      <div className="flex items-baseline gap-2">
-        <span className="text-[10px] text-muted-foreground">{CANDIDATE_STATE_LABEL[c.state]}</span>
-        <span className="text-[10px] text-muted-foreground/60">始于 {md(c.firstSeen)}</span>
+      <div className="flex items-center gap-2.5">
+        <span className={`h-[5px] w-[5px] ${c.state === 'emerging' ? 'bg-amber-600 dark:bg-amber-400' : 'bg-zinc-300 dark:bg-zinc-600'}`} />
+        <span className="text-[9.5px] tracking-[0.06em] text-zinc-400 dark:text-zinc-500">{CANDIDATE_STATE_LABEL[c.state]}</span>
+        <span className="text-[9.5px] text-zinc-400 dark:text-zinc-500/70">始于 {md(c.firstSeen)}</span>
       </div>
-      <p className="mt-1.5 text-[13px] leading-[1.65] text-foreground">{c.statement}</p>
-      <p className="mt-1.5 text-[11px] leading-[1.6] text-muted-foreground">{c.signalNote}</p>
+      <p className="mt-3 text-[13px] leading-[1.75] text-zinc-950 dark:text-zinc-50">{c.statement}</p>
+      <p className="mt-2 text-[11px] leading-[1.75] text-zinc-500 dark:text-zinc-400">{c.signalNote}</p>
 
       <Block label="攒它的记录">
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
+        <div className="flex flex-col gap-1.5">
           {c.signalIds.map((sid) => {
             const ev = EVIDENCE_BY_ID.get(sid)
             return (
-              <RefLink key={sid} s={s} id={sid} className="text-[11px] text-muted-foreground">
-                {ev ? truncate(ev.observed, 22) : truncate(refOf(sid)?.label ?? sid, 22)}
+              <RefLink key={sid} s={s} id={sid} className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                {ev ? truncate(ev.observed, 26) : truncate(refOf(sid)?.label ?? sid, 26)}
               </RefLink>
             )
           })}
@@ -518,21 +518,21 @@ function CandidateBody({ s, id }: { s: Store; id: string }) {
       </Block>
 
       <Block label="为什么还没定">
-        <p className="text-[11px] leading-[1.65] text-muted-foreground">{c.why}</p>
+        <p className="text-[11px] leading-[1.75] text-zinc-400 dark:text-zinc-500">{c.why}</p>
       </Block>
 
       {c.state === 'emerging' ? (
-        <div className="mt-4 border-t border-border/70 pt-2.5">
+        <div className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-4">
           {editing ? (
             <div>
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 rows={2}
-                className="w-full border border-border bg-background px-2 py-1.5 text-[12px] outline-none focus:border-foreground/40"
+                className="w-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 px-2.5 py-2 text-[12px] leading-[1.7] outline-none focus:border-zinc-900 dark:focus:border-zinc-100"
                 placeholder="按你的说法改写它"
               />
-              <div className="mt-1.5 flex gap-3">
+              <div className="mt-2 flex gap-4">
                 <TextAction
                   onClick={() => {
                     s.resolveCandidate(c.id, 'corrected')
@@ -547,7 +547,7 @@ function CandidateBody({ s, id }: { s: Store; id: string }) {
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-4">
               <TextAction onClick={() => s.resolveCandidate(c.id, 'confirmed')}>说得对</TextAction>
               <TextAction
                 onClick={() => {
@@ -566,11 +566,10 @@ function CandidateBody({ s, id }: { s: Store; id: string }) {
       ) : null}
 
       {c.state === 'resolved' && c.resolution ? (
-        <p className="mt-4 border-t border-border/70 pt-2.5 text-[11px] leading-[1.6] text-muted-foreground">
+        <p className="mt-6 border-t border-zinc-200 dark:border-zinc-800 pt-3 text-[10px] leading-[1.7] text-zinc-400 dark:text-zinc-500">
           {md(c.resolution.at)} · {c.resolution.note}。它不会被重新激活。
         </p>
       ) : null}
     </div>
   )
 }
-

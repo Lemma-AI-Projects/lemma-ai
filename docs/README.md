@@ -15,7 +15,7 @@
 | **公司形态研究（第一速度）** | [`research/first-velocity/`](research/first-velocity/README.md) —— 7 份。问"产品之外的价值算不算护城河"；**赶时间只读 07**。全部是条件句，不是战略 |
 | **研究方法** | [`methodologies/rnd-methodology.md`](methodologies/rnd-methodology.md) |
 | **产品与交互设计** | [`design/`](design/) |
-| **User Trajectory（产品 / 交互 / 语义）** | 定位与四视角 [`design/user-trajectory-positioning.md`](design/user-trajectory-positioning.md) · Discovery 交互探索（未选方案）[`research/user-trajectory-discovery-exploration.md`](research/user-trajectory-discovery-exploration.md) · 决策与**冲突登记** [`decisions/user-trajectory-experience.md`](decisions/user-trajectory-experience.md) · Timeline 布局计划（旧，仍有效）[`design/trajectory.md`](design/trajectory.md) · 语义分类与合成数据 [`research/user-trajectory-lab/`](research/user-trajectory-lab/) |
+| **User Trajectory（产品 / 交互 / 语义）** | **总体计划与止损点** [`planning/user-trajectory.md`](planning/user-trajectory.md) · 定位与四视角 [`design/user-trajectory-positioning.md`](design/user-trajectory-positioning.md) · Discovery 交互探索（未选方案）[`research/user-trajectory-discovery-exploration.md`](research/user-trajectory-discovery-exploration.md) · 决策与**冲突登记** [`decisions/user-trajectory-experience.md`](decisions/user-trajectory-experience.md) · Timeline 布局计划（旧，仍有效）[`design/trajectory.md`](design/trajectory.md) · 语义分类与合成数据 [`research/user-trajectory-lab/`](research/user-trajectory-lab/) |
 | **系统契约与组件边界** | [`architecture/`](architecture/) · 证据层 [`evidence/`](evidence/index.md) · 语音层 [`voice/`](voice/index.md) |
 | **历史与被取代的东西** | [`archive/`](archive/) —— 保留理由，不删 |
 

@@ -145,6 +145,18 @@ export const CONNECTIONS: ConnectionRec[] = [
     basisIds: ['ins-01', 'ins-08'],
     epistemic: 'interpretation',
   },
+  {
+    // 加这一条的原因很具体：原来四处连接八个端点，每个端点只连一次 ——
+    // 于是"一个对象连到多处"这件事在原型里**从来没被画出来过**。
+    // 这条一加，mat-19 有了两条边，关系图才有第二根分叉可看。
+    id: 'conn-05',
+    a: 'mat-19',
+    b: 'foc-02',
+    kind: 'shared_question',
+    why: '你在三月八日自己写过：这个词在两个领域指的不是一回事。两个月后读到这篇时，你又一次把「表征」和「意识」放在同一段里 —— 这条线是从那句话开始的。',
+    basisIds: ['ins-01', 'act-122'],
+    epistemic: 'interpretation',
+  },
 ]
 
 /** 首页三块。三种发现对应三个方向，各自落在不同视角。 */
