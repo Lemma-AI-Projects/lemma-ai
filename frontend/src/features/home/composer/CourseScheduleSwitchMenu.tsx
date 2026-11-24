@@ -10,6 +10,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { ComposerChinButton } from '@/features/home/composer/ComposerChinButton'
 import {
+  COMPOSER_MENU_ROW_CLASS_NAME,
   COMPOSER_PANEL_CLASS_NAME,
   COMPOSER_PANEL_LABEL_CLASS_NAME,
 } from '@/features/home/composer/composerMenuStyles'
@@ -71,11 +72,8 @@ export function CourseScheduleSwitchMenu({
         )}
       >
         <AnimatedHeight animateKey={courseScheduleMenuLayoutKey(value)}>
-          {/* 表头不是菜单项：不带悬停底色，免得和下面的面板叠成两块灰。 */}
-          <label
-            htmlFor={switchId}
-            className="flex w-full items-center gap-2.5 px-2 py-1.5 text-[14px] text-zinc-950 select-none"
-          >
+          {/* 整行都能点：和其它菜单项一样，悬停时整行垫一层底色。 */}
+          <label htmlFor={switchId} className={COMPOSER_MENU_ROW_CLASS_NAME}>
             <span className="flex-1 truncate">排进日程</span>
             <Switch
               id={switchId}

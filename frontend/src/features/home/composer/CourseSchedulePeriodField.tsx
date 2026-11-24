@@ -1,13 +1,12 @@
 import { useId } from 'react'
-import { addDays, format } from 'date-fns'
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui'
 
-import { Input } from '@/components/ui/input'
 import {
   COMPOSER_MENU_LABEL_CLASS_NAME,
   COMPOSER_PANEL_CHIP_SELECTED_CLASS_NAME,
   COMPOSER_PANEL_LABEL_CLASS_NAME,
 } from '@/features/home/composer/composerMenuStyles'
+import { CourseScheduleEndDatePicker } from '@/features/home/composer/CourseScheduleEndDatePicker'
 import {
   COURSE_SCHEDULE_PERIOD_OPTIONS,
   isCourseScheduleEndDatePast,
@@ -28,6 +27,7 @@ const APPEARANCE_CLASS_NAMES: Record<
     item: string
     itemSelected: string
     itemIdle: string
+    datePicker: string
   }
 > = {
   track: {
@@ -37,6 +37,7 @@ const APPEARANCE_CLASS_NAMES: Record<
     item: 'h-[22px]',
     itemSelected: 'bg-white',
     itemIdle: '',
+    datePicker: 'mt-1.5',
   },
   chips: {
     label: COMPOSER_PANEL_LABEL_CLASS_NAME,
@@ -45,10 +46,11 @@ const APPEARANCE_CLASS_NAMES: Record<
     item: 'h-7',
     itemSelected: COMPOSER_PANEL_CHIP_SELECTED_CLASS_NAME,
     itemIdle: 'hover:bg-zinc-200/70',
+    datePicker: 'mt-1',
   },
 }
 
-// 排期菜单里的「周期」一栏：这门课一共排多久；选「到某天」时多出一个日期框。
+// 排期菜单里的「周期」一栏：这门课一共排多久；选「到某天」时多出一枚选截止日的胶囊。
 // 五种排期菜单共用，只在已经选了学习日之后出现。
 export function CourseSchedulePeriodField({
   appearance = 'track',
@@ -62,19 +64,9 @@ export function CourseSchedulePeriodField({
   value: CourseSchedule
 }) {
   const labelId = useId()
-  const dateInputId = useId()
   const dateErrorId = useId()
   const isEndDatePast = isCourseScheduleEndDatePast(value)
   const classNames = APPEARANCE_CLASS_NAMES[appearance]
-  const dateInputProps = {
-    type: 'date',
-    min: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
-    value: value.endDate,
-    onChange: (event: { target: { value: string } }) =>
-      onValueChange({ ...value, endDate: event.target.value }),
-    'aria-invalid': isEndDatePast,
-    'aria-describedby': isEndDatePast ? dateErrorId : undefined,
-  }
 
   return (
     <div className={className}>
@@ -113,35 +105,15 @@ export function CourseSchedulePeriodField({
           ))}
         </ToggleGroupPrimitive.Root>
 
-        {value.period === 'date' &&
-          (appearance === 'chips' ? (
-            // 和上面的选项同一种白片：左边一句说明，右边是日期。
-            <label
-              htmlFor={dateInputId}
-              className={cn(
-                'mt-1 flex h-7 items-center rounded-full pr-1.5 pl-3 text-xs transition-shadow focus-within:ring-2 focus-within:ring-zinc-300',
-                COMPOSER_PANEL_CHIP_SELECTED_CLASS_NAME,
-                isEndDatePast && 'ring-destructive/40'
-              )}
-            >
-              <span className="text-zinc-500">截止到</span>
-              <input
-                id={dateInputId}
-                {...dateInputProps}
-                className={cn(
-                  // 浏览器自带的日历图标是纯黑的，压到和说明文字差不多的深浅。
-                  'ml-auto bg-transparent text-right text-xs tabular-nums outline-none [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-45',
-                  value.endDate === '' ? 'text-zinc-400' : 'text-zinc-950'
-                )}
-              />
-            </label>
-          ) : (
-            <Input
-              aria-label="截止日期"
-              {...dateInputProps}
-              className="mt-1.5 block h-7 rounded-full border-zinc-200 bg-white px-2.5 py-0 text-xs text-zinc-900 focus-visible:border-zinc-300 focus-visible:ring-2 focus-visible:ring-zinc-300/60 md:text-xs"
-            />
-          ))}
+        {value.period === 'date' && (
+          <CourseScheduleEndDatePicker
+            value={value.endDate}
+            onValueChange={(endDate) => onValueChange({ ...value, endDate })}
+            invalid={isEndDatePast}
+            aria-describedby={isEndDatePast ? dateErrorId : undefined}
+            className={classNames.datePicker}
+          />
+        )}
         {isEndDatePast && (
           <p
             id={dateErrorId}
