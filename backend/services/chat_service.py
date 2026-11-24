@@ -4,12 +4,7 @@ Split into two steps because the conversation id must be known BEFORE the
 SSE response starts (it travels in the X-Conversation-Id header):
 
     prepare_turn()  -> create-or-load the conversation, rebuild history
-    run_turn()      -> dispatch on the request's tool: plain text or a tool turn
-
-A plain turn (stream_turn) just streams the model. A tool turn (currently only
-stream_course_planning_turn) streams a short AI intro, runs the tool's own
-service, then attaches a tool card via one `tool` chunk — same conversation
-resolution, SSE protocol and persistence as a plain turn, only the body differs.
+    stream_turn()   -> stream the model and persist the finished turn
 
 Persistence rule (拍板 2026-06-11): the user+assistant pair is written once
 the first token has been emitted — partial answers from a stop/error are kept
@@ -29,13 +24,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai import AIChunk, AIUseCase, ChatMessage, ai_client
 from core import aio
-from core.database import AsyncSessionLocal
 from core.security import CurrentUser
 from schemas.ai import ChatRequest
 from services import (
     conversation_service,
     conversation_tool_service,
-    course_planning_service,
     project_service,
 )
 
@@ -129,8 +122,8 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
       and this generator's frame is torn down.
 
     A `tool` chunk (a plugin card, e.g. desmos_graph) is captured as the
-    turn's tool_ref and lands in ai_messages.tool_json — the same thin-card
-    mechanism course_planning uses, so history reload re-renders it in place.
+    turn's tool_ref and lands in ai_messages.tool_json, so history reload
+    re-renders the card in place.
     """
     parts: list[str] = []
     reasoning_parts: list[str] = []
@@ -205,137 +198,6 @@ async def stream_turn(context: TurnContext) -> AsyncIterator[AIChunk]:
         # under cancellation — the persist above no longer depends on it.
         with contextlib.suppress(Exception):
             await chunk_stream.aclose()
-        if persist_task is not None and not persist_task.done():
-            with contextlib.suppress(asyncio.CancelledError):
-                await asyncio.shield(persist_task)
-
-
-def run_turn(
-    context: TurnContext, *, tool: str | None, user: CurrentUser
-) -> AsyncIterator[AIChunk]:
-    """Dispatch a turn to its runner. Plain text by default; a tool turn when
-    the request asked for one. Returns the async iterator (not awaited) so the
-    API layer wraps it straight into the SSE response."""
-    if tool == "course_planning":
-        return stream_course_planning_turn(context, user)
-    return stream_turn(context)
-
-
-async def stream_course_planning_turn(
-    context: TurnContext, user: CurrentUser
-) -> AsyncIterator[AIChunk]:
-    """Course-planning tool turn: create the course up front, stream a short AI
-    intro, then attach the card with one `tool` chunk.
-
-    Ordering matters for two reasons:
-    - The course shell is created BEFORE the intro streams, so the turn has a
-      course id from the first token. Closing the tab mid-intro still persists
-      the turn (same "first token persists" guarantee as a plain chat turn).
-    - The questionnaire is generated on a protected background task, NOT inline,
-      so `done` fires right after the intro: the card appears immediately (with
-      a skeleton) instead of after the slow questionnaire LLM call.
-
-    A NEW conversation isn't in the DB yet, so the course links via the message
-    tool_json reference rather than course.conversation_id (which would violate
-    the FK pre-persist).
-    """
-    intro_parts: list[str] = []
-    reasoning_parts: list[str] = []
-    reasoning_text: str | None = None
-    raw_parts: dict[str, Any] | None = None
-    persist_task: asyncio.Task[Any] | None = None
-
-    plan_conversation_id = (
-        None if context.new_conversation_title else context.conversation_id
-    )
-    async with AsyncSessionLocal() as db:
-        course = await course_planning_service.create_course_shell(
-            db,
-            user,
-            topic=context.user_content,
-            conversation_id=plan_conversation_id,
-        )
-    course_id = course.id
-    # Generate the questionnaire off the critical path: it fills the course
-    # afterwards (the card polls for it) and survives a client disconnect.
-    aio.spawn_protected(
-        course_planning_service.generate_and_store_questionnaire(
-            course_id, topic=context.user_content
-        )
-    )
-    # 搜索前置: kick off the request-level broad search CONCURRENTLY with the
-    # questionnaire (Celery). It caches course_search_candidates and flips
-    # course.search_status; organize (after answers) gates on that. Lazy import:
-    # tasks import services.
-    from tasks.course_search import search_course
-
-    search_course.delay(str(course_id), context.user_content)
-
-    def ensure_persist_scheduled() -> None:
-        nonlocal persist_task
-        intro_text = "".join(intro_parts)
-        assistant_reasoning_text = reasoning_text or "".join(reasoning_parts) or None
-        # course_id always exists here (created above); persist once the intro
-        # has produced output, mirroring the plain chat turn.
-        if persist_task is None and intro_text:
-            persist_task = aio.spawn_protected(
-                conversation_service.persist_turn(
-                    conversation_id=context.conversation_id,
-                    user_id=context.user_id,
-                    new_conversation_title=context.new_conversation_title,
-                    new_conversation_project_id=context.new_conversation_project_id,
-                    user_content=context.user_content,
-                    user_sent_at=context.user_sent_at,
-                    assistant_content=intro_text,
-                    assistant_reasoning_text=assistant_reasoning_text,
-                    raw_parts=raw_parts,
-                    tool_ref={
-                        "type": "course_planning",
-                        "courseId": str(course_id),
-                    },
-                )
-            )
-
-    intro_stream = ai_client.stream_chat(
-        AIUseCase.COURSE_PLAN_INTRO,
-        [*context.history, ChatMessage(role="user", content=context.user_content)],
-        user_id=str(context.user_id),
-        conversation_id=str(context.conversation_id),
-    )
-    try:
-        async for chunk in intro_stream:
-            if chunk.kind == "delta":
-                if chunk.text:
-                    intro_parts.append(chunk.text)
-                yield chunk
-            elif chunk.kind == "reasoning":
-                if chunk.reasoning_text:
-                    reasoning_parts.append(chunk.reasoning_text)
-                yield chunk
-            elif chunk.kind == "usage":
-                yield chunk
-            elif chunk.kind == "done":
-                # Capture for history rebuild; do NOT forward — the TURN isn't
-                # done until the card is attached below.
-                raw_parts = chunk.raw_parts
-                reasoning_text = chunk.reasoning_text
-            elif chunk.kind == "error":
-                # Intro failed before producing output: surface and stop. The
-                # orphan course shell is swept later; nothing is persisted.
-                yield chunk
-                return
-
-        # Intro streamed OK -> attach the card and finish the turn.
-        yield AIChunk(
-            kind="tool",
-            tool={"type": "course_planning", "courseId": str(course_id)},
-        )
-        ensure_persist_scheduled()
-        yield AIChunk(kind="done")
-    finally:
-        ensure_persist_scheduled()
-        with contextlib.suppress(Exception):
-            await intro_stream.aclose()
         if persist_task is not None and not persist_task.done():
             with contextlib.suppress(asyncio.CancelledError):
                 await asyncio.shield(persist_task)

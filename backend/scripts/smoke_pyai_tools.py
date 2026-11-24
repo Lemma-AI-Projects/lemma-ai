@@ -109,12 +109,12 @@ async def _run_facade() -> bool:
     from collections.abc import AsyncIterator
 
     from ai.client import ai_client
-    from ai.tools.types import ToolBinding, ToolCall, ToolProgress, ToolResult, ToolSpec
+    from ai.tools.types import ToolBinding, ToolCall, ToolResult, ToolSpec
     from ai.types import ChatMessage
 
     calls: list[dict[str, Any]] = []
 
-    async def handler(call: ToolCall) -> AsyncIterator[ToolProgress | ToolResult]:
+    async def handler(call: ToolCall) -> AsyncIterator[ToolResult]:
         calls.append(call.args)
         yield ToolResult(
             response={"status": "recorded"},

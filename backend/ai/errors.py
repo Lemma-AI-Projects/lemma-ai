@@ -9,7 +9,6 @@ in `raw` for logs and must never be sent to the frontend.
 from typing import Any
 
 import httpx
-from google.genai import errors as genai_errors
 from pydantic_ai.exceptions import (
     FallbackExceptionGroup,
     ModelAPIError,
@@ -66,7 +65,7 @@ def is_retryable_error_code(code: str | None) -> bool:
 
 
 def _status_to_error(status: int | None, exc: Exception) -> AIError:
-    """Shared HTTP-status normalization (pydantic-ai + google-genai channels).
+    """Shared HTTP-status normalization.
 
     429 -> rate limited; 408/5xx -> timeout-class (transient: gateway/upstream
     hiccups, worth a retry); other 4xx -> terminal provider verdict.
@@ -91,10 +90,6 @@ def map_framework_error(exc: Exception) -> AIError:
 
     if isinstance(exc, (UsageLimitExceeded, UnexpectedModelBehavior)):
         return AIProviderError(str(exc), raw=exc)
-
-    # google-genai exceptions from the native video channel (终稿 6.1 同表归一化).
-    if isinstance(exc, genai_errors.APIError):
-        return _status_to_error(getattr(exc, "code", None), exc)
 
     if isinstance(exc, TimeoutError):
         return AITimeoutError("AI request timed out", raw=exc)

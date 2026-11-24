@@ -4,7 +4,7 @@ and never follow the framework — the frontend codes against this contract:
     event: delta   data: {"text": "..."}
     event: reasoning data: {"text": "..."}
     event: usage   data: {"inputTokens": n, "outputTokens": n, "totalTokens": n}
-    event: tool    data: {"type": "course_planning", "courseId": "<uuid>"}
+    event: tool    data: {"type": "desmos_graph", "graphId": "<uuid>"}
     event: done    data: {}
     event: error   data: {"code": "<business code>", "message": "..."}
 
@@ -48,12 +48,6 @@ def tool_event(payload: dict[str, Any]) -> str:
     return _encode("tool", payload)
 
 
-def preparing_event() -> str:
-    # A tool is preparing a long-running resource (e.g. uploading the point's
-    # video to Gemini) before the answer can continue; the client shows a wait.
-    return _encode("preparing", {})
-
-
 def done_event() -> str:
     return _encode("done", {})
 
@@ -78,8 +72,6 @@ def encode_chunk(chunk: AIChunk) -> str:
         return usage_event(chunk.usage or TokenUsage())
     if chunk.kind == "tool":
         return tool_event(chunk.tool or {})
-    if chunk.kind == "preparing":
-        return preparing_event()
     if chunk.kind == "done":
         return done_event()
     return error_event(chunk.error_code or "ai_error", chunk.error_message or "")

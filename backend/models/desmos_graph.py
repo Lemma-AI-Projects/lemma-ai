@@ -29,10 +29,10 @@ class DesmosGraph(Base):
 
     conversation_id is NULLABLE: on a NEW conversation's first turn the
     conversation row doesn't exist yet (persist_turn writes it after the first
-    token — course_planning precedent), so the graph is created unlinked and
-    the message tool_json remains the authoritative link. Deleting a
-    conversation CASCADE-deletes its linked graphs; first-turn orphans are
-    accepted as negligible and swept by cleanup jobs alongside stale drafts.
+    token), so the graph is created unlinked and the message tool_json
+    remains the authoritative link. Deleting a conversation CASCADE-deletes
+    its linked graphs; first-turn orphans are accepted as negligible and left
+    for a cleanup job.
     """
 
     __tablename__ = "desmos_graphs"

@@ -3,9 +3,9 @@
 Public surface: the AIClient facade, the boundary types, and the runtime
 init/shutdown pair for the FastAPI lifespan. Everything else is internal.
 
-Import discipline (终稿 2.2): `pydantic_ai` / `openai` / `google.genai` are
-imported only inside this package; services/, schemas/ and models/ see the
-boundary types below and nothing framework-shaped.
+Import discipline (终稿 2.2): `pydantic_ai` / `openai` are imported only
+inside this package; services/, schemas/ and models/ see the boundary types
+below and nothing framework-shaped.
 """
 
 from ai.client import AIClient, ai_client
@@ -19,21 +19,16 @@ from ai.errors import (
     AITimeoutError,
     UnsupportedCapabilityError,
 )
-from ai.media.inputs import from_provider_file, from_url
-from ai.media.provider_files import delete_video, upload_video
 from ai.model_factory import init_http_client, shutdown_http_client
-from ai.native.gemini_video import close_shared_client
 from ai.skills import validate_skills
 from ai.streaming import encode_chunk
 from ai.tools import (
-    LOAD_POINT_VIDEO,
     LOAD_SKILL,
     READ_CURRENT_GRAPH,
     RENDER_DESMOS_3D_GRAPH,
     RENDER_DESMOS_GRAPH,
     ToolBinding,
     ToolCall,
-    ToolProgress,
     ToolResult,
     ToolSpec,
     tool_spec,
@@ -46,8 +41,6 @@ from ai.types import (
     ChatMessage,
     ModelRoute,
     TokenUsage,
-    VideoInput,
-    VideoInputKind,
 )
 
 
@@ -60,13 +53,11 @@ def init_ai_runtime() -> None:
 
 
 async def shutdown_ai_runtime() -> None:
-    """Close the shared HTTP clients (lifespan shutdown)."""
+    """Close the shared HTTP client (lifespan shutdown)."""
     await shutdown_http_client()
-    await close_shared_client()
 
 
 __all__ = [
-    "LOAD_POINT_VIDEO",
     "LOAD_SKILL",
     "READ_CURRENT_GRAPH",
     "RENDER_DESMOS_3D_GRAPH",
@@ -86,20 +77,13 @@ __all__ = [
     "ModelRoute",
     "ToolBinding",
     "ToolCall",
-    "ToolProgress",
     "ToolResult",
     "ToolSpec",
     "TokenUsage",
     "UnsupportedCapabilityError",
-    "VideoInput",
-    "VideoInputKind",
     "ai_client",
-    "delete_video",
     "encode_chunk",
-    "from_provider_file",
-    "from_url",
     "init_ai_runtime",
     "shutdown_ai_runtime",
     "tool_spec",
-    "upload_video",
 ]

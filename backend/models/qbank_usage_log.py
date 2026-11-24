@@ -11,8 +11,8 @@ from core.database import Base
 class QbankUsageLog(Base):
     """Append-only ledger: one row per XKW (学科网) call attempt.
 
-    Kept apart from provider_usage_logs (拍板 D2): XKW bills per call, not per
-    actor run, and the daily quota is aggregated from this table. Failures are
+    A ledger of its own (拍板 D2): XKW bills per call, and the daily quota is
+    aggregated from this table. Failures are
     rows too; `billable` is False for 900161214 (success but empty) and for
     fixture-provider calls. No FKs (same policy as the other ledgers): rows must
     outlive users and question sets.

@@ -11,12 +11,12 @@ protocol is owned by ai/streaming.py; for reference the events are:
     event: delta   data: {"text": "..."}
     event: reasoning data: {"text": "..."}
     event: usage   data: {"inputTokens": n, "outputTokens": n, "totalTokens": n}
-    event: tool    data: {"type": "course_planning", "courseId": "<uuid>"}
+    event: tool    data: {"type": "desmos_graph", "graphId": "<uuid>"}
     event: done    data: {}
     event: error   data: {"code": "<business code>", "message": "..."}
 
-A `tool` event is emitted only for tool turns (request `tool` field set): the
-intro deltas stream first, then one `tool` event attaches the card.
+A `tool` event is emitted when a plugin tool the model called attaches a card
+to the turn.
 """
 
 import uuid
@@ -44,11 +44,6 @@ class ChatRequest(BaseModel):
     # born inside this project. Ignored when conversationId is present
     # (moving an existing conversation goes through PATCH /conversations).
     project_id: uuid.UUID | None = None
-    # Deterministic, client-triggered tool for THIS turn (the input-menu
-    # toggle). None -> a plain text turn. "course_planning" -> the turn streams
-    # a short intro then attaches a course-planning card. Adding a tool here is
-    # how new conversation tools (quiz/flashcards) are dispatched later.
-    tool: Literal["course_planning"] | None = None
     messages: list[ChatMessageIn] = Field(min_length=1, max_length=1)
 
     @field_validator("messages")

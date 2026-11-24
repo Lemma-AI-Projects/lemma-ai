@@ -5,9 +5,8 @@ run, so "change model = edit config" stays true. The system prompt arrives via
 LemmaDeps + dynamic instructions (rendered by prompts/registry in client.py),
 keeping prompt ownership out of the framework.
 
-Two families: text/video agents output str (chat/ask_video); the course agents
-bind a pydantic output_type for structured generation (client.generate). The
-output types live in ai/coursegen/types.py (types-only import, no cycle).
+Two families: text agents output str (chat); structured agents bind a
+pydantic output_type for structured generation (client.generate).
 """
 
 from dataclasses import dataclass
@@ -15,7 +14,6 @@ from typing import Any
 
 from pydantic_ai import Agent, RunContext
 
-from ai.coursegen.types import ComposedCourse, Questionnaire, SearchQueries
 from ai.errors import UnsupportedCapabilityError
 from ai.types import AIUseCase
 
@@ -24,7 +22,6 @@ from ai.types import AIUseCase
 class LemmaDeps:
     system_prompt: str
     user_id: str | None = None
-    course_id: str | None = None
     # Phase 3: profile lookups / db handles land here.
 
 
@@ -47,37 +44,12 @@ def _build_structured_agent(output_type: type[Any]) -> Agent[LemmaDeps, Any]:
 
 
 text_chat_agent = _build_agent()
-# The course-planning intro is a plain streaming-text turn (own prompt only).
-course_plan_intro_agent = _build_agent()
-# Video agents serve the framework engine path (AI_VIDEO_ENGINE=pydantic_ai);
-# the native engine takes the system prompt directly, without an Agent.
-video_qa_agent = _build_agent()
-video_summary_agent = _build_agent()
-video_locate_agent = _build_agent()
-# AI 伴学: grounded video Q&A. The native engine streams it (gemini_video); this
-# framework agent only serves the pydantic_ai engine path, like the other video
-# agents.
-course_companion_agent = _build_agent()
 
 _AGENTS: dict[AIUseCase, Agent[LemmaDeps, str]] = {
     AIUseCase.TEXT_CHAT: text_chat_agent,
-    AIUseCase.COURSE_PLAN_INTRO: course_plan_intro_agent,
-    AIUseCase.VIDEO_QA: video_qa_agent,
-    AIUseCase.VIDEO_SUMMARY: video_summary_agent,
-    AIUseCase.VIDEO_LOCATE: video_locate_agent,
-    AIUseCase.COURSE_COMPANION: course_companion_agent,
 }
 
-course_intake_agent = _build_structured_agent(Questionnaire)
-# 搜索前置: broad query expansion + compose (select & organize the pool).
-topic_search_agent = _build_structured_agent(SearchQueries)
-course_compose_agent = _build_structured_agent(ComposedCourse)
-
-_STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {
-    AIUseCase.COURSE_INTAKE: course_intake_agent,
-    AIUseCase.TOPIC_SEARCH: topic_search_agent,
-    AIUseCase.COURSE_COMPOSE: course_compose_agent,
-}
+_STRUCTURED_AGENTS: dict[AIUseCase, Agent[LemmaDeps, Any]] = {}
 
 
 def agent_for(use_case: AIUseCase) -> Agent[LemmaDeps, str]:

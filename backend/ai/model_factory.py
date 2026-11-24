@@ -11,15 +11,12 @@ from typing import Any
 import httpx
 from openai import AsyncOpenAI
 from pydantic_ai.models import Model
-from pydantic_ai.models.google import GoogleModel, GoogleModelSettings
 from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings
-from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 
 from ai.errors import AIConfigError
-from ai.native import gemini_video
 from ai.types import ModelRoute
 from core.config import settings
 
@@ -75,11 +72,6 @@ def build_model(route: ModelRoute) -> Model:
         model = _build_aihubmix_openai(route)
     elif channel == ("openrouter", "openrouter"):
         model = _build_openrouter(route)
-    elif channel == ("aihubmix", "gemini_video"):
-        # Framework video channel — only reached when AI_VIDEO_ENGINE=
-        # pydantic_ai (终稿 8.2); the default native engine bypasses the
-        # factory entirely (client.ask_video -> native/gemini_video.py).
-        model = _build_gemini_framework(route)
     else:
         raise AIConfigError(
             f"no factory branch for {route.platform}/{route.adapter}"
@@ -136,18 +128,6 @@ def _build_openrouter(route: ModelRoute) -> Model:
     )
 
 
-def _build_gemini_framework(route: ModelRoute) -> Model:
-    # Reuses the native channel's client builder so base_url/retry discipline
-    # stays in one place; the genai SDK manages its own connection pool.
-    return GoogleModel(
-        route.model,
-        provider=GoogleProvider(client=gemini_video.build_client()),
-        settings=GoogleModelSettings(
-            **_google_settings_kwargs(route),
-        ),
-    )
-
-
 def _apply_common_thinking_settings(
     settings_kwargs: dict[str, Any], route: ModelRoute
 ) -> None:
@@ -182,15 +162,3 @@ def _apply_openrouter_thinking_settings(
         settings["openrouter_reasoning"] = route.extra["openrouter_reasoning"]
     elif "reasoning" in route.extra:
         settings["openrouter_reasoning"] = route.extra["reasoning"]
-
-
-def _google_settings_kwargs(route: ModelRoute) -> dict[str, Any]:
-    settings_kwargs: dict[str, Any] = {"timeout": route.timeout_s}
-    _apply_common_thinking_settings(settings_kwargs, route)
-    if "google_thinking_config" in route.extra:
-        settings_kwargs["google_thinking_config"] = route.extra[
-            "google_thinking_config"
-        ]
-    elif "thinking_config" in route.extra:
-        settings_kwargs["google_thinking_config"] = route.extra["thinking_config"]
-    return settings_kwargs

@@ -50,7 +50,7 @@ class ConversationMessageOut(BaseModel):
     # visible answer remains the content_text source of truth.
     reasoning_text: str | None = None
     # Optional tool card attached to this turn (wire-shaped, e.g.
-    # {"type": "course_planning", "courseId": "..."}); lets reload re-render the
+    # {"type": "desmos_graph", "graphId": "..."}); lets reload re-render the
     # card in place. Sourced from the ai_messages.tool_json column.
     tool: dict[str, Any] | None = Field(default=None, validation_alias="tool_json")
     created_at: datetime

@@ -7,8 +7,8 @@ same objects):
   ``upload_file`` with a ``TransferConfig`` does automatic multipart — the only
   reliable way to move a 0.5-1.5 GB lecture. The SDK's own ``.upload()`` is a
   single PUT (officially recommended only <=6 MB) and must NEVER carry a video.
-  Celery tasks build their OWN boto3 client (per-task discipline, mirroring
-  ai/native/gemini_video.py) — never reuse one across tasks/loops.
+  Celery tasks build their OWN boto3 client (per-task discipline) — never
+  reuse one across tasks/loops.
 - SIGN (download / playback) goes through the supabase SDK ``create_signed_url``:
   the native, CDN-backed path a browser can range/seek and CORS against. The SDK
   is synchronous, so the API request path wraps it in ``anyio.to_thread`` (same
@@ -59,7 +59,7 @@ _UPLOAD_TRANSFER_CONFIG = TransferConfig(
 _DOWNLOAD_TRANSFER_CONFIG = TransferConfig(
     multipart_threshold=8 * 1024 * 1024,
     multipart_chunksize=8 * 1024 * 1024,
-    max_concurrency=max(1, settings.video_download_concurrency),
+    max_concurrency=max(1, settings.storage_download_concurrency),
     use_threads=True,
 )
 
@@ -100,10 +100,8 @@ def upload_file(client: Any, *, local_path: str, key: str, content_type: str) ->
 def download_file(client: Any, *, key: str, local_path: str) -> None:
     """Download a private-bucket object to a local path (multipart, parallel).
 
-    The inverse of upload_file — used by the companion ingest task to pull a
-    point's re-hosted video body out of Storage before handing it to the Gemini
-    Files API. Celery builds its OWN client (build_s3_client), per-task, never
-    reusing one across loops.
+    The inverse of upload_file. Celery builds its OWN client
+    (build_s3_client), per-task, never reusing one across loops.
     """
     client.download_file(
         settings.supabase_storage_bucket,

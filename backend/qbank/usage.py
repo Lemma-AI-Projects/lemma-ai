@@ -1,4 +1,4 @@
-"""XKW call ledger (mirrors ai/search/usage.py).
+"""XKW call ledger (mirrors ai/usage.py).
 
 Sink: a structured JSON log line + a qbank_usage_logs row. A DB hiccup must
 never break a call, so persistence failures are logged and swallowed.

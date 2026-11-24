@@ -6,7 +6,7 @@ de-duplicates) -> store every question + parse it into a version -> keep the
 fully machine-gradable objective ones -> pin `count` of them (3.. count-1
 still makes a set; fewer is `empty`).
 
-Celery 纪律 (mirrors course_organize): asyncio.run wraps the async body; the
+Celery 纪律: asyncio.run wraps the async body; the
 provider is built per task and closed in finally; the module engine is
 disposed so the next task starts clean. XKW verdicts (auth / forbidden / bad
 request) are terminal -> `failed`; infra blips retry a bounded number of times,

@@ -1,9 +1,8 @@
 """Global conversation plugin tools (Desmos 2D/3D 四件套; future plugins land here).
 
-Builds the per-turn ToolBindings shared by BOTH channels — chat_service
-(pydantic-ai framework loop) and companion_service (native gemini loop). The
-tool TRUTH is single: specs from ai/tools/declarations, handlers here,
-validation in schemas/desmos.py; each channel only adapts dispatch.
+Builds the per-turn ToolBindings that chat_service binds to the pydantic-ai
+framework loop. The tool TRUTH is single: specs from ai/tools/declarations,
+handlers here, validation in schemas/desmos.py.
 
 The two Desmos render tools (2D / 3D) share ONE handler pipeline via
 `_make_render_handler(config)` — gate, auto-teach, one-card rule, zero-trust
@@ -41,7 +40,6 @@ from ai import (
     RENDER_DESMOS_GRAPH,
     ToolBinding,
     ToolCall,
-    ToolProgress,
     ToolResult,
     tool_spec,
 )
@@ -109,13 +107,13 @@ def build_global_tools(
 
     conversation_id is None only when the conversation row may not exist yet
     (new conversation's first turn) — graphs are then created unlinked and the
-    message tool_json carries the link (course_planning precedent).
+    message tool_json carries the link.
     """
     ctx = TurnToolContext()
 
     async def load_skill_handler(
         call: ToolCall,
-    ) -> AsyncIterator[ToolProgress | ToolResult]:
+    ) -> AsyncIterator[ToolResult]:
         name = str(call.args.get("skill", ""))
         if name not in skill_names():
             yield ToolResult(
@@ -128,7 +126,7 @@ def build_global_tools(
     def make_render_handler(config: RenderConfig):
         async def render_handler(
             call: ToolCall,
-        ) -> AsyncIterator[ToolProgress | ToolResult]:
+        ) -> AsyncIterator[ToolResult]:
             if config.skill_name not in ctx.loaded_skills:
                 # 门禁 + 自动补课：不是干拒（真跑观察到模型被拒后会放弃并让
                 # 用户"稍等"），而是把本工具的规范全文直接递回去，让下一轮就
@@ -189,7 +187,7 @@ def build_global_tools(
 
     async def read_handler(
         call: ToolCall,
-    ) -> AsyncIterator[ToolProgress | ToolResult]:
+    ) -> AsyncIterator[ToolResult]:
         graph_id = ctx.last_graph_id
         if graph_id is None and conversation_id is not None:
             async with AsyncSessionLocal() as db:

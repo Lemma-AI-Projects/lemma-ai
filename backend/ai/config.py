@@ -18,13 +18,11 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Channels proven by scripts/validate_ai_channels.py.
-# probes 1-2 passed 2026-06-10 (text); probes 3-6 passed 2026-06-10 (video,
-# native + framework engines both green — merge verdict: framework optional).
+# Channels proven by scripts/validate_ai_channels.py (probes 1-2 passed
+# 2026-06-10).
 _TESTED_CHANNELS = {
     ("aihubmix", "openai_compatible"),
     ("openrouter", "openrouter"),
-    ("aihubmix", "gemini_video"),
 }
 # Known but not yet probed. Allowed in the table with a startup warning until
 # the probe verdict moves them up (终稿 5.1 配置纪律).
@@ -77,7 +75,7 @@ def validate_routes() -> None:
             if channel in _UNTESTED_CHANNELS:
                 logger.warning(
                     "route %s -> %s/%s is an untested channel "
-                    "(probes 3-6 pending verdict)",
+                    "(probe verdict pending)",
                     use_case,
                     route.platform,
                     route.adapter,

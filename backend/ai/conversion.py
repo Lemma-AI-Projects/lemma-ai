@@ -6,7 +6,6 @@ Stateless thin functions; nothing here talks to the network or the database.
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from google.genai import types as genai_types
 from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
@@ -17,15 +16,14 @@ from pydantic_ai.messages import (
     TextPart,
     TextPartDelta,
     UserPromptPart,
-    VideoUrl,
 )
 from pydantic_ai.tools import Tool as PydanticTool
 from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import RunUsage
 
 from ai.errors import UnsupportedCapabilityError
-from ai.tools.types import ToolBinding, ToolCall, ToolResult, ToolSpec
-from ai.types import ChatMessage, TokenUsage, VideoInput
+from ai.tools.types import ToolBinding, ToolCall, ToolResult
+from ai.types import ChatMessage, TokenUsage
 
 
 def split_history_and_prompt(
@@ -201,81 +199,17 @@ def response_cost_usd(messages: list[ModelMessage]) -> Decimal | None:
     return None
 
 
-def to_video_part(video: VideoInput, engine: str) -> Any:
-    """Provider file reference -> the video part each engine understands.
-
-    Callers run media/resolver.ensure_ready() first, so only PROVIDER_FILE_ID
-    with a valid URI reaches this point (最新决策 2: Files API only).
-    """
-    mime_type = video.mime_type or "video/mp4"
-    if engine == "pydantic_ai":
-        return VideoUrl(url=video.url or "", media_type=mime_type)
-    return genai_types.Part.from_uri(file_uri=video.url or "", mime_type=mime_type)
-
-
-# --- function calling (决策⑩-a): the ONLY place that touches genai tool types ---
-
-
-def to_genai_tool(specs: list[ToolSpec]) -> genai_types.Tool:
-    """Boundary ToolSpecs -> one genai Tool with their function declarations."""
-    return genai_types.Tool(
-        function_declarations=[
-            genai_types.FunctionDeclaration(
-                name=spec.name,
-                description=spec.description,
-                parameters=spec.parameters or None,
-            )
-            for spec in specs
-        ]
-    )
-
-
-def function_calls_from_parts(parts: Any) -> list[ToolCall]:
-    """Extract boundary ToolCalls from a streamed chunk's content parts."""
-    calls: list[ToolCall] = []
-    for part in parts or []:
-        function_call = getattr(part, "function_call", None)
-        if function_call is not None and getattr(function_call, "name", None):
-            calls.append(
-                ToolCall(name=function_call.name, args=dict(function_call.args or {}))
-            )
-    return calls
-
-
-def to_function_call_part(call: ToolCall) -> genai_types.Part:
-    """Rebuild the model's function_call as a Part (to replay its turn)."""
-    return genai_types.Part.from_function_call(name=call.name, args=call.args)
-
-
-def to_function_response_part(name: str, response: dict[str, Any]) -> genai_types.Part:
-    """A tool's JSON result -> the function_response Part fed back to the model."""
-    return genai_types.Part.from_function_response(name=name, response=response)
-
-
-def to_media_part(video: VideoInput) -> genai_types.Part:
-    """A media tool's VideoInput -> a native media Part (user-turn injection)."""
-    return to_video_part(video, "native")
-
-
 def to_pydantic_toolset(
     bindings: list[ToolBinding], card_sink: list[dict[str, Any]]
 ) -> FunctionToolset:
-    """ToolBindings -> a per-run FunctionToolset (pydantic-ai channel dispatch,
-    the counterpart of the native loop's name->handler dispatch).
+    """ToolBindings -> a per-run FunctionToolset (pydantic-ai channel dispatch).
 
     Each wrapped function drains its handler and returns `response` to the
     framework (which feeds it back to the model); a `card` payload is pushed
     into `card_sink` for the client to relay as AIChunk(kind="tool").
 
-    Text-channel constraints (documented in the plan):
-    - ToolProgress is ignored — this channel has no mid-tool progress stream;
-      long-running tools with `preparing` semantics belong on the native loop.
-    - `media` results are unsupported here (the video tool stays native); a
-      media payload is dropped rather than crashing the turn.
-
     Tool.from_schema skips framework-side argument validation — args reach the
-    handler as-is, which is exactly the contract our handlers already have on
-    the native loop (Pydantic in the service is the verdict).
+    handler as-is (Pydantic in the service is the verdict).
     """
     return FunctionToolset(
         tools=[_binding_to_pydantic_tool(binding, card_sink) for binding in bindings]
@@ -330,31 +264,3 @@ def deltas_from_stream_event(event: Any) -> tuple[str, str]:
         if isinstance(delta, ThinkingPartDelta) and isinstance(content, str):
             return "", content
     return "", ""
-
-
-def gemini_usage_to_token_usage(
-    metadata: genai_types.GenerateContentResponseUsageMetadata | None,
-) -> TokenUsage:
-    """usage_metadata (native video channel) -> boundary TokenUsage.
-
-    Gemini bills thinking tokens as output, but reports them separately from
-    candidates_token_count — fold them into output_tokens and keep the
-    breakdown in raw so input + output stays ≈ total.
-    """
-    if metadata is None:
-        return TokenUsage()
-    raw: dict[str, Any] = {}
-    if metadata.thoughts_token_count:
-        raw["thoughts_token_count"] = metadata.thoughts_token_count
-    if metadata.cached_content_token_count:
-        raw["cached_content_token_count"] = metadata.cached_content_token_count
-    output_tokens = (metadata.candidates_token_count or 0) + (
-        metadata.thoughts_token_count or 0
-    )
-    return TokenUsage(
-        input_tokens=metadata.prompt_token_count,
-        output_tokens=output_tokens or None,
-        total_tokens=metadata.total_token_count,
-        reasoning_tokens=metadata.thoughts_token_count or None,
-        raw=raw,
-    )
