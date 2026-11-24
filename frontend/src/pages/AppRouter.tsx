@@ -8,7 +8,6 @@ import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CourseDashboardPage } from '@/pages/CourseDashboardPage'
-import { CoursePointPage } from '@/pages/CoursePointPage'
 import { CourseQuizSandboxPage } from '@/pages/CourseQuizSandboxPage'
 import { HomePage } from '@/pages/HomePage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
@@ -47,20 +46,6 @@ const routes: RouteObject[] = [
             element: <SchedulePage />,
           },
           {
-            // 课程中心 -> 课程仪表盘 -> 学习点，与后端
-            // /api/v1/courses/{id}/points/{pointId} 同构。
-            path: 'courses',
-            element: <CourseCenterPage />,
-          },
-          {
-            path: 'courses/:courseId',
-            element: <CourseDashboardPage />,
-          },
-          {
-            path: 'courses/:courseId/points/:pointId',
-            element: <CoursePointPage />,
-          },
-          {
             path: 'knowledge',
             element: <KnowledgeBasePage />,
           },
@@ -90,6 +75,15 @@ const routes: RouteObject[] = [
           {
             path: 'sandbox/composer',
             element: <ComposerSandboxPage />,
+          },
+          {
+            // 课程中心 -> 课程仪表盘的样式预览，mock 驱动，尚无后端契约。
+            path: 'sandbox/courses',
+            element: <CourseCenterPage />,
+          },
+          {
+            path: 'sandbox/courses/:courseId',
+            element: <CourseDashboardPage />,
           },
           {
             path: 'project/:id',

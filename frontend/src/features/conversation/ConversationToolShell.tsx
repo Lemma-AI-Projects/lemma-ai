@@ -9,9 +9,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
-import type { QuestionnaireAnswers } from '@/features/coursePlanner/courseApi'
-import type { CourseSearchProgress } from '@/features/coursePlanner/streamCourseOrganize'
-import { ConversationToolSearching } from './ConversationToolSearching'
+import {
+  ConversationToolSearching,
+  type CourseSearchProgress,
+} from './ConversationToolSearching'
 import {
   ConversationOutlineSkeleton,
   ConversationQuestionnaireSkeleton,
@@ -23,9 +24,8 @@ import type {
   ConversationToolStage,
 } from './types'
 
-// Re-exported so existing importers keep a single import site; the type itself
-// is owned by the course domain (coursePlanner/courseApi).
-export type { QuestionnaireAnswers }
+// Selected option per question id (null = unanswered).
+export type QuestionnaireAnswers = Record<string, string | null>
 
 export type ConversationToolSize = 'default' | 'full'
 
@@ -205,7 +205,7 @@ function OutlineTree({
   renderIcon: (status: ProgressStatus | undefined) => ReactNode
 }) {
   if (modules.length === 0) {
-    // The tree arrives with the materializing snapshot, so this only flashes.
+    // Shown until the outline has modules.
     return <ConversationOutlineSkeleton />
   }
 
@@ -276,8 +276,8 @@ export function ConversationToolShell({
   // The build finished but produced no usable course (every point failed);
   // only meaningful when stage === 'ready'.
   failed?: boolean
-  // The searching window (决策②/⑤): real search hits + live compose
-  // reasoning. Only meaningful when stage === 'searching'.
+  // Search results + live compose reasoning for the searching stage. Only
+  // meaningful when stage === 'searching'.
   search?: CourseSearchProgress | null
   reasoningText?: string
   errorMessage?: string | null
@@ -397,7 +397,7 @@ export function ConversationToolShell({
             </span>
           </h3>
 
-          {/* 部分交付：课程整体 ready，但个别行的视频没做出来——照实标红，
+          {/* 部分交付：课程整体就绪但个别行生成失败时照实标红，
               否则用户只能点进去才发现那一节打不开。 */}
           <OutlineTree
             modules={modules}

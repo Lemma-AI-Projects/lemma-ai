@@ -1,5 +1,10 @@
 import { cn } from '@/lib/utils'
-import type { CourseCompanionConversation } from './courseCompanionApi'
+
+interface CourseCompanionConversation {
+  id: string
+  title: string | null
+  updatedAt: string
+}
 
 export function CourseConversationPills({
   activeConversationId,
@@ -11,7 +16,7 @@ export function CourseConversationPills({
 }: {
   activeConversationId?: string
   conversations: CourseCompanionConversation[]
-  /** 还没有会话时胶囊上的文字。学习点页用「新对话」。 */
+  /** 还没有会话时胶囊上的文字，默认「新对话」。 */
   emptyLabel?: string
   isError?: boolean
   isLoading?: boolean

@@ -44,9 +44,9 @@ export function ConversationOutlineSkeleton() {
 }
 
 /**
- * Full-card skeleton for the brief window before the first course snapshot
- * lands (stage unknown). Mirrors the shell frame plus a heading and the
- * questionnaire body skeleton (the common first stage).
+ * Full-card skeleton for the brief window before the card's stage is known.
+ * Mirrors the shell frame plus a heading and the questionnaire body skeleton
+ * (the common first stage).
  */
 export function ConversationToolCardSkeleton() {
   return (

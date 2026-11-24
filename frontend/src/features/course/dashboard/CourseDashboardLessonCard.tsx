@@ -1,5 +1,4 @@
 import { CircleCheckBig, Play, RotateCcw } from 'lucide-react'
-import { Link } from 'react-router-dom'
 
 import { BacklogStatusIcon } from '@/components/BacklogStatusIcon'
 import { Button } from '@/components/ui/button'
@@ -7,10 +6,10 @@ import type { DashboardLesson, DashboardPoint } from './types'
 
 function CoursePointRow({
   point,
-  href,
+  onStart,
 }: {
   point: DashboardPoint
-  href: string
+  onStart?: () => void
 }) {
   const Icon = point.completed ? RotateCcw : Play
 
@@ -30,26 +29,25 @@ function CoursePointRow({
       </div>
       {/* 「练习」入口要等测验能力落地才出现，这里只给「学习」。 */}
       <Button
-        asChild
+        type="button"
         variant="ghost"
         size="sm"
+        onClick={onStart}
         className="h-7 shrink-0 rounded-full border border-zinc-300 bg-transparent px-3 text-[13px] text-zinc-600 hover:border-zinc-400 hover:bg-transparent hover:text-zinc-900"
       >
-        <Link to={href}>
-          <Icon className="size-3.5" />
-          {point.completed ? '重新学习' : '学习'}
-        </Link>
+        <Icon className="size-3.5" />
+        {point.completed ? '重新学习' : '学习'}
       </Button>
     </div>
   )
 }
 
 export function CourseDashboardLessonCard({
-  courseId,
   lesson,
+  onStartPoint,
 }: {
-  courseId: string
   lesson: DashboardLesson
+  onStartPoint?: (pointId: string) => void
 }) {
   return (
     <div className="min-w-0 flex-1 rounded-2xl border border-zinc-200 p-5">
@@ -67,7 +65,7 @@ export function CourseDashboardLessonCard({
             <CoursePointRow
               key={point.id}
               point={point}
-              href={`/courses/${courseId}/points/${point.id}`}
+              onStart={onStartPoint ? () => onStartPoint(point.id) : undefined}
             />
           ))}
         </div>

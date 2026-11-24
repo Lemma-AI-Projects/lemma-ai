@@ -8,7 +8,6 @@ import type { ConversationToolRef } from './types'
 export type ConversationStreamingTurnStatus =
   | 'idle'
   | 'submitted'
-  | 'preparing'
   | 'streaming'
   | 'error'
 
@@ -25,19 +24,16 @@ export function ConversationStreamingTurn({
   tool = null,
   errorMessage,
   canRetry,
-  waitingMessage = 'Thinking...',
   onRetry,
 }: {
   status: ConversationStreamingTurnStatus
   text: string
   reasoningText: string
   /** Tool card already attached mid-stream (e.g. desmos_graph): rendered live
-   *  so the closing explanation can point at a visible graph. course_planning
-   *  keeps its existing finalize-time rendering. */
+   *  so the closing explanation can point at a visible graph. */
   tool?: ConversationToolRef | null
   errorMessage: string | null
   canRetry: boolean
-  waitingMessage?: string
   onRetry: () => void
 }) {
   if (status === 'idle') {
@@ -48,10 +44,6 @@ export function ConversationStreamingTurn({
     <section data-slot="conversation-streaming-turn" className="flex w-full flex-col gap-3 pb-6">
       {status === 'submitted' && (
         <ConversationReasoning content="" isStreaming />
-      )}
-
-      {status === 'preparing' && (
-        <p className="animate-pulse text-sm text-zinc-400">{waitingMessage}</p>
       )}
 
       {status === 'streaming' && reasoningText.length > 0 && (

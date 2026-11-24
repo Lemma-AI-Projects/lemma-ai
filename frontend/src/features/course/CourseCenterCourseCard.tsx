@@ -1,15 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Pin, Share2, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CircularProgress } from '@/components/CircularProgress'
-import { flattenPoints } from '@/features/course/courseApi'
+import type { CourseCenterCourse } from '@/features/course/courseCenterFilters'
 import { toProgressPercent } from '@/features/course/courseProgress'
 import { DeleteCourseDialog } from '@/features/course/DeleteCourseDialog'
-import { useCourseDetailQuery } from '@/hooks/useCourseDetail'
 import { cn } from '@/lib/utils'
-import type { CourseListItem } from '@/types/course'
 
 function formatChineseDate(iso: string): string {
   const date = new Date(iso)
@@ -20,21 +17,15 @@ function formatChineseDate(iso: string): string {
 export function CourseCenterCourseCard({
   course,
   className,
+  onOpen,
+  onDelete,
 }: {
-  course: CourseListItem
+  course: CourseCenterCourse
   className?: string
+  onOpen?: () => void
+  onDelete?: () => void
 }) {
-  const navigate = useNavigate()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  // 详情与仪表盘共用 query key，所以这次取数也顺带预热了「前往课堂」。
-  const detailQuery = useCourseDetailQuery(course.id)
-  const { resumePoint, hasPoints } = useMemo(() => {
-    const points = flattenPoints(detailQuery.data)
-    return {
-      resumePoint: points.find((point) => !point.completed),
-      hasPoints: points.length > 0,
-    }
-  }, [detailQuery.data])
   const progressPercent = toProgressPercent(
     course.completedPointCount,
     course.totalPointCount
@@ -57,11 +48,12 @@ export function CourseCenterCourseCard({
           继续学习
         </p>
         {/* 第一个没学完的学习点，即下次该从哪儿接着看。 */}
-        {detailQuery.isPending ? (
+        {course.resumePointTitle === undefined ? (
           <Skeleton className="mt-1 h-5 w-full" />
         ) : (
           <p className="mt-1 line-clamp-4 text-[15px] leading-[21px] font-semibold text-zinc-900">
-            {resumePoint?.title ?? (hasPoints ? '已全部学完' : '暂无学习点')}
+            {course.resumePointTitle ??
+              (course.totalPointCount > 0 ? '已全部学完' : '暂无学习点')}
           </p>
         )}
       </div>
@@ -69,7 +61,7 @@ export function CourseCenterCourseCard({
       <Button
         type="button"
         variant="ghost"
-        onClick={() => navigate(`/courses/${course.id}`)}
+        onClick={onOpen}
         className="absolute right-4 bottom-[43px] h-8 rounded-full border border-zinc-300 bg-transparent px-3 text-[13px] font-medium text-zinc-600 hover:border-zinc-400 hover:bg-transparent hover:text-zinc-900"
       >
         前往课堂
@@ -117,7 +109,7 @@ export function CourseCenterCourseCard({
             课程类型
           </p>
           <p className="mt-0.5 truncate text-[16px] leading-[22px] font-semibold text-zinc-800">
-            视频课程
+            {course.typeLabel}
           </p>
         </div>
         <div className="min-w-0">
@@ -130,7 +122,7 @@ export function CourseCenterCourseCard({
         </div>
       </div>
 
-      {/* 封面：后端 coverUrl 暂无生产者，恒为占位块。 */}
+      {/* 封面：没有 coverUrl 时渲染占位块。 */}
       {course.coverUrl ? (
         <img
           src={course.coverUrl}
@@ -175,8 +167,11 @@ export function CourseCenterCourseCard({
       <DeleteCourseDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        courseId={course.id}
         courseTitle={course.title}
+        onConfirm={() => {
+          onDelete?.()
+          setDeleteDialogOpen(false)
+        }}
       />
     </div>
   )

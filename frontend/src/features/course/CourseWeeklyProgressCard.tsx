@@ -1,15 +1,11 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  flattenPoints,
-  useCompletionsQuery,
-  useCoursesListQuery,
-} from '@/features/course/courseApi'
-import { isCourseCompleted } from '@/features/course/courseCenterFilters'
-import { useCourseDetailQuery } from '@/hooks/useCourseDetail'
+  isCourseCompleted,
+  type CourseCenterCourse,
+} from '@/features/course/courseCenterFilters'
 import { cn } from '@/lib/utils'
 
 // 一个 session = 学完一个学习点。
@@ -34,44 +30,53 @@ function addDays(date: Date, days: number): Date {
   return next
 }
 
-export function CourseWeeklyProgressCard({ className }: { className?: string }) {
-  const navigate = useNavigate()
-  const coursesQuery = useCoursesListQuery()
+export function CourseWeeklyProgressCard({
+  className,
+  courses,
+  completedAt,
+  isLoading = false,
+  isError = false,
+  onOpenCourse,
+}: {
+  className?: string
+  courses: CourseCenterCourse[]
+  /** 学习点的完成时刻（ISO），按本地时区归到本周 / 上周。 */
+  completedAt: string[]
+  isLoading?: boolean
+  isError?: boolean
+  onOpenCourse?: (courseId: string) => void
+}) {
   // 0 = 本周，-1 = 上周。卡片只提供这两周。
   const [weekOffset, setWeekOffset] = useState(0)
   const isCurrentWeek = weekOffset === 0
 
-  // 整个会话固定同一个「现在」：每次渲染 new Date() 会让 query key 一直变。
+  // 整个会话固定同一个「现在」，本周 / 上周的边界不随重渲染漂移。
   const now = useMemo(() => new Date(), [])
   const weekStart = useMemo(() => startOfWeek(now, weekOffset), [now, weekOffset])
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart])
   const todayIndex = mondayBasedIndex(now)
 
-  const completionsQuery = useCompletionsQuery(weekStart, weekEnd)
-  const completions = completionsQuery.data
+  const completions = useMemo(
+    () =>
+      completedAt.filter((iso) => {
+        const date = new Date(iso)
+        return date >= weekStart && date < weekEnd
+      }),
+    [completedAt, weekStart, weekEnd]
+  )
 
   // 窗口已经限定在这一周，所以按本地星期几归档即可（比按毫秒差取整更抗夏令时）。
   const dayCounts = useMemo(() => {
     const counts = Array.from({ length: 7 }, () => 0)
-    for (const iso of completions ?? []) {
+    for (const iso of completions) {
       counts[mondayBasedIndex(new Date(iso))] += 1
     }
     return counts
   }, [completions])
 
-  const quickStartCourse = coursesQuery.data?.find(
-    (course) => !isCourseCompleted(course)
-  )
-  // 「下一讲」= 该课程第一个没学完的学习点。详情与左侧课程卡共用 query key，
-  // 同一页面里那份数据已经在取了，这里基本直接命中缓存。
-  const quickStartDetailQuery = useCourseDetailQuery(quickStartCourse?.id)
-  const nextPoint = useMemo(
-    () =>
-      flattenPoints(quickStartDetailQuery.data).find(
-        (point) => !point.completed
-      ),
-    [quickStartDetailQuery.data]
-  )
+  const quickStartCourse = courses.find((course) => !isCourseCompleted(course))
+  // 「下一讲」= 该课程第一个没学完的学习点。
+  const nextPointTitle = quickStartCourse?.resumePointTitle
 
   return (
     <section
@@ -87,11 +92,11 @@ export function CourseWeeklyProgressCard({ className }: { className?: string }) 
             {isCurrentWeek ? '本周' : '上周'}
           </p>
           {/* 占位块按 h2 的盒高（mt-1 + leading-6）取值，避免加载前后内容跳动。 */}
-          {completionsQuery.isPending ? (
+          {isLoading ? (
             <Skeleton className="mt-1 h-6 w-32" />
           ) : (
             <h2 className="mt-1 text-[20px] leading-6 font-semibold tracking-[-0.02em]">
-              已学 {completions?.length ?? 0} 个 session
+              已学 {completions.length} 个 session
             </h2>
           )}
         </div>
@@ -158,30 +163,30 @@ export function CourseWeeklyProgressCard({ className }: { className?: string }) 
         </p>
 
         <div className="mt-2">
-          {coursesQuery.isPending ? (
+          {isLoading ? (
             <div className="rounded-[14px] border border-zinc-200 p-3">
               <Skeleton className="h-4 w-4/5" />
               <Skeleton className="mt-2 h-3 w-3/5" />
             </div>
-          ) : coursesQuery.isError ? (
+          ) : isError ? (
             <div className="rounded-[14px] border border-zinc-200 px-3 py-4 text-[12.5px] text-zinc-400">
               课程加载失败
             </div>
           ) : quickStartCourse ? (
             <button
               type="button"
-              onClick={() => navigate(`/courses/${quickStartCourse.id}`)}
+              onClick={() => onOpenCourse?.(quickStartCourse.id)}
               className="w-full rounded-[14px] border border-zinc-200 bg-white px-3 py-2.5 text-left transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
             >
               <span className="block truncate text-[14.5px] leading-5 font-semibold text-zinc-900">
                 {quickStartCourse.title}
               </span>
               {/* 占位块按第二行的盒高（mt-1.5 + leading-[18px]）取值。 */}
-              {quickStartDetailQuery.isPending ? (
+              {nextPointTitle === undefined ? (
                 <Skeleton className="mt-1.5 h-[18px] w-3/5" />
-              ) : nextPoint ? (
+              ) : nextPointTitle ? (
                 <span className="mt-1.5 block truncate text-[13px] leading-[18px] text-zinc-400">
-                  下一讲：{nextPoint.title}
+                  下一讲：{nextPointTitle}
                 </span>
               ) : null}
             </button>

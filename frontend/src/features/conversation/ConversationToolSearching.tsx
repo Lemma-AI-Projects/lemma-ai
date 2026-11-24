@@ -6,16 +6,25 @@ import { math } from '@streamdown/math'
 import { mermaid } from '@streamdown/mermaid'
 
 import { Spinner } from '@/components/ui/spinner'
-import type {
-  CourseSearchItem,
-  CourseSearchProgress,
-} from '@/features/coursePlanner/streamCourseOrganize'
 
-// The organizing window (决策⑤ 两段式): 搜索中 → 已找到 + 编排中. Visual style is
-// the sandbox "searching · 搜索中" design (per-source spinner headers, real video
+export interface CourseSearchItem {
+  platform: string
+  title: string
+  author: string | null
+  viewCount: number | null
+}
+
+export interface CourseSearchProgress {
+  platforms: { platform: string; count: number }[]
+  items: CourseSearchItem[]
+}
+
+// The organizing window, two stages: 搜索中 → 已找到 + 编排中. Visual style is
+// the sandbox "searching · 搜索中" design (per-source spinner headers, search
 // results as capsule chips, a 编排 section streaming the model's reasoning,
-// connector line, smooth height growth) — driven by REAL /organize/stream data
-// (no mock). Following the sandbox, each section only appears once it has content.
+// connector line, smooth height growth). Presentational only: the caller
+// supplies the search results and reasoning text. Following the sandbox, each
+// section only appears once it has content.
 
 const streamdownPlugins = { cjk, code, math, mermaid }
 

@@ -42,10 +42,7 @@ export function CourseDashboard({ course }: { course: CourseDashboardData }) {
                     label={lesson.label}
                     progress={lesson.progress}
                   />
-                  <CourseDashboardLessonCard
-                    courseId={course.id}
-                    lesson={lesson}
-                  />
+                  <CourseDashboardLessonCard lesson={lesson} />
                 </div>
               )
             })}

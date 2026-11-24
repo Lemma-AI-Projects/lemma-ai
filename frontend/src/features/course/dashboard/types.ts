@@ -1,6 +1,5 @@
-// 仪表盘视图模型：由后端 CourseDetail 派生（见 mapCourseDetailToDashboard）。
-// 与 wire 类型分开，是因为这里额外承载「第几章」「一二三」这类纯展示的编号，
-// 以及由学习点聚合出来的进度百分比——后端两者都不下发。
+// 仪表盘视图模型，承载「第几章」「一二三」这类纯展示的编号，以及由学习点
+// 聚合出来的进度百分比。接入数据来源时由调用方映射成这个形态，不要把它当成契约。
 
 export interface DashboardPoint {
   id: string

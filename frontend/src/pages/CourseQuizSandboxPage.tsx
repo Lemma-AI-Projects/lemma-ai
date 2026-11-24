@@ -39,8 +39,8 @@ function isSandboxView(value: string | null): value is SandboxView {
   return value === 'flow' || value === 'answer' || value === 'preview'
 }
 
-// [sandbox] 题库调试页：列出当前用户的真实题组（后端开发者入口生成），沿用学习点页的
-// 双栏尺寸；伴学栏不发请求，窄视口下收起，把宽度留给题面。
+// [sandbox] 题库调试页：列出当前用户的真实题组（后端开发者入口生成），题面加伴学栏的
+// 双栏布局；伴学栏不发请求，窄视口下收起，把宽度留给题面。
 export function CourseQuizSandboxPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()

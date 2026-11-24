@@ -25,7 +25,7 @@ export function CourseDashboardSidebar({
 
   return (
     <div className="absolute top-20 right-26 w-60">
-      {/* 封面：后端 coverUrl 暂无生产者，恒为占位块。 */}
+      {/* 封面：没有 coverUrl 时渲染占位块。 */}
       {course.coverUrl ? (
         <img
           src={course.coverUrl}

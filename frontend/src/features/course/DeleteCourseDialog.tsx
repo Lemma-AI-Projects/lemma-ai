@@ -1,35 +1,24 @@
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { useDeleteCourseMutation } from './courseApi'
 
 export function DeleteCourseDialog({
   open,
   onOpenChange,
-  courseId,
   courseTitle,
+  onConfirm,
+  isPending = false,
+  isError = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  courseId: string
   courseTitle: string
+  onConfirm: () => void
+  isPending?: boolean
+  isError?: boolean
 }) {
-  const deleteMutation = useDeleteCourseMutation()
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) deleteMutation.reset()
-    onOpenChange(nextOpen)
-  }
-
-  const handleDelete = () => {
-    deleteMutation.mutate(
-      { courseId },
-      { onSuccess: () => onOpenChange(false) }
-    )
-  }
-
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <DialogPrimitive.Content
@@ -43,9 +32,9 @@ export function DeleteCourseDialog({
               删除课程
             </DialogPrimitive.Title>
             <DialogPrimitive.Description className="mt-2 text-sm leading-6 text-muted-foreground">
-              将删除《{courseTitle}》的全部章节、学习点与已转存的视频，伴学会话也会一并移除。此操作不可撤销。
+              将删除《{courseTitle}》的全部章节与学习点。此操作不可撤销。
             </DialogPrimitive.Description>
-            {deleteMutation.isError && (
+            {isError && (
               <p className="mt-3 text-xs text-destructive">删除失败，请重试</p>
             )}
           </div>
@@ -65,11 +54,11 @@ export function DeleteCourseDialog({
               type="button"
               size="sm"
               variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={handleDelete}
+              disabled={isPending}
+              onClick={onConfirm}
               className="rounded-full"
             >
-              {deleteMutation.isPending ? '删除中…' : '删除'}
+              {isPending ? '删除中…' : '删除'}
             </Button>
           </div>
         </DialogPrimitive.Content>

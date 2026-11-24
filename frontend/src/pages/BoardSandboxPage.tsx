@@ -11,7 +11,7 @@ const PROGRESS_PREVIEW_VALUES = [100, 100, 40, 0, 0]
 const CHAT_SLIDE_CLASS_NAME =
   'transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-transform motion-reduce:transition-none'
 
-// [sandbox] board 的独立调试页面；右栏复用学习点页的伴学对话框形态。
+// [sandbox] board 的独立调试页面；右栏是课程伴学对话框的形态。
 export function BoardSandboxPage() {
   const [draft, setDraft] = useState('')
   const [isCollapsed, setIsCollapsed] = useState(false)

@@ -1,6 +1,6 @@
 import { env } from '@/lib/env'
 import { supabase } from '@/lib/supabaseClient'
-import type { ConversationToolRef } from './types'
+import { parseConversationToolRef, type ConversationToolRef } from './types'
 
 export interface ChatStreamUsage {
   inputTokens: number | null
@@ -25,8 +25,6 @@ export interface StreamChatOptions {
   conversationId?: string
   /** 新会话直接诞生在该项目里；conversationId 存在时无意义，不发送。 */
   projectId?: string
-  /** 本轮启用的工具（输入菜单开关）；省略则是普通文本回合。 */
-  tool?: ConversationToolRef['type']
   signal: AbortSignal
   /**
    * 新会话时后端通过响应头 X-Conversation-Id 返回预生成 id，
@@ -36,7 +34,7 @@ export interface StreamChatOptions {
   onDelta: (text: string) => void
   onReasoning?: (text: string) => void
   onUsage?: (usage: ChatStreamUsage) => void
-  /** 工具回合：引导语流式输出后，后端发来一个 tool 事件挂载工具卡片。 */
+  /** 模型调用插件工具后，后端发来一个 tool 事件挂载工具卡片。 */
   onTool?: (tool: ConversationToolRef) => void
 }
 
@@ -55,7 +53,6 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
     content,
     conversationId,
     projectId,
-    tool,
     signal,
     onConversationId,
     onDelta,
@@ -85,7 +82,6 @@ export async function streamChat(options: StreamChatOptions): Promise<void> {
       body: JSON.stringify({
         ...(conversationId ? { conversationId } : {}),
         ...(!conversationId && projectId ? { projectId } : {}),
-        ...(tool ? { tool } : {}),
         messages: [{ role: 'user', content }],
       }),
       signal,
@@ -195,7 +191,10 @@ async function consumeSseStream(
         return
       }
       case 'tool': {
-        handlers.onTool?.(JSON.parse(parsed.data) as ConversationToolRef)
+        const tool = parseConversationToolRef(JSON.parse(parsed.data))
+        if (tool) {
+          handlers.onTool?.(tool)
+        }
         return
       }
       case 'done': {

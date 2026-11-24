@@ -1,8 +1,13 @@
 import { useState, type CSSProperties } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { CourseCenterCourseList } from '@/features/course/CourseCenterCourseList'
 import { CourseCenterTabs } from '@/features/course/CourseCenterTabs'
 import type { CourseCenterTab } from '@/features/course/courseCenterFilters'
 import { CourseWeeklyProgressCard } from '@/features/course/CourseWeeklyProgressCard'
+import {
+  courseCenterSampleCompletedAt,
+  courseCenterSampleCourses,
+} from '@/mock/courseCenterSample'
 
 const COURSE_CENTER_LAYOUT_STYLE = {
   // 标题与整个 Tab 组共用的左边距；增大向右，减小向左。
@@ -26,7 +31,10 @@ const COURSE_CENTER_LAYOUT_STYLE = {
     ' - var(--course-center-weekly-card-top))',
 } as CSSProperties
 
+// [sandbox] 课程中心的样式预览，数据来自 mock；删除课程只关闭对话框。
 export function CourseCenterPage() {
+  const navigate = useNavigate()
+  const openCourse = (courseId: string) => navigate(`/sandbox/courses/${courseId}`)
   // 工具栏与列表共用筛选状态，故提升到页面。
   const [activeTab, setActiveTab] = useState<CourseCenterTab>('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -56,12 +64,19 @@ export function CourseCenterPage() {
                   activeTab={activeTab}
                   searchTerm={searchTerm}
                   className="mt-2"
+                  courses={courseCenterSampleCourses}
+                  onOpenCourse={openCourse}
                 />
               </div>
             </div>
 
             {/* 高度固定：与左侧列表完全解耦，有几张课程卡都不影响它。 */}
-            <CourseWeeklyProgressCard className="w-full max-w-[330px] xl:mt-[var(--course-center-weekly-card-top)] xl:mr-[44px] xl:h-[var(--course-center-weekly-card-height)] xl:w-[330px] xl:shrink-0" />
+            <CourseWeeklyProgressCard
+              courses={courseCenterSampleCourses}
+              completedAt={courseCenterSampleCompletedAt}
+              onOpenCourse={openCourse}
+              className="w-full max-w-[330px] xl:mt-[var(--course-center-weekly-card-top)] xl:mr-[44px] xl:h-[var(--course-center-weekly-card-height)] xl:w-[330px] xl:shrink-0"
+            />
           </div>
         </div>
       </main>

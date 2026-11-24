@@ -1,10 +1,10 @@
 import { Skeleton } from '@/components/ui/skeleton'
 import { CourseCenterCourseCard } from '@/features/course/CourseCenterCourseCard'
-import { useCoursesListQuery } from '@/features/course/courseApi'
 import {
   EMPTY_TAB_NOTICE,
   filterCoursesByTab,
   searchCourses,
+  type CourseCenterCourse,
   type CourseCenterTab,
 } from '@/features/course/courseCenterFilters'
 import { cn } from '@/lib/utils'
@@ -29,14 +29,22 @@ export function CourseCenterCourseList({
   activeTab,
   searchTerm,
   className,
+  courses: allCourses,
+  isLoading = false,
+  isError = false,
+  onOpenCourse,
+  onDeleteCourse,
 }: {
   activeTab: CourseCenterTab
   searchTerm: string
   className?: string
+  courses: CourseCenterCourse[]
+  isLoading?: boolean
+  isError?: boolean
+  onOpenCourse?: (courseId: string) => void
+  onDeleteCourse?: (courseId: string) => void
 }) {
-  const coursesQuery = useCoursesListQuery()
-
-  if (coursesQuery.isPending) {
+  if (isLoading) {
     return (
       <div className={cn('flex flex-col gap-3', className)}>
         <Skeleton className={cn('rounded-[20px]', CARD_HEIGHT_CLASS)} />
@@ -45,7 +53,7 @@ export function CourseCenterCourseList({
     )
   }
 
-  if (coursesQuery.isError) {
+  if (isError) {
     return (
       <div className={className}>
         <CourseCenterNotice>课程加载失败</CourseCenterNotice>
@@ -53,7 +61,6 @@ export function CourseCenterCourseList({
     )
   }
 
-  const allCourses = coursesQuery.data ?? []
   const courses = searchCourses(
     filterCoursesByTab(allCourses, activeTab),
     searchTerm
@@ -73,7 +80,12 @@ export function CourseCenterCourseList({
   return (
     <div className={cn('flex flex-col gap-3', className)}>
       {courses.map((course) => (
-        <CourseCenterCourseCard key={course.id} course={course} />
+        <CourseCenterCourseCard
+          key={course.id}
+          course={course}
+          onOpen={() => onOpenCourse?.(course.id)}
+          onDelete={() => onDeleteCourse?.(course.id)}
+        />
       ))}
     </div>
   )

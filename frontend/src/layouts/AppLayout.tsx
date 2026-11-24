@@ -4,7 +4,6 @@ import {
   FlaskConical,
   FolderOpen,
   FolderPlus,
-  GraduationCap,
   Home,
   LibraryBig,
   Puzzle,
@@ -62,7 +61,6 @@ export function AppLayout() {
     <>
       <div className="sticky top-14 z-10 flex flex-col gap-0.5 bg-zinc-100">
         <SidebarItem icon={SquarePen} label="New chat" to="/home" end />
-        <SidebarItem icon={GraduationCap} label="课程中心" to="/courses" />
         <SidebarItem icon={CalendarDays} label="Schedule" to="/schedule" />
         <SidebarItem icon={LibraryBig} label="Knowledge Base" to="/knowledge" />
         <SidebarItem icon={Puzzle} label="Plugins" to="/plugins" />
@@ -141,6 +139,11 @@ export function AppLayout() {
             icon={FlaskConical}
             label="输入框 Sandbox(调试)"
             to="/sandbox/composer"
+          />
+          <SidebarItem
+            icon={FlaskConical}
+            label="课程中心 Sandbox(调试)"
+            to="/sandbox/courses"
           />
           {conversationsQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">

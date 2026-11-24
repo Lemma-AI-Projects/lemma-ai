@@ -6,7 +6,7 @@ import {
   conversationDetailQueryKey,
   conversationsQueryRootKey,
 } from '@/lib/queryKeys'
-import type { ConversationToolRef } from './types'
+import { parseConversationToolRef, type ConversationToolRef } from './types'
 
 export interface ConversationListItem {
   id: string
@@ -52,15 +52,22 @@ async function getConversations(): Promise<ConversationListItem[]> {
   return data
 }
 
+type ConversationMessageResponse = Omit<ConversationMessage, 'tool'> & {
+  tool?: unknown
+}
+
 async function getConversationMessages(
   conversationId: string
 ): Promise<ConversationMessage[]> {
   const { data } = await signOutOn401(
-    apiClient.get<ConversationMessage[]>(
+    apiClient.get<ConversationMessageResponse[]>(
       `/api/v1/conversations/${conversationId}/messages`
     )
   )
-  return data
+  return data.map(({ tool, ...message }) => {
+    const parsedTool = parseConversationToolRef(tool)
+    return parsedTool ? { ...message, tool: parsedTool } : message
+  })
 }
 
 async function getConversationDetail(

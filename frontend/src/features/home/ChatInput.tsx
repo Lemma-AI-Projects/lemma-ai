@@ -18,8 +18,8 @@ const HOME_PLUS_BOTTOM_OFFSET_CLASS = 'mb-[-5px]'
 // Home add menu horizontal offset. Aligns the menu left edge with the input border.
 const HOME_ADD_MENU_ALIGN_OFFSET = -14
 
-// Action chin below the input. Its negative overlap mirrors the course video's
-// layered underlay while reserving a compact row for mode buttons.
+// Action chin below the input: a layered underlay tucked under the input's
+// bottom edge, reserving a compact row for mode buttons.
 const HOME_INPUT_CHIN_CLASS_NAME =
   'relative z-0 -mt-[22px] flex h-[62px] items-center gap-1.5 rounded-b-[22px] bg-zinc-100 px-3.5 pt-[22px]'
 
@@ -28,7 +28,7 @@ export function ChatInput({
   onSend,
 }: {
   className?: string
-  onSend: (text: string, options?: { tool?: 'course_planning' }) => void
+  onSend: (text: string) => void
 }) {
   const [value, setValue] = useState('')
   const [composerMode, setComposerMode] = useState<HomeComposerMode>('chat')
@@ -39,14 +39,8 @@ export function ChatInput({
     if (!text) {
       return
     }
-    // 视频课程沿用现有 Course Planning 工具；自由课程尚无已交接契约，
-    // 在该功能落地前不发送任何新 tool/字段。
-    onSend(
-      text,
-      composerMode === 'video-course'
-        ? { tool: 'course_planning' }
-        : undefined
-    )
+    // 自由课程尚无已交接契约，在该功能落地前两种模式都只发送文本。
+    onSend(text)
     setValue('')
   }
 

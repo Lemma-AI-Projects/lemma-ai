@@ -7,7 +7,6 @@ import {
 import {
   GraduationCap,
   MessageCircle,
-  Video,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -20,7 +19,7 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-export type HomeComposerMode = 'free-course' | 'video-course' | 'chat'
+export type HomeComposerMode = 'free-course' | 'chat'
 
 interface CourseSourceOption {
   value: HomeComposerMode
@@ -37,13 +36,6 @@ const courseSourceOptions: CourseSourceOption[] = [
     labelMaxWidth: 58,
     iconColor: 'text-[#6f6ab5]',
     Icon: GraduationCap,
-  },
-  {
-    value: 'video-course',
-    label: '视频课程',
-    labelMaxWidth: 58,
-    iconColor: 'text-[#c4744e]',
-    Icon: Video,
   },
   {
     value: 'chat',
@@ -73,7 +65,6 @@ export function CourseSourceSegmentedControl({
   const rootRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<Record<HomeComposerMode, HTMLButtonElement | null>>({
     'free-course': null,
-    'video-course': null,
     chat: null,
   })
 
@@ -123,11 +114,7 @@ export function CourseSourceSegmentedControl({
         spacing={0}
         value={value}
         onValueChange={(nextValue) => {
-          if (
-            nextValue === 'free-course' ||
-            nextValue === 'video-course' ||
-            nextValue === 'chat'
-          ) {
+          if (nextValue === 'free-course' || nextValue === 'chat') {
             setOpenTooltip(null)
             onValueChange(nextValue)
           }

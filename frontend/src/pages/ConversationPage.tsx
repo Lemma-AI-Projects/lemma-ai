@@ -16,8 +16,6 @@ interface ConversationLocationState {
   messageKey?: string
   /** 项目页发起的新会话：直接诞生在该项目里。 */
   projectId?: string
-  /** 首页选择“视频课程”后带入：本条消息走 Course Planning 工具回合。 */
-  tool?: 'course_planning'
 }
 
 // 模块级防重：StrictMode 双挂载与重渲染下，同一条首页带入的消息只发送一次
@@ -55,7 +53,7 @@ export function ConversationPage() {
       '',
       window.location.href
     )
-    send(text, { projectId: state?.projectId, tool: state?.tool })
+    send(text, { projectId: state?.projectId })
   }, [id, location.state, send])
 
   // 本轮自建的会话内存态即完整历史，不启用回填；带 id 进入/刷新时才拉
