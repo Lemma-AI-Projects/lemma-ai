@@ -3,6 +3,7 @@ import { RequireAuth } from '@/features/auth/RequireAuth'
 import { AppLayout } from '@/layouts/AppLayout'
 import { BoardSandboxPage } from '@/pages/BoardSandboxPage'
 import { ChatSandboxPage } from '@/pages/ChatSandboxPage'
+import { ComposerSandboxPage } from '@/pages/ComposerSandboxPage'
 import { ConversationPage } from '@/pages/ConversationPage'
 import { ConversationSandboxPage } from '@/pages/ConversationSandboxPage'
 import { CourseCenterPage } from '@/pages/CourseCenterPage'
@@ -85,6 +86,10 @@ const routes: RouteObject[] = [
           {
             path: 'sandbox/quiz',
             element: <CourseQuizSandboxPage />,
+          },
+          {
+            path: 'sandbox/composer',
+            element: <ComposerSandboxPage />,
           },
           {
             path: 'project/:id',

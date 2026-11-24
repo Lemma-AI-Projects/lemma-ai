@@ -137,6 +137,11 @@ export function AppLayout() {
             label="Board Sandbox(调试)"
             to="/sandbox/board"
           />
+          <SidebarItem
+            icon={FlaskConical}
+            label="输入框 Sandbox(调试)"
+            to="/sandbox/composer"
+          />
           {conversationsQuery.isPending ? (
             <div className="flex flex-col gap-2 px-3 py-1.5">
               <Skeleton className="h-5 w-full" />

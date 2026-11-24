@@ -1,5 +1,5 @@
 import { type ComponentProps, type ReactNode } from 'react'
-import { ChevronRight, type LucideIcon } from 'lucide-react'
+import { Check, ChevronRight, type LucideIcon } from 'lucide-react'
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
@@ -372,6 +372,33 @@ export function InputMenuSub({
         </DropdownMenuPrimitive.SubContent>
       </DropdownMenuPrimitive.Portal>
     </DropdownMenuPrimitive.Sub>
+  )
+}
+
+export function InputMenuRadioGroup(
+  props: ComponentProps<typeof DropdownMenuPrimitive.RadioGroup>
+) {
+  return <DropdownMenuPrimitive.RadioGroup {...props} />
+}
+
+// 单选菜单项：当前选中项在右侧显示对勾，配合 InputMenuRadioGroup 使用。
+export function InputMenuRadioItem({
+  children,
+  className,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.RadioItem>) {
+  return (
+    <DropdownMenuPrimitive.RadioItem
+      className={cn(inputMenuItemClassName, className)}
+      {...props}
+    >
+      <span className={inputMenuItemTextClassName}>{children}</span>
+      <DropdownMenuPrimitive.ItemIndicator
+        className={inputMenuTrailingIconPositionClassName}
+      >
+        <Check className={inputMenuIconClassName} />
+      </DropdownMenuPrimitive.ItemIndicator>
+    </DropdownMenuPrimitive.RadioItem>
   )
 }
 
