@@ -21,6 +21,11 @@ import type {
   ConversationToolQuestion,
   ConversationToolStage,
 } from '@/features/conversation/types'
+import { CourseOutlineDesignCanvas } from '@/features/coursePlanner/outline/CourseOutlineDesignCanvas'
+import {
+  courseOutlineSample,
+  courseOutlineSampleTitle,
+} from '@/mock/courseOutlineSample'
 
 // [sandbox] 课程工具卡片与 Markdown 样式的静态预览：不连后端，
 // 用样例数据调样式与交互。题目页面另有独立沙盒路由。
@@ -89,6 +94,56 @@ const READY_MODULES: ConversationToolModule[] = [
       {
         id: 'l2',
         title: '第二单元：极限的运算法则与连续性',
+        pointCount: 3,
+        status: 'completed',
+      },
+      {
+        id: 'l3',
+        title: '第三单元：无穷小比较与重要极限',
+        pointCount: 2,
+        status: 'completed',
+      },
+    ],
+  },
+  {
+    id: 'm2',
+    title: '第二章：导数——变化率的量化',
+    status: 'completed',
+    lessons: [
+      {
+        id: 'l4',
+        title: '第一单元：导数的定义与几何意义',
+        pointCount: 2,
+        status: 'completed',
+      },
+      {
+        id: 'l5',
+        title: '第二单元：基本求导法则与链式法则',
+        pointCount: 3,
+        status: 'completed',
+      },
+      {
+        id: 'l6',
+        title: '第三单元：导数的应用——极值与单调性',
+        pointCount: 2,
+        status: 'completed',
+      },
+    ],
+  },
+  {
+    id: 'm3',
+    title: '第三章：积分——累积与面积',
+    status: 'completed',
+    lessons: [
+      {
+        id: 'l7',
+        title: '第一单元：不定积分与原函数',
+        pointCount: 2,
+        status: 'completed',
+      },
+      {
+        id: 'l8',
+        title: '第二单元：定积分与牛顿-莱布尼茨公式',
         pointCount: 3,
         status: 'completed',
       },
@@ -225,7 +280,7 @@ interface StagePreview {
   failed?: boolean
 }
 
-type SandboxView = 'course-tool' | 'streamdown-style'
+type SandboxView = 'course-tool' | 'course-outline' | 'streamdown-style'
 
 const STAGE_PREVIEWS: StagePreview[] = [
   {
@@ -442,10 +497,10 @@ function SearchSourceBlock({
           </span>
         </div>
 
-        <div className="relative ml-1 flex flex-col gap-0.5 pl-7">
+        <div className="relative flex flex-col gap-0.5 pl-8">
           <div
             aria-hidden
-            className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200 transition-opacity duration-500"
+            className="absolute bottom-1 left-2 top-1 w-px -translate-x-1/2 bg-zinc-200 transition-opacity duration-500"
           />
           <SmoothHeight contentClassName={payloadClassName}>
             {renderPayload()}
@@ -531,7 +586,7 @@ function MaterializationSandboxShell({
           <span>{title}</span>
         </h3>
 
-        <div className="mt-4 flex flex-col gap-1">
+        <div className="mt-4 flex flex-col gap-2">
           {modules.map((module) => (
             <section key={module.id}>
               <div className="flex min-h-9 items-start gap-2 py-2 text-[16.5px] font-medium text-zinc-800">
@@ -547,10 +602,10 @@ function MaterializationSandboxShell({
                 </span>
               </div>
 
-              <div className="relative ml-1 flex flex-col gap-0.5 pl-7">
+              <div className="relative mt-1 flex flex-col gap-0.5 pl-8">
                 <div
                   aria-hidden
-                  className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200"
+                  className="absolute bottom-1 left-2 top-1 w-px -translate-x-1/2 bg-zinc-200"
                 />
                 {module.lessons.map((lesson) => (
                   <div
@@ -566,9 +621,6 @@ function MaterializationSandboxShell({
                     </span>
                     <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
                       {lesson.title}
-                    </span>
-                    <span className="mt-0.5 shrink-0 text-[13px] leading-5 text-zinc-400">
-                      {lesson.pointCount} 个学习点
                     </span>
                   </div>
                 ))}
@@ -626,7 +678,7 @@ function ReadySandboxShell({
           <span>您的课程已就绪：{title}</span>
         </h3>
 
-        <div className="mt-4 flex flex-col gap-1">
+        <div className="mt-4 flex flex-col gap-2">
           {modules.map((module) => (
             <section key={module.id}>
               <div className="flex min-h-9 items-start gap-2 py-2 text-[16.5px] font-medium text-zinc-800">
@@ -638,10 +690,10 @@ function ReadySandboxShell({
                 </span>
               </div>
 
-              <div className="relative ml-1 flex flex-col gap-0.5 pl-7">
+              <div className="relative mt-1 flex flex-col gap-0.5 pl-8">
                 <div
                   aria-hidden
-                  className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200"
+                  className="absolute bottom-1 left-2 top-1 w-px -translate-x-1/2 bg-zinc-200"
                 />
                 {module.lessons.map((lesson) => (
                   <div
@@ -653,9 +705,6 @@ function ReadySandboxShell({
                     </span>
                     <span className="min-w-0 flex-1 whitespace-normal break-words leading-5">
                       {lesson.title}
-                    </span>
-                    <span className="mt-0.5 shrink-0 text-[13px] leading-5 text-zinc-400">
-                      {lesson.pointCount} 个学习点
                     </span>
                   </div>
                 ))}
@@ -713,6 +762,18 @@ export function ConversationSandboxPage() {
             </button>
             <button
               type="button"
+              aria-pressed={activeView === 'course-outline'}
+              onClick={() => setActiveView('course-outline')}
+              className={
+                activeView === 'course-outline'
+                  ? 'h-8 rounded-full bg-zinc-950 px-3 text-sm font-medium text-white'
+                  : 'h-8 rounded-full px-3 text-sm font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900'
+              }
+            >
+              知识地图与课表
+            </button>
+            <button
+              type="button"
               aria-pressed={activeView === 'streamdown-style'}
               onClick={() => setActiveView('streamdown-style')}
               className={
@@ -728,6 +789,11 @@ export function ConversationSandboxPage() {
 
         {activeView === 'streamdown-style' ? (
           <StreamdownStyleCanvas />
+        ) : activeView === 'course-outline' ? (
+          <CourseOutlineDesignCanvas
+            title={courseOutlineSampleTitle}
+            outline={courseOutlineSample}
+          />
         ) : (
           <>
             <section className="flex flex-col gap-3">

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, typ
 import { Minus, Plus } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { dotGridBackground } from '@/lib/dotGrid'
 
 const MIN_SCALE = 0.25
 const MAX_SCALE = 3
 const ZOOM_STEP = 1.2
-const GRID_SPACING = 24
 
 interface Viewport {
   x: number
@@ -124,9 +124,6 @@ export function BoardCanvas({ children }: { children?: ReactNode }) {
     }
   }
 
-  const spacing = GRID_SPACING * viewport.scale
-  const dotRadius = Math.min(1.4, Math.max(0.45, viewport.scale * 0.85))
-
   return (
     <>
       <div
@@ -141,11 +138,7 @@ export function BoardCanvas({ children }: { children?: ReactNode }) {
         onLostPointerCapture={stopDrag}
         onKeyDown={handleKeyDown}
         className={`absolute inset-0 touch-none overflow-hidden bg-zinc-100 outline-none select-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-zinc-300 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        style={{
-          backgroundImage: `radial-gradient(circle, rgb(161 161 170 / 0.45) ${dotRadius}px, transparent ${dotRadius + 0.4}px)`,
-          backgroundSize: `${spacing}px ${spacing}px`,
-          backgroundPosition: `${viewport.x - spacing / 2}px ${viewport.y - spacing / 2}px`,
-        }}
+        style={dotGridBackground(viewport)}
       >
         {/* 内容与点阵共用视口坐标；浮层工具不参与画布变换。 */}
         <div

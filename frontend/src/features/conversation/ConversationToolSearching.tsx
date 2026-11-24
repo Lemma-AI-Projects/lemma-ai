@@ -114,10 +114,10 @@ function SearchSourceBlock({
           </span>
         </div>
 
-        <div className="relative ml-1 flex flex-col gap-0.5 pl-7">
+        <div className="relative flex flex-col gap-0.5 pl-8">
           <div
             aria-hidden
-            className="absolute bottom-1 left-[7px] top-1 w-px bg-zinc-200 transition-opacity duration-500"
+            className="absolute bottom-1 left-2 top-1 w-px -translate-x-1/2 bg-zinc-200 transition-opacity duration-500"
           />
           <SmoothHeight contentClassName={contentClassName}>{children}</SmoothHeight>
         </div>
