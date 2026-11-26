@@ -344,6 +344,8 @@ export function InputMenuSwitchItem({
 
 interface InputMenuSubProps {
   children: ReactNode
+  // 二级菜单浮层的附加样式，例如给很长的列表限高并允许滚动。
+  contentClassName?: string
   icon?: LucideIcon
   label: string
   sideOffset?: number
@@ -351,6 +353,7 @@ interface InputMenuSubProps {
 
 export function InputMenuSub({
   children,
+  contentClassName,
   icon: Icon,
   label,
   sideOffset = inputMenuSubDefaultSideOffset,
@@ -366,7 +369,11 @@ export function InputMenuSub({
       <DropdownMenuPrimitive.Portal>
         <DropdownMenuPrimitive.SubContent
           sideOffset={sideOffset}
-          className={cn(inputMenuContentClassName, inputMenuSubContentWidthClassName)}
+          className={cn(
+            inputMenuContentClassName,
+            inputMenuSubContentWidthClassName,
+            contentClassName
+          )}
         >
           {children}
         </DropdownMenuPrimitive.SubContent>

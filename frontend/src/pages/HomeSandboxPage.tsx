@@ -1,7 +1,11 @@
 import { ActionChip } from '@/components/ActionChip'
 import { HomeComposer } from '@/features/home/composer/HomeComposer'
 import { HomeUserMenu } from '@/features/home/HomeUserMenu'
-import { composerSpaces, composerTodayTasks } from '@/mock/homeComposer'
+import {
+  composerAttachmentLibrary,
+  composerSpaces,
+  composerTodayTasks,
+} from '@/mock/homeComposer'
 import { suggestions } from '@/mock/homeSuggestions'
 
 // [sandbox] 首页预览：和首页（HomePage）同一套布局，只把输入框换成新版 HomeComposer，
@@ -34,6 +38,7 @@ export function HomeSandboxPage() {
             todayButton="sentence"
             todayTasks={composerTodayTasks}
             spaces={composerSpaces}
+            attachmentLibrary={composerAttachmentLibrary}
           />
           <div className="flex flex-wrap justify-center gap-2">
             {suggestions.map((s) => (

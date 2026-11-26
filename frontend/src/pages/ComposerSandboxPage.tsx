@@ -1,5 +1,7 @@
 import { useId, useState } from 'react'
 
+import { type ComposerAttachMenuVariant } from '@/features/home/composer/ComposerAttachMenu'
+import { type ComposerAttachSearchLayout } from '@/features/home/composer/composerAttachments'
 import { type ComposerTodayButtonAppearance } from '@/features/home/composer/ComposerTodayButton'
 import { type CourseScheduleMenuVariant } from '@/features/home/composer/CourseScheduleMenu'
 import {
@@ -7,7 +9,11 @@ import {
   type HomeComposerVolumeControl,
 } from '@/features/home/composer/HomeComposer'
 import { cn } from '@/lib/utils'
-import { composerSpaces, composerTodayTasks } from '@/mock/homeComposer'
+import {
+  composerAttachmentLibrary,
+  composerSpaces,
+  composerTodayTasks,
+} from '@/mock/homeComposer'
 
 // 待选的输入框样式；要比较新样式时在这里加一项。
 const COMPOSER_CANDIDATES: {
@@ -39,6 +45,25 @@ const SCHEDULE_MENU_OPTIONS: { value: CourseScheduleMenuVariant; label: string }
   { value: 'checklist', label: '勾选清单' },
   { value: 'presets', label: '常用预设' },
 ]
+
+// 待选的加号菜单样式：输入框左下角的加号，用来给这次对话附上参考资料。
+const ATTACH_MENU_OPTIONS: { value: ComposerAttachMenuVariant; label: string }[] = [
+  { value: 'legacy', label: '现状' },
+  { value: 'cascade', label: '分级菜单' },
+  { value: 'search', label: '搜索面板' },
+  { value: 'panes', label: '分栏面板' },
+  { value: 'fanout', label: '展开胶囊' },
+]
+
+// 待选的搜索框样式：分栏面板里，搜索框和下面两栏怎么分开。只对「分栏面板」生效。
+const ATTACH_SEARCH_LAYOUT_OPTIONS: { value: ComposerAttachSearchLayout; label: string }[] =
+  [
+    { value: 'plain', label: '现状' },
+    { value: 'field', label: '垫底色' },
+    { value: 'column', label: '归右栏' },
+    { value: 'column-field', label: '归右栏垫底色' },
+    { value: 'band', label: '顶部色带' },
+  ]
 
 // 顶栏里的一组候选样式切换：一句说明加一排单选。
 function SandboxVariantSwitch<Value extends string>({
@@ -92,6 +117,10 @@ export function ComposerSandboxPage() {
   // 默认停在已经选定的样式上：「今日」入口用一句话，排期菜单用开关展开。
   const [todayButton, setTodayButton] = useState<ComposerTodayButtonAppearance>('sentence')
   const [scheduleMenu, setScheduleMenu] = useState<CourseScheduleMenuVariant>('switch')
+  // 加号菜单目前在迭代的是「分栏面板」，默认停在它上面。
+  const [attachMenu, setAttachMenu] = useState<ComposerAttachMenuVariant>('panes')
+  const [attachSearchLayout, setAttachSearchLayout] =
+    useState<ComposerAttachSearchLayout>('plain')
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-md border border-zinc-200/80 bg-zinc-50">
@@ -108,6 +137,18 @@ export function ComposerSandboxPage() {
           options={SCHEDULE_MENU_OPTIONS}
           value={scheduleMenu}
           onValueChange={setScheduleMenu}
+        />
+        <SandboxVariantSwitch
+          label="加号菜单"
+          options={ATTACH_MENU_OPTIONS}
+          value={attachMenu}
+          onValueChange={setAttachMenu}
+        />
+        <SandboxVariantSwitch
+          label="面板搜索框"
+          options={ATTACH_SEARCH_LAYOUT_OPTIONS}
+          value={attachSearchLayout}
+          onValueChange={setAttachSearchLayout}
         />
       </div>
 
@@ -127,6 +168,9 @@ export function ComposerSandboxPage() {
                 todayButton={todayButton}
                 todayTasks={composerTodayTasks}
                 spaces={composerSpaces}
+                attachMenu={attachMenu}
+                attachSearchLayout={attachSearchLayout}
+                attachmentLibrary={composerAttachmentLibrary}
               />
             </section>
           ))}

@@ -7,9 +7,18 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import { InputAddMenu } from '@/components/InputAddMenu'
 import { InputMenu } from '@/components/InputMenu'
 import { Button } from '@/components/ui/button'
+import {
+  ComposerAttachMenu,
+  type ComposerAttachMenuVariant,
+} from '@/features/home/composer/ComposerAttachMenu'
+import { ComposerAttachmentChips } from '@/features/home/composer/ComposerAttachmentChips'
+import {
+  type ComposerAttachSearchLayout,
+  type ComposerAttachment,
+  type ComposerAttachmentLibrary,
+} from '@/features/home/composer/composerAttachments'
 import { ComposerChinButton } from '@/features/home/composer/ComposerChinButton'
 import {
   ComposerModeSwitch,
@@ -64,8 +73,12 @@ const MODE_COPY: Record<ComposerMode, { placeholder: string; inputLabel: string 
 // 新版首页输入框：上方一条肩线（今日 + 模式）；下面一整块浅灰托盘从四周包住输入卡，
 // 课程设置胶囊排在托盘底部。
 // 目前只在输入框 Sandbox 里陈列；自由课程的后端契约落地前，课程设置只保存在本地状态。
-// `volumeControl`、`scheduleMenu` 和 `todayButton` 是供 Sandbox 对比的候选样式开关。
+// `volumeControl`、`scheduleMenu`、`todayButton` 和 `attachMenu` 是供 Sandbox 对比的候选样式开关；
+// `attachMenu` 还没选定，不传时是原来的加号菜单。
 export function HomeComposer({
+  attachMenu = 'legacy',
+  attachSearchLayout,
+  attachmentLibrary,
   className,
   onSend,
   scheduleMenu,
@@ -74,6 +87,11 @@ export function HomeComposer({
   todayTasks,
   volumeControl,
 }: {
+  attachMenu?: ComposerAttachMenuVariant
+  // 分栏面板里搜索框的候选样式，只对 `attachMenu="panes"` 生效。
+  attachSearchLayout?: ComposerAttachSearchLayout
+  // 用户在平台里可以附到对话上的资料（课程、练习、日程、知识库）。
+  attachmentLibrary: ComposerAttachmentLibrary
   className?: string
   onSend?: (text: string) => void
   scheduleMenu: CourseScheduleMenuVariant
@@ -87,9 +105,30 @@ export function HomeComposer({
   const [volume, setVolume] = useState<CourseVolume>(DEFAULT_COURSE_VOLUME)
   const [schedule, setSchedule] = useState<CourseSchedule>(DEFAULT_COURSE_SCHEDULE)
   const [spaceId, setSpaceId] = useState<string | null>(null)
+  // 附到这次对话上的参考资料。本地文件目前只记下文件名，不上传。
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
   const hasContent = text.trim().length > 0
   const VolumeMenu =
     volumeControl === 'slider' ? CourseVolumeSliderMenu : CourseVolumeListMenu
+
+  const toggleAttachment = (attachment: ComposerAttachment) => {
+    setAttachments((current) =>
+      current.some((item) => item.id === attachment.id)
+        ? current.filter((item) => item.id !== attachment.id)
+        : [...current, attachment]
+    )
+  }
+
+  const addFiles = (files: File[]) => {
+    setAttachments((current) => [
+      ...current,
+      ...files.map((file) => ({
+        id: `file:${crypto.randomUUID()}`,
+        kind: 'file' as const,
+        title: file.name,
+      })),
+    ])
+  }
 
   const submit = () => {
     const trimmed = text.trim()
@@ -98,6 +137,7 @@ export function HomeComposer({
     }
     onSend?.(trimmed)
     setText('')
+    setAttachments([])
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -118,6 +158,7 @@ export function HomeComposer({
       {/* 托盘圆角 = 输入卡圆角（22px）+ 托盘内边距（6px）。 */}
       <div className="rounded-[28px] bg-zinc-100 p-1.5">
         <div className="flex flex-col rounded-[22px] border border-zinc-200 bg-white">
+          <ComposerAttachmentChips attachments={attachments} onRemove={toggleAttachment} />
           <textarea
             aria-label={MODE_COPY[mode].inputLabel}
             placeholder={MODE_COPY[mode].placeholder}
@@ -125,13 +166,24 @@ export function HomeComposer({
             value={text}
             onChange={(event) => setText(event.target.value)}
             onKeyDown={handleKeyDown}
-            className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
+            className={cn(
+              'scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400',
+              // 上面有附件时，文字离附件近一点。
+              attachments.length > 0 ? 'pt-2.5' : 'pt-4'
+            )}
             style={{ fieldSizing: 'content' } as CSSProperties}
           />
 
           <div className="flex items-center gap-2 px-4 pt-1 pb-4">
             <div className="mb-[-5px] ml-[-3px] flex items-center">
-              <InputAddMenu menuAlignOffset={-14} />
+              <ComposerAttachMenu
+                variant={attachMenu}
+                searchLayout={attachSearchLayout}
+                attachments={attachments}
+                library={attachmentLibrary}
+                onToggle={toggleAttachment}
+                onAddFiles={addFiles}
+              />
             </div>
             <div className="mb-[-4px] ml-auto mr-[-4px]">
               <Button
