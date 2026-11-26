@@ -147,6 +147,11 @@ export function AppLayout() {
           />
           <SidebarItem
             icon={FlaskConical}
+            label="日程 Sandbox(调试)"
+            to="/sandbox/schedule"
+          />
+          <SidebarItem
+            icon={FlaskConical}
             label="课程中心 Sandbox(调试)"
             to="/sandbox/courses"
           />

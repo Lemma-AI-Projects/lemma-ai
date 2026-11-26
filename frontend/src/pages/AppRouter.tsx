@@ -17,6 +17,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
+import { ScheduleSandboxPage } from '@/pages/ScheduleSandboxPage'
 
 const routes: RouteObject[] = [
   {
@@ -81,6 +82,11 @@ const routes: RouteObject[] = [
             // 首页预览：首页布局 + 新版输入框（选定样式）。
             path: 'sandbox/home',
             element: <HomeSandboxPage />,
+          },
+          {
+            // 日程页预览：日程页布局 + 右侧日历的几种候选方案。
+            path: 'sandbox/schedule',
+            element: <ScheduleSandboxPage />,
           },
           {
             // 课程中心 -> 课程仪表盘的样式预览，mock 驱动，尚无后端契约。
