@@ -1,6 +1,9 @@
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui'
 
-import { COMPOSER_PANEL_CHIP_SELECTED_CLASS_NAME } from '@/features/home/composer/composerMenuStyles'
+import {
+  COMPOSER_PANEL_IDLE_HOVER_CLASS_NAME,
+  COMPOSER_PANEL_SELECTED_CLASS_NAME,
+} from '@/features/home/composer/composerMenuStyles'
 import {
   WEEKDAY_OPTIONS,
   type Weekday,
@@ -9,7 +12,7 @@ import { cn } from '@/lib/utils'
 
 // - dots：七个独立的圆点，选中的垫一层浅灰；
 // - bar：七格连成一条浅灰轨道，选中的格子变白，相邻的选中日连成一段（与模式切换同一种做法）；
-// - chips：放在浅灰面板里用，七个等宽的圆片，选中的变成带细边的白片。
+// - chips：放在面板里用，七个等宽的圆片，选中的变成白片。
 export type WeekdayPickerAppearance = 'dots' | 'bar' | 'chips'
 
 const ROOT_CLASS_NAME: Record<WeekdayPickerAppearance, string> = {
@@ -78,8 +81,8 @@ export function WeekdayPicker({
                 cn(
                   'h-7 min-w-0 flex-1 rounded-full',
                   selected
-                    ? COMPOSER_PANEL_CHIP_SELECTED_CLASS_NAME
-                    : 'hover:bg-zinc-200/70'
+                    ? COMPOSER_PANEL_SELECTED_CLASS_NAME
+                    : COMPOSER_PANEL_IDLE_HOVER_CLASS_NAME
                 )
             )}
           >

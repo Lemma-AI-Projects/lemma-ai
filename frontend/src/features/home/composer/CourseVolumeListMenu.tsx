@@ -2,7 +2,6 @@ import { Layers } from 'lucide-react'
 
 import {
   InputMenu,
-  InputMenuLabel,
   InputMenuRadioGroup,
   InputMenuRadioItem,
 } from '@/components/InputMenu'
@@ -33,8 +32,9 @@ export function CourseVolumeListMenu({
         </ComposerChinButton>
       }
     >
-      <InputMenuLabel>课程体量</InputMenuLabel>
+      {/* 不加标题：胶囊上已经写了「体量」，菜单里只放三档。 */}
       <InputMenuRadioGroup
+        aria-label="课程体量"
         value={value}
         onValueChange={(next) => {
           const option = COURSE_VOLUME_OPTIONS.find((item) => item.value === next)

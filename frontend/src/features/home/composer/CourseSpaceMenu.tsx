@@ -2,7 +2,6 @@ import { Folder } from 'lucide-react'
 
 import {
   InputMenu,
-  InputMenuLabel,
   InputMenuRadioGroup,
   InputMenuRadioItem,
 } from '@/components/InputMenu'
@@ -40,8 +39,9 @@ export function CourseSpaceMenu({
         </ComposerChinButton>
       }
     >
-      <InputMenuLabel>学习空间</InputMenuLabel>
+      {/* 不加标题：胶囊上已经写了「空间」，菜单里只放选项。 */}
       <InputMenuRadioGroup
+        aria-label="学习空间"
         value={selected?.id ?? NO_SPACE_VALUE}
         onValueChange={(next) =>
           onValueChange(next === NO_SPACE_VALUE ? null : next)

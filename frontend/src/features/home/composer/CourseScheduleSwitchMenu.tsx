@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils'
 const EXPANDED_AREA_WIDTH_CLASS_NAME = 'w-[238px]'
 
 // 排期入口（开关展开）：先只有一个「排进日程」开关，打开后菜单变宽，露出学习日和周期。
-// 学习日和周期收在开关下方的一块浅灰面板里：靠底色表示「这一块归开关管」，不用分割线。
+// 学习日和周期收在开关下方的一块面板里：靠底色表示「这一块归开关管」，不用分割线。
 export function CourseScheduleSwitchMenu({
   onValueChange,
   value,

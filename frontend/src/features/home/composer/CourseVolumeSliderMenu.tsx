@@ -7,7 +7,6 @@ import {
 } from '@/components/ui/popover'
 import { Slider } from '@/components/ui/slider'
 import { ComposerChinButton } from '@/features/home/composer/ComposerChinButton'
-import { COMPOSER_MENU_LABEL_CLASS_NAME } from '@/features/home/composer/composerMenuStyles'
 import {
   COURSE_VOLUME_OPTIONS,
   courseVolumeSummary,
@@ -49,8 +48,8 @@ export function CourseVolumeSliderMenu({
         aria-label="课程体量"
         className="w-48 rounded-lg p-1 shadow-none"
       >
-        <p className={COMPOSER_MENU_LABEL_CLASS_NAME}>课程体量</p>
-        <div className="px-2 pt-2 pb-1.5">
+        {/* 不加标题，和列表菜单一致。 */}
+        <div className="px-2 pt-2.5 pb-1.5">
           <Slider
             aria-label="课程体量"
             aria-valuetext={COURSE_VOLUME_OPTIONS[index]?.label}

@@ -17,6 +17,7 @@ import {
 } from '@/features/home/composer/ComposerModeSwitch'
 import {
   ComposerTodayButton,
+  type ComposerTodayButtonAppearance,
   type ComposerTodayTask,
 } from '@/features/home/composer/ComposerTodayButton'
 import {
@@ -63,12 +64,13 @@ const MODE_COPY: Record<ComposerMode, { placeholder: string; inputLabel: string 
 // 新版首页输入框：上方一条肩线（今日 + 模式）；下面一整块浅灰托盘从四周包住输入卡，
 // 课程设置胶囊排在托盘底部。
 // 目前只在输入框 Sandbox 里陈列；自由课程的后端契约落地前，课程设置只保存在本地状态。
-// `volumeControl` 和 `scheduleMenu` 是供 Sandbox 对比的候选样式开关。
+// `volumeControl`、`scheduleMenu` 和 `todayButton` 是供 Sandbox 对比的候选样式开关。
 export function HomeComposer({
   className,
   onSend,
   scheduleMenu,
   spaces,
+  todayButton,
   todayTasks,
   volumeControl,
 }: {
@@ -76,6 +78,7 @@ export function HomeComposer({
   onSend?: (text: string) => void
   scheduleMenu: CourseScheduleMenuVariant
   spaces: ComposerSpace[]
+  todayButton: ComposerTodayButtonAppearance
   todayTasks: ComposerTodayTask[]
   volumeControl: HomeComposerVolumeControl
 }) {
@@ -108,7 +111,7 @@ export function HomeComposer({
   return (
     <div className={cn('relative', className)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-2.5">
-        <ComposerTodayButton tasks={todayTasks} />
+        <ComposerTodayButton appearance={todayButton} tasks={todayTasks} />
         <ComposerModeSwitch value={mode} onValueChange={setMode} className="ml-auto" />
       </div>
 

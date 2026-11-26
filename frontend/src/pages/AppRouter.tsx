@@ -10,6 +10,7 @@ import { CourseCenterPage } from '@/pages/CourseCenterPage'
 import { CourseDashboardPage } from '@/pages/CourseDashboardPage'
 import { CourseQuizSandboxPage } from '@/pages/CourseQuizSandboxPage'
 import { HomePage } from '@/pages/HomePage'
+import { HomeSandboxPage } from '@/pages/HomeSandboxPage'
 import { KnowledgeBasePage } from '@/pages/KnowledgeBasePage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -75,6 +76,11 @@ const routes: RouteObject[] = [
           {
             path: 'sandbox/composer',
             element: <ComposerSandboxPage />,
+          },
+          {
+            // 首页预览：首页布局 + 新版输入框（选定样式）。
+            path: 'sandbox/home',
+            element: <HomeSandboxPage />,
           },
           {
             // 课程中心 -> 课程仪表盘的样式预览，mock 驱动，尚无后端契约。

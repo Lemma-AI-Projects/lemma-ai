@@ -3,8 +3,10 @@ import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui'
 
 import {
   COMPOSER_MENU_LABEL_CLASS_NAME,
-  COMPOSER_PANEL_CHIP_SELECTED_CLASS_NAME,
+  COMPOSER_PANEL_FIELD_CLASS_NAME,
+  COMPOSER_PANEL_IDLE_HOVER_CLASS_NAME,
   COMPOSER_PANEL_LABEL_CLASS_NAME,
+  COMPOSER_PANEL_SELECTED_CLASS_NAME,
 } from '@/features/home/composer/composerMenuStyles'
 import { CourseScheduleEndDatePicker } from '@/features/home/composer/CourseScheduleEndDatePicker'
 import {
@@ -15,7 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 
 // - track：直接放在白色菜单里，一条浅灰轨道加白色选中块；
-// - chips：放在浅灰面板里，四个等宽的胶囊，选中的变成带细边的白片（与 WeekdayPicker 的 chips 配套）。
+// - chips：放在面板里，四个等宽的胶囊，选中的变成白片（与 WeekdayPicker 的 chips 配套）。
 export type CourseSchedulePeriodFieldAppearance = 'track' | 'chips'
 
 const APPEARANCE_CLASS_NAMES: Record<
@@ -27,6 +29,7 @@ const APPEARANCE_CLASS_NAMES: Record<
     item: string
     itemSelected: string
     itemIdle: string
+    // 截止日胶囊：和上面选项的间距，加上它在这种底色上的填充或描边。
     datePicker: string
   }
 > = {
@@ -37,16 +40,18 @@ const APPEARANCE_CLASS_NAMES: Record<
     item: 'h-[22px]',
     itemSelected: 'bg-white',
     itemIdle: '',
-    datePicker: 'mt-1.5',
+    // 菜单本身是白的，胶囊没法再用白色填充，所以只描一圈边。
+    datePicker:
+      'mt-2 ring-1 ring-zinc-300/80 ring-inset hover:bg-zinc-200/50 hover:ring-zinc-300 data-[state=open]:bg-zinc-200/50 data-[state=open]:ring-zinc-300',
   },
   chips: {
     label: COMPOSER_PANEL_LABEL_CLASS_NAME,
     body: '',
     group: 'gap-1',
     item: 'h-7',
-    itemSelected: COMPOSER_PANEL_CHIP_SELECTED_CLASS_NAME,
-    itemIdle: 'hover:bg-zinc-200/70',
-    datePicker: 'mt-1',
+    itemSelected: COMPOSER_PANEL_SELECTED_CLASS_NAME,
+    itemIdle: COMPOSER_PANEL_IDLE_HOVER_CLASS_NAME,
+    datePicker: cn('mt-2', COMPOSER_PANEL_FIELD_CLASS_NAME),
   },
 }
 
