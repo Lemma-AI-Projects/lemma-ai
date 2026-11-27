@@ -16,6 +16,7 @@ import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
+import { QuestionnaireSandboxPage } from '@/pages/QuestionnaireSandboxPage'
 import { SchedulePage } from '@/pages/SchedulePage'
 import { ScheduleSandboxPage } from '@/pages/ScheduleSandboxPage'
 
@@ -69,6 +70,11 @@ const routes: RouteObject[] = [
           {
             path: 'sandbox/chat',
             element: <ChatSandboxPage />,
+          },
+          {
+            // 问卷预览：问卷贴在输入框上方、一次一题的新交互。
+            path: 'sandbox/questionnaire',
+            element: <QuestionnaireSandboxPage />,
           },
           {
             path: 'sandbox/quiz',

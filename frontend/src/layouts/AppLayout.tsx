@@ -127,6 +127,11 @@ export function AppLayout() {
           />
           <SidebarItem
             icon={FlaskConical}
+            label="问卷 Sandbox(调试)"
+            to="/sandbox/questionnaire"
+          />
+          <SidebarItem
+            icon={FlaskConical}
             label="题目 Sandbox(调试)"
             to="/sandbox/quiz"
           />

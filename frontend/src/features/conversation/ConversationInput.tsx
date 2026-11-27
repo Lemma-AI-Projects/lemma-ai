@@ -21,6 +21,7 @@ export function ConversationInput({
   isStreaming,
   onSend,
   onStop,
+  placeholder = 'Ask anything about this lesson...',
 }: {
   className?: string
   value: string
@@ -28,6 +29,8 @@ export function ConversationInput({
   isStreaming: boolean
   onSend: (text: string) => void
   onStop: () => void
+  // 输入框里的提示文字。输入框临时另有用途时换掉它，比如上方有问卷、发来的文字会记成回答。
+  placeholder?: string
 }) {
   const hasContent = value.trim().length > 0
 
@@ -56,7 +59,7 @@ export function ConversationInput({
       )}
     >
       <textarea
-        placeholder="Ask anything about this lesson..."
+        placeholder={placeholder}
         rows={1}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
