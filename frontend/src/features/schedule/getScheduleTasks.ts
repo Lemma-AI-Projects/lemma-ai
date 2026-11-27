@@ -2,10 +2,17 @@ import { addDays, format, isBefore, startOfDay } from 'date-fns'
 
 import { scheduleTasks, type ScheduleTaskTag } from '@/mock/scheduleTasks'
 
+// 任务所属的课程。
+export interface ScheduleCourse {
+  id: string
+  title: string
+}
+
 export interface ScheduleTask {
   id: string
   title: string
   description: string
+  course: ScheduleCourse
   tags: readonly ScheduleTaskTag[]
   date: Date
   dueDateLabel: string
@@ -32,6 +39,7 @@ export function getScheduleTasks(today: Date): ScheduleTask[] {
       id: task.id,
       title: task.title,
       description: task.description,
+      course: task.course,
       tags: task.tags,
       date,
       dueDateLabel: format(date, 'MMM d'),

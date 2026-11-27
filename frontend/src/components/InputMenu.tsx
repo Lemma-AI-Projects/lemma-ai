@@ -245,6 +245,7 @@ interface InputMenuProps {
   children: ReactNode
   contentClassName?: string
   modal?: boolean
+  onOpenChange?: (open: boolean) => void
   side?: ComponentProps<typeof DropdownMenuPrimitive.Content>['side']
   sideOffset?: number
   trigger: ReactNode
@@ -256,12 +257,13 @@ export function InputMenu({
   children,
   contentClassName,
   modal = inputMenuDefaultModal,
+  onOpenChange,
   side = inputMenuDefaultSide,
   sideOffset = inputMenuDefaultSideOffset,
   trigger,
 }: InputMenuProps) {
   return (
-    <DropdownMenuPrimitive.Root modal={modal}>
+    <DropdownMenuPrimitive.Root modal={modal} onOpenChange={onOpenChange}>
       <DropdownMenuPrimitive.Trigger asChild>
         {trigger}
       </DropdownMenuPrimitive.Trigger>

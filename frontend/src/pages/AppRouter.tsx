@@ -17,6 +17,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { PluginsPage } from '@/pages/PluginsPage'
 import { ProjectPage } from '@/pages/ProjectPage'
 import { SchedulePage } from '@/pages/SchedulePage'
+import { ScheduleSandboxPage } from '@/pages/ScheduleSandboxPage'
 
 const routes: RouteObject[] = [
   {
@@ -76,6 +77,11 @@ const routes: RouteObject[] = [
           {
             path: 'sandbox/composer',
             element: <ComposerSandboxPage />,
+          },
+          {
+            // 日程预览：日程页布局 + 右侧日历的候选方案。
+            path: 'sandbox/schedule',
+            element: <ScheduleSandboxPage />,
           },
           {
             // 首页预览：首页布局 + 新版输入框（选定样式）。
