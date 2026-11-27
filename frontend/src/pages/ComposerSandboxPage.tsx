@@ -1,5 +1,6 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 
+import { SandboxVariantSwitch } from '@/components/SandboxVariantSwitch'
 import { type ComposerAttachMenuVariant } from '@/features/home/composer/ComposerAttachMenu'
 import { type ComposerAttachSearchLayout } from '@/features/home/composer/composerAttachments'
 import { type ComposerTodayButtonAppearance } from '@/features/home/composer/ComposerTodayButton'
@@ -8,7 +9,6 @@ import {
   HomeComposer,
   type HomeComposerVolumeControl,
 } from '@/features/home/composer/HomeComposer'
-import { cn } from '@/lib/utils'
 import {
   composerAttachmentLibrary,
   composerSpaces,
@@ -64,52 +64,6 @@ const ATTACH_SEARCH_LAYOUT_OPTIONS: { value: ComposerAttachSearchLayout; label: 
     { value: 'column-field', label: '归右栏垫底色' },
     { value: 'band', label: '顶部色带' },
   ]
-
-// 顶栏里的一组候选样式切换：一句说明加一排单选。
-function SandboxVariantSwitch<Value extends string>({
-  label,
-  onValueChange,
-  options,
-  value,
-}: {
-  label: string
-  onValueChange: (value: Value) => void
-  options: { value: Value; label: string }[]
-  value: Value
-}) {
-  const labelId = useId()
-
-  return (
-    <div className="flex items-center gap-2">
-      <span id={labelId} className="text-xs text-zinc-500">
-        {label}
-      </span>
-      <div
-        role="radiogroup"
-        aria-labelledby={labelId}
-        className="flex rounded-full bg-zinc-200/60 p-0.5"
-      >
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={value === option.value}
-            onClick={() => onValueChange(option.value)}
-            className={cn(
-              'rounded-full px-2.5 py-0.5 text-xs transition-colors',
-              value === option.value
-                ? 'bg-white text-zinc-900 shadow-xs'
-                : 'text-zinc-500 hover:text-zinc-800'
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // [sandbox] 输入框调试页：把待选的首页输入框样式上下排开，各自独立可操作，不发任何请求。
 // 每个样式上下都留出一段空白，让「今日」向上、设置菜单向下弹出时不遮挡输入框。
