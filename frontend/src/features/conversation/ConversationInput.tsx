@@ -1,4 +1,4 @@
-import { type KeyboardEvent } from 'react'
+import { type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowUp, Square } from 'lucide-react'
 import { InputAddMenu } from '@/components/InputAddMenu'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,8 @@ export function ConversationInput({
   onSend,
   onStop,
   placeholder = 'Ask anything about this lesson...',
+  addMenu,
+  attachments,
 }: {
   className?: string
   value: string
@@ -31,6 +33,10 @@ export function ConversationInput({
   onStop: () => void
   // 输入框里的提示文字。输入框临时另有用途时换掉它，比如上方有问卷、发来的文字会记成回答。
   placeholder?: string
+  // 换掉左下角默认的加号菜单。
+  addMenu?: ReactNode
+  // 已经附上的参考资料，排在文字上方。没有附件时不要传，文字才会贴回顶部。
+  attachments?: ReactNode
 }) {
   const hasContent = value.trim().length > 0
 
@@ -58,13 +64,18 @@ export function ConversationInput({
         className
       )}
     >
+      {attachments}
       <textarea
         placeholder={placeholder}
         rows={1}
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pt-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400"
+        className={cn(
+          'scrollbar-hidden max-h-[calc(6*1.625em+1.5rem)] min-h-[68px] w-full resize-none overflow-y-auto border-0 bg-transparent px-4 pb-2 text-[15px] leading-relaxed text-zinc-900 outline-none placeholder:text-zinc-400',
+          // 上面有附件时，文字离附件近一点。
+          attachments ? 'pt-2.5' : 'pt-4'
+        )}
         style={{ fieldSizing: 'content' } as React.CSSProperties}
       />
 
@@ -76,11 +87,13 @@ export function ConversationInput({
             'flex items-center gap-2'
           )}
         >
-          <InputAddMenu
-            contextLabel="Include conversation context"
-            menuAlignOffset={CONVERSATION_ADD_MENU_ALIGN_OFFSET}
-            referenceLabel="Reference conversation"
-          />
+          {addMenu ?? (
+            <InputAddMenu
+              contextLabel="Include conversation context"
+              menuAlignOffset={CONVERSATION_ADD_MENU_ALIGN_OFFSET}
+              referenceLabel="Reference conversation"
+            />
+          )}
         </div>
 
         <div className="mb-[-4px] ml-auto mr-[-4px]">

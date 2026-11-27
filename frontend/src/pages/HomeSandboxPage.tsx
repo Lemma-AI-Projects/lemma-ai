@@ -11,6 +11,7 @@ import { suggestions } from '@/mock/homeSuggestions'
 // [sandbox] 首页预览：和首页（HomePage）同一套布局，只把输入框换成新版 HomeComposer，
 // 用来看新输入框放进真实页面后的效果。
 // 选定的样式：「今日」入口用一句话，排期菜单用开关展开；课程体量还没定，先用列表菜单。
+// 加号用分栏面板，搜索框归在右栏顶上、垫一层底色。
 // 今日卡片（无标题、任务可点）和排期面板的配色（白片）已经定成唯一实现，不需要在这里选。
 //
 // 与首页的两处不同：
@@ -38,6 +39,8 @@ export function HomeSandboxPage() {
             todayButton="sentence"
             todayTasks={composerTodayTasks}
             spaces={composerSpaces}
+            attachMenu="panes"
+            attachSearchLayout="column-field"
             attachmentLibrary={composerAttachmentLibrary}
           />
           <div className="flex flex-wrap justify-center gap-2">

@@ -19,6 +19,10 @@ import {
 } from '@/features/conversation/questionnaire/questionnaire'
 import { useQuestionnaire } from '@/features/conversation/questionnaire/useQuestionnaire'
 import { useStickToBottom } from '@/features/conversation/useStickToBottom'
+import { ComposerAttachMenu } from '@/features/home/composer/ComposerAttachMenu'
+import { ComposerAttachmentChips } from '@/features/home/composer/ComposerAttachmentChips'
+import { type ComposerAttachment } from '@/features/home/composer/composerAttachments'
+import { composerAttachmentLibrary } from '@/mock/homeComposer'
 import {
   questionnaireSandboxMessages,
   questionnaireSandboxReply,
@@ -47,6 +51,9 @@ function QuestionnaireDemo({ questions }: { questions: QuestionnaireQuestion[] }
   const [phase, setPhase] = useState<QuestionnairePhase>('open')
   const [inputText, setInputText] = useState('')
   const [entries, setEntries] = useState<StreamEntry[]>([])
+  // 附到下一条消息上的参考资料（加号和首页输入框是同一套：分栏面板，搜索框归右栏垫底色）。
+  // 本地文件目前只记下文件名，不上传。
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
   const questionnaire = useQuestionnaire(questions)
   const scrollRef = useRef<HTMLDivElement>(null)
   const followToBottom = useStickToBottom(scrollRef)
@@ -82,12 +89,33 @@ function QuestionnaireDemo({ questions }: { questions: QuestionnaireQuestion[] }
     ])
   }
 
+  const toggleAttachment = (attachment: ComposerAttachment) => {
+    setAttachments((current) =>
+      current.some((item) => item.id === attachment.id)
+        ? current.filter((item) => item.id !== attachment.id)
+        : [...current, attachment]
+    )
+  }
+
+  const addFiles = (files: File[]) => {
+    setAttachments((current) => [
+      ...current,
+      ...files.map((file) => ({
+        id: `file:${crypto.randomUUID()}`,
+        kind: 'file' as const,
+        title: file.name,
+      })),
+    ])
+  }
+
   const handleSend = (text: string) => {
-    // 问卷展开时，输入框里发来的文字就是当前这道题的回答；其余时候是普通聊天。
+    // 问卷展开时，输入框里发来的文字就是当前这道题的回答，附件留着等下一条消息；
+    // 其余时候是普通聊天，附件随这条消息发出（示例里不显示在消息上），输入框清空。
     if (phase === 'open') {
       questionnaire.answer(text)
     } else {
       appendMessage('user', text)
+      setAttachments([])
     }
   }
 
@@ -116,6 +144,23 @@ function QuestionnaireDemo({ questions }: { questions: QuestionnaireQuestion[] }
         onStop: () => undefined,
         placeholder:
           phase === 'open' ? '没有合适的选项？在这里写下你的回答' : undefined,
+        addMenu: (
+          <ComposerAttachMenu
+            variant="panes"
+            searchLayout="column-field"
+            attachments={attachments}
+            library={composerAttachmentLibrary}
+            onToggle={toggleAttachment}
+            onAddFiles={addFiles}
+          />
+        ),
+        attachments:
+          attachments.length > 0 ? (
+            <ComposerAttachmentChips
+              attachments={attachments}
+              onRemove={toggleAttachment}
+            />
+          ) : undefined,
       }}
       inputDock={
         phase === 'open' ? (
